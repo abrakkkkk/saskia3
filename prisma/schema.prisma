@@ -1,0 +1,324 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Hospital {
+  id        String   @id @default(cuid())
+  nome      String
+  cnpj      String   @unique
+  endereco  String?
+  telefone  String?
+  email     String?
+  logo      String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usuarios        Usuario[]
+  pacientes       Paciente[]
+  agendamentos    Agendamento[]
+  receitas        Receita[]
+  cirurgias       Cirurgia[]
+  utiLeitos       UtiLeito[]
+  salas           Sala[]
+  tickets         Ticket[]
+  chamadas        Chamada[]
+  emergencias     Emergencia[]
+  estoqueItems    EstoqueItem[]
+  exames          Exame[]
+  configDashboard ConfigDashboard?
+}
+
+model Usuario {
+  id         String   @id @default(cuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  nome       String
+  email      String   @unique
+  senha      String
+  cargo      String   @default("enfermeiro_assistencial")
+  avatar     String?
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([hospitalId])
+}
+
+model Paciente {
+  id              String    @id @default(cuid())
+  hospitalId      String
+  hospital        Hospital  @relation(fields: [hospitalId], references: [id])
+  nome            String
+  cpf             String?
+  rg              String?
+  nascimento      DateTime?
+  sexo            String?
+  telefone        String?
+  email           String?
+  endereco        String?
+  convenio        String?
+  numConvenio     String?
+  mae             String?
+  pai             String?
+  profissao       String?
+  estadoCivil     String?
+  nacionalidade   String?
+  naturalidade    String?
+  religiao        String?
+  etnia           String?
+  tipoSanguineo   String?
+  alergias        String?
+  status          String    @default("Recepção")
+  classificacao   String?
+  leitoTipo       String?
+  leitoNumero     Int?
+  consultorio     String?
+  queixaPrincipal String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  triagens     Triagem[]
+  evolucoes    Evolucao[]
+  prescricoes  Prescricao[]
+  receitas     Receita[]
+  agendamentos Agendamento[]
+  exames       Exame[]
+  cirurgias    Cirurgia[]
+  chamadas     Chamada[]
+
+  @@index([hospitalId])
+  @@index([cpf])
+}
+
+model Triagem {
+  id            String   @id @default(cuid())
+  pacienteId    String
+  paciente      Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  classificacao String
+  pressao       String?
+  temperatura   String?
+  frequenciaC   String?
+  frequenciaR   String?
+  saturacao     String?
+  glicemia      String?
+  peso          String?
+  altura        String?
+  dor           Int?
+  queixa        String?
+  observacoes   String?
+  profissional  String?
+  createdAt     DateTime @default(now())
+
+  @@index([pacienteId])
+}
+
+model Evolucao {
+  id           String   @id @default(cuid())
+  pacienteId   String
+  paciente     Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  tipo         String
+  descricao    String
+  profissional String?
+  createdAt    DateTime @default(now())
+
+  @@index([pacienteId])
+}
+
+model Prescricao {
+  id           String   @id @default(cuid())
+  pacienteId   String
+  paciente     Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  medicamento  String
+  dose         String?
+  via          String?
+  frequencia   String?
+  observacoes  String?
+  profissional String?
+  createdAt    DateTime @default(now())
+
+  @@index([pacienteId])
+}
+
+model Receita {
+  id           String   @id @default(cuid())
+  pacienteId   String
+  paciente     Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  hospitalId   String
+  hospital     Hospital @relation(fields: [hospitalId], references: [id])
+  medicamentos Json
+  observacoes  String?
+  profissional String?
+  createdAt    DateTime @default(now())
+
+  @@index([pacienteId])
+  @@index([hospitalId])
+}
+
+model Agendamento {
+  id            String   @id @default(cuid())
+  pacienteId    String
+  paciente      Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  hospitalId    String
+  hospital      Hospital @relation(fields: [hospitalId], references: [id])
+  data          DateTime
+  hora          String
+  tipo          String?
+  especialidade String?
+  profissional  String?
+  sala          String?
+  status        String   @default("Agendado")
+  observacoes   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([pacienteId])
+  @@index([hospitalId])
+  @@index([data])
+}
+
+model Exame {
+  id           String   @id @default(cuid())
+  pacienteId   String
+  paciente     Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  hospitalId   String
+  hospital     Hospital @relation(fields: [hospitalId], references: [id])
+  tipo         String
+  nome         String
+  resultado    String?
+  status       String   @default("Solicitado")
+  profissional String?
+  observacoes  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([pacienteId])
+  @@index([hospitalId])
+}
+
+model Cirurgia {
+  id           String    @id @default(cuid())
+  pacienteId   String
+  paciente     Paciente  @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  hospitalId   String
+  hospital     Hospital  @relation(fields: [hospitalId], references: [id])
+  procedimento String
+  sala         String?
+  data         DateTime?
+  hora         String?
+  equipe       String?
+  anestesia    String?
+  status       String    @default("Agendada")
+  observacoes  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([pacienteId])
+  @@index([hospitalId])
+}
+
+model UtiLeito {
+  id           String   @id @default(cuid())
+  hospitalId   String
+  hospital     Hospital @relation(fields: [hospitalId], references: [id])
+  numero       Int
+  tipo         String   @default("adulto")
+  status       String   @default("livre")
+  pacienteNome String?
+  pacienteCpf  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([hospitalId])
+}
+
+model Sala {
+  id         String   @id @default(cuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  nome       String
+  tipo       String?
+  setor      String?
+  andar      String?
+  status     String   @default("livre")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([hospitalId])
+}
+
+model Ticket {
+  id          String   @id @default(cuid())
+  hospitalId  String
+  hospital    Hospital @relation(fields: [hospitalId], references: [id])
+  numero      String   @unique
+  solicitante String
+  titulo      String
+  descricao   String
+  prioridade  String   @default("Média")
+  status      String   @default("Enviado")
+  respostas   Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([hospitalId])
+}
+
+model Chamada {
+  id           String    @id @default(cuid())
+  hospitalId   String
+  hospital     Hospital  @relation(fields: [hospitalId], references: [id])
+  pacienteId   String?
+  paciente     Paciente? @relation(fields: [pacienteId], references: [id])
+  pacienteNome String
+  cpf          String?
+  consultorio  String
+  status       String    @default("ativa")
+  createdAt    DateTime  @default(now())
+
+  @@index([hospitalId])
+}
+
+model Emergencia {
+  id           String   @id @default(cuid())
+  hospitalId   String
+  hospital     Hospital @relation(fields: [hospitalId], references: [id])
+  tipo         String
+  profissional String
+  createdAt    DateTime @default(now())
+
+  @@index([hospitalId])
+}
+
+model EstoqueItem {
+  id           String    @id @default(cuid())
+  hospitalId   String
+  hospital     Hospital  @relation(fields: [hospitalId], references: [id])
+  categoria    String
+  nome         String
+  codigo       String?
+  quantidade   Int       @default(0)
+  unidade      String?
+  minimo       Int       @default(0)
+  lote         String?
+  validade     DateTime?
+  fornecedor   String?
+  localizacao  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([hospitalId])
+  @@index([categoria])
+}
+
+model ConfigDashboard {
+  id         String   @id @default(cuid())
+  hospitalId String   @unique
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  config     Json
+  updatedAt  DateTime @updatedAt
+}
