@@ -97,7 +97,7 @@ enum StatusChamada {
 // ==========================================
 
 model Hospital {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   nome      String
   cnpj      String   @unique
   endereco  String?
@@ -124,7 +124,7 @@ model Hospital {
 }
 
 model Usuario {
-  id         String       @id @default(cuid())
+  id         String       @id @default(uuid())
   hospitalId String
   hospital   Hospital     @relation(fields: [hospitalId], references: [id])
   nome       String
@@ -140,7 +140,7 @@ model Usuario {
 }
 
 model Paciente {
-  id              String         @id @default(cuid())
+  id              String         @id @default(uuid())
   hospitalId      String
   hospital        Hospital       @relation(fields: [hospitalId], references: [id])
   nome            String
@@ -187,7 +187,7 @@ model Paciente {
 }
 
 model Triagem {
-  id            String   @id @default(cuid())
+  id            String   @id @default(uuid())
   pacienteId    String
   paciente      Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
   classificacao String
@@ -209,7 +209,7 @@ model Triagem {
 }
 
 model Evolucao {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
   pacienteId   String
   paciente     Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
   tipo         String
@@ -221,7 +221,7 @@ model Evolucao {
 }
 
 model Prescricao {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
   pacienteId   String
   paciente     Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
   medicamento  String
@@ -236,7 +236,7 @@ model Prescricao {
 }
 
 model Receita {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
   pacienteId   String
   paciente     Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
   hospitalId   String
@@ -251,7 +251,7 @@ model Receita {
 }
 
 model Agendamento {
-  id            String            @id @default(cuid())
+  id            String            @id @default(uuid())
   pacienteId    String
   paciente      Paciente          @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
   hospitalId    String
@@ -272,7 +272,7 @@ model Agendamento {
 }
 
 model Exame {
-  id           String      @id @default(cuid())
+  id           String      @id @default(uuid())
   pacienteId   String
   paciente     Paciente    @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
   hospitalId   String
@@ -291,7 +291,7 @@ model Exame {
 }
 
 model Cirurgia {
-  id           String         @id @default(cuid())
+  id           String         @id @default(uuid())
   pacienteId   String
   paciente     Paciente       @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
   hospitalId   String
@@ -311,7 +311,7 @@ model Cirurgia {
 }
 
 model UtiLeito {
-  id           String         @id @default(cuid())
+  id           String         @id @default(uuid())
   hospitalId   String
   hospital     Hospital       @relation(fields: [hospitalId], references: [id])
   numero       Int
@@ -326,7 +326,7 @@ model UtiLeito {
 }
 
 model Sala {
-  id         String         @id @default(cuid())
+  id         String         @id @default(uuid())
   hospitalId String
   hospital   Hospital       @relation(fields: [hospitalId], references: [id])
   nome       String
@@ -341,7 +341,7 @@ model Sala {
 }
 
 model Ticket {
-  id          String           @id @default(cuid())
+  id          String           @id @default(uuid())
   hospitalId  String
   hospital    Hospital         @relation(fields: [hospitalId], references: [id])
   numero      Int              @unique @default(autoincrement())
@@ -358,7 +358,7 @@ model Ticket {
 }
 
 model Chamada {
-  id           String        @id @default(cuid())
+  id           String        @id @default(uuid())
   hospitalId   String
   hospital     Hospital      @relation(fields: [hospitalId], references: [id])
   pacienteId   String?
@@ -373,7 +373,7 @@ model Chamada {
 }
 
 model Emergencia {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
   hospitalId   String
   hospital     Hospital @relation(fields: [hospitalId], references: [id])
   tipo         String
@@ -384,7 +384,7 @@ model Emergencia {
 }
 
 model EstoqueItem {
-  id          String    @id @default(cuid())
+  id          String    @id @default(uuid())
   hospitalId  String
   hospital    Hospital  @relation(fields: [hospitalId], references: [id])
   categoria   String
@@ -405,7 +405,7 @@ model EstoqueItem {
 }
 
 model ConfigDashboard {
-  id         String   @id @default(cuid())
+  id         String   @id @default(uuid())
   hospitalId String   @unique
   hospital   Hospital @relation(fields: [hospitalId], references: [id])
   config     Json
