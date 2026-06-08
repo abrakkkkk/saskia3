@@ -20,15 +20,6 @@ enum CargoUsuario {
   OUTROS
 }
 
-enum StatusPaciente {
-  RECEPCAO
-  TRIAGEM
-  ATENDIMENTO
-  OBSERVACAO
-  INTERNACAO
-  ALTA
-  OBITO
-}
 
 enum StatusAgendamento {
   AGENDADO
@@ -163,7 +154,7 @@ model Paciente {
   etnia           String?
   tipoSanguineo   String?
   alergias        String?
-  status          StatusPaciente @default(RECEPCAO)
+  status          String         @default("Recepção")
   classificacao   String?
   leitoTipo       String?
   leitoNumero     Int?
