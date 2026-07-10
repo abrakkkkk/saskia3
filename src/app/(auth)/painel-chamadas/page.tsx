@@ -47,12 +47,12 @@ export default function PainelChamadasPage() {
       <div style={{ flex: 2, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, #1e293b, #0f172a)', borderRadius: '16px', border: '2px solid #334155', padding: '40px', textAlign: 'center' }}>
         {ultimaChamada ? (
           <div className="chamada-destaque" style={{ animation: 'pulse 2s infinite' }}>
-            <div style={{ fontSize: '24px', color: '#94a3b8', textTransform: 'uppercase', tracking: 'widest', marginBottom: '10px' }}>Por favor, dirija-se à</div>
+            <div style={{ fontSize: '24px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>Por favor, dirija-se à</div>
             <div style={{ fontSize: '80px', fontWeight: 900, color: '#38bdf8', lineHeight: '1', marginBottom: '40px' }}>
               {ultimaChamada.consultorio}
             </div>
             
-            <div style={{ fontSize: '24px', color: '#94a3b8', textTransform: 'uppercase', tracking: 'widest', marginBottom: '10px' }}>Paciente</div>
+            <div style={{ fontSize: '24px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>Paciente</div>
             <div style={{ fontSize: '64px', fontWeight: 800, color: 'white', lineHeight: '1.1' }}>
               {ultimaChamada.pacienteNome}
             </div>
