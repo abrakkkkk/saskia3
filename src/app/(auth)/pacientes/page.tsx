@@ -24,7 +24,14 @@ export default function PacientesPage() {
   const [pagina, setPagina] = useState(1);
   const [loading, setLoading] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
-  const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', nascimento: '', classificacao: 'Verde', status: 'Recepção' });
+  const [formPaciente, setFormPaciente] = useState<{
+    nome: string; cpf: string; rg?: string; nascimento: string; sexo?: string;
+    telefone?: string; email?: string; endereco?: string;
+    mae?: string; convenio?: string; tipoSanguineo?: string; alergias?: string;
+    status: string; classificacao: string; queixaPrincipal?: string;
+  }>({ 
+    nome: '', cpf: '', nascimento: '', classificacao: 'Verde', status: 'Recepção' 
+  });
 
   const fetchPacientes = () => {
     fetch('/api/pacientes')
@@ -245,51 +252,134 @@ export default function PacientesPage() {
       {/* Modal Novo Paciente */}
       {modalAberto && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '500px', margin: '20px', animation: 'fadeIn 0.2s ease-out' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', margin: '20px', animation: 'fadeIn 0.2s ease-out' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
-              <h3 style={{ fontSize: '20px', color: '#1e293b', margin: 0 }}><i className="las la-user-plus text-blue-600"></i> Cadastrar Paciente</h3>
+              <h3 style={{ fontSize: '20px', color: '#1e293b', margin: 0 }}><i className="las la-user-plus text-blue-600"></i> Ficha Completa de Cadastro</h3>
               <button onClick={() => setModalAberto(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', color: '#64748b', cursor: 'pointer' }}><i className="las la-times"></i></button>
             </div>
             
-            <form onSubmit={criarPaciente} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <form onSubmit={criarPaciente} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* Seção: Dados Pessoais */}
               <div>
-                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Nome Completo *</label>
-                <input required type="text" className="input-field" placeholder="Ex: Maria da Silva" value={formPaciente.nome} onChange={e => setFormPaciente({...formPaciente, nome: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                <h4 style={{ fontSize: '14px', color: '#2563eb', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <i className="las la-id-card"></i> Dados Pessoais
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Nome Completo *</label>
+                    <input required type="text" className="input-field" placeholder="Ex: Maria da Silva" value={formPaciente.nome} onChange={e => setFormPaciente({...formPaciente, nome: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>CPF</label>
+                    <input type="text" className="input-field" placeholder="000.000.000-00" value={formPaciente.cpf} onChange={e => setFormPaciente({...formPaciente, cpf: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>RG</label>
+                    <input type="text" className="input-field" placeholder="00.000.000-0" value={formPaciente.rg || ''} onChange={e => setFormPaciente({...formPaciente, rg: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Data de Nascimento *</label>
+                    <input required type="date" className="input-field" value={formPaciente.nascimento} onChange={e => setFormPaciente({...formPaciente, nascimento: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Sexo</label>
+                    <select className="input-field" value={formPaciente.sexo || ''} onChange={e => setFormPaciente({...formPaciente, sexo: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                      <option value="">Selecione...</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Feminino">Feminino</option>
+                      <option value="Outro">Outro</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção: Contato & Endereço */}
+              <div>
+                <h4 style={{ fontSize: '14px', color: '#2563eb', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <i className="las la-phone"></i> Contato e Endereço
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Telefone / WhatsApp</label>
+                    <input type="text" className="input-field" placeholder="(00) 00000-0000" value={formPaciente.telefone || ''} onChange={e => setFormPaciente({...formPaciente, telefone: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>E-mail</label>
+                    <input type="email" className="input-field" placeholder="email@exemplo.com" value={formPaciente.email || ''} onChange={e => setFormPaciente({...formPaciente, email: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Endereço Completo</label>
+                    <input type="text" className="input-field" placeholder="Rua, Número, Bairro, Cidade - UF" value={formPaciente.endereco || ''} onChange={e => setFormPaciente({...formPaciente, endereco: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção: Filiação & Outros */}
+              <div>
+                <h4 style={{ fontSize: '14px', color: '#2563eb', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <i className="las la-users"></i> Informações Adicionais
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Nome da Mãe</label>
+                    <input type="text" className="input-field" placeholder="Nome completo da mãe" value={formPaciente.mae || ''} onChange={e => setFormPaciente({...formPaciente, mae: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Convênio</label>
+                    <input type="text" className="input-field" placeholder="Ex: Unimed, SUS, Bradesco" value={formPaciente.convenio || ''} onChange={e => setFormPaciente({...formPaciente, convenio: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Tipo Sanguíneo</label>
+                    <select className="input-field" value={formPaciente.tipoSanguineo || ''} onChange={e => setFormPaciente({...formPaciente, tipoSanguineo: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                      <option value="">Desconhecido</option>
+                      <option value="A+">A+</option><option value="A-">A-</option>
+                      <option value="B+">B+</option><option value="B-">B-</option>
+                      <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                      <option value="O+">O+</option><option value="O-">O-</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Alergias</label>
+                    <input type="text" className="input-field" placeholder="Ex: Penicilina, Frutos do mar" value={formPaciente.alergias || ''} onChange={e => setFormPaciente({...formPaciente, alergias: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção: Atendimento Atual */}
+              <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ fontSize: '14px', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <i className="las la-hospital"></i> Atendimento Atual
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Status de Entrada</label>
+                    <select className="input-field" value={formPaciente.status} onChange={e => setFormPaciente({...formPaciente, status: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white' }}>
+                      <option value="Recepção">Recepção (Aguardando Triagem)</option>
+                      <option value="Internado">Internação Direta</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Risco Inicial</label>
+                    <select className="input-field" value={formPaciente.classificacao} onChange={e => setFormPaciente({...formPaciente, classificacao: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white' }}>
+                      <option value="Azul">Não Urgente (Azul)</option>
+                      <option value="Verde">Pouco Urgente (Verde)</option>
+                      <option value="Amarelo">Urgente (Amarelo)</option>
+                      <option value="Vermelho">Emergência (Vermelho)</option>
+                    </select>
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Queixa Principal / Motivo</label>
+                    <input type="text" className="input-field" placeholder="Descreva brevemente o motivo da vinda ao hospital..." value={formPaciente.queixaPrincipal || ''} onChange={e => setFormPaciente({...formPaciente, queixaPrincipal: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white' }} />
+                  </div>
+                </div>
               </div>
               
-              <div style={{ display: 'flex', gap: '15px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>CPF</label>
-                  <input type="text" className="input-field" placeholder="000.000.000-00" value={formPaciente.cpf} onChange={e => setFormPaciente({...formPaciente, cpf: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Data de Nascimento *</label>
-                  <input required type="date" className="input-field" value={formPaciente.nascimento} onChange={e => setFormPaciente({...formPaciente, nascimento: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '15px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Status Inicial</label>
-                  <select className="input-field" value={formPaciente.status} onChange={e => setFormPaciente({...formPaciente, status: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                    <option value="Recepção">Recepção (Aguardando Triagem)</option>
-                    <option value="Internado">Internação Direta</option>
-                  </select>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Risco Aparente</label>
-                  <select className="input-field" value={formPaciente.classificacao} onChange={e => setFormPaciente({...formPaciente, classificacao: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                    <option value="Azul">Não Urgente (Azul)</option>
-                    <option value="Verde">Pouco Urgente (Verde)</option>
-                    <option value="Amarelo">Urgente (Amarelo)</option>
-                    <option value="Vermelho">Emergência (Vermelho)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '15px' }}>
                 <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" >Salvar Cadastro</button>
+                <button type="submit" className="btn btn-primary" >Salvar Ficha Completa</button>
               </div>
             </form>
           </div>
