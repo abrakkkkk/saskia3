@@ -5,16 +5,18 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 interface DashboardStats {
-  totalPacientes: number
+  pacientesAtendidos: number
   aguardando: number
-  emAtendimento: number
-  finalizados: number
-  internados: number
+  ocupadosVermelha: number
+  ocupadosAmarela: number
+  salasCirurgicas: number
+  leitosUti: number
   altas: number
   evasoes: number
-  obitos: number
   transferencias: number
-  retorno: number
+  mediaEtaria: number
+  totalPacientes: number
+  obitos: number
 }
 
 const NAV_CARDS = [
@@ -76,40 +78,38 @@ const CATEGORY_GROUPS = [
 const STATUS_CORES: Record <string, string> = {
   'Aguardando': '#f59e0b', 'Em Atendimento': '#3b82f6', 'Finalizado': '#22c55e',
   'Retorno': '#a855f7', 'Internado': '#ec4899', 'Alta Médica': '#16a34a',
-  'Óbito': '#64748b', 'Evasão': '#dc2626'
+  'Óbito': '#64748b', 'Evasão': '#dc2626', 'Transferido': '#3b82f6'
 }
 
 export default function DashboardPage() {
   const { data: session } = useSession()
-  const [stats, setStats] = useState<DashboardStats> ({
-    totalPacientes: 0, aguardando: 0, emAtendimento: 0, finalizados: 0,
-    internados: 0, altas: 0, evasoes: 0, obitos: 0, transferencias: 0, retorno: 0,
+  const [stats, setStats] = useState<DashboardStats>({
+    pacientesAtendidos: 0, aguardando: 0, ocupadosVermelha: 0, ocupadosAmarela: 0,
+    salasCirurgicas: 0, leitosUti: 0, altas: 0, evasoes: 0, transferencias: 0,
+    mediaEtaria: 0, totalPacientes: 0, obitos: 0
   })
 
-  useEffect (() => {
-    fetch ('/api/dashboard/stats')
-      .then (response => response.json())
-      .then (setStats)
-      .catch (() => {})
+  useEffect(() => {
+    fetch('/api/dashboard/stats')
+      .then(response => response.json())
+      .then(setStats)
+      .catch(() => {})
   }, [])
 
   const user = session?.user
-  const cargoMap: Record <string, string> = {
+  const cargoMap: Record<string, string> = {
     diretor_geral: 'Diretor Geral (CEO)',
     enfermeiro_assistencial: 'Enfermeiro Assistencial',
     medico_especialista: 'Médico Especialista'
   }
-  const cargo = cargoMap [user?.cargo || ''] || user?.cargo || 'Profissional'
+  const cargo = cargoMap[user?.cargo || ''] || user?.cargo || 'Profissional'
 
   const statusData = {
     'Aguardando': stats.aguardando,
-    'Em Atendimento': stats.emAtendimento,
-    'Finalizado': stats.finalizados,
-    'Retorno': stats.retorno,
-    'Internado': stats.internados,
     'Alta Médica': stats.altas,
     'Óbito': stats.obitos,
-    'Evasão': stats.evasoes
+    'Evasão': stats.evasoes,
+    'Transferido': stats.transferencias
   }
 
   const totalStatus = Object.values (statusData).reduce ((a, b) => a + b, 0)
@@ -156,38 +156,109 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="contadores">
-        <div className="card-contador theme-blue">
-          <div className="contador-info">
-            <h3>Pacientes Atendidos</h3>
-            <div className="numero">{stats.finalizados + stats.retorno}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '30px' }}>
+        
+        <div className="card-contador">
+          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
+            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-users" style={{ fontSize: '24px' }}></i></div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Pacientes Atendidos</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.pacientesAtendidos}</div>
           </div>
-          <div className="icone"><i className="las la-users"></i></div>
         </div>
 
-        <div className="card-contador theme-blue">
-          <div className="contador-info">
-            <h3>Aguardando</h3>
-            <div className="numero">{stats.aguardando}</div>
+        <div className="card-contador">
+          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
+            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-hourglass-half" style={{ fontSize: '24px' }}></i></div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Aguardando Atendimento</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.aguardando}</div>
           </div>
-          <div className="icone"><i className="las la-hourglass-half"></i></div>
         </div>
 
-        <div className="card-contador theme-blue">
-          <div className="contador-info">
-            <h3>Altas</h3>
-            <div className="numero">{stats.altas}</div>
+        <div className="card-contador">
+          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
+            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-door-open" style={{ fontSize: '24px' }}></i></div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Leitos Sala Vermelha</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{stats.ocupadosVermelha}/7</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Capacidade: 7 leitos</div>
           </div>
-          <div className="icone"><i className="las la-check-circle"></i></div>
         </div>
 
-        <div className="card-contador theme-blue">
-          <div className="contador-info">
-            <h3>Resumo Geral</h3>
-            <div className="numero">{stats.totalPacientes}</div>
-            <div className="sub">pacientes no total</div>
+        <div className="card-contador">
+          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
+            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-door-closed" style={{ fontSize: '24px' }}></i></div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Leitos Sala Amarela</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{stats.ocupadosAmarela}/20</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Capacidade: 20 leitos</div>
           </div>
-          <div className="icone"><i className="las la-file-alt"></i></div>
+        </div>
+
+        <div className="card-contador">
+          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
+            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-procedures" style={{ fontSize: '24px' }}></i></div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Salas Cirúrgicas</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{stats.salasCirurgicas}/4</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Capacidade: 4 salas</div>
+          </div>
+        </div>
+
+        <div className="card-contador">
+          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
+            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-bed" style={{ fontSize: '24px' }}></i></div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Leitos UTI</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{stats.leitosUti}/10</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Capacidade: 10 leitos</div>
+          </div>
+        </div>
+
+        <div className="card-contador">
+          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
+            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-check-circle" style={{ fontSize: '24px' }}></i></div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Altas</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.altas}</div>
+          </div>
+        </div>
+
+        <div className="card-contador">
+          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
+            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-exclamation-triangle" style={{ fontSize: '24px' }}></i></div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Evasão</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.evasoes}</div>
+          </div>
+        </div>
+
+        <div className="card-contador">
+          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
+            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-truck" style={{ fontSize: '24px' }}></i></div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Transferências</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.transferencias}</div>
+          </div>
+        </div>
+
+        <div className="card-contador">
+          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
+            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-chart-bar" style={{ fontSize: '24px' }}></i></div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Média Etária</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.mediaEtaria}</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8' }}>anos</div>
+          </div>
+        </div>
+
+        <div className="card-contador">
+          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
+            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-file-alt" style={{ fontSize: '24px' }}></i></div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Resumo Geral</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.totalPacientes}</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8' }}>pacientes cadastrados</div>
+          </div>
+        </div>
+
+        <div className="card-contador">
+          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
+            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-cross" style={{ fontSize: '24px' }}></i></div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Óbitos</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.obitos}</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8' }}>registrados</div>
+          </div>
         </div>
       </div>
 
@@ -246,15 +317,15 @@ export default function DashboardPage() {
           <div className="resumo-metricas">
             <div className="metrica-box">
               <div className="metrica-badge"><i className="las la-arrow-up"></i> +12% esse mês</div>
-              <div className="valor">{stats.finalizados + stats.retorno + stats.aguardando}</div>
+              <div className="valor">{stats.pacientesAtendidos + stats.aguardando}</div>
               <div className="label">Atendimentos Ativos</div>
             </div>
             <div className="metrica-box">
               <div className="metrica-badge" style={{ background: '#eff6ff', color: '#1e40af' }}>
                 <i className="las la-check-double"></i> Concluídos
               </div>
-              <div className="valor">{stats.altas}</div>
-              <div className="label">Altas e Finalizados</div>
+              <div className="valor">{stats.altas + stats.transferencias}</div>
+              <div className="label">Altas e Transferências</div>
             </div>
           </div>
         </div>
