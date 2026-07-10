@@ -112,6 +112,14 @@ model Hospital {
   estoqueItems    EstoqueItem[]
   exames          Exame[]
   configDashboard ConfigDashboard?
+  obitos          Obito[]
+  mensagensChat   MensagemChat[]
+  casosSociais    CasoSocial[]
+  ouvidoriaTickets OuvidoriaTicket[]
+  veiculosTransporte VeiculoTransporte[]
+  ocorrenciasSeguranca OcorrenciaSeguranca[]
+  operadorasPlano OperadoraPlano[]
+  estoqueSangue   EstoqueSangue[]
 }
 
 model Usuario {
@@ -402,4 +410,114 @@ model ConfigDashboard {
   config     Json
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+// ==========================================
+// MÓDULOS DE GESTÃO (Fase 10)
+// ==========================================
+
+model Obito {
+  id           String   @id @default(uuid())
+  hospitalId   String
+  hospital     Hospital @relation(fields: [hospitalId], references: [id])
+  pacienteNome String
+  dataHora     DateTime
+  medicoCrm    String
+  causaBasi    String
+  createdAt    DateTime @default(now())
+  
+  @@index([hospitalId])
+}
+
+model MensagemChat {
+  id         String   @id @default(uuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  remetente  String
+  texto      String
+  dataHora   DateTime @default(now())
+
+  @@index([hospitalId])
+}
+
+model CasoSocial {
+  id           String   @id @default(uuid())
+  hospitalId   String
+  hospital     Hospital @relation(fields: [hospitalId], references: [id])
+  pacienteNome String
+  situacao     String
+  detalhe      String
+  status       String   @default("EM ACOMPANHAMENTO")
+  createdAt    DateTime @default(now())
+
+  @@index([hospitalId])
+}
+
+model OuvidoriaTicket {
+  id           String   @id @default(uuid())
+  hospitalId   String
+  hospital     Hospital @relation(fields: [hospitalId], references: [id])
+  protocolo    String   @unique
+  tipo         String
+  setor        String
+  paciente     String
+  mensagem     String
+  status       String   @default("ABERTO")
+  prazo        String
+  createdAt    DateTime @default(now())
+
+  @@index([hospitalId])
+}
+
+model VeiculoTransporte {
+  id         String   @id @default(uuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  tipo       String
+  identificador String // Placa ou ID
+  status     String   @default("DISPONÍVEL")
+  local      String
+  createdAt  DateTime @default(now())
+
+  @@index([hospitalId])
+}
+
+model OcorrenciaSeguranca {
+  id         String   @id @default(uuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  tipo       String
+  local      String
+  relato     String
+  vigilante  String
+  dataHora   DateTime @default(now())
+
+  @@index([hospitalId])
+}
+
+model OperadoraPlano {
+  id         String   @id @default(uuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  nome       String
+  codigoAns  String
+  vigencia   String
+  status     String   @default("ATIVO")
+  teto       String
+  createdAt  DateTime @default(now())
+
+  @@index([hospitalId])
+}
+
+model EstoqueSangue {
+  id         String   @id @default(uuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  tipo       String
+  quantidade Int
+  status     String   @default("NORMAL")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([hospitalId])
 }

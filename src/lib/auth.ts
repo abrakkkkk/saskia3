@@ -13,11 +13,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         hospitalId: { label: "Hospital", type: "text" },
       },
       async authorize(credentials) {
-        // 👇 AS TRÊS LINHAS DE TESTE ESTÃO AQUI 👇
-        console.log("=== DADOS QUE A TELA ENVIOU ===")
-        console.log(credentials)
-        console.log("===============================")
-
         if (
           !credentials?.email ||
           !credentials?.senha ||
@@ -62,7 +57,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           hospitalId: usuario.hospitalId,
           hospitalNome: usuario.hospital.nome,
           avatar: usuario.avatar,
-        } as any
+        }
       },
     }),
   ],
@@ -73,21 +68,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = (user as any).id
-        token.cargo = (user as any).cargo
-        token.hospitalId = (user as any).hospitalId
-        token.hospitalNome = (user as any).hospitalNome
-        token.avatar = (user as any).avatar
+        token.id = user.id as string
+        token.cargo = user.cargo as string
+        token.hospitalId = user.hospitalId as string
+        token.hospitalNome = user.hospitalNome as string
+        token.avatar = user.avatar as string | null
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
-        ;(session.user as any).id = token.id
-        ;(session.user as any).cargo = token.cargo
-        ;(session.user as any).hospitalId = token.hospitalId
-        ;(session.user as any).hospitalNome = token.hospitalNome
-        ;(session.user as any).avatar = token.avatar
+        session.user.id = token.id as string
+        session.user.cargo = token.cargo as string
+        session.user.hospitalId = token.hospitalId as string
+        session.user.hospitalNome = token.hospitalNome as string
+        session.user.avatar = token.avatar as string | null
       }
       return session
     },
