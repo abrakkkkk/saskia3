@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const mensagem = await prisma.mensagemChat.create({
       data: {
         hospitalId,
-        remetente: session.user.nome || 'Usuário',
+        remetente: session.user.name || 'Usuário',
         texto: body.texto,
       }
     });
