@@ -48,8 +48,7 @@ export async function POST(request: NextRequest) {
         minimo: body.minimo ? Number(body.minimo) : 0,
         lote: body.lote || null,
         validade: body.validade ? new Date(body.validade) : null,
-        fornecedor: body.fornecedor || null,
-        valorUnit: body.valorUnit ? Number(body.valorUnit) : null
+        fornecedor: body.fornecedor || null
       }
     })
 

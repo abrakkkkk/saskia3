@@ -37,9 +37,8 @@ export async function POST(request: NextRequest) {
         hospitalId,
         titulo: body.titulo,
         descricao: body.descricao,
-        tipo: body.tipo || 'TI',
         prioridade: body.prioridade || 'MEDIA',
-        status: 'ABERTO',
+        status: 'ENVIADO',
         solicitante: session.user.name || 'Usuário do Sistema'
       }
     })
