@@ -7,7 +7,7 @@ import { calcularIdade, MANCHESTER_CORES, STATUS_CORES } from '@/lib/utils'
 import { Triagem, Evolucao, Prescricao } from '@prisma/client'
 
 interface Paciente {
-  id: string; nome: string; cpf: string; nascimento: string; sexo: string
+  id: string; nome: string; cpf: string; rg: string; nascimento: string; sexo: string
   telefone: string; email: string; endereco: string; convenio: string
   status: string; classificacao: string; leitoTipo: string; leitoNumero: number
   queixaPrincipal: string; alergias: string; tipoSanguineo: string
@@ -18,15 +18,53 @@ interface Paciente {
 export default function FichaPacientePage() {
   const params = useParams()
   const [paciente, setPaciente] = useState<Paciente | null>(null)
-  const [loading, setLoading] = useState (true)
-  const [tab, setTab] = useState ('dados')
+  const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState('dados')
 
-  useEffect (() => {
-    fetch (`/api/pacientes/${params.id}`)
-      .then (response => response.json())
-      .then (data => { setPaciente(data); setLoading(false); })
-      .catch (() => setLoading(false))
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [formData, setFormData] = useState({
+    nome: '', cpf: '', rg: '', nascimento: '', sexo: '',
+    telefone: '', email: '', endereco: '', convenio: '',
+    mae: '', pai: '', profissao: '', estadoCivil: '',
+    queixaPrincipal: '', alergias: '', tipoSanguineo: ''
+  })
+
+  const carregarPaciente = () => {
+    fetch(`/api/pacientes/${params.id}`)
+      .then(response => response.json())
+      .then(data => { setPaciente(data); setLoading(false); })
+      .catch(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    carregarPaciente()
   }, [params.id])
+
+  const salvarEdicao = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSaving(true)
+    try {
+      const res = await fetch(`/api/pacientes/${params.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          nascimento: formData.nascimento ? new Date(formData.nascimento).toISOString() : null
+        })
+      })
+      if (res.ok) {
+        setIsEditing(false)
+        carregarPaciente()
+      } else {
+        alert('Erro ao atualizar paciente')
+      }
+    } catch {
+      alert('Erro de conexão ao salvar')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   if (loading) return <div className="module-placeholder"><i className="las la-spinner la-spin" style={{ fontSize: 40 }}></i><h2>Carregando...</h2></div>
   if (!paciente) return <div className="module-placeholder"><i className="las la-exclamation-triangle"></i><h2>Paciente não encontrado</h2></div>
@@ -83,19 +121,129 @@ export default function FichaPacientePage() {
 
       <div className="card" style={{ padding: 30 }}>
         {tab === 'dados' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20 }}>
-            {[
-              ['Nome', paciente.nome], ['CPF', paciente.cpf], ['Nascimento', paciente.nascimento ? new Date (paciente.nascimento).toLocaleDateString ('pt-BR') : '-'],
-              ['Sexo', paciente.sexo], ['Telefone', paciente.telefone], ['Email', paciente.email],
-              ['Endereço', paciente.endereco], ['Convênio', paciente.convenio], ['Tipo Sanguíneo', paciente.tipoSanguineo],
-              ['Alergias', paciente.alergias], ['Mãe', paciente.mae], ['Pai', paciente.pai],
-              ['Profissão', paciente.profissao], ['Estado Civil', paciente.estadoCivil], ['Queixa Principal', paciente.queixaPrincipal]
-            ].map (([label, value]) => (
-              <div key={label}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
-                <div style={{ fontSize: 14, color: '#0a1f44', fontWeight: 500 }}>{value || '-'}</div>
-              </div>
-            ))}
+          <div>
+            {!isEditing ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20 }}>
+                  <button className="btn btn-outline btn-sm" onClick={() => {
+                    setFormData({
+                      nome: paciente.nome || '',
+                      cpf: paciente.cpf || '',
+                      rg: paciente.rg || '',
+                      nascimento: paciente.nascimento ? new Date(paciente.nascimento).toISOString().split('T')[0] : '',
+                      sexo: paciente.sexo || '',
+                      telefone: paciente.telefone || '',
+                      email: paciente.email || '',
+                      endereco: paciente.endereco || '',
+                      convenio: paciente.convenio || '',
+                      mae: paciente.mae || '',
+                      pai: paciente.pai || '',
+                      profissao: paciente.profissao || '',
+                      estadoCivil: paciente.estadoCivil || '',
+                      queixaPrincipal: paciente.queixaPrincipal || '',
+                      alergias: paciente.alergias || '',
+                      tipoSanguineo: paciente.tipoSanguineo || ''
+                    });
+                    setIsEditing(true);
+                  }}>
+                    <i className="las la-pen"></i> Editar Cadastro
+                  </button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20 }}>
+                  {[
+                    ['Nome', paciente.nome], ['CPF', paciente.cpf], ['Nascimento', paciente.nascimento ? new Date (paciente.nascimento).toLocaleDateString ('pt-BR') : '-'],
+                    ['Sexo', paciente.sexo], ['Telefone', paciente.telefone], ['Email', paciente.email],
+                    ['Endereço', paciente.endereco], ['Convênio', paciente.convenio], ['Tipo Sanguíneo', paciente.tipoSanguineo],
+                    ['Alergias', paciente.alergias], ['Mãe', paciente.mae], ['Pai', paciente.pai],
+                    ['Profissão', paciente.profissao], ['Estado Civil', paciente.estadoCivil], ['Queixa Principal', paciente.queixaPrincipal]
+                  ].map (([label, value]) => (
+                    <div key={label}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
+                      <div style={{ fontSize: 14, color: '#0a1f44', fontWeight: 500 }}>{value || '-'}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <form onSubmit={salvarEdicao}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Nome Completo *</label>
+                    <input required className="input-field" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>CPF</label>
+                    <input className="input-field" value={formData.cpf} onChange={e => setFormData({...formData, cpf: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>RG</label>
+                    <input className="input-field" value={formData.rg} onChange={e => setFormData({...formData, rg: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Data de Nascimento *</label>
+                    <input required type="date" className="input-field" value={formData.nascimento} onChange={e => setFormData({...formData, nascimento: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Sexo</label>
+                    <select className="input-field" value={formData.sexo} onChange={e => setFormData({...formData, sexo: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }}>
+                      <option value="">Selecione...</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option><option value="Outro">Outro</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Telefone</label>
+                    <input className="input-field" value={formData.telefone} onChange={e => setFormData({...formData, telefone: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>E-mail</label>
+                    <input type="email" className="input-field" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Endereço Completo</label>
+                    <input className="input-field" value={formData.endereco} onChange={e => setFormData({...formData, endereco: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Nome da Mãe</label>
+                    <input className="input-field" value={formData.mae} onChange={e => setFormData({...formData, mae: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Nome do Pai</label>
+                    <input className="input-field" value={formData.pai} onChange={e => setFormData({...formData, pai: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Convênio</label>
+                    <input className="input-field" value={formData.convenio} onChange={e => setFormData({...formData, convenio: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Profissão</label>
+                    <input className="input-field" value={formData.profissao} onChange={e => setFormData({...formData, profissao: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Estado Civil</label>
+                    <input className="input-field" value={formData.estadoCivil} onChange={e => setFormData({...formData, estadoCivil: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Tipo Sanguíneo</label>
+                    <select className="input-field" value={formData.tipoSanguineo} onChange={e => setFormData({...formData, tipoSanguineo: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }}>
+                      <option value="">Desconhecido</option><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="AB+">AB+</option><option value="AB-">AB-</option><option value="O+">O+</option><option value="O-">O-</option>
+                    </select>
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Alergias</label>
+                    <input className="input-field" value={formData.alergias} onChange={e => setFormData({...formData, alergias: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 5 }}>Queixa Principal</label>
+                    <input className="input-field" value={formData.queixaPrincipal} onChange={e => setFormData({...formData, queixaPrincipal: e.target.value})} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+                  <button type="button" onClick={() => setIsEditing(false)} className="btn btn-outline">Cancelar</button>
+                  <button type="submit" className="btn btn-primary" disabled={isSaving}>
+                    {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         )}
 
