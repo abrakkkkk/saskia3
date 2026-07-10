@@ -57,7 +57,7 @@ export default function ServicoSocialPage() {
           <p>Acompanhamento de pacientes em vulnerabilidade e apoio familiar</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" style={{ background: '#d946ef' }} onClick={() => setModalAberto(true)}>
+          <button className="btn btn-primary"  onClick={() => setModalAberto(true)}>
             <i className="las la-plus"></i> Novo Caso
           </button>
         </div>
@@ -101,7 +101,7 @@ export default function ServicoSocialPage() {
                     <td style={{ maxWidth: '300px', fontSize: '13px', color: '#475569' }}>{c.detalhe}</td>
                     <td><div style={{ fontWeight: 700, color: '#f59e0b' }}>{c.status}</div></td>
                     <td>
-                      <button className="btn-primary" style={{ background: 'transparent', color: '#d946ef', border: '1px solid #fbcfe8', padding: '6px 12px' }}>
+                      <button className="btn btn-primary" style={{ background: 'transparent', color: '#d946ef', border: '1px solid #fbcfe8', padding: '6px 12px' }}>
                         Atualizar Evolução
                       </button>
                     </td>
@@ -138,7 +138,7 @@ export default function ServicoSocialPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white' }}>Cancelar</button>
-                <button type="submit" className="btn-primary" style={{ padding: '10px', background: '#d946ef' }}>Abrir Caso</button>
+                <button type="submit" className="btn btn-primary" >Abrir Caso</button>
               </div>
             </form>
           </div>

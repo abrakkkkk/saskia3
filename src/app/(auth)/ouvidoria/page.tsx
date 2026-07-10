@@ -63,7 +63,7 @@ export default function OuvidoriaPage() {
           <p>Gestão de reclamações, elogios e sugestões de pacientes</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" style={{ background: '#475569' }} onClick={() => setModalAberto(true)}>
+          <button className="btn btn-primary"  onClick={() => setModalAberto(true)}>
             <i className="las la-plus"></i> Nova Manifestação
           </button>
         </div>
@@ -125,7 +125,7 @@ export default function OuvidoriaPage() {
                       <div style={{ fontSize: '11px', color: t.prazo.includes('Vence') ? '#ef4444' : '#64748b' }}>{t.prazo}</div>
                     </td>
                     <td>
-                      <button className="btn-primary" style={{ background: 'transparent', color: '#3b82f6', border: '1px solid #bfdbfe', padding: '6px 12px', fontSize: '12px' }}>
+                      <button className="btn btn-primary" style={{ background: 'transparent', color: '#3b82f6', border: '1px solid #bfdbfe', padding: '6px 12px', fontSize: '12px' }}>
                         Responder
                       </button>
                     </td>
@@ -164,7 +164,7 @@ export default function OuvidoriaPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white' }}>Cancelar</button>
-                <button type="submit" className="btn-primary" style={{ padding: '10px' }}>Registrar</button>
+                <button type="submit" className="btn btn-primary" >Registrar</button>
               </div>
             </form>
           </div>

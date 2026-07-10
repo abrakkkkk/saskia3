@@ -56,7 +56,7 @@ export default function ObitosPage() {
           <p>Controle e emissão de Declarações de Óbito (DO)</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" style={{ background: '#1e293b' }} onClick={() => setModalAberto(true)}>
+          <button className="btn btn-primary"  onClick={() => setModalAberto(true)}>
             <i className="las la-plus"></i> Registrar Óbito
           </button>
         </div>
@@ -100,7 +100,7 @@ export default function ObitosPage() {
                     <td>{o.medicoCrm}</td>
                     <td><span className="status-badge" style={{ background: '#f1f5f9', color: '#475569' }}>Emitida</span></td>
                     <td>
-                      <button className="btn-primary" style={{ background: 'transparent', color: '#3b82f6', border: '1px solid #bfdbfe', padding: '6px 12px' }}>
+                      <button className="btn btn-primary" style={{ background: 'transparent', color: '#3b82f6', border: '1px solid #bfdbfe', padding: '6px 12px' }}>
                         <i className="las la-print"></i> Imprimir DO
                       </button>
                     </td>
@@ -135,7 +135,7 @@ export default function ObitosPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white' }}>Cancelar</button>
-                <button type="submit" className="btn-primary" style={{ padding: '10px', background: '#1e293b' }}>Salvar Registro</button>
+                <button type="submit" className="btn btn-primary" >Salvar Registro</button>
               </div>
             </form>
           </div>

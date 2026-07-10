@@ -79,7 +79,7 @@ export default function FaturamentoPage() {
           <p>Gestão de contas médicas, guias TISS e recebimentos</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" style={{ background: '#10b981' }} onClick={() => setShowNovaConta(!showNovaConta)}>
+          <button className="btn btn-primary"  onClick={() => setShowNovaConta(!showNovaConta)}>
             <i className="las la-plus-circle"></i> Gerar Guia
           </button>
         </div>
@@ -111,7 +111,7 @@ export default function FaturamentoPage() {
               <label style={{ display: 'block', fontSize: '13px', color: '#064e3b', marginBottom: '5px' }}>Valor (R$)</label>
               <input type="number" step="0.01" className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #a7f3d0' }} value={novoValor} onChange={(e) => setNovoValor(e.target.value)} />
             </div>
-            <button className="btn-primary" style={{ padding: '10px 20px', height: '42px', background: '#059669' }} onClick={gerarGuia}>
+            <button className="btn btn-primary"  onClick={gerarGuia}>
               Salvar Guia
             </button>
           </div>
@@ -185,7 +185,7 @@ export default function FaturamentoPage() {
                   <td>
                     {f.status !== 'PAGO' && f.status !== 'GLOSADO' && (
                       <button 
-                        className="btn-primary" 
+                        className="btn btn-primary" 
                         style={{ padding: '6px 12px', fontSize: '12px', background: 'transparent', color: '#10b981', border: '1px solid #10b981' }} 
                         onClick={() => avancarStatus(f.id, f.status)}
                       >

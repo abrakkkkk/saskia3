@@ -55,7 +55,7 @@ export default function PlanosPage() {
           <p>Gestão de convênios, credenciamento e faturamento ANS</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" style={{ background: '#3b82f6' }} onClick={() => setModalAberto(true)}>
+          <button className="btn btn-primary"  onClick={() => setModalAberto(true)}>
             <i className="las la-plus"></i> Nova Operadora
           </button>
         </div>
@@ -107,7 +107,7 @@ export default function PlanosPage() {
                       </span>
                     </td>
                     <td>
-                      <button className="btn-primary" style={{ background: 'transparent', color: '#3b82f6', border: '1px solid #bfdbfe', padding: '6px 12px' }}>
+                      <button className="btn btn-primary" style={{ background: 'transparent', color: '#3b82f6', border: '1px solid #bfdbfe', padding: '6px 12px' }}>
                         Tabela de Preços
                       </button>
                     </td>
@@ -150,7 +150,7 @@ export default function PlanosPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white' }}>Cancelar</button>
-                <button type="submit" className="btn-primary" style={{ padding: '10px', background: '#3b82f6' }}>Salvar</button>
+                <button type="submit" className="btn btn-primary" >Salvar</button>
               </div>
             </form>
           </div>

@@ -90,7 +90,7 @@ export default function UtiPage() {
           <p>Visão de ocupação em tempo real</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" onClick={() => setShowNovoLeito(!showNovoLeito)}>
+          <button className="btn btn-primary" onClick={() => setShowNovoLeito(!showNovoLeito)}>
             <i className="las la-plus"></i> Novo Leito
           </button>
         </div>
@@ -112,7 +112,7 @@ export default function UtiPage() {
                 <option value="NEONATAL">Neonatal</option>
               </select>
             </div>
-            <button className="btn-primary" style={{ padding: '10px 20px', height: '42px' }} onClick={criarLeito}>
+            <button className="btn btn-primary"  onClick={criarLeito}>
               Salvar
             </button>
           </div>

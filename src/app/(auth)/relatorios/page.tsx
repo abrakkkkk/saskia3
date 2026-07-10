@@ -24,7 +24,7 @@ export default function RelatoriosPage() {
           <p>Visão estratégica e Business Intelligence (BI)</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" style={{ background: '#475569' }}>
+          <button className="btn btn-primary" >
             <i className="las la-file-export"></i> Exportar PDF
           </button>
         </div>

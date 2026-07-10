@@ -100,7 +100,7 @@ export default function ChamadosTiPage() {
           <p>Suporte técnico e manutenção predial do hospital</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
+          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
             <i className="las la-plus"></i> Abrir Chamado
           </button>
         </div>
@@ -141,7 +141,7 @@ export default function ChamadosTiPage() {
           </div>
           
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '15px' }}>
-            <button className="btn-primary" style={{ padding: '10px 20px' }} onClick={abrirChamado}>
+            <button className="btn btn-primary"  onClick={abrirChamado}>
               Enviar Solicitação
             </button>
           </div>
@@ -199,7 +199,7 @@ export default function ChamadosTiPage() {
                     <td>
                       {ticket.status !== 'RESOLVIDO' && ticket.status !== 'CANCELADO' && (
                         <button 
-                          className="btn-primary" 
+                          className="btn btn-primary" 
                           style={{ padding: '6px 12px', fontSize: '12px', background: 'transparent', color: '#3b82f6', border: '1px solid #bfdbfe' }}
                           onClick={() => atualizarStatusFake(ticket.id, ticket.status)}
                         >

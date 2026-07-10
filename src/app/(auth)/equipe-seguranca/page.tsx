@@ -55,7 +55,7 @@ export default function EquipeSegurancaPage() {
           <p>Registro de ocorrências, controle de acesso e monitoramento</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" style={{ background: '#1e293b' }} onClick={() => setModalAberto(true)}>
+          <button className="btn btn-primary"  onClick={() => setModalAberto(true)}>
             <i className="las la-plus"></i> Registrar Ocorrência
           </button>
         </div>
@@ -141,7 +141,7 @@ export default function EquipeSegurancaPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white' }}>Cancelar</button>
-                <button type="submit" className="btn-primary" style={{ padding: '10px', background: '#1e293b' }}>Gravar Ocorrência</button>
+                <button type="submit" className="btn btn-primary" >Gravar Ocorrência</button>
               </div>
             </form>
           </div>

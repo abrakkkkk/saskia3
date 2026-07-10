@@ -129,7 +129,7 @@ export default function ExamesPage() {
               <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>Nome / Especificação</label>
               <input type="text" className="input-field" placeholder="Ex: Hemograma Completo" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} value={nomeExame} onChange={(e) => setNomeExame(e.target.value)} />
             </div>
-            <button className="btn-primary" style={{ justifyContent: 'center', padding: '12px' }} onClick={solicitarExame}>
+            <button className="btn btn-primary" style={{ justifyContent: 'center', padding: '12px' }} onClick={solicitarExame}>
               <i className="las la-plus"></i> Criar Solicitação
             </button>
           </div>
@@ -174,14 +174,14 @@ export default function ExamesPage() {
                       <td>
                         {exame.status !== 'CONCLUIDO' ? (
                           <button 
-                            className="btn-primary" 
+                            className="btn btn-primary" 
                             style={{ padding: '6px 12px', fontSize: '12px' }}
                             onClick={() => atualizarStatusFake(exame.id, exame.status)}
                           >
                             <i className="las la-step-forward"></i> Avançar Status
                           </button>
                         ) : (
-                          <button className="btn-primary" style={{ padding: '6px 12px', fontSize: '12px', background: '#3b82f6' }}>
+                          <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '12px', background: '#3b82f6' }}>
                             <i className="las la-file-pdf"></i> Resultado
                           </button>
                         )}

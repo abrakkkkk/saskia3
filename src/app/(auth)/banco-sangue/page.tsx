@@ -56,7 +56,7 @@ export default function BancoSanguePage() {
           <p>Gestão de bolsas de sangue, hemocomponentes e transfusões</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" style={{ background: '#ef4444' }} onClick={() => setModalAberto(true)}>
+          <button className="btn btn-primary"  onClick={() => setModalAberto(true)}>
             <i className="las la-plus"></i> Entrada de Bolsas
           </button>
         </div>
@@ -112,7 +112,7 @@ export default function BancoSanguePage() {
                       </span>
                     </td>
                     <td>
-                      <button className="btn-primary" style={{ background: 'transparent', color: '#ef4444', border: '1px solid #fca5a5', padding: '6px 12px' }}>
+                      <button className="btn btn-primary" style={{ background: 'transparent', color: '#ef4444', border: '1px solid #fca5a5', padding: '6px 12px' }}>
                         <i className="las la-minus"></i> Baixa (Transfusão)
                       </button>
                     </td>
@@ -148,7 +148,7 @@ export default function BancoSanguePage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white' }}>Cancelar</button>
-                <button type="submit" className="btn-primary" style={{ padding: '10px', background: '#ef4444' }}>Registrar Entrada</button>
+                <button type="submit" className="btn btn-primary" >Registrar Entrada</button>
               </div>
             </form>
           </div>

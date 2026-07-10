@@ -57,7 +57,7 @@ export default function TransportePage() {
           <p>Controle de ambulâncias e veículos logísticos</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" style={{ background: '#f97316' }} onClick={() => setModalAberto(true)}>
+          <button className="btn btn-primary"  onClick={() => setModalAberto(true)}>
             <i className="las la-plus"></i> Novo Veículo
           </button>
         </div>
@@ -110,7 +110,7 @@ export default function TransportePage() {
                       </span>
                     </td>
                     <td>
-                      <button className="btn-primary" style={{ background: 'transparent', color: '#3b82f6', border: '1px solid #bfdbfe', padding: '6px 12px' }}>
+                      <button className="btn btn-primary" style={{ background: 'transparent', color: '#3b82f6', border: '1px solid #bfdbfe', padding: '6px 12px' }}>
                         Atualizar Local
                       </button>
                     </td>
@@ -154,7 +154,7 @@ export default function TransportePage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white' }}>Cancelar</button>
-                <button type="submit" className="btn-primary" style={{ padding: '10px', background: '#f97316' }}>Salvar</button>
+                <button type="submit" className="btn btn-primary" >Salvar</button>
               </div>
             </form>
           </div>

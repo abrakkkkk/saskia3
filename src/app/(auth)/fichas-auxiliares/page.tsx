@@ -130,7 +130,7 @@ export default function FichasAuxiliaresPage() {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-                  <button className="btn-primary" style={{ padding: '12px 24px', background: '#3b82f6' }}>
+                  <button className="btn btn-primary" style={{ padding: '12px 24px', background: '#3b82f6' }}>
                     <i className="las la-save"></i> Salvar Avaliação no Prontuário
                   </button>
                 </div>

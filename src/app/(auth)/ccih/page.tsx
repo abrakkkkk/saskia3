@@ -62,7 +62,7 @@ export default function CcihPage() {
           <p>Comissão de Controle de Infecção Hospitalar e Vigilância</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" style={{ background: '#dc2626' }} onClick={() => setShowNovo(!showNovo)}>
+          <button className="btn btn-primary"  onClick={() => setShowNovo(!showNovo)}>
             <i className="las la-exclamation-triangle"></i> Reportar Infecção
           </button>
         </div>
@@ -104,7 +104,7 @@ export default function CcihPage() {
               <input type="checkbox" checked={isolamento} onChange={(e) => setIsolamento(e.target.checked)} style={{ width: '18px', height: '18px' }} />
               Paciente em Isolamento de Contato
             </label>
-            <button className="btn-primary" style={{ background: '#b91c1c', padding: '10px 20px' }} onClick={registrarCaso}>
+            <button className="btn btn-primary" style={{ background: '#b91c1c', padding: '10px 20px' }} onClick={registrarCaso}>
               Registrar no CCIH
             </button>
           </div>
@@ -192,7 +192,7 @@ export default function CcihPage() {
                       )}
                     </td>
                     <td>
-                      <button className="btn-primary" style={{ padding: '6px 12px', fontSize: '12px', background: 'transparent', color: '#10b981', border: '1px solid #10b981' }} onClick={() => setPacientes(pacientes.filter(x => x.id !== p.id))}>
+                      <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '12px', background: 'transparent', color: '#10b981', border: '1px solid #10b981' }} onClick={() => setPacientes(pacientes.filter(x => x.id !== p.id))}>
                         <i className="las la-check-circle"></i> Alta/Cura
                       </button>
                     </td>

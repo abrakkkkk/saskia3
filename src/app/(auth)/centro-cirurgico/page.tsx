@@ -172,7 +172,7 @@ export default function CentroCirurgicoPage() {
               <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>Data e Hora</label>
               <input type="datetime-local" className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} value={dataHora} onChange={(e) => setDataHora(e.target.value)} />
             </div>
-            <button className="btn-primary" style={{ justifyContent: 'center', padding: '12px', marginTop: '10px' }} onClick={agendarCirurgia}>
+            <button className="btn btn-primary" style={{ justifyContent: 'center', padding: '12px', marginTop: '10px' }} onClick={agendarCirurgia}>
               Agendar Procedimento
             </button>
           </div>
@@ -216,7 +216,7 @@ export default function CentroCirurgicoPage() {
                       <td>
                         {cir.status !== 'CONCLUIDA' && cir.status !== 'CANCELADA' && (
                           <button 
-                            className="btn-primary" 
+                            className="btn btn-primary" 
                             style={{ padding: '6px 12px', fontSize: '12px' }}
                             onClick={() => atualizarStatusFake(cir.id, cir.status)}
                           >

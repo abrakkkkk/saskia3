@@ -110,7 +110,7 @@ export default function VacinacaoPage() {
                     ) : (
                       <button 
                         onClick={() => aplicarVacina(vacina.id)}
-                        className="btn-primary" 
+                        className="btn btn-primary" 
                         style={{ padding: '8px 16px', background: vacina.status === 'ATRASADA' ? '#ef4444' : '#3b82f6' }}
                       >
                         Registrar Aplicação

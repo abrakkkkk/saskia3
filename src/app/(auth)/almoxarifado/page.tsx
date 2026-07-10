@@ -120,7 +120,7 @@ export default function AlmoxarifadoPage() {
               <input type="text" className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} />
             </div>
 
-            <button className="btn-primary" style={{ justifyContent: 'center', padding: '12px', marginTop: '10px' }} onClick={cadastrarMaterial}>
+            <button className="btn btn-primary" style={{ justifyContent: 'center', padding: '12px', marginTop: '10px' }} onClick={cadastrarMaterial}>
               <i className="las la-truck-loading"></i> Registrar Entrada
             </button>
           </div>
@@ -162,7 +162,7 @@ export default function AlmoxarifadoPage() {
                       </td>
                       <td>{checarAlerta(mat)}</td>
                       <td>
-                        <button className="btn-primary" style={{ padding: '6px 12px', fontSize: '12px', background: '#3b82f6' }}>
+                        <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '12px', background: '#3b82f6' }}>
                           <i className="las la-dolly"></i> Retirar
                         </button>
                       </td>

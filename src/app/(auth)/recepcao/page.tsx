@@ -101,7 +101,7 @@ export default function RecepcaoPage() {
           <p>Gestão de chegada de pacientes e encaminhamentos</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" onClick={() => setModalAberto(true)}>
+          <button className="btn btn-primary" onClick={() => setModalAberto(true)}>
             <i className="las la-plus"></i> Novo Paciente
           </button>
         </div>
@@ -151,14 +151,14 @@ export default function RecepcaoPage() {
                       <td>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button 
-                            className="btn-primary" 
+                            className="btn btn-primary" 
                             style={{ padding: '6px 12px', fontSize: '12px' }}
                             onClick={() => chamarPainel(paciente)}
                           >
                             <i className="las la-bullhorn"></i> Chamar
                           </button>
                           <button 
-                            className="btn-primary" 
+                            className="btn btn-primary" 
                             style={{ padding: '6px 12px', fontSize: '12px', background: 'linear-gradient(135deg, #10b981, #059669)' }}
                             onClick={() => enviarParaTriagem(paciente.id)}
                           >
@@ -213,7 +213,7 @@ export default function RecepcaoPage() {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
                 <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" className="btn-primary" style={{ padding: '10px 20px' }}>Salvar Cadastro</button>
+                <button type="submit" className="btn btn-primary" >Salvar Cadastro</button>
               </div>
             </form>
           </div>

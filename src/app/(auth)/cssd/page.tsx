@@ -54,10 +54,10 @@ export default function CssdPage() {
               <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '15px' }}><i className="las la-map-marker"></i> {item.setorOrigem}</div>
               
               <div style={{ display: 'flex', gap: '5px' }}>
-                {statusKey === 'SUJA' && <button className="btn-primary" style={{ padding: '6px', fontSize: '11px', flex: 1, justifyContent: 'center' }} onClick={() => moverLote(item.id, 'PREPARO')}>Lavado <i className="las la-arrow-right"></i></button>}
-                {statusKey === 'PREPARO' && <button className="btn-primary" style={{ padding: '6px', fontSize: '11px', flex: 1, justifyContent: 'center', background: '#3b82f6' }} onClick={() => moverLote(item.id, 'AUTOCLAVE')}>Autoclave <i className="las la-arrow-right"></i></button>}
-                {statusKey === 'AUTOCLAVE' && <button className="btn-primary" style={{ padding: '6px', fontSize: '11px', flex: 1, justifyContent: 'center', background: '#10b981' }} onClick={() => moverLote(item.id, 'ARSENAL')}>Estéril <i className="las la-check"></i></button>}
-                {statusKey === 'ARSENAL' && <button className="btn-primary" style={{ padding: '6px', fontSize: '11px', flex: 1, justifyContent: 'center', background: '#64748b' }} onClick={() => moverLote(item.id, 'SUJA')}>Usado <i className="las la-undo"></i></button>}
+                {statusKey === 'SUJA' && <button className="btn btn-primary" style={{ padding: '6px', fontSize: '11px', flex: 1, justifyContent: 'center' }} onClick={() => moverLote(item.id, 'PREPARO')}>Lavado <i className="las la-arrow-right"></i></button>}
+                {statusKey === 'PREPARO' && <button className="btn btn-primary" style={{ padding: '6px', fontSize: '11px', flex: 1, justifyContent: 'center', background: '#3b82f6' }} onClick={() => moverLote(item.id, 'AUTOCLAVE')}>Autoclave <i className="las la-arrow-right"></i></button>}
+                {statusKey === 'AUTOCLAVE' && <button className="btn btn-primary" style={{ padding: '6px', fontSize: '11px', flex: 1, justifyContent: 'center', background: '#10b981' }} onClick={() => moverLote(item.id, 'ARSENAL')}>Estéril <i className="las la-check"></i></button>}
+                {statusKey === 'ARSENAL' && <button className="btn btn-primary" style={{ padding: '6px', fontSize: '11px', flex: 1, justifyContent: 'center', background: '#64748b' }} onClick={() => moverLote(item.id, 'SUJA')}>Usado <i className="las la-undo"></i></button>}
               </div>
             </div>
           ))}
@@ -92,7 +92,7 @@ export default function CssdPage() {
               <option value="UTI">UTI</option>
             </select>
           </div>
-          <button className="btn-primary" style={{ padding: '10px 20px', height: '42px', background: '#ef4444' }} onClick={registrarEntrada}>
+          <button className="btn btn-primary"  onClick={registrarEntrada}>
             <i className="las la-biohazard"></i> Dar Entrada
           </button>
         </div>

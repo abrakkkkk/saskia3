@@ -140,7 +140,7 @@ export default function FarmaciaPage() {
               <input type="text" className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} />
             </div>
 
-            <button className="btn-primary" style={{ justifyContent: 'center', padding: '12px', marginTop: '10px' }} onClick={cadastrarMedicamento}>
+            <button className="btn btn-primary" style={{ justifyContent: 'center', padding: '12px', marginTop: '10px' }} onClick={cadastrarMedicamento}>
               <i className="las la-save"></i> Registrar Entrada
             </button>
           </div>

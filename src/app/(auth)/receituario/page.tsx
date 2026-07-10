@@ -135,7 +135,7 @@ export default function ReceituarioPage() {
                     onChange={(e) => setPosologia(e.target.value)}
                   />
                 </div>
-                <button className="btn-primary" style={{ padding: '10px 20px', height: '84px' }} onClick={adicionarMedicamento}>
+                <button className="btn btn-primary" style={{ padding: '10px 20px', height: '84px' }} onClick={adicionarMedicamento}>
                   <i className="las la-plus" style={{ fontSize: '24px' }}></i>
                 </button>
               </div>
@@ -171,7 +171,7 @@ export default function ReceituarioPage() {
               ></textarea>
             </div>
 
-            <button className="btn-primary" style={{ padding: '14px', fontSize: '16px', justifyContent: 'center' }} onClick={salvarReceita}>
+            <button className="btn btn-primary" style={{ padding: '14px', fontSize: '16px', justifyContent: 'center' }} onClick={salvarReceita}>
               <i className="las la-print"></i> Gerar e Salvar Prescrição
             </button>
           </div>

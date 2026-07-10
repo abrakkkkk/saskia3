@@ -19,7 +19,7 @@ export default function ConfiguracoesPage() {
           <p>Gerencie preferências, perfis e integrações do Saskia</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" onClick={handleSave}>
+          <button className="btn btn-primary" onClick={handleSave}>
             <i className="las la-save"></i> Salvar Alterações
           </button>
         </div>
@@ -92,7 +92,7 @@ export default function ConfiguracoesPage() {
                     <div style={{ fontWeight: 600, color: '#1e293b' }}>Enfermeiros Assistenciais</div>
                     <div style={{ fontSize: '12px', color: '#64748b' }}>Acesso à Triagem, Evolução e Administração de Medicamentos</div>
                   </div>
-                  <button className="btn-primary" style={{ background: 'transparent', color: '#3b82f6', border: '1px solid #bfdbfe' }}>Editar Regras</button>
+                  <button className="btn btn-primary" >Editar Regras</button>
                 </div>
               </div>
             </div>
@@ -121,7 +121,7 @@ export default function ConfiguracoesPage() {
                     <div style={{ fontSize: '13px', color: '#64748b' }}>Motor de mensageria para envio de guias médicas.</div>
                   </div>
                   <div>
-                    <button className="btn-primary" style={{ background: '#3b82f6' }}>Conectar</button>
+                    <button className="btn btn-primary" >Conectar</button>
                   </div>
                 </div>
               </div>

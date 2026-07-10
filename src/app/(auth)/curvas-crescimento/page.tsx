@@ -52,7 +52,7 @@ export default function CurvasCrescimentoPage() {
               <input type="number" className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} value={altura} onChange={(e) => setAltura(e.target.value)} />
             </div>
 
-            <button className="btn-primary" style={{ marginTop: '10px', justifyContent: 'center' }}>
+            <button className="btn btn-primary" style={{ marginTop: '10px', justifyContent: 'center' }}>
               <i className="las la-calculator"></i> Atualizar Curva
             </button>
           </div>

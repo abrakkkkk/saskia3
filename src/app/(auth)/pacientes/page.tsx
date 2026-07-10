@@ -91,7 +91,7 @@ export default function PacientesPage() {
       <div className="page-header">
         <h2><i className="las la-user-injured"></i> Pacientes</h2>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="btn-primary" onClick={() => setModalAberto(true)}>
+          <button className="btn btn-primary" onClick={() => setModalAberto(true)}>
             <i className="las la-plus"></i> Novo Paciente
           </button>
           <Link href="/gestao-salas" className="btn btn-purple"><i className="las la-door-open"></i> Gerenciar Salas</Link>
@@ -289,7 +289,7 @@ export default function PacientesPage() {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
                 <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" className="btn-primary" style={{ padding: '10px 20px' }}>Salvar Cadastro</button>
+                <button type="submit" className="btn btn-primary" >Salvar Cadastro</button>
               </div>
             </form>
           </div>

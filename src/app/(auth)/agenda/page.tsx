@@ -50,7 +50,7 @@ export default function AgendaPage() {
           <p>Controle de agendamentos e retornos</p>
         </div>
         <div className="header-actions">
-          <button className="btn-primary" onClick={() => alert('Modal de Novo Agendamento será aberto aqui')}>
+          <button className="btn btn-primary" onClick={() => alert('Modal de Novo Agendamento será aberto aqui')}>
             <i className="las la-plus"></i> Novo Agendamento
           </button>
         </div>
@@ -122,7 +122,7 @@ export default function AgendaPage() {
                 <option>Ortopedia</option>
               </select>
             </div>
-            <button className="btn-primary" style={{ width: '100%', marginTop: '10px', justifyContent: 'center' }}>
+            <button className="btn btn-primary" style={{ width: '100%', marginTop: '10px', justifyContent: 'center' }}>
                Filtrar
             </button>
           </div>
