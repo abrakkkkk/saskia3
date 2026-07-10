@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { PrismaClient, CargoUsuario, StatusAgendamento, StatusExame, StatusCirurgia, TipoLeito, StatusOcupacao, PrioridadeTicket, StatusTicket, StatusChamada } from '@prisma/client';
+import { PrismaClient, CargoUsuario, StatusAgendamento, StatusExame, StatusCirurgia, TipoLeito, StatusOcupacao, PrioridadeTicket, StatusTicket, StatusChamada, Usuario } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
@@ -59,7 +59,7 @@ async function main() {
     { nome: 'Dra. Juliana Mendes', email: 'juliana.cardio@hospitalalfa.com', cargo: CargoUsuario.MEDICO }
   ];
 
-  const medicos: any[] = [];
+  const medicos: Usuario[] = [];
   for (const m of medicosDados) {
     const doc = await prisma.usuario.create({
       data: { ...m, hospitalId: hospital.id, senha: 'senha_criptografada_aqui' }
@@ -70,10 +70,10 @@ async function main() {
   const enfermeirosDados = [
     { nome: 'Mariana Silva', email: 'mariana.enfermagem@hospitalalfa.com', cargo: CargoUsuario.ENFERMEIRO_ASSISTENCIAL },
     { nome: 'Roberto Alves', email: 'roberto.triagem@hospitalalfa.com', cargo: CargoUsuario.ENFERMEIRO_ASSISTENCIAL },
-    { nome: 'Paula Tejeda', email: 'paula.chefe@hospitalalfa.com', cargo: CargoUsuario.ENFERMEIRO_CHEFE }
+    { nome: 'Paula Tejeda', email: 'paula.chefe@hospitalalfa.com', cargo: CargoUsuario.ENFERMEIRO_ASSISTENCIAL }
   ];
 
-  const enfermeiros: any[] = [];
+  const enfermeiros: Usuario[] = [];
   for (const e of enfermeirosDados) {
     const enf = await prisma.usuario.create({
       data: { ...e, hospitalId: hospital.id, senha: 'senha_criptografada_aqui' }
@@ -188,7 +188,7 @@ async function main() {
         hospitalId: hospital.id,
         tipo: i % 2 === 0 ? 'Imagem' : 'Laboratorial',
         nome: i % 2 === 0 ? 'Raio-X de Tórax' : 'Creatinina e Ureia',
-        status: i % 3 === 0 ? StatusExame.FINALIZADO : StatusExame.COLETADO,
+        status: i % 3 === 0 ? StatusExame.CONCLUIDO : StatusExame.COLETADO,
         profissional: medico.nome,
       }
     });
@@ -210,7 +210,7 @@ async function main() {
 
   // 5. Infraestrutura Robusta (Leitos de UTI e Enfermaria)
   console.log('Populando infraestrutura hospitalar...');
-  const leitosDados: any[] = [];
+  const leitosDados: { hospitalId: string; numero: number; tipo: TipoLeito; status: StatusOcupacao; pacienteNome: string | null }[] = [];
   for (let j = 101; j <= 110; j++) {
     leitosDados.push({
       hospitalId: hospital.id,
@@ -246,7 +246,7 @@ async function main() {
   await prisma.ticket.createMany({
     data: [
       { hospitalId: hospital.id, solicitante: 'Mariana Silva (Enfermagem)', titulo: 'Impressora do posto 2 travada', descricao: 'Não imprime etiquetas de identificação de pulseiras.', prioridade: PrioridadeTicket.ALTA, status: StatusTicket.ENVIADO },
-      { hospitalId: hospital.id, solicitante: 'Dr. Carlos Eduardo', titulo: 'Erro de Login no Prontuário', descricao: 'Lentidão intermitente ao salvar evoluções no sistema.', prioridade: PrioridadeTicket.CRITICA, status: StatusTicket.EM_ANDAMENTO }
+      { hospitalId: hospital.id, solicitante: 'Dr. Carlos Eduardo', titulo: 'Erro de Login no Prontuário', descricao: 'Lentidão intermitente ao salvar evoluções no sistema.', prioridade: PrioridadeTicket.URGENTE, status: StatusTicket.EM_ANALISE }
     ]
   });
 

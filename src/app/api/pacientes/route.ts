@@ -7,7 +7,7 @@ export async function GET() {
     const session = await auth()
     if (!session) return NextResponse.json ([], { status: 401 })
 
-    const hospitalId = (session.user as any).hospitalId
+    const hospitalId = session.user.hospitalId
     const pacientes = await prisma.paciente.findMany ({
       where: { hospitalId },
       orderBy: { createdAt: 'desc' },
@@ -28,7 +28,7 @@ export async function POST (request: NextRequest) {
     const session = await auth()
     if (!session) return NextResponse.json ({ error: 'Não autorizado' }, { status: 401 })
 
-    const hospitalId = (session.user as any).hospitalId
+    const hospitalId = session.user.hospitalId
     const body = await request.json()
 
     const paciente = await prisma.paciente.create ({

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { calcularIdade, MANCHESTER_CORES, STATUS_CORES } from '@/lib/utils'
+import { Triagem, Evolucao, Prescricao } from '@prisma/client'
 
 interface Paciente {
   id: string; nome: string; cpf: string; nascimento: string; sexo: string
@@ -11,7 +12,7 @@ interface Paciente {
   status: string; classificacao: string; leitoTipo: string; leitoNumero: number
   queixaPrincipal: string; alergias: string; tipoSanguineo: string
   mae: string; pai: string; profissao: string; estadoCivil: string
-  triagens: any[]; evolucoes: any[]; prescricoes: any[]
+  triagens: Triagem[]; evolucoes: Evolucao[]; prescricoes: Prescricao[]
 }
 
 export default function FichaPacientePage() {
@@ -100,7 +101,7 @@ export default function FichaPacientePage() {
 
         {tab === 'triagem' && (
           <div>
-            {paciente.triagens?.length > 0 ? paciente.triagens.map((t: any, i: number) => (
+            {paciente.triagens?.length > 0 ? paciente.triagens.map((t: Triagem, i: number) => (
               <div key={i} style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 15 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                   <strong style={{ color: '#0a1f44' }}>Triagem #{i + 1}</strong>
@@ -124,7 +125,7 @@ export default function FichaPacientePage() {
 
         {tab === 'evolucao' && (
           <div>
-            {paciente.evolucoes?.length > 0 ? paciente.evolucoes.map((e: any, i: number) => (
+            {paciente.evolucoes?.length > 0 ? paciente.evolucoes.map((e: Evolucao, i: number) => (
               <div key={i} style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 15 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                   <strong style={{ color: '#0a1f44' }}>{e.tipo === 'medica' ? '🩺 Evolução Médica' : '💉 Evolução de Enfermagem'}</strong>
@@ -139,7 +140,7 @@ export default function FichaPacientePage() {
 
         {tab === 'prescricao' && (
           <div>
-            {paciente.prescricoes?.length > 0 ? paciente.prescricoes.map((p: any, i: number) => (
+            {paciente.prescricoes?.length > 0 ? paciente.prescricoes.map((p: Prescricao, i: number) => (
               <div key={i} style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 15, display: 'flex', gap: 15, alignItems: 'center' }}>
                 <div style={{ width: 40, height: 40, background: '#eff6ff', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <i className="las la-pills" style={{ fontSize: 20, color: '#1e3a8a' }}></i>

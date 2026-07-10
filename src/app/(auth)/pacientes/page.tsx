@@ -23,13 +23,44 @@ export default function PacientesPage() {
   const [busca, setBusca] = useState('');
   const [pagina, setPagina] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [modalAberto, setModalAberto] = useState(false);
+  const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', nascimento: '', classificacao: 'Verde', status: 'Recepção' });
 
-  useEffect(() => {
+  const fetchPacientes = () => {
     fetch('/api/pacientes')
       .then(r => r.json())
       .then(data => { setPacientes(data); setLoading(false); })
       .catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchPacientes();
   }, []);
+
+  const criarPaciente = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/pacientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formPaciente,
+          nascimento: new Date(formPaciente.nascimento).toISOString()
+        })
+      });
+      if (res.ok) {
+        setModalAberto(false);
+        setFormPaciente({ nome: '', cpf: '', nascimento: '', classificacao: 'Verde', status: 'Recepção' });
+        fetchPacientes();
+        alert('Paciente cadastrado com sucesso!');
+      } else {
+        const errorData = await res.json();
+        alert(errorData.error || 'Erro ao cadastrar paciente.');
+      }
+    } catch (error) {
+      alert('Falha na conexão com o servidor.');
+    }
+  };
 
   const filtrados = pacientes.filter(p => {
     const matchStatus = filtroStatus === 'todos' || p.status === filtroStatus;
@@ -60,6 +91,9 @@ export default function PacientesPage() {
       <div className="page-header">
         <h2><i className="las la-user-injured"></i> Pacientes</h2>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn-primary" onClick={() => setModalAberto(true)}>
+            <i className="las la-plus"></i> Novo Paciente
+          </button>
           <Link href="/gestao-salas" className="btn btn-purple"><i className="las la-door-open"></i> Gerenciar Salas</Link>
         </div>
       </div>
@@ -133,10 +167,10 @@ export default function PacientesPage() {
                     <td>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#0a1f44' }}>
                         <span style={{
-                          width: 36, height: 36, borderRadius: '50%',
+                          width: 36, height: 36, borderRadius: 6,
                           background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: '#1e3a8a', fontWeight: 700, fontSize: 14,
+                          color: '#1e3a8a', fontWeight: 700, fontSize: 14, border: '1px solid #bfdbfe'
                         }}>
                           {getIniciais(p.nome)}
                         </span>
@@ -207,6 +241,61 @@ export default function PacientesPage() {
           </div>
         )}
       </div>
+
+      {/* Modal Novo Paciente */}
+      {modalAberto && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '500px', margin: '20px', animation: 'fadeIn 0.2s ease-out' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
+              <h3 style={{ fontSize: '20px', color: '#1e293b', margin: 0 }}><i className="las la-user-plus text-blue-600"></i> Cadastrar Paciente</h3>
+              <button onClick={() => setModalAberto(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', color: '#64748b', cursor: 'pointer' }}><i className="las la-times"></i></button>
+            </div>
+            
+            <form onSubmit={criarPaciente} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Nome Completo *</label>
+                <input required type="text" className="input-field" placeholder="Ex: Maria da Silva" value={formPaciente.nome} onChange={e => setFormPaciente({...formPaciente, nome: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>CPF</label>
+                  <input type="text" className="input-field" placeholder="000.000.000-00" value={formPaciente.cpf} onChange={e => setFormPaciente({...formPaciente, cpf: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Data de Nascimento *</label>
+                  <input required type="date" className="input-field" value={formPaciente.nascimento} onChange={e => setFormPaciente({...formPaciente, nascimento: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Status Inicial</label>
+                  <select className="input-field" value={formPaciente.status} onChange={e => setFormPaciente({...formPaciente, status: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                    <option value="Recepção">Recepção (Aguardando Triagem)</option>
+                    <option value="Internado">Internação Direta</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Risco Aparente</label>
+                  <select className="input-field" value={formPaciente.classificacao} onChange={e => setFormPaciente({...formPaciente, classificacao: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                    <option value="Azul">Não Urgente (Azul)</option>
+                    <option value="Verde">Pouco Urgente (Verde)</option>
+                    <option value="Amarelo">Urgente (Amarelo)</option>
+                    <option value="Vermelho">Emergência (Vermelho)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
+                <button type="submit" className="btn-primary" style={{ padding: '10px 20px' }}>Salvar Cadastro</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

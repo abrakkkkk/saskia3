@@ -23,10 +23,12 @@ export default function ChatbotWindow({ onClose }: { onClose: () => void }) {
   const [showSugestoes, setShowSugestoes] = useState(true);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const initialized = useRef(false);
 
   useEffect(() => {
-    if (messages.length === 0) {
-      const nome = session?.user?.name?.split(' ')[0] || 'profissional';
+    if (!initialized.current && session?.user) {
+      initialized.current = true;
+      const nome = session.user.name?.split(' ')[0] || 'profissional';
       setMessages([{
         role: 'assistant',
         content: `Olá, ${nome}! 👋 Sou o **EnfBia Bot**, seu assistente de IA do Saskia Saúde.\n\nEstou aqui para ajudar com protocolos clínicos, dúvidas sobre medicamentos, triagem, cuidados de enfermagem e muito mais.\n\nComo posso ajudar você hoje?`,
@@ -34,7 +36,7 @@ export default function ChatbotWindow({ onClose }: { onClose: () => void }) {
       }]);
     }
     inputRef.current?.focus();
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     if (messagesRef.current) {
