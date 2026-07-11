@@ -210,7 +210,7 @@ export default function GestaoSalasPage() {
   };
 
   const confirmarReserva = () => {
-    const r = {
+    const r: Reserva = {
       id: Date.now(),
       salaId: parseInt(formReserva.salaId),
       profissional: formReserva.profissional.trim(),
@@ -218,7 +218,7 @@ export default function GestaoSalasPage() {
       data: formReserva.data,
       horaInicio: formReserva.horaInicio,
       horaFim: formReserva.horaFim,
-      status: "ativa" as const
+      status: "ativa"
     };
     
     if(!r.salaId || !r.profissional || !r.data || !r.horaInicio || !r.horaFim){
