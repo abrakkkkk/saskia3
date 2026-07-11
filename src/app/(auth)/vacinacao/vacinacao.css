@@ -1,24 +1,116 @@
+.documentos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
 
-.documentos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-.doc-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 15px; cursor: pointer; }
-.doc-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
-.doc-preview { text-align: center; padding: 20px; background: #f1f5f9; border-radius: 8px; margin-bottom: 12px; }
-.doc-preview i { font-size: 42px; color: #1e3a8a; }
-.btn-voltar { background: #1e3a8a; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; }
-.btn-doc { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; margin-right: 5px; }
-.btn-ver { background: #1e3a8a; color: white; }
-.btn-baixar { background: #16a34a; color: white; }
-.modal-pdf { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10001; justify-content: center; align-items: center; }
-.modal-pdf-conteudo { background: white; width: 90%; height: 90%; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
-.modal-pdf-header { background: #1e3a8a; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
-.modal-pdf-body { flex: 1; overflow: auto; }
-.modal-pdf-body iframe { width: 100%; height: 100%; border: none; }
+.doc-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 15px;
+    cursor: pointer;
+}
+
+.doc-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.doc-preview {
+    text-align: center;
+    padding: 20px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.doc-preview i {
+    font-size: 42px;
+    color: #1e3a8a;
+}
+
+.btn-voltar {
+    background: #1e3a8a;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-doc {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 5px;
+}
+
+.btn-ver {
+    background: #1e3a8a;
+    color: white;
+}
+
+.btn-baixar {
+    background: #16a34a;
+    color: white;
+}
+
+.modal-pdf {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10001;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-pdf-conteudo {
+    background: white;
+    width: 90%;
+    height: 90%;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-pdf-header {
+    background: #1e3a8a;
+    color: white;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-pdf-body {
+    flex: 1;
+    overflow: auto;
+}
+
+.modal-pdf-body iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
 
 
-    footer a:hover {
-        color: white !important;
-        transition: all 0.3s ease;
-    }
-    footer i {
-        margin-right: 5px;
-    }
+footer a:hover {
+    color: white !important;
+    transition: all 0.3s ease;
+}
+
+footer i {
+    margin-right: 5px;
+}

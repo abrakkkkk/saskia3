@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Syringe, 
-  FileText, 
-  Eye, 
-  Download 
+import {
+  Syringe,
+  FileText,
+  Eye,
+  Download
 } from 'lucide-react';
 
 interface VacinaDoc {
@@ -51,12 +51,12 @@ export default function VacinacaoPage() {
   }, []);
   const handleDriveAction = (doc: VacinaDoc, action: 'view' | 'download') => {
     const driveFile = driveFiles.find(f => f.name === doc.nome);
-    
+
     if (!driveFile) {
       alert(`Arquivo "${doc.nome}" não encontrado no Google Drive.`);
       return;
     }
-    
+
     if (action === 'download' && driveFile.webContentLink) {
       window.open(driveFile.webContentLink, '_blank');
     } else {
@@ -87,14 +87,14 @@ export default function VacinacaoPage() {
                 {doc.titulo}
               </h4>
               <div className="mt-auto pt-4 flex gap-2">
-                <button 
+                <button
                   onClick={() => handleDriveAction(doc, 'view')}
                   className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 font-semibold py-2.5 rounded-xl hover:bg-emerald-600 hover:text-white transition-colors text-sm"
                 >
                   <Eye className="w-4 h-4" />
                   Ver
                 </button>
-                <button 
+                <button
                   onClick={() => handleDriveAction(doc, 'download')}
                   className="flex-1 flex items-center justify-center gap-2 bg-slate-50 text-slate-700 font-semibold py-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition-colors text-sm"
                 >

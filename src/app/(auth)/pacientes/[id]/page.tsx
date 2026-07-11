@@ -17,7 +17,7 @@ export default function FichaPacientePage() {
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [formData, setFormData] = useState<any>({})
-  
+
   // Triagem
   const [triagem, setTriagem] = useState({
     classificacao: '', fluxograma: '',
@@ -51,18 +51,18 @@ export default function FichaPacientePage() {
   const carregarPaciente = () => {
     fetch(`/api/pacientes/${params.id}`)
       .then(response => response.json())
-      .then(data => { 
-        setPaciente(data); 
+      .then(data => {
+        setPaciente(data);
         setFormData({
-          nome: data.nome || '', cpf: data.cpf || '', rg: data.rg || '', 
-          nascimento: data.nascimento ? new Date(data.nascimento).toISOString().split('T')[0] : '', 
-          sexo: data.sexo || '', telefone: data.telefone || '', email: data.email || '', 
+          nome: data.nome || '', cpf: data.cpf || '', rg: data.rg || '',
+          nascimento: data.nascimento ? new Date(data.nascimento).toISOString().split('T')[0] : '',
+          sexo: data.sexo || '', telefone: data.telefone || '', email: data.email || '',
           endereco: data.endereco || '', convenio: data.convenio || '',
-          mae: data.mae || '', pai: data.pai || '', profissao: data.profissao || '', 
-          estadoCivil: data.estadoCivil || '', queixaPrincipal: data.queixaPrincipal || '', 
+          mae: data.mae || '', pai: data.pai || '', profissao: data.profissao || '',
+          estadoCivil: data.estadoCivil || '', queixaPrincipal: data.queixaPrincipal || '',
           alergias: data.alergias || '', tipoSanguineo: data.tipoSanguineo || ''
         });
-        setLoading(false); 
+        setLoading(false);
       })
       .catch(() => setLoading(false))
   }
@@ -85,7 +85,7 @@ export default function FichaPacientePage() {
         if (savedEscores.dor !== undefined) setDor(savedEscores.dor)
         if (savedEscores.braden) setBraden(savedEscores.braden)
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   useEffect(() => {
@@ -113,7 +113,7 @@ export default function FichaPacientePage() {
         setIsEditing(false)
         carregarPaciente()
       } else alert('Erro ao atualizar paciente')
-    } catch { alert('Erro de conexão ao salvar') } 
+    } catch { alert('Erro de conexão ao salvar') }
     finally { setIsSaving(false) }
   }
 
@@ -125,7 +125,7 @@ export default function FichaPacientePage() {
         body: JSON.stringify({ status: novoStatus })
       })
       if (res.ok) carregarPaciente()
-    } catch {}
+    } catch { }
   }
 
   // MEWS Calculation
@@ -181,7 +181,7 @@ export default function FichaPacientePage() {
         registrarTimeline('Triagem', 'Nova triagem registrada')
         carregarPaciente()
       } else alert('Erro ao salvar triagem')
-    } catch {} finally { setIsSaving(false) }
+    } catch { } finally { setIsSaving(false) }
   }
 
   const salvarEscores = () => {
@@ -244,7 +244,7 @@ export default function FichaPacientePage() {
         registrarTimeline('Evolução', 'Evolução SOAP registrada')
         carregarPaciente()
       }
-    } catch {} finally { setIsSaving(false) }
+    } catch { } finally { setIsSaving(false) }
   }
 
   const registrarPrescricao = async () => {
@@ -260,7 +260,7 @@ export default function FichaPacientePage() {
         registrarTimeline('Prescrição', `Adicionado: ${novoMed.medicamento}`)
         carregarPaciente()
       }
-    } catch {} finally { setIsSaving(false) }
+    } catch { } finally { setIsSaving(false) }
   }
 
   const solicitarExame = async () => {
@@ -276,7 +276,7 @@ export default function FichaPacientePage() {
         registrarTimeline('Exame', `Solicitado: ${novoExame.nome}`)
         carregarPaciente()
       }
-    } catch {} finally { setIsSaving(false) }
+    } catch { } finally { setIsSaving(false) }
   }
 
   if (loading) return <div className="module-placeholder"><i className="las la-spinner la-spin" style={{ fontSize: 40 }}></i><h2>Carregando...</h2></div>
@@ -393,22 +393,22 @@ export default function FichaPacientePage() {
             ) : (
               <form onSubmit={salvarEdicao}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-                  <div style={{ gridColumn: '1 / -1' }}><label className="form-label">Nome Completo *</label><input required className="input-field" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} /></div>
-                  <div><label className="form-label">CPF</label><input className="input-field" value={formData.cpf} onChange={e => setFormData({...formData, cpf: e.target.value})} /></div>
-                  <div><label className="form-label">RG</label><input className="input-field" value={formData.rg} onChange={e => setFormData({...formData, rg: e.target.value})} /></div>
-                  <div><label className="form-label">Nascimento *</label><input required type="date" className="input-field" value={formData.nascimento} onChange={e => setFormData({...formData, nascimento: e.target.value})} /></div>
-                  <div><label className="form-label">Sexo</label><select className="input-field" value={formData.sexo} onChange={e => setFormData({...formData, sexo: e.target.value})}><option value="">Selecione...</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option><option value="Outro">Outro</option></select></div>
-                  <div><label className="form-label">Telefone</label><input className="input-field" value={formData.telefone} onChange={e => setFormData({...formData, telefone: e.target.value})} /></div>
-                  <div><label className="form-label">E-mail</label><input type="email" className="input-field" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} /></div>
-                  <div style={{ gridColumn: '1 / -1' }}><label className="form-label">Endereço Completo</label><input className="input-field" value={formData.endereco} onChange={e => setFormData({...formData, endereco: e.target.value})} /></div>
-                  <div><label className="form-label">Mãe</label><input className="input-field" value={formData.mae} onChange={e => setFormData({...formData, mae: e.target.value})} /></div>
-                  <div><label className="form-label">Pai</label><input className="input-field" value={formData.pai} onChange={e => setFormData({...formData, pai: e.target.value})} /></div>
-                  <div><label className="form-label">Convênio</label><input className="input-field" value={formData.convenio} onChange={e => setFormData({...formData, convenio: e.target.value})} /></div>
-                  <div><label className="form-label">Profissão</label><input className="input-field" value={formData.profissao} onChange={e => setFormData({...formData, profissao: e.target.value})} /></div>
-                  <div><label className="form-label">Estado Civil</label><input className="input-field" value={formData.estadoCivil} onChange={e => setFormData({...formData, estadoCivil: e.target.value})} /></div>
-                  <div><label className="form-label">Tipo Sanguíneo</label><select className="input-field" value={formData.tipoSanguineo} onChange={e => setFormData({...formData, tipoSanguineo: e.target.value})}><option value="">Desconhecido</option><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="AB+">AB+</option><option value="AB-">AB-</option><option value="O+">O+</option><option value="O-">O-</option></select></div>
-                  <div style={{ gridColumn: '1 / -1' }}><label className="form-label">Alergias</label><input className="input-field" value={formData.alergias} onChange={e => setFormData({...formData, alergias: e.target.value})} /></div>
-                  <div style={{ gridColumn: '1 / -1' }}><label className="form-label">Queixa Principal</label><input className="input-field" value={formData.queixaPrincipal} onChange={e => setFormData({...formData, queixaPrincipal: e.target.value})} /></div>
+                  <div style={{ gridColumn: '1 / -1' }}><label className="form-label">Nome Completo *</label><input required className="input-field" value={formData.nome} onChange={e => setFormData({ ...formData, nome: e.target.value })} /></div>
+                  <div><label className="form-label">CPF</label><input className="input-field" value={formData.cpf} onChange={e => setFormData({ ...formData, cpf: e.target.value })} /></div>
+                  <div><label className="form-label">RG</label><input className="input-field" value={formData.rg} onChange={e => setFormData({ ...formData, rg: e.target.value })} /></div>
+                  <div><label className="form-label">Nascimento *</label><input required type="date" className="input-field" value={formData.nascimento} onChange={e => setFormData({ ...formData, nascimento: e.target.value })} /></div>
+                  <div><label className="form-label">Sexo</label><select className="input-field" value={formData.sexo} onChange={e => setFormData({ ...formData, sexo: e.target.value })}><option value="">Selecione...</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option><option value="Outro">Outro</option></select></div>
+                  <div><label className="form-label">Telefone</label><input className="input-field" value={formData.telefone} onChange={e => setFormData({ ...formData, telefone: e.target.value })} /></div>
+                  <div><label className="form-label">E-mail</label><input type="email" className="input-field" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} /></div>
+                  <div style={{ gridColumn: '1 / -1' }}><label className="form-label">Endereço Completo</label><input className="input-field" value={formData.endereco} onChange={e => setFormData({ ...formData, endereco: e.target.value })} /></div>
+                  <div><label className="form-label">Mãe</label><input className="input-field" value={formData.mae} onChange={e => setFormData({ ...formData, mae: e.target.value })} /></div>
+                  <div><label className="form-label">Pai</label><input className="input-field" value={formData.pai} onChange={e => setFormData({ ...formData, pai: e.target.value })} /></div>
+                  <div><label className="form-label">Convênio</label><input className="input-field" value={formData.convenio} onChange={e => setFormData({ ...formData, convenio: e.target.value })} /></div>
+                  <div><label className="form-label">Profissão</label><input className="input-field" value={formData.profissao} onChange={e => setFormData({ ...formData, profissao: e.target.value })} /></div>
+                  <div><label className="form-label">Estado Civil</label><input className="input-field" value={formData.estadoCivil} onChange={e => setFormData({ ...formData, estadoCivil: e.target.value })} /></div>
+                  <div><label className="form-label">Tipo Sanguíneo</label><select className="input-field" value={formData.tipoSanguineo} onChange={e => setFormData({ ...formData, tipoSanguineo: e.target.value })}><option value="">Desconhecido</option><option value="A+">A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="AB+">AB+</option><option value="AB-">AB-</option><option value="O+">O+</option><option value="O-">O-</option></select></div>
+                  <div style={{ gridColumn: '1 / -1' }}><label className="form-label">Alergias</label><input className="input-field" value={formData.alergias} onChange={e => setFormData({ ...formData, alergias: e.target.value })} /></div>
+                  <div style={{ gridColumn: '1 / -1' }}><label className="form-label">Queixa Principal</label><input className="input-field" value={formData.queixaPrincipal} onChange={e => setFormData({ ...formData, queixaPrincipal: e.target.value })} /></div>
                 </div>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
                   <button type="button" onClick={() => setIsEditing(false)} className="btn btn-outline">Cancelar</button>
@@ -427,25 +427,25 @@ export default function FichaPacientePage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 20 }}>
               <div>
                 <label className="form-label">Classificação de Risco</label>
-                <select className="input-field" value={triagem.classificacao} onChange={e => setTriagem({...triagem, classificacao: e.target.value})}>
+                <select className="input-field" value={triagem.classificacao} onChange={e => setTriagem({ ...triagem, classificacao: e.target.value })}>
                   <option value="">Selecione...</option><option value="Vermelho">Vermelho</option><option value="Laranja">Laranja</option><option value="Amarelo">Amarelo</option><option value="Verde">Verde</option><option value="Azul">Azul</option>
                 </select>
               </div>
               <div>
                 <label className="form-label">Fluxograma Principal</label>
-                <select className="input-field" value={triagem.fluxograma} onChange={e => setTriagem({...triagem, fluxograma: e.target.value})}>
+                <select className="input-field" value={triagem.fluxograma} onChange={e => setTriagem({ ...triagem, fluxograma: e.target.value })}>
                   <option value="">Selecione...</option><option value="Dor torácica">Dor torácica</option><option value="Dispneia">Dispneia</option><option value="Febre">Febre</option><option value="Trauma">Trauma</option><option value="Dor abdominal">Dor abdominal</option>
                 </select>
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 15, marginBottom: 20, background: '#f8fafc', padding: 20, borderRadius: 12 }}>
-              <div><label className="form-label">PA</label><input type="text" className="input-field" placeholder="120/80" value={triagem.pressao} onChange={e=>setTriagem({...triagem, pressao: e.target.value})} /></div>
-              <div><label className="form-label">FC</label><input type="number" className="input-field" placeholder="80" value={triagem.frequenciaC} onChange={e=>setTriagem({...triagem, frequenciaC: e.target.value})} /></div>
-              <div><label className="form-label">FR</label><input type="number" className="input-field" placeholder="18" value={triagem.frequenciaR} onChange={e=>setTriagem({...triagem, frequenciaR: e.target.value})} /></div>
-              <div><label className="form-label">Temp</label><input type="number" step="0.1" className="input-field" placeholder="36.5" value={triagem.temperatura} onChange={e=>setTriagem({...triagem, temperatura: e.target.value})} /></div>
-              <div><label className="form-label">SatO2</label><input type="number" className="input-field" placeholder="98" value={triagem.saturacao} onChange={e=>setTriagem({...triagem, saturacao: e.target.value})} /></div>
-              <div><label className="form-label">HGT</label><input type="number" className="input-field" placeholder="90" value={triagem.glicemia} onChange={e=>setTriagem({...triagem, glicemia: e.target.value})} /></div>
-              <div><label className="form-label">AVPU</label><select className="input-field" value={triagem.avpu} onChange={e=>setTriagem({...triagem, avpu: e.target.value})}><option value="A">Alerta</option><option value="V">Voz</option><option value="P">Dor</option><option value="U">Inconsc</option></select></div>
+              <div><label className="form-label">PA</label><input type="text" className="input-field" placeholder="120/80" value={triagem.pressao} onChange={e => setTriagem({ ...triagem, pressao: e.target.value })} /></div>
+              <div><label className="form-label">FC</label><input type="number" className="input-field" placeholder="80" value={triagem.frequenciaC} onChange={e => setTriagem({ ...triagem, frequenciaC: e.target.value })} /></div>
+              <div><label className="form-label">FR</label><input type="number" className="input-field" placeholder="18" value={triagem.frequenciaR} onChange={e => setTriagem({ ...triagem, frequenciaR: e.target.value })} /></div>
+              <div><label className="form-label">Temp</label><input type="number" step="0.1" className="input-field" placeholder="36.5" value={triagem.temperatura} onChange={e => setTriagem({ ...triagem, temperatura: e.target.value })} /></div>
+              <div><label className="form-label">SatO2</label><input type="number" className="input-field" placeholder="98" value={triagem.saturacao} onChange={e => setTriagem({ ...triagem, saturacao: e.target.value })} /></div>
+              <div><label className="form-label">HGT</label><input type="number" className="input-field" placeholder="90" value={triagem.glicemia} onChange={e => setTriagem({ ...triagem, glicemia: e.target.value })} /></div>
+              <div><label className="form-label">AVPU</label><select className="input-field" value={triagem.avpu} onChange={e => setTriagem({ ...triagem, avpu: e.target.value })}><option value="A">Alerta</option><option value="V">Voz</option><option value="P">Dor</option><option value="U">Inconsc</option></select></div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 20 }}>
               <div style={{ background: mewsInfo.bg, padding: 20, borderRadius: 12, textAlign: 'center', transition: 'all 0.3s', border: `2px solid ${mewsInfo.text}` }}>
@@ -454,8 +454,8 @@ export default function FichaPacientePage() {
                 <div style={{ fontSize: 12, color: mewsInfo.text, fontWeight: 600 }}>{mewsInfo.label}</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <textarea className="input-field" rows={2} placeholder="Queixa Principal" value={triagem.queixa} onChange={e=>setTriagem({...triagem, queixa: e.target.value})}></textarea>
-                <textarea className="input-field" rows={2} placeholder="História da Doença Atual (HDA)" value={triagem.observacoes} onChange={e=>setTriagem({...triagem, observacoes: e.target.value})}></textarea>
+                <textarea className="input-field" rows={2} placeholder="Queixa Principal" value={triagem.queixa} onChange={e => setTriagem({ ...triagem, queixa: e.target.value })}></textarea>
+                <textarea className="input-field" rows={2} placeholder="História da Doença Atual (HDA)" value={triagem.observacoes} onChange={e => setTriagem({ ...triagem, observacoes: e.target.value })}></textarea>
               </div>
             </div>
             <button className="btn btn-primary" style={{ width: '100%' }} onClick={registrarTriagem} disabled={isSaving}>{isSaving ? 'Registrando...' : 'Registrar Triagem'}</button>
@@ -482,9 +482,9 @@ export default function FichaPacientePage() {
               {/* Glasgow */}
               <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px' }}>
                 <h4 style={{ color: '#1e3a8a', marginBottom: '15px' }}>Escala de Glasgow</h4>
-                <div style={{ marginBottom: 10 }}><label className="form-label">Ocular</label><select value={glasgow.ocular} onChange={e=>setGlasgow({...glasgow, ocular: parseInt(e.target.value)})} className="input-field"><option value={4}>4 - Espontânea</option><option value={3}>3 - À voz</option><option value={2}>2 - À dor</option><option value={1}>1 - Nenhuma</option></select></div>
-                <div style={{ marginBottom: 10 }}><label className="form-label">Verbal</label><select value={glasgow.verbal} onChange={e=>setGlasgow({...glasgow, verbal: parseInt(e.target.value)})} className="input-field"><option value={5}>5 - Orientada</option><option value={4}>4 - Confusa</option><option value={3}>3 - Palavras Inapropriadas</option><option value={2}>2 - Sons</option><option value={1}>1 - Nenhuma</option></select></div>
-                <div style={{ marginBottom: 10 }}><label className="form-label">Motora</label><select value={glasgow.motor} onChange={e=>setGlasgow({...glasgow, motor: parseInt(e.target.value)})} className="input-field"><option value={6}>6 - Obedece comandos</option><option value={5}>5 - Localiza dor</option><option value={4}>4 - Flexão normal</option><option value={3}>3 - Flexão anormal</option><option value={2}>2 - Extensão anormal</option><option value={1}>1 - Nenhuma</option></select></div>
+                <div style={{ marginBottom: 10 }}><label className="form-label">Ocular</label><select value={glasgow.ocular} onChange={e => setGlasgow({ ...glasgow, ocular: parseInt(e.target.value) })} className="input-field"><option value={4}>4 - Espontânea</option><option value={3}>3 - À voz</option><option value={2}>2 - À dor</option><option value={1}>1 - Nenhuma</option></select></div>
+                <div style={{ marginBottom: 10 }}><label className="form-label">Verbal</label><select value={glasgow.verbal} onChange={e => setGlasgow({ ...glasgow, verbal: parseInt(e.target.value) })} className="input-field"><option value={5}>5 - Orientada</option><option value={4}>4 - Confusa</option><option value={3}>3 - Palavras Inapropriadas</option><option value={2}>2 - Sons</option><option value={1}>1 - Nenhuma</option></select></div>
+                <div style={{ marginBottom: 10 }}><label className="form-label">Motora</label><select value={glasgow.motor} onChange={e => setGlasgow({ ...glasgow, motor: parseInt(e.target.value) })} className="input-field"><option value={6}>6 - Obedece comandos</option><option value={5}>5 - Localiza dor</option><option value={4}>4 - Flexão normal</option><option value={3}>3 - Flexão anormal</option><option value={2}>2 - Extensão anormal</option><option value={1}>1 - Nenhuma</option></select></div>
                 <div style={{ marginTop: 15, background: '#eff6ff', padding: '15px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontWeight: 700, color: '#1e3a8a' }}>Total:</span><span style={{ fontSize: '24px', fontWeight: 800, color: '#1e3a8a' }}>{totalGlasgow}</span></div>
               </div>
 
@@ -492,12 +492,12 @@ export default function FichaPacientePage() {
               <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px' }}>
                 <h4 style={{ color: '#059669', marginBottom: '15px' }}>Escala de Braden</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div><label className="form-label" style={{ fontSize: 11 }}>Sensorial</label><select value={braden.sensorial} onChange={e=>setBraden({...braden, sensorial: parseInt(e.target.value)})} className="input-field"><option value={4}>4</option><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
-                  <div><label className="form-label" style={{ fontSize: 11 }}>Umidade</label><select value={braden.umidade} onChange={e=>setBraden({...braden, umidade: parseInt(e.target.value)})} className="input-field"><option value={4}>4</option><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
-                  <div><label className="form-label" style={{ fontSize: 11 }}>Atividade</label><select value={braden.atividade} onChange={e=>setBraden({...braden, atividade: parseInt(e.target.value)})} className="input-field"><option value={4}>4</option><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
-                  <div><label className="form-label" style={{ fontSize: 11 }}>Mobilidade</label><select value={braden.mobilidade} onChange={e=>setBraden({...braden, mobilidade: parseInt(e.target.value)})} className="input-field"><option value={4}>4</option><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
-                  <div><label className="form-label" style={{ fontSize: 11 }}>Nutrição</label><select value={braden.nutricao} onChange={e=>setBraden({...braden, nutricao: parseInt(e.target.value)})} className="input-field"><option value={4}>4</option><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
-                  <div><label className="form-label" style={{ fontSize: 11 }}>Fricção</label><select value={braden.friccao} onChange={e=>setBraden({...braden, friccao: parseInt(e.target.value)})} className="input-field"><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
+                  <div><label className="form-label" style={{ fontSize: 11 }}>Sensorial</label><select value={braden.sensorial} onChange={e => setBraden({ ...braden, sensorial: parseInt(e.target.value) })} className="input-field"><option value={4}>4</option><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
+                  <div><label className="form-label" style={{ fontSize: 11 }}>Umidade</label><select value={braden.umidade} onChange={e => setBraden({ ...braden, umidade: parseInt(e.target.value) })} className="input-field"><option value={4}>4</option><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
+                  <div><label className="form-label" style={{ fontSize: 11 }}>Atividade</label><select value={braden.atividade} onChange={e => setBraden({ ...braden, atividade: parseInt(e.target.value) })} className="input-field"><option value={4}>4</option><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
+                  <div><label className="form-label" style={{ fontSize: 11 }}>Mobilidade</label><select value={braden.mobilidade} onChange={e => setBraden({ ...braden, mobilidade: parseInt(e.target.value) })} className="input-field"><option value={4}>4</option><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
+                  <div><label className="form-label" style={{ fontSize: 11 }}>Nutrição</label><select value={braden.nutricao} onChange={e => setBraden({ ...braden, nutricao: parseInt(e.target.value) })} className="input-field"><option value={4}>4</option><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
+                  <div><label className="form-label" style={{ fontSize: 11 }}>Fricção</label><select value={braden.friccao} onChange={e => setBraden({ ...braden, friccao: parseInt(e.target.value) })} className="input-field"><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
                 </div>
                 <div style={{ marginTop: 15, background: '#ecfdf5', padding: '15px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontWeight: 700, color: '#059669' }}>Total:</span><span style={{ fontSize: '24px', fontWeight: 800, color: '#059669' }}>{totalBraden}</span></div>
               </div>
@@ -529,12 +529,12 @@ export default function FichaPacientePage() {
 
             {pepSubTab === 'soap' && (
               <div>
-                <textarea className="input-field" rows={2} placeholder="S - Subjetivo (O que o paciente relata)" value={novaEvolucao.s} onChange={e=>setNovaEvolucao({...novaEvolucao, s: e.target.value})} style={{ marginBottom: 10 }}></textarea>
-                <textarea className="input-field" rows={2} placeholder="O - Objetivo (O que o médico observa/exame físico)" value={novaEvolucao.o} onChange={e=>setNovaEvolucao({...novaEvolucao, o: e.target.value})} style={{ marginBottom: 10 }}></textarea>
-                <textarea className="input-field" rows={2} placeholder="A - Avaliação (Impressão diagnóstica)" value={novaEvolucao.a} onChange={e=>setNovaEvolucao({...novaEvolucao, a: e.target.value})} style={{ marginBottom: 10 }}></textarea>
-                <textarea className="input-field" rows={2} placeholder="P - Plano (Conduta, exames, medicação)" value={novaEvolucao.p} onChange={e=>setNovaEvolucao({...novaEvolucao, p: e.target.value})} style={{ marginBottom: 10 }}></textarea>
+                <textarea className="input-field" rows={2} placeholder="S - Subjetivo (O que o paciente relata)" value={novaEvolucao.s} onChange={e => setNovaEvolucao({ ...novaEvolucao, s: e.target.value })} style={{ marginBottom: 10 }}></textarea>
+                <textarea className="input-field" rows={2} placeholder="O - Objetivo (O que o médico observa/exame físico)" value={novaEvolucao.o} onChange={e => setNovaEvolucao({ ...novaEvolucao, o: e.target.value })} style={{ marginBottom: 10 }}></textarea>
+                <textarea className="input-field" rows={2} placeholder="A - Avaliação (Impressão diagnóstica)" value={novaEvolucao.a} onChange={e => setNovaEvolucao({ ...novaEvolucao, a: e.target.value })} style={{ marginBottom: 10 }}></textarea>
+                <textarea className="input-field" rows={2} placeholder="P - Plano (Conduta, exames, medicação)" value={novaEvolucao.p} onChange={e => setNovaEvolucao({ ...novaEvolucao, p: e.target.value })} style={{ marginBottom: 10 }}></textarea>
                 <button className="btn btn-primary" style={{ width: '100%', marginBottom: 20 }} onClick={registrarEvolucao} disabled={isSaving}>{isSaving ? 'Salvando...' : 'Salvar Evolução SOAP'}</button>
-                
+
                 {paciente.evolucoes?.length > 0 ? paciente.evolucoes.map((ev: any, i: number) => (
                   <div key={i} style={{ background: '#f8fafc', padding: 15, marginBottom: 10, borderLeft: '4px solid #1e3a8a', borderRadius: 8 }}>
                     <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>{ev.profissional} - {new Date(ev.createdAt).toLocaleString('pt-BR')}</div>
@@ -547,12 +547,12 @@ export default function FichaPacientePage() {
             {pepSubTab === 'sinais' && (
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 10, marginBottom: 15 }}>
-                  <input type="text" className="input-field" placeholder="PA" value={novoSinal.pressao} onChange={e=>setNovoSinal({...novoSinal, pressao: e.target.value})} />
-                  <input type="number" className="input-field" placeholder="FC" value={novoSinal.fc} onChange={e=>setNovoSinal({...novoSinal, fc: e.target.value})} />
-                  <input type="number" className="input-field" placeholder="FR" value={novoSinal.fr} onChange={e=>setNovoSinal({...novoSinal, fr: e.target.value})} />
-                  <input type="number" step="0.1" className="input-field" placeholder="Temp" value={novoSinal.temp} onChange={e=>setNovoSinal({...novoSinal, temp: e.target.value})} />
-                  <input type="number" className="input-field" placeholder="SpO2" value={novoSinal.satO2} onChange={e=>setNovoSinal({...novoSinal, satO2: e.target.value})} />
-                  <input type="number" className="input-field" placeholder="Glicemia" value={novoSinal.glicemia} onChange={e=>setNovoSinal({...novoSinal, glicemia: e.target.value})} />
+                  <input type="text" className="input-field" placeholder="PA" value={novoSinal.pressao} onChange={e => setNovoSinal({ ...novoSinal, pressao: e.target.value })} />
+                  <input type="number" className="input-field" placeholder="FC" value={novoSinal.fc} onChange={e => setNovoSinal({ ...novoSinal, fc: e.target.value })} />
+                  <input type="number" className="input-field" placeholder="FR" value={novoSinal.fr} onChange={e => setNovoSinal({ ...novoSinal, fr: e.target.value })} />
+                  <input type="number" step="0.1" className="input-field" placeholder="Temp" value={novoSinal.temp} onChange={e => setNovoSinal({ ...novoSinal, temp: e.target.value })} />
+                  <input type="number" className="input-field" placeholder="SpO2" value={novoSinal.satO2} onChange={e => setNovoSinal({ ...novoSinal, satO2: e.target.value })} />
+                  <input type="number" className="input-field" placeholder="Glicemia" value={novoSinal.glicemia} onChange={e => setNovoSinal({ ...novoSinal, glicemia: e.target.value })} />
                 </div>
                 <button className="btn btn-primary" style={{ width: '100%', marginBottom: 20 }} onClick={registrarSinalVital}>Registrar Sinais Vitais</button>
                 <div style={{ overflowX: 'auto' }}>
@@ -567,14 +567,14 @@ export default function FichaPacientePage() {
                 </div>
               </div>
             )}
-            
+
             {pepSubTab === 'medicamentos' && (
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 15 }}>
-                  <input type="text" className="input-field" placeholder="Medicamento" value={novoMed.medicamento} onChange={e=>setNovoMed({...novoMed, medicamento: e.target.value})} />
-                  <input type="text" className="input-field" placeholder="Dose" value={novoMed.dose} onChange={e=>setNovoMed({...novoMed, dose: e.target.value})} />
-                  <input type="text" className="input-field" placeholder="Via" value={novoMed.via} onChange={e=>setNovoMed({...novoMed, via: e.target.value})} />
-                  <input type="text" className="input-field" placeholder="Frequência" value={novoMed.frequencia} onChange={e=>setNovoMed({...novoMed, frequencia: e.target.value})} />
+                  <input type="text" className="input-field" placeholder="Medicamento" value={novoMed.medicamento} onChange={e => setNovoMed({ ...novoMed, medicamento: e.target.value })} />
+                  <input type="text" className="input-field" placeholder="Dose" value={novoMed.dose} onChange={e => setNovoMed({ ...novoMed, dose: e.target.value })} />
+                  <input type="text" className="input-field" placeholder="Via" value={novoMed.via} onChange={e => setNovoMed({ ...novoMed, via: e.target.value })} />
+                  <input type="text" className="input-field" placeholder="Frequência" value={novoMed.frequencia} onChange={e => setNovoMed({ ...novoMed, frequencia: e.target.value })} />
                 </div>
                 <button className="btn btn-primary" style={{ width: '100%', marginBottom: 20 }} onClick={registrarPrescricao} disabled={isSaving}>{isSaving ? 'Registrando...' : 'Adicionar à Prescrição'}</button>
                 <ul style={{ listStyle: 'none', padding: 0 }}>
@@ -591,8 +591,8 @@ export default function FichaPacientePage() {
             {pepSubTab === 'exames' && (
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10, marginBottom: 15 }}>
-                  <input type="text" className="input-field" placeholder="Nome do Exame" value={novoExame.nome} onChange={e=>setNovoExame({...novoExame, nome: e.target.value})} />
-                  <input type="text" className="input-field" placeholder="Resultado (Opcional)" value={novoExame.resultado} onChange={e=>setNovoExame({...novoExame, resultado: e.target.value})} />
+                  <input type="text" className="input-field" placeholder="Nome do Exame" value={novoExame.nome} onChange={e => setNovoExame({ ...novoExame, nome: e.target.value })} />
+                  <input type="text" className="input-field" placeholder="Resultado (Opcional)" value={novoExame.resultado} onChange={e => setNovoExame({ ...novoExame, resultado: e.target.value })} />
                 </div>
                 <button className="btn btn-primary" style={{ width: '100%', marginBottom: 20 }} onClick={solicitarExame} disabled={isSaving}>{isSaving ? 'Registrando...' : 'Solicitar Exame'}</button>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
@@ -613,8 +613,8 @@ export default function FichaPacientePage() {
           <div>
             <h3 style={{ marginBottom: 20, color: '#0a1f44' }}>Avaliação Nutricional</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-              <div><label className="form-label">Peso (kg)</label><input type="number" step="0.1" className="input-field" value={nutricao.peso} onChange={e => setNutricao({...nutricao, peso: e.target.value})} /></div>
-              <div><label className="form-label">Altura (m)</label><input type="number" step="0.01" className="input-field" value={nutricao.altura} onChange={e => setNutricao({...nutricao, altura: e.target.value})} /></div>
+              <div><label className="form-label">Peso (kg)</label><input type="number" step="0.1" className="input-field" value={nutricao.peso} onChange={e => setNutricao({ ...nutricao, peso: e.target.value })} /></div>
+              <div><label className="form-label">Altura (m)</label><input type="number" step="0.01" className="input-field" value={nutricao.altura} onChange={e => setNutricao({ ...nutricao, altura: e.target.value })} /></div>
             </div>
             {imc > 0 && (
               <div style={{ background: '#eff6ff', padding: '20px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -622,8 +622,8 @@ export default function FichaPacientePage() {
                 <div style={{ fontSize: 32, fontWeight: 800, color: '#1e3a8a' }}>{imc.toFixed(1)}</div>
               </div>
             )}
-            <div style={{ marginBottom: 20 }}><label className="form-label">Prescrição de Dieta</label><select className="input-field" value={nutricao.dieta} onChange={e=>setNutricao({...nutricao, dieta: e.target.value})}><option>Via Oral</option><option>Branda</option><option>Pastosa</option><option>Líquida</option><option>Enteral</option><option>Jejum Absoluto</option></select></div>
-            <div style={{ marginBottom: 20 }}><label className="form-label">Restrições</label><input type="text" className="input-field" value={nutricao.restricoes} onChange={e=>setNutricao({...nutricao, restricoes: e.target.value})} /></div>
+            <div style={{ marginBottom: 20 }}><label className="form-label">Prescrição de Dieta</label><select className="input-field" value={nutricao.dieta} onChange={e => setNutricao({ ...nutricao, dieta: e.target.value })}><option>Via Oral</option><option>Branda</option><option>Pastosa</option><option>Líquida</option><option>Enteral</option><option>Jejum Absoluto</option></select></div>
+            <div style={{ marginBottom: 20 }}><label className="form-label">Restrições</label><input type="text" className="input-field" value={nutricao.restricoes} onChange={e => setNutricao({ ...nutricao, restricoes: e.target.value })} /></div>
             <div><button className="btn btn-primary" style={{ width: '100%' }} onClick={salvarNutricao}>Registrar Avaliação Nutricional</button></div>
           </div>
         )}
@@ -633,12 +633,12 @@ export default function FichaPacientePage() {
           <div>
             <h3 style={{ marginBottom: 20, color: '#0a1f44' }}>Avaliação Médica</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 15 }}>
-              <input className="input-field" placeholder="Médico Responsável" value={medico.responsavel} onChange={e=>setMedico({...medico, responsavel: e.target.value})} />
-              <input className="input-field" placeholder="CRM" value={medico.crm} onChange={e=>setMedico({...medico, crm: e.target.value})} />
+              <input className="input-field" placeholder="Médico Responsável" value={medico.responsavel} onChange={e => setMedico({ ...medico, responsavel: e.target.value })} />
+              <input className="input-field" placeholder="CRM" value={medico.crm} onChange={e => setMedico({ ...medico, crm: e.target.value })} />
             </div>
-            <input className="input-field" placeholder="Especialidade" value={medico.especialidade} onChange={e=>setMedico({...medico, especialidade: e.target.value})} style={{ marginBottom: 15 }} />
-            <textarea className="input-field" rows={3} placeholder="Hipótese Diagnóstica / CID-10" value={medico.diagnostico} onChange={e=>setMedico({...medico, diagnostico: e.target.value})} style={{ marginBottom: 15 }}></textarea>
-            <textarea className="input-field" rows={4} placeholder="Conduta Médica" value={medico.conduta} onChange={e=>setMedico({...medico, conduta: e.target.value})} style={{ marginBottom: 15 }}></textarea>
+            <input className="input-field" placeholder="Especialidade" value={medico.especialidade} onChange={e => setMedico({ ...medico, especialidade: e.target.value })} style={{ marginBottom: 15 }} />
+            <textarea className="input-field" rows={3} placeholder="Hipótese Diagnóstica / CID-10" value={medico.diagnostico} onChange={e => setMedico({ ...medico, diagnostico: e.target.value })} style={{ marginBottom: 15 }}></textarea>
+            <textarea className="input-field" rows={4} placeholder="Conduta Médica" value={medico.conduta} onChange={e => setMedico({ ...medico, conduta: e.target.value })} style={{ marginBottom: 15 }}></textarea>
             <button className="btn btn-primary" style={{ width: '100%' }} onClick={salvarMedico}>Salvar Avaliação Médica</button>
           </div>
         )}
@@ -648,11 +648,11 @@ export default function FichaPacientePage() {
           <div>
             <h3 style={{ marginBottom: 20, color: '#0a1f44' }}>Anotações de Enfermagem</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 15 }}>
-              <input className="input-field" placeholder="Enfermeiro Responsável" value={enfermagem.responsavel} onChange={e=>setEnfermagem({...enfermagem, responsavel: e.target.value})} />
-              <input className="input-field" placeholder="COREN" value={enfermagem.coren} onChange={e=>setEnfermagem({...enfermagem, coren: e.target.value})} />
+              <input className="input-field" placeholder="Enfermeiro Responsável" value={enfermagem.responsavel} onChange={e => setEnfermagem({ ...enfermagem, responsavel: e.target.value })} />
+              <input className="input-field" placeholder="COREN" value={enfermagem.coren} onChange={e => setEnfermagem({ ...enfermagem, coren: e.target.value })} />
             </div>
-            <textarea className="input-field" rows={4} placeholder="Evolução de Enfermagem (Anotações)" value={enfermagem.evolucao} onChange={e=>setEnfermagem({...enfermagem, evolucao: e.target.value})} style={{ marginBottom: 15 }}></textarea>
-            <textarea className="input-field" rows={4} placeholder="Prescrição de Enfermagem (Cuidados)" value={enfermagem.prescricao} onChange={e=>setEnfermagem({...enfermagem, prescricao: e.target.value})} style={{ marginBottom: 15 }}></textarea>
+            <textarea className="input-field" rows={4} placeholder="Evolução de Enfermagem (Anotações)" value={enfermagem.evolucao} onChange={e => setEnfermagem({ ...enfermagem, evolucao: e.target.value })} style={{ marginBottom: 15 }}></textarea>
+            <textarea className="input-field" rows={4} placeholder="Prescrição de Enfermagem (Cuidados)" value={enfermagem.prescricao} onChange={e => setEnfermagem({ ...enfermagem, prescricao: e.target.value })} style={{ marginBottom: 15 }}></textarea>
             <button className="btn btn-primary" style={{ width: '100%' }} onClick={salvarEnfermagem}>Salvar Registro</button>
           </div>
         )}
@@ -678,13 +678,13 @@ export default function FichaPacientePage() {
           <div>
             <h3 style={{ marginBottom: 20, color: '#0a1f44' }}>Linha do Tempo Clínica</h3>
             <div style={{ display: 'flex', gap: 15, marginBottom: 20, flexWrap: 'wrap' }}>
-              <select className="input-field" style={{ width: 'auto' }} value={novoTimeline.tipo} onChange={e=>setNovoTimeline({...novoTimeline, tipo: e.target.value})}>
+              <select className="input-field" style={{ width: 'auto' }} value={novoTimeline.tipo} onChange={e => setNovoTimeline({ ...novoTimeline, tipo: e.target.value })}>
                 <option>Anotação Geral</option><option>Procedimento</option><option>Intercorrência</option>
               </select>
-              <input className="input-field" placeholder="Descreva o evento..." style={{ flex: 1 }} value={novoTimeline.descricao} onChange={e=>setNovoTimeline({...novoTimeline, descricao: e.target.value})} />
+              <input className="input-field" placeholder="Descreva o evento..." style={{ flex: 1 }} value={novoTimeline.descricao} onChange={e => setNovoTimeline({ ...novoTimeline, descricao: e.target.value })} />
               <button className="btn btn-primary" onClick={addTimelinePost}>Publicar</button>
             </div>
-            
+
             <div style={{ position: 'relative', paddingLeft: 30, borderLeft: '2px solid #e2e8f0', marginLeft: 20, marginTop: 30 }}>
               {timelineEvents.length > 0 ? timelineEvents.map(t => (
                 <div key={t.id} style={{ position: 'relative', marginBottom: 25 }}>
