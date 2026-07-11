@@ -1,4 +1,5 @@
 'use client';
+import { getSessionUser } from '@/lib/session';
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -39,13 +40,13 @@ export default function PontoPage() {
   }, []);
 
   const getHospitalId = () => {
-    const u = localStorage.getItem('usuarioLogado');
+    const u = JSON.stringify(getSessionUser());
     const usuario = session?.user || (u ? JSON.parse(u) : null);
     return usuario?.hospitalId || 'hospital_001';
   };
 
   const getNomeProfissional = () => {
-    const u = localStorage.getItem('usuarioLogado');
+    const u = JSON.stringify(getSessionUser());
     const usuario = session?.user || (u ? JSON.parse(u) : null);
     return usuario?.name || usuario?.nome || 'Profissional Desconhecido';
   };
@@ -53,8 +54,24 @@ export default function PontoPage() {
   const fetchRegistros = () => {
     try {
       const hid = getHospitalId();
-      const db = JSON.parse(localStorage.getItem(`${hid}_pontoRegistros`) || '[]');
-      setRegistros(db);
+      fetch(`/api/pontoregistro?hospitalId=${hid}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            // Map db object to UI model
+            const mapped = data.map(r => {
+              const dt = new Date(r.dataHora);
+              return {
+                data: dt.toLocaleDateString('pt-BR'),
+                hora: dt.toLocaleTimeString('pt-BR'),
+                tipo: r.tipo,
+                profissional: r.usuario?.nome || 'Profissional',
+                timestamp: dt.getTime()
+              }
+            });
+            setRegistros(mapped);
+          }
+        });
     } catch(e) {}
   };
 
@@ -73,7 +90,20 @@ export default function PontoPage() {
 
     const novosRegistros = [...registros, novoRegistro];
     setRegistros(novosRegistros);
-    localStorage.setItem(`${hid}_pontoRegistros`, JSON.stringify(novosRegistros));
+
+    const u = JSON.stringify(getSessionUser());
+    const sess = session?.user || (u ? JSON.parse(u) : null);
+
+    fetch('/api/pontoregistro', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hospitalId: hid,
+        usuarioId: sess?.id || 'usuario_anonimo',
+        tipo,
+        dataHora: agora.toISOString()
+      })
+    }).catch(console.error);
 
     const msgs: Record<string, string> = {
       'ENTRADA': '✅ ENTRADA REGISTRADA! 💪',

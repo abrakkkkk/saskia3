@@ -20,7 +20,6 @@ enum CargoUsuario {
   OUTROS
 }
 
-
 enum StatusAgendamento {
   AGENDADO
   CONFIRMADO
@@ -99,49 +98,65 @@ model Hospital {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  usuarios        Usuario[]
-  pacientes       Paciente[]
-  agendamentos    Agendamento[]
-  receitas        Receita[]
-  cirurgias       Cirurgia[]
-  utiLeitos       UtiLeito[]
-  salas           Sala[]
-  tickets         Ticket[]
-  chamadas        Chamada[]
-  emergencias     Emergencia[]
-  estoqueItems    EstoqueItem[]
-  exames          Exame[]
-  configDashboard ConfigDashboard?
-  obitos          Obito[]
-  mensagensChat   MensagemChat[]
-  casosSociais    CasoSocial[]
-  ouvidoriaTickets OuvidoriaTicket[]
-  veiculosTransporte VeiculoTransporte[]
+  usuarios             Usuario[]
+  pacientes            Paciente[]
+  agendamentos         Agendamento[]
+  receitas             Receita[]
+  cirurgias            Cirurgia[]
+  utiLeitos            UtiLeito[]
+  salas                Sala[]
+  tickets              Ticket[]
+  chamadas             Chamada[]
+  emergencias          Emergencia[]
+  estoqueItems         EstoqueItem[]
+  exames               Exame[]
+  configDashboard      ConfigDashboard?
+  obitos               Obito[]
+  mensagensChat        MensagemChat[]
+  casosSociais         CasoSocial[]
+  ouvidoriaTickets     OuvidoriaTicket[]
+  veiculosTransporte   VeiculoTransporte[]
+  transportesPaciente  TransportePaciente[]
   ocorrenciasSeguranca OcorrenciaSeguranca[]
-  operadorasPlano OperadoraPlano[]
-  estoqueSangue   EstoqueSangue[]
+  operadorasPlano      OperadoraPlano[]
+  estoqueSangue        EstoqueSangue[]
+  movimentacoesEstoque MovimentacaoEstoque[]
+  reservasSala         ReservaSala[]
+  manutencaoOrdens     ManutencaoOS[]
+  cssdLotes            CssdLote[]
+  faturas              Fatura[]
+  adminLogs            AdminLog[]
+  lembretes            Lembrete[]
+  pontoRegistros       PontoRegistro[]
+  feedbacks            Feedback[]
+  ccihRegistros        CcihRegistro[]
+  categorias           Categoria[]
+  procedimentos        Procedimento[]
+  modelosProntuarios   ModeloProntuario[]
 }
 
 model Usuario {
-  id         String       @id @default(uuid())
-  hospitalId String
-  hospital   Hospital     @relation(fields: [hospitalId], references: [id])
-  nome       String
-  email      String       @unique
-  senha      String
-  cargo      CargoUsuario @default(ENFERMEIRO_ASSISTENCIAL)
-  avatar     String?
-  ativo      Boolean      @default(true)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  id             String          @id @default(uuid())
+  hospitalId     String
+  hospital       Hospital        @relation(fields: [hospitalId], references: [id])
+  nome           String
+  email          String          @unique
+  senha          String
+  cargo          CargoUsuario    @default(ENFERMEIRO_ASSISTENCIAL)
+  avatar         String?
+  ativo          Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  pontoRegistros PontoRegistro[]
+  feedbacks      Feedback[]
 
   @@index([hospitalId])
 }
 
 model Paciente {
-  id              String         @id @default(uuid())
+  id              String    @id @default(uuid())
   hospitalId      String
-  hospital        Hospital       @relation(fields: [hospitalId], references: [id])
+  hospital        Hospital  @relation(fields: [hospitalId], references: [id])
   nome            String
   cpf             String?
   rg              String?
@@ -162,14 +177,14 @@ model Paciente {
   etnia           String?
   tipoSanguineo   String?
   alergias        String?
-  status          String         @default("Recepção")
+  status          String    @default("Recepção")
   classificacao   String?
   leitoTipo       String?
   leitoNumero     Int?
   consultorio     String?
   queixaPrincipal String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   triagens     Triagem[]
   evolucoes    Evolucao[]
@@ -179,6 +194,14 @@ model Paciente {
   exames       Exame[]
   cirurgias    Cirurgia[]
   chamadas     Chamada[]
+
+  sinaisVitais         SinalVital[]
+  escoresClinicos      EscoreClinico[]
+  avaliacoesNutri      AvaliacaoNutricional[]
+  avaliacoesMedicas    AvaliacaoMedica[]
+  anotacoesEnf         AnotacaoEnfermagem[]
+  timelineEvents       TimelineEvent[]
+  movimentacoesEstoque MovimentacaoEstoque[]
 
   @@unique([cpf, hospitalId]) // Proteção contra CPFs duplicados no mesmo hospital
   @@index([hospitalId])
@@ -190,15 +213,15 @@ model Triagem {
   pacienteId    String
   paciente      Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
   classificacao String
-  pressao       String?  // Mantido como String para formatos como "120/80"
-  temperatura   Float?   // Convertido para número decimal (ex: 37.5)
-  frequenciaC   Int?     // Convertido para número inteiro (ex: 80 bpm)
-  frequenciaR   Int?     // Convertido para número inteiro (ex: 16 irpm)
-  saturacao     Int?     // Convertido para número inteiro (ex: 98%)
-  glicemia      Int?     // Convertido para número inteiro (ex: 95 mg/dL)
-  peso          Float?   // Convertido para número decimal (ex: 75.5 kg)
-  altura        Float?   // Convertido para número decimal (ex: 1.75 m)
-  dor           Int?     // Mantido Int (escala de 0 a 10)
+  pressao       String? // Mantido como String para formatos como "120/80"
+  temperatura   Float? // Convertido para número decimal (ex: 37.5)
+  frequenciaC   Int? // Convertido para número inteiro (ex: 80 bpm)
+  frequenciaR   Int? // Convertido para número inteiro (ex: 16 irpm)
+  saturacao     Int? // Convertido para número inteiro (ex: 98%)
+  glicemia      Int? // Convertido para número inteiro (ex: 95 mg/dL)
+  peso          Float? // Convertido para número decimal (ex: 75.5 kg)
+  altura        Float? // Convertido para número decimal (ex: 1.75 m)
+  dor           Int? // Mantido Int (escala de 0 a 10)
   queixa        String?
   observacoes   String?
   profissional  String?
@@ -255,7 +278,7 @@ model Agendamento {
   paciente      Paciente          @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
   hospitalId    String
   hospital      Hospital          @relation(fields: [hospitalId], references: [id])
-  dataHora      DateTime          // Unificado: substitui data e hora soltas
+  dataHora      DateTime // Unificado: substitui data e hora soltas
   tipo          String?
   especialidade String?
   profissional  String?
@@ -297,7 +320,7 @@ model Cirurgia {
   hospital     Hospital       @relation(fields: [hospitalId], references: [id])
   procedimento String
   sala         String?
-  dataHora     DateTime?      // Unificado: substitui data e hora soltas
+  dataHora     DateTime? // Unificado: substitui data e hora soltas
   equipe       String?
   anestesia    String?
   status       StatusCirurgia @default(AGENDADA)
@@ -335,6 +358,8 @@ model Sala {
   status     StatusOcupacao @default(LIVRE)
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
+
+  reservas ReservaSala[]
 
   @@index([hospitalId])
 }
@@ -399,8 +424,23 @@ model EstoqueItem {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  movimentacoes MovimentacaoEstoque[]
+
   @@index([hospitalId])
   @@index([categoria])
+}
+
+model ModeloProntuario {
+  id         String   @id @default(uuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  titulo     String
+  descricao  String?
+  campos     Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([hospitalId])
 }
 
 model ConfigDashboard {
@@ -417,15 +457,28 @@ model ConfigDashboard {
 // ==========================================
 
 model Obito {
-  id           String   @id @default(uuid())
-  hospitalId   String
-  hospital     Hospital @relation(fields: [hospitalId], references: [id])
-  pacienteNome String
-  dataHora     DateTime
-  medicoCrm    String
-  causaBasi    String
-  createdAt    DateTime @default(now())
-  
+  id              String   @id @default(uuid())
+  hospitalId      String
+  hospital        Hospital @relation(fields: [hospitalId], references: [id])
+  nome            String
+  nascimento      String?
+  cpf             String?
+  sexo            String?
+  data            String
+  hora            String
+  local           String?
+  causa           String
+  causaSec        String?
+  medico          String
+  prontuario      String?
+  responsavel     String?
+  telefone        String?
+  observacoes     String?
+  registradoPor   String?
+  dataRegistro    String?
+  certidaoEmitida Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
   @@index([hospitalId])
 }
 
@@ -454,43 +507,46 @@ model CasoSocial {
 }
 
 model OuvidoriaTicket {
-  id           String   @id @default(uuid())
-  hospitalId   String
-  hospital     Hospital @relation(fields: [hospitalId], references: [id])
-  protocolo    String   @unique
-  tipo         String
-  setor        String
-  paciente     String
-  mensagem     String
-  status       String   @default("ABERTO")
-  prazo        String
-  createdAt    DateTime @default(now())
-
-  @@index([hospitalId])
-}
-
-model VeiculoTransporte {
   id         String   @id @default(uuid())
   hospitalId String
   hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  protocolo  String   @unique
   tipo       String
-  identificador String // Placa ou ID
-  status     String   @default("DISPONÍVEL")
-  local      String
+  setor      String
+  paciente   String
+  mensagem   String
+  status     String   @default("ABERTO")
+  prazo      String
   createdAt  DateTime @default(now())
 
   @@index([hospitalId])
 }
 
+model VeiculoTransporte {
+  id            String   @id @default(uuid())
+  hospitalId    String
+  hospital      Hospital @relation(fields: [hospitalId], references: [id])
+  tipo          String
+  identificador String // Placa ou ID
+  status        String   @default("DISPONÍVEL")
+  local         String
+  createdAt     DateTime @default(now())
+
+  @@index([hospitalId])
+}
+
 model OcorrenciaSeguranca {
-  id         String   @id @default(uuid())
-  hospitalId String
-  hospital   Hospital @relation(fields: [hospitalId], references: [id])
-  tipo       String
-  local      String
-  relato     String
-  vigilante  String
-  dataHora   DateTime @default(now())
+  id            String    @id @default(uuid())
+  hospitalId    String
+  hospital      Hospital  @relation(fields: [hospitalId], references: [id])
+  tipo          String
+  local         String
+  relato        String
+  vigilante     String
+  dataHora      DateTime  @default(now())
+  resolvido     Boolean   @default(false)
+  resolvidoPor  String?
+  dataResolucao DateTime?
 
   @@index([hospitalId])
 }
@@ -518,6 +574,322 @@ model EstoqueSangue {
   status     String   @default("NORMAL")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([hospitalId])
+}
+
+model SinalVital {
+  id           String   @id @default(uuid())
+  pacienteId   String
+  paciente     Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  pressao      String?
+  fc           String?
+  fr           String?
+  temp         String?
+  satO2        String?
+  glicemia     String?
+  profissional String?
+  createdAt    DateTime @default(now())
+
+  @@index([pacienteId])
+}
+
+model EscoreClinico {
+  id           String   @id @default(uuid())
+  pacienteId   String
+  paciente     Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  glasgow      Json?
+  dor          Int?
+  braden       Json?
+  profissional String?
+  createdAt    DateTime @default(now())
+
+  @@index([pacienteId])
+}
+
+model AvaliacaoNutricional {
+  id           String   @id @default(uuid())
+  pacienteId   String
+  paciente     Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  peso         String?
+  altura       String?
+  dieta        String?
+  restricoes   String?
+  profissional String?
+  createdAt    DateTime @default(now())
+
+  @@index([pacienteId])
+}
+
+model AvaliacaoMedica {
+  id            String   @id @default(uuid())
+  pacienteId    String
+  paciente      Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  responsavel   String?
+  crm           String?
+  especialidade String?
+  diagnostico   String?
+  conduta       String?
+  profissional  String?
+  createdAt     DateTime @default(now())
+
+  @@index([pacienteId])
+}
+
+model AnotacaoEnfermagem {
+  id           String   @id @default(uuid())
+  pacienteId   String
+  paciente     Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  responsavel  String?
+  coren        String?
+  evolucao     String?
+  prescricao   String?
+  profissional String?
+  createdAt    DateTime @default(now())
+
+  @@index([pacienteId])
+}
+
+model TimelineEvent {
+  id         String   @id @default(uuid())
+  pacienteId String
+  paciente   Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  tipo       String
+  descricao  String
+  user       String?
+  createdAt  DateTime @default(now())
+
+  @@index([pacienteId])
+}
+
+model MovimentacaoEstoque {
+  id          String      @id @default(uuid())
+  hospitalId  String
+  hospital    Hospital    @relation(fields: [hospitalId], references: [id])
+  tipo        String // "ENTRADA" ou "SAIDA"
+  itemId      String
+  item        EstoqueItem @relation(fields: [itemId], references: [id])
+  quantidade  Int
+  pacienteId  String?
+  paciente    Paciente?   @relation(fields: [pacienteId], references: [id])
+  setor       String?
+  fornecedor  String?
+  responsavel String
+  observacao  String?
+  createdAt   DateTime    @default(now())
+
+  @@index([hospitalId])
+  @@index([itemId])
+}
+
+model ReservaSala {
+  id           String   @id @default(uuid())
+  salaId       String
+  sala         Sala     @relation(fields: [salaId], references: [id])
+  hospitalId   String
+  hospital     Hospital @relation(fields: [hospitalId], references: [id])
+  profissional String
+  paciente     String?
+  data         String
+  horaInicio   String
+  horaFim      String
+  status       String   @default("ATIVA")
+  createdAt    DateTime @default(now())
+
+  @@index([salaId])
+  @@index([hospitalId])
+}
+
+// ==========================================
+// MÓDULOS ADMINISTRATIVOS (Fase 5)
+// ==========================================
+
+model ManutencaoOS {
+  id          String   @id @default(uuid())
+  hospitalId  String
+  hospital    Hospital @relation(fields: [hospitalId], references: [id])
+  equipamento String
+  setor       String
+  tipo        String // Corretiva, Preventiva, Preditiva, Calibração, Emergencial
+  prioridade  String   @default("Normal")
+  solicitante String
+  data        String
+  descricao   String?
+  status      String   @default("Aberta") // Aberta, Em Andamento, Concluída
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([hospitalId])
+}
+
+model CssdLote {
+  id                 String   @id @default(uuid())
+  hospitalId         String
+  hospital           Hospital @relation(fields: [hospitalId], references: [id])
+  numero             String
+  setor              String
+  operador           String
+  data               String
+  equipamento        String
+  ciclo              String
+  indicadorQuimico   String
+  indicadorBiologico String
+  bowieDick          String
+  obs                String?
+  status             String   @default("Recepção") // Recepção, Limpeza, Preparo, Esterilização, Pronto, Rejeitado
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  itens CssdItem[]
+
+  @@index([hospitalId])
+}
+
+model CssdItem {
+  id          String   @id @default(uuid())
+  loteId      String
+  lote        CssdLote @relation(fields: [loteId], references: [id], onDelete: Cascade)
+  nome        String
+  tipo        String
+  quantidade  Int      @default(1)
+  embalagem   String
+  integridade String   @default("Íntegra")
+  createdAt   DateTime @default(now())
+
+  @@index([loteId])
+}
+
+model TransportePaciente {
+  id          String   @id @default(uuid())
+  hospitalId  String
+  hospital    Hospital @relation(fields: [hospitalId], references: [id])
+  paciente    String
+  origem      String
+  destino     String
+  tipo        String
+  solicitante String
+  data        String
+  status      String   @default("Pendente") // Pendente, Concluído
+  createdAt   DateTime @default(now())
+
+  @@index([hospitalId])
+}
+
+// ==========================================
+// MODELS ADICIONADOS PARA SUBSTITUIR LOCALSTORAGE
+// ==========================================
+
+model Fatura {
+  id         String   @id @default(uuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  valor      Float
+  vencimento DateTime
+  status     String   @default("Pendente")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([hospitalId])
+}
+
+model AdminLog {
+  id         String    @id @default(uuid())
+  hospitalId String?
+  hospital   Hospital? @relation(fields: [hospitalId], references: [id])
+  usuario    String
+  acao       String
+  detalhes   String?
+  createdAt  DateTime  @default(now())
+
+  @@index([hospitalId])
+}
+
+model Lembrete {
+  id          String   @id @default(uuid())
+  hospitalId  String
+  hospital    Hospital @relation(fields: [hospitalId], references: [id])
+  titulo      String
+  tipo        String   @default("consulta")
+  descricao   String?
+  relacionado String?
+  dataHora    DateTime
+  concluido   Boolean  @default(false)
+  criadoPor   String?
+  status      String   @default("Pendente")
+  createdAt   DateTime @default(now())
+
+  @@index([hospitalId])
+}
+
+model PontoRegistro {
+  id          String   @id @default(uuid())
+  hospitalId  String
+  hospital    Hospital @relation(fields: [hospitalId], references: [id])
+  usuarioId   String
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  tipo        String // ENTRADA, SAIDA, PAUSA_INICIO, PAUSA_FIM
+  dataHora    DateTime @default(now())
+  localizacao String?
+  createdAt   DateTime @default(now())
+
+  @@index([hospitalId])
+  @@index([usuarioId])
+}
+
+model Feedback {
+  id         String   @id @default(uuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  usuarioId  String
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  tipo       String // SUGESTAO, ELOGIO, RECLAMACAO
+  mensagem   String
+  status     String   @default("NOVO")
+  createdAt  DateTime @default(now())
+
+  @@index([hospitalId])
+  @@index([usuarioId])
+}
+
+model CcihRegistro {
+  id         String   @id @default(uuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  tipo       String // IRAS, CULTURA, HM, ATM
+  subtipo    String?
+  descricao  String?
+  dados      Json?
+  data       DateTime
+  status     String   @default("ATIVO")
+  criadoPor  String?
+  createdAt  DateTime @default(now())
+
+  @@index([hospitalId])
+  @@index([tipo])
+}
+
+model Categoria {
+  id         String   @id @default(uuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  nome       String
+  tipo       String // PRODUTO, SERVICO, MEDICAMENTO, etc.
+  descricao  String?
+  createdAt  DateTime @default(now())
+
+  @@index([hospitalId])
+}
+
+model Procedimento {
+  id         String   @id @default(uuid())
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  codigo     String?
+  nome       String
+  descricao  String?
+  valorBase  Float?
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now())
 
   @@index([hospitalId])
 }

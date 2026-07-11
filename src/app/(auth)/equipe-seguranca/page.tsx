@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import './equipe-seguranca.css';
@@ -34,26 +33,28 @@ export default function EquipeSegurancaPage() {
   const [historico, setHistorico] = useState<any[]>([]);
   const [tabAtiva, setTabAtiva] = useState('alertas');
   const [alertaRecente, setAlertaRecente] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   
   const [buscaAlerta, setBuscaAlerta] = useState('');
   const [buscaHistorico, setBuscaHistorico] = useState('');
   const [modalDetalhes, setModalDetalhes] = useState<any>(null);
 
-  const getHospitalId = () => {
-    const u = localStorage.getItem('usuarioLogado');
-    const usuario = session?.user || (u ? JSON.parse(u) : null);
-    return usuario?.hospitalId || 'hospital_001';
-  };
-
-  const loadData = () => {
+  const loadData = async () => {
     try {
-      const hid = getHospitalId();
-      const a = JSON.parse(localStorage.getItem(`${hid}_registroEmergencias`) || '[]');
-      const h = JSON.parse(localStorage.getItem(`${hid}_alertasResolvidos`) || '[]');
-      setAlertas(a);
-      setHistorico(h);
-      checkAlertasRecentes(a);
-    } catch(e) {}
+      const res = await fetch('/api/equipe-seguranca');
+      if (res.ok) {
+        const ocorrencias = await res.json();
+        const a = ocorrencias.filter((o: any) => !o.resolvido);
+        const h = ocorrencias.filter((o: any) => o.resolvido);
+        setAlertas(a);
+        setHistorico(h);
+        checkAlertasRecentes(a);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -66,100 +67,96 @@ export default function EquipeSegurancaPage() {
   const checkAlertasRecentes = (alertasAtuais: any[]) => {
     const agora = new Date();
     const recente = alertasAtuais.find(a => {
-      // Formato: DD/MM/YYYY, HH:mm:ss ou YYYY-MM-DDTHH:mm:ss
-      // Vamos tentar parsear a data
-      let dataStr = a.dataHora;
-      if (dataStr.includes('/')) {
-        const [d, t] = dataStr.split(', ');
-        if (d && t) {
-          const [dia, mes, ano] = d.split('/');
-          dataStr = `${ano}-${mes}-${dia}T${t}`;
-        }
-      }
-      
-      const dAlerta = new Date(dataStr);
+      const dAlerta = new Date(a.dataHora);
       if (isNaN(dAlerta.getTime())) return false;
 
       const diff = (agora.getTime() - dAlerta.getTime()) / 1000 / 60;
       return diff < 30 && !a.resolvido;
     });
 
-    if (recente && (!alertaRecente || alertaRecente.dataHora !== recente.dataHora)) {
+    if (recente && (!alertaRecente || alertaRecente.id !== recente.id)) {
       setAlertaRecente(recente);
       try {
-        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4B/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gA=='); 
-        audio.play().catch(() => {}); // catch in case browser blocks auto-play
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4B/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gIB/f3+AgH9/f3+Af39/gA=='); 
+        audio.play().catch(() => {});
       } catch(e) {}
     } else if (!recente) {
       setAlertaRecente(null);
     }
   };
 
-  const simularAlerta = () => {
-    const hid = getHospitalId();
-    const novo = {
+  const simularAlerta = async () => {
+    const payload = {
       tipo: "BOTÃO DO PÂNICO",
-      profissional: "Simulação de Teste",
-      dataHora: new Date().toLocaleString('pt-BR'),
-      resolvido: false
+      local: "Simulação de Teste",
+      relato: "Simulação de botão do pânico",
+      vigilante: "Sistema",
+      dataHora: new Date().toISOString()
     };
-    const atualizados = [...alertas, novo];
-    setAlertas(atualizados);
-    localStorage.setItem(`${hid}_registroEmergencias`, JSON.stringify(atualizados));
-    checkAlertasRecentes(atualizados);
-    alert("🚨 Alerta simulado gerado! Verifique o painel.");
+    
+    try {
+      const res = await fetch('/api/equipe-seguranca', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Erro ao simular');
+      alert("🚨 Alerta simulado gerado! Verifique o painel.");
+      loadData();
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
-  const resolverAlerta = (dataHora: string) => {
+  const resolverAlerta = async (id: string) => {
     if (!confirm("Confirmar resolução deste alerta?")) return;
-    const hid = getHospitalId();
     
-    const index = alertas.findIndex(a => a.dataHora === dataHora);
-    if (index >= 0) {
-      const u = localStorage.getItem('usuarioLogado');
-      const usuario = session?.user || (u ? JSON.parse(u) : null);
-      
-      const alerta = { ...alertas[index] };
-      alerta.resolvido = true;
-      alerta.resolvidoPor = usuario?.name || usuario?.nome || "Equipe de Segurança";
-      alerta.dataResolucao = new Date().toLocaleString('pt-BR');
-      
-      const novosHistorico = [...historico, alerta];
-      const novosAlertas = alertas.filter(a => a.dataHora !== dataHora);
-      
-      setAlertas(novosAlertas);
-      setHistorico(novosHistorico);
-      
-      localStorage.setItem(`${hid}_registroEmergencias`, JSON.stringify(novosAlertas));
-      localStorage.setItem(`${hid}_alertasResolvidos`, JSON.stringify(novosHistorico));
-      
-      checkAlertasRecentes(novosAlertas);
+    const usuario = session?.user?.name || "Equipe de Segurança";
+    const payload = {
+      resolvido: true,
+      resolvidoPor: usuario,
+      dataResolucao: new Date().toISOString()
+    };
+
+    try {
+      const res = await fetch(`/api/equipe-seguranca/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Erro ao resolver');
       alert("✅ Alerta resolvido com sucesso!");
+      setModalDetalhes(null);
+      loadData();
+    } catch (error: any) {
+      alert(error.message);
     }
   };
 
   // Stats
-  const hojeStr = new Date().toLocaleDateString('pt-BR');
-  const statTotal = alertas.length;
-  const statPanico = alertas.filter(a => a.tipo === "BOTÃO DO PÂNICO").length;
-  const statPCR = alertas.filter(a => a.tipo === "ALERTA PCR").length;
-  const statPendentes = alertas.filter(a => !a.resolvido).length;
+  const hojeStr = new Date().toISOString().split('T')[0];
+  const statTotal = alertas.length + historico.length;
+  const statPanico = [...alertas, ...historico].filter(a => a.tipo === "BOTÃO DO PÂNICO").length;
+  const statPCR = [...alertas, ...historico].filter(a => a.tipo === "ALERTA PCR").length;
+  const statPendentes = alertas.length;
   const statResolvidos = historico.filter(a => a.dataResolucao && a.dataResolucao.startsWith(hojeStr)).length;
 
   // Filtros
-  let alertasFiltrados = alertas.filter(a => !a.resolvido).reverse();
+  let alertasFiltrados = alertas.slice();
   if (buscaAlerta) {
     const term = buscaAlerta.toLowerCase();
-    alertasFiltrados = alertasFiltrados.filter(a => a.profissional.toLowerCase().includes(term) || a.tipo.toLowerCase().includes(term));
+    alertasFiltrados = alertasFiltrados.filter(a => a.local.toLowerCase().includes(term) || a.tipo.toLowerCase().includes(term));
   }
 
-  let historicoFiltrado = historico.slice().reverse();
+  let historicoFiltrado = historico.slice();
   if (buscaHistorico) {
     const term = buscaHistorico.toLowerCase();
-    historicoFiltrado = historicoFiltrado.filter(a => a.profissional.toLowerCase().includes(term) || a.tipo.toLowerCase().includes(term));
+    historicoFiltrado = historicoFiltrado.filter(a => (a.resolvidoPor && a.resolvidoPor.toLowerCase().includes(term)) || a.tipo.toLowerCase().includes(term));
   }
 
   const handlePrint = () => { window.print(); };
+
+  if (loading && alertas.length === 0 && historico.length === 0) return <div>Carregando...</div>;
 
   return (
     <div className="conteudo">
@@ -180,7 +177,7 @@ export default function EquipeSegurancaPage() {
           {alertaRecente && (
             <>
               <i className="las la-exclamation-triangle"></i> 
-              <span> 🚨 {alertaRecente.tipo} acionado por {alertaRecente.profissional} - {alertaRecente.dataHora} - DIRIJA-SE AO LOCAL IMEDIATAMENTE!</span>
+              <span> 🚨 {alertaRecente.tipo} acionado em {alertaRecente.local} - {new Date(alertaRecente.dataHora).toLocaleTimeString()} - DIRIJA-SE AO LOCAL IMEDIATAMENTE!</span>
             </>
           )}
         </div>
@@ -224,33 +221,32 @@ export default function EquipeSegurancaPage() {
         {tabAtiva === 'alertas' && (
           <div>
             <div className="search-box">
-              <input type="text" placeholder="Buscar por profissional ou tipo..." value={buscaAlerta} onChange={e => setBuscaAlerta(e.target.value)} />
+              <input type="text" placeholder="Buscar por local ou tipo..." value={buscaAlerta} onChange={e => setBuscaAlerta(e.target.value)} />
             </div>
             <div className="tabela-wrapper">
               <table className="tabela-seg">
                 <thead>
-                  <tr><th>Data/Hora</th><th>Tipo</th><th>Profissional</th><th>Setor</th><th>Status</th><th>Ações</th></tr>
+                  <tr><th>Data/Hora</th><th>Tipo</th><th>Local</th><th>Status</th><th>Ações</th></tr>
                 </thead>
                 <tbody>
                   {alertasFiltrados.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#16a34a' }}>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#16a34a' }}>
                         <i className="las la-check-circle" style={{ fontSize: '48px', display: 'block', marginBottom: '10px' }}></i>
                         <strong>Nenhum alerta ativo! Ambiente seguro.</strong>
                       </td>
                     </tr>
                   ) : (
-                    alertasFiltrados.map((a, i) => {
+                    alertasFiltrados.map((a) => {
                       const badge = a.tipo === "BOTÃO DO PÂNICO" ? "badge-panico" : "badge-pcr";
                       return (
-                        <tr key={i} className="critico">
-                          <td><strong>{a.dataHora}</strong></td>
+                        <tr key={a.id} className="critico">
+                          <td><strong>{new Date(a.dataHora).toLocaleString('pt-BR')}</strong></td>
                           <td><span className={`badge ${badge}`}>{a.tipo}</span></td>
-                          <td>{a.profissional}</td>
-                          <td>—</td>
+                          <td>{a.local}</td>
                           <td><span className="badge badge-danger">⚠️ Ativo</span></td>
                           <td style={{ display: 'flex', gap: '8px' }}>
-                            <button className="btn btn-success btn-sm" onClick={() => resolverAlerta(a.dataHora)}>
+                            <button className="btn btn-success btn-sm" onClick={() => resolverAlerta(a.id)}>
                               <i className="las la-check-circle"></i> Resolver
                             </button>
                             <button className="btn btn-info btn-sm" onClick={() => setModalDetalhes(a)}>
@@ -275,17 +271,17 @@ export default function EquipeSegurancaPage() {
             <div className="tabela-wrapper">
               <table className="tabela-seg">
                 <thead>
-                  <tr><th>Data/Hora</th><th>Tipo</th><th>Profissional</th><th>Status</th><th>Resolvido por</th></tr>
+                  <tr><th>Data/Hora</th><th>Tipo</th><th>Local</th><th>Status</th><th>Resolvido por</th></tr>
                 </thead>
                 <tbody>
                   {historicoFiltrado.length === 0 ? (
                     <tr><td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhum registro no histórico</td></tr>
                   ) : (
-                    historicoFiltrado.map((a, i) => (
-                      <tr key={i}>
-                        <td>{a.dataHora}</td>
+                    historicoFiltrado.map((a) => (
+                      <tr key={a.id}>
+                        <td>{new Date(a.dataHora).toLocaleString('pt-BR')}</td>
                         <td><span className="badge badge-info">{a.tipo}</span></td>
-                        <td>{a.profissional}</td>
+                        <td>{a.local}</td>
                         <td><span className="badge badge-success">✅ Resolvido</span></td>
                         <td>{a.resolvidoPor || '—'}</td>
                       </tr>
@@ -302,9 +298,8 @@ export default function EquipeSegurancaPage() {
             <h3 style={{ marginBottom: '20px', color: '#0a1f44' }}><i className="las la-map-marked"></i> Monitoramento por Setor</h3>
             <div className="mapa-grid">
               {setoresMonitorados.map((s, i) => {
-                // Simples logica estática ou dinâmica pra alertas de setor
                 const isAlerta = alertasFiltrados.some(a => a.tipo === "BOTÃO DO PÂNICO"); // fake alerta visual
-                const status = (isAlerta && i === 0) ? 'alerta' : 'normal'; // Apenas para ilustrar
+                const status = (isAlerta && i === 0) ? 'alerta' : 'normal';
                 
                 return (
                   <div key={i} className={`mapa-setor ${status === 'alerta' ? 'alerta' : ''}`}>
@@ -358,12 +353,17 @@ export default function EquipeSegurancaPage() {
           <div className="modal-detalhes-content">
             <h3><i className="las la-exclamation-triangle" style={{ color: '#dc2626' }}></i> Detalhes do Alerta</h3>
             <p><strong>Tipo:</strong> <span className="badge badge-info">{modalDetalhes.tipo}</span></p>
-            <p><strong>Profissional:</strong> {modalDetalhes.profissional}</p>
-            <p><strong>Data/Hora:</strong> {modalDetalhes.dataHora}</p>
+            <p><strong>Local:</strong> {modalDetalhes.local}</p>
+            <p><strong>Data/Hora:</strong> {new Date(modalDetalhes.dataHora).toLocaleString('pt-BR')}</p>
             <p><strong>Status:</strong> {modalDetalhes.resolvido ? <span className="badge badge-success">Resolvido</span> : <span className="badge badge-danger">⚠️ Ativo</span>}</p>
             {modalDetalhes.resolvidoPor && <p><strong>Resolvido por:</strong> {modalDetalhes.resolvidoPor}</p>}
             
             <div style={{ marginTop: '25px', display: 'flex', justifyContent: 'flex-end' }}>
+              {!modalDetalhes.resolvido && (
+                <button className="btn btn-success" onClick={() => resolverAlerta(modalDetalhes.id)} style={{marginRight: '10px'}}>
+                  <i className="las la-check"></i> Resolver Agora
+                </button>
+              )}
               <button className="btn btn-warning" onClick={() => setModalDetalhes(null)}>
                 <i className="las la-times"></i> Fechar
               </button>

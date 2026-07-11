@@ -1,282 +1,255 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import './usuario.css';
 
+interface Usuario {
+  id: string;
+  nome: string;
+  email: string;
+  cargo: string;
+  ativo: boolean;
+  createdAt: string;
+}
+
 export default function UsuarioPage() {
-    const containerRef = useRef<HTMLDivElement>(null);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [filtroAtual, setFiltroAtual] = useState('todos');
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        // Execute original JS logic
-        const scriptEl = document.createElement('script');
-        scriptEl.innerHTML = `
+  // Modal State
+  const [modalAberto, setModalAberto] = useState(false);
+  const [formUsuario, setFormUsuario] = useState({ id: '', nome: '', email: '', senha: '', cargo: 'MEDICO' });
+  const [isSaving, setIsSaving] = useState(false);
 
-let usuarios = [];
-let filtroAtual = 'todos';
+  useEffect(() => {
+    carregarUsuarios();
+  }, []);
 
-function carregarUsuarios() {
-    const saved = localStorage.getItem("usuarios_sistema");
-    if (saved) {
-        usuarios = JSON.parse(saved);
+  const carregarUsuarios = async () => {
+    try {
+      const res = await fetch('/api/usuarios');
+      if (res.ok) {
+        const data = await res.json();
+        setUsuarios(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar usuários:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Funções Auxiliares para traduzir o Cargo do Prisma para Nível/Cargo da UI Antiga
+  const getNivel = (cargo: string) => {
+    if (cargo === 'ADMIN') return 'admin';
+    if (['MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'TECNICO_ENFERMAGEM', 'FARMACEUTICO'].includes(cargo)) return 'profissional';
+    return 'recepcao';
+  };
+
+  const getNivelNome = (nivel: string) => {
+    if (nivel === 'admin') return 'Administrador';
+    if (nivel === 'profissional') return 'Profissional de Saúde';
+    return 'Recepção';
+  };
+
+  const getCargoLabel = (cargo: string) => {
+    const mapa: Record<string, string> = {
+      ADMIN: "Gestor do Sistema",
+      MEDICO: "Médico(a)",
+      ENFERMEIRO_ASSISTENCIAL: "Enfermeiro(a)",
+      TECNICO_ENFERMAGEM: "Técnico(a) de Enfermagem",
+      FARMACEUTICO: "Farmacêutico(a)",
+      RECEPCIONISTA: "Atendente / Recepcionista",
+      OUTROS: "Outros"
+    };
+    return mapa[cargo] || "Outros";
+  };
+
+  // Stats
+  const adminCount = usuarios.filter(u => getNivel(u.cargo) === 'admin').length;
+  const profissionalCount = usuarios.filter(u => getNivel(u.cargo) === 'profissional').length;
+  const recepcaoCount = usuarios.filter(u => getNivel(u.cargo) === 'recepcao').length;
+
+  // Filtro
+  const usuariosFiltrados = usuarios.filter(u => {
+    if (filtroAtual === 'todos') return true;
+    return getNivel(u.cargo) === filtroAtual;
+  });
+
+  const abrirModal = (u?: Usuario) => {
+    if (u) {
+      setFormUsuario({ id: u.id, nome: u.nome, email: u.email, senha: '', cargo: u.cargo });
     } else {
-        usuarios = [
-            { id: 1, nome: "Administrador Master", email: "admin@saskia.com", senha: "admin123", nivel: "admin", dataCadastro: new Date().toISOString() },
-            { id: 2, nome: "Dr. Carlos Silva", email: "carlos@saskia.com", senha: "123456", nivel: "profissional", dataCadastro: new Date().toISOString() },
-            { id: 3, nome: "Ana Recepção", email: "ana@saskia.com", senha: "123456", nivel: "recepcao", dataCadastro: new Date().toISOString() }
-        ];
-        salvarUsuarios();
+      setFormUsuario({ id: '', nome: '', email: '', senha: '', cargo: 'MEDICO' });
     }
-    atualizarStats();
-    filtrarUsuarios(filtroAtual);
-}
+    setModalAberto(true);
+  };
 
-function salvarUsuarios() {
-    localStorage.setItem("usuarios_sistema", JSON.stringify(usuarios));
-}
-
-function atualizarStats() {
-    const admin = usuarios.filter(u => u.nivel === "admin").length;
-    const profissional = usuarios.filter(u => u.nivel === "profissional").length;
-    const recepcao = usuarios.filter(u => u.nivel === "recepcao").length;
-    
-    document.getElementById("totalAdmin").innerHTML = admin;
-    document.getElementById("totalProfissionais").innerHTML = profissional;
-    document.getElementById("totalRecepcaoUser").innerHTML = recepcao;
-    document.getElementById("totalUsuarios").innerHTML = usuarios.length;
-}
-
-function renderizarUsuarios() {
-    const tbody = document.getElementById("listaUsuarios");
-    let usuariosFiltrados = usuarios;
-    
-    if (filtroAtual !== 'todos') {
-        usuariosFiltrados = usuarios.filter(u => u.nivel === filtroAtual);
+  const salvarUsuario = async () => {
+    if (!formUsuario.nome || !formUsuario.email) {
+      alert("Preencha nome e e-mail!");
+      return;
     }
-    
-    if (usuariosFiltrados.length === 0) {
-        tbody.innerHTML = \`<tr><td colspan="6" class="sem-dados">Nenhum usuário encontrado</td></tr>\`;
-        return;
+    if (!formUsuario.id && !formUsuario.senha) {
+      alert("Informe uma senha para o novo usuário!");
+      return;
     }
-    
-    let html = "";
-    for (let i = 0; i < usuariosFiltrados.length; i++) {
-        const u = usuariosFiltrados[i];
-        let nivelClass = "";
-        let nivelNome = "";
-        
-        if (u.nivel === "admin") {
-            nivelClass = "nivel-admin";
-            nivelNome = "Administrador";
-        } else if (u.nivel === "profissional") {
-            nivelClass = "nivel-profissional";
-            nivelNome = "Profissional de Saúde";
-        } else {
-            nivelClass = "nivel-recepcao";
-            nivelNome = "Recepção";
-        }
-        
-        const dataCadastro = u.dataCadastro ? new Date(u.dataCadastro).toLocaleDateString('pt-BR') : "-";
-        
-        html += \`
-            <tr>
-                <td><i class="las la-user-circle"></i> \${u.nome}</td>
-                <td><i class="las la-envelope"></i> \${u.email}</td>
-                <td><span class="badge-nivel \${nivelClass}">\${nivelNome}</span></td>
-                <td>\${getCargoLabel(u.nivel)}</td>
-                <td>\${dataCadastro}</td>
-                <td>
-                    <button class="btn-editar" onclick="editarUsuario(\${u.id})"><i class="las la-edit"></i></button>
-                    <button class="btn-excluir" onclick="excluirUsuario(\${u.id})"><i class="las la-trash"></i></button>
-                </td>
-            </tr>
-        \`;
+
+    setIsSaving(true);
+    try {
+      const url = formUsuario.id ? `/api/usuarios/${formUsuario.id}` : '/api/usuarios';
+      const method = formUsuario.id ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formUsuario)
+      });
+
+      if (res.ok) {
+        alert("Usuário salvo com sucesso!");
+        setModalAberto(false);
+        carregarUsuarios();
+      } else {
+        const errorData = await res.json();
+        alert(errorData.error || "Erro ao salvar usuário");
+      }
+    } catch (error) {
+      alert("Erro de conexão");
+    } finally {
+      setIsSaving(false);
     }
-    tbody.innerHTML = html;
-}
+  };
 
-function getCargoLabel(nivel) {
-    if (nivel === "admin") return "Gestor do Sistema";
-    if (nivel === "profissional") return "Médico / Enfermeiro";
-    return "Atendente / Recepcionista";
-}
-
-function filtrarUsuarios(filtro) {
-    filtroAtual = filtro;
-    document.querySelectorAll('.filtro-btn').forEach(btn => btn.classList.remove('ativo'));
-    event.target.classList.add('ativo');
-    renderizarUsuarios();
-}
-
-function abrirModalUsuario() {
-    document.getElementById("usuarioId").value = "";
-    document.getElementById("usuarioNome").value = "";
-    document.getElementById("usuarioEmail").value = "";
-    document.getElementById("usuarioSenha").value = "";
-    document.getElementById("usuarioNivel").value = "profissional";
-    document.getElementById("modalUsuario").style.display = "flex";
-}
-
-function fecharModalUsuario() {
-    document.getElementById("modalUsuario").style.display = "none";
-}
-
-function editarUsuario(id) {
-    const usuario = usuarios.find(u => u.id === id);
-    if (usuario) {
-        document.getElementById("usuarioId").value = usuario.id;
-        document.getElementById("usuarioNome").value = usuario.nome;
-        document.getElementById("usuarioEmail").value = usuario.email;
-        document.getElementById("usuarioSenha").value = "";
-        document.getElementById("usuarioNivel").value = usuario.nivel;
-        document.getElementById("modalUsuario").style.display = "flex";
-    }
-}
-
-function salvarUsuario() {
-    const id = document.getElementById("usuarioId").value;
-    const nome = document.getElementById("usuarioNome").value;
-    const email = document.getElementById("usuarioEmail").value;
-    const senha = document.getElementById("usuarioSenha").value;
-    const nivel = document.getElementById("usuarioNivel").value;
-    
-    if (!nome || !email) {
-        alert("Preencha nome e e-mail!");
-        return;
-    }
-    
-    if (!id && !senha) {
-        alert("Informe uma senha para o novo usuário!");
-        return;
-    }
-    
-    if (id) {
-        const index = usuarios.findIndex(u => u.id == id);
-        if (index !== -1) {
-            usuarios[index].nome = nome;
-            usuarios[index].email = email;
-            usuarios[index].nivel = nivel;
-            if (senha) usuarios[index].senha = senha;
-        }
-    } else {
-        const novoId = usuarios.length > 0 ? Math.max(...usuarios.map(u => u.id)) + 1 : 1;
-        usuarios.push({
-            id: novoId,
-            nome: nome,
-            email: email,
-            senha: senha,
-            nivel: nivel,
-            dataCadastro: new Date().toISOString()
-        });
-    }
-    
-    salvarUsuarios();
-    atualizarStats();
-    renderizarUsuarios();
-    fecharModalUsuario();
-    alert("Usuário salvo com sucesso!");
-}
-
-function excluirUsuario(id) {
+  const excluirUsuario = async (id: string) => {
     if (confirm("Tem certeza que deseja excluir este usuário?")) {
-        usuarios = usuarios.filter(u => u.id !== id);
-        salvarUsuarios();
-        atualizarStats();
-        renderizarUsuarios();
-        alert("Usuário excluído!");
+      try {
+        const res = await fetch(`/api/usuarios/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          alert("Usuário excluído!");
+          carregarUsuarios();
+        } else {
+          alert("Erro ao excluir usuário");
+        }
+      } catch (error) {
+        alert("Erro de conexão");
+      }
     }
-}
-`;
-        document.body.appendChild(scriptEl);
+  };
 
-        return () => {
-            if (scriptEl.parentNode) {
-                scriptEl.parentNode.removeChild(scriptEl);
-            }
-        };
-    }, []);
+  return (
+    <div className="conteudo">
+      <div className="header-usuarios">
+        <h2><i className="las la-users"></i> Usuários do Sistema</h2>
+        <button className="btn-novo" onClick={() => abrirModal()}>
+          <i className="las la-user-plus"></i> Novo Usuário
+        </button>
+      </div>
 
-    return (
-        <div 
-            className="migrated-page-container" 
-            ref={containerRef}
-            dangerouslySetInnerHTML={{ __html: `<div class="conteudo">
+      {/* CARDS ESTATÍSTICOS */}
+      <div className="stats-usuarios">
+        <div className="stat-card-user">
+          <h4><i className="las la-crown"></i> Administradores</h4>
+          <div className="numero">{adminCount}</div>
+        </div>
+        <div className="stat-card-user">
+          <h4><i className="las la-stethoscope"></i> Profissionais</h4>
+          <div className="numero">{profissionalCount}</div>
+        </div>
+        <div className="stat-card-user">
+          <h4><i className="las la-headset"></i> Recepção</h4>
+          <div className="numero">{recepcaoCount}</div>
+        </div>
+        <div className="stat-card-user">
+          <h4><i className="las la-users"></i> Total</h4>
+          <div className="numero">{usuarios.length}</div>
+        </div>
+      </div>
 
-<div class="header-usuarios">
-    <h2><i class="las la-users"></i> Usuários do Sistema</h2>
-    <button class="btn-novo" onclick="abrirModalUsuario()">
-        <i class="las la-user-plus"></i> Novo Usuário
-    </button>
-</div>
+      {/* FILTROS */}
+      <div className="filtros-usuarios">
+        <button className={`filtro-btn ${filtroAtual === 'todos' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('todos')}><i className="las la-list-ul"></i> Todos</button>
+        <button className={`filtro-btn ${filtroAtual === 'admin' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('admin')}><i className="las la-crown"></i> Administradores</button>
+        <button className={`filtro-btn ${filtroAtual === 'profissional' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('profissional')}><i className="las la-stethoscope"></i> Profissionais</button>
+        <button className={`filtro-btn ${filtroAtual === 'recepcao' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('recepcao')}><i className="las la-headset"></i> Recepção</button>
+      </div>
 
-<!-- CARDS ESTATÍSTICOS -->
-<div class="stats-usuarios">
-    <div class="stat-card-user">
-        <h4><i class="las la-crown"></i> Administradores</h4>
-        <div class="numero" id="totalAdmin">0</div>
-    </div>
-    <div class="stat-card-user">
-        <h4><i class="las la-stethoscope"></i> Profissionais</h4>
-        <div class="numero" id="totalProfissionais">0</div>
-    </div>
-    <div class="stat-card-user">
-        <h4><i class="las la-headset"></i> Recepção</h4>
-        <div class="numero" id="totalRecepcaoUser">0</div>
-    </div>
-    <div class="stat-card-user">
-        <h4><i class="las la-users"></i> Total</h4>
-        <div class="numero" id="totalUsuarios">0</div>
-    </div>
-</div>
-
-<!-- FILTROS -->
-<div class="filtros-usuarios">
-    <button class="filtro-btn ativo" onclick="filtrarUsuarios('todos')"><i class="las la-list-ul"></i> Todos</button>
-    <button class="filtro-btn" onclick="filtrarUsuarios('admin')"><i class="las la-crown"></i> Administradores</button>
-    <button class="filtro-btn" onclick="filtrarUsuarios('profissional')"><i class="las la-stethoscope"></i> Profissionais</button>
-    <button class="filtro-btn" onclick="filtrarUsuarios('recepcao')"><i class="las la-headset"></i> Recepção</button>
-</div>
-
-<!-- TABELA DE USUÁRIOS -->
-<div class="tabela-usuarios">
-    <table>
-        <thead>
+      {/* TABELA DE USUÁRIOS */}
+      <div className="tabela-usuarios">
+        <table>
+          <thead>
             <tr>
-                <th>Nome</th>
-                <th>E-mail</th>
-                <th>Nível</th>
-                <th>Cargo</th>
-                <th>Cadastro</th>
-                <th>Ações</th>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Nível</th>
+              <th>Cargo</th>
+              <th>Cadastro</th>
+              <th>Ações</th>
             </tr>
-        </thead>
-        <tbody id="listaUsuarios"></tbody>
-    </table>
-</div>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={6} className="sem-dados">Carregando usuários...</td></tr>
+            ) : usuariosFiltrados.length === 0 ? (
+              <tr><td colSpan={6} className="sem-dados">Nenhum usuário encontrado</td></tr>
+            ) : (
+              usuariosFiltrados.map(u => {
+                const nivel = getNivel(u.cargo);
+                return (
+                  <tr key={u.id}>
+                    <td><i className="las la-user-circle"></i> {u.nome}</td>
+                    <td><i className="las la-envelope"></i> {u.email}</td>
+                    <td><span className={`badge-nivel nivel-${nivel}`}>{getNivelNome(nivel)}</span></td>
+                    <td>{getCargoLabel(u.cargo)}</td>
+                    <td>{new Date(u.createdAt).toLocaleDateString('pt-BR')}</td>
+                    <td>
+                      <button className="btn-editar" onClick={() => abrirModal(u)}><i className="las la-edit"></i></button>
+                      <button className="btn-excluir" onClick={() => excluirUsuario(u.id)}><i className="las la-trash"></i></button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
 
-</div>
-<div id="modalUsuario" class="modal-usuario">
-    <div class="modal-content">
-        <div class="modal-header">
-            <span><i class="las la-user-plus"></i> Usuário</span>
-            <button onclick="fecharModalUsuario()" style="background:none; border:none; color:white; font-size:24px;">×</button>
+      {/* MODAL */}
+      {modalAberto && (
+        <div className="modal-usuario" style={{ display: 'flex' }}>
+          <div className="modal-content">
+            <div className="modal-header">
+              <span><i className="las la-user-plus"></i> {formUsuario.id ? 'Editar Usuário' : 'Novo Usuário'}</span>
+              <button onClick={() => setModalAberto(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>×</button>
+            </div>
+            <div className="modal-body">
+              <label>Nome completo</label>
+              <input type="text" value={formUsuario.nome} onChange={e => setFormUsuario({...formUsuario, nome: e.target.value})} placeholder="Nome completo" />
+              
+              <label>E-mail</label>
+              <input type="email" value={formUsuario.email} onChange={e => setFormUsuario({...formUsuario, email: e.target.value})} placeholder="E-mail" />
+              
+              <label>Senha {formUsuario.id && '(Deixe em branco para manter a atual)'}</label>
+              <input type="password" value={formUsuario.senha} onChange={e => setFormUsuario({...formUsuario, senha: e.target.value})} placeholder="Senha" />
+              
+              <label>Cargo do Sistema</label>
+              <select value={formUsuario.cargo} onChange={e => setFormUsuario({...formUsuario, cargo: e.target.value})}>
+                <option value="ADMIN">Gestor / Administrador</option>
+                <option value="MEDICO">Médico(a)</option>
+                <option value="ENFERMEIRO_ASSISTENCIAL">Enfermeiro(a)</option>
+                <option value="TECNICO_ENFERMAGEM">Técnico(a) de Enfermagem</option>
+                <option value="FARMACEUTICO">Farmacêutico(a)</option>
+                <option value="RECEPCIONISTA">Recepção / Atendimento</option>
+                <option value="OUTROS">Outros</option>
+              </select>
+              
+              <button className="btn-salvar" onClick={salvarUsuario} disabled={isSaving}>
+                {isSaving ? 'Salvando...' : 'Salvar Usuário'}
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="modal-body">
-            <input type="hidden" id="usuarioId">
-            <label>Nome completo</label>
-            <input type="text" id="usuarioNome" placeholder="Nome completo">
-            <label>E-mail</label>
-            <input type="email" id="usuarioEmail" placeholder="E-mail">
-            <label>Senha</label>
-            <input type="password" id="usuarioSenha" placeholder="Senha">
-            <label>Nível de Acesso</label>
-            <select id="usuarioNivel">
-                <option value="admin">Administrador</option>
-                <option value="profissional">Profissional de Saúde</option>
-                <option value="recepcao">Recepção</option>
-            </select>
-            <button class="btn-salvar" onclick="salvarUsuario()">Salvar</button>
-        </div>
+      )}
     </div>
-</div>` }} 
-        />
-    );
+  );
 }

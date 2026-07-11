@@ -1,4 +1,5 @@
 'use client';
+import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
 import './procedimentos.css';
 
@@ -24,19 +25,45 @@ export default function AdminProcedimentosPage() {
 
   useEffect(() => {
     try {
-      const u = localStorage.getItem('usuarioLogado');
+      const u = JSON.stringify(getSessionUser());
       const usuario = u ? JSON.parse(u) : null;
       const hid = usuario?.hospitalId || usuario?.id || 'hospital_001';
       setHospitalId(hid);
 
-      const procs = JSON.parse(localStorage.getItem(`${hid}_procedimentos`) || '[]');
-      setProcedimentos(procs);
+      fetch(`/api/procedimento?hospitalId=${hid}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            // Map db object to UI model
+            const mapped = data.map(p => ({
+              id: p.id,
+              nome: p.nome,
+              descricao: p.descricao || '',
+              valor: p.valorBase ? `R$ ${p.valorBase}` : '',
+              area: 'Geral' // or some default
+            }));
+            setProcedimentos(mapped);
+          }
+        })
+        .catch(console.error);
     } catch(e) {}
   }, []);
 
   const saveProcedimentos = (data: Procedimento[]) => {
     setProcedimentos(data);
-    localStorage.setItem(`${hospitalId}_procedimentos`, JSON.stringify(data));
+    const novo = data[data.length - 1];
+    if (hospitalId && novo) {
+      // POST the newest
+      fetch('/api/procedimento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          hospitalId, 
+          nome: novo.nome, 
+          descricao: novo.descricao 
+        })
+      }).catch(console.error);
+    }
   };
 
   const abrirModal = (index: number | null = null) => {

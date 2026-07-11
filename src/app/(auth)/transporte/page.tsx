@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import './transporte.css';
 
 interface Transporte {
-  id: number;
+  id: string;
   paciente: string;
   origem: string;
   destino: string;
@@ -14,8 +14,8 @@ interface Transporte {
 }
 
 export default function TransportePage() {
-  const [hospitalId, setHospitalId] = useState('hospital_001');
   const [activeTab, setActiveTab] = useState<'solicitar'|'lista'>('solicitar');
+  const [loading, setLoading] = useState(true);
   
   const [transportes, setTransportes] = useState<Transporte[]>([]);
   const [pacientes, setPacientes] = useState<any[]>([]);
@@ -28,36 +28,37 @@ export default function TransportePage() {
   const [transpSolicitante, setTranspSolicitante] = useState('');
   const [transpData, setTranspData] = useState('');
 
-  useEffect(() => {
+  const carregarDados = async () => {
+    setLoading(true);
     try {
-      const u = localStorage.getItem('usuarioLogado');
-      const usuario = u ? JSON.parse(u) : null;
-      const hid = usuario?.hospitalId || usuario?.id || 'hospital_001';
-      setHospitalId(hid);
-
-      const storedTransp = JSON.parse(localStorage.getItem(`${hid}_transpSolicitacoes`) || '[]');
-      setTransportes(storedTransp);
-
-      const storedPac = JSON.parse(localStorage.getItem(`${hid}_pacientes`) || '[]');
-      setPacientes(storedPac);
-
-      setTranspData(new Date().toISOString().slice(0, 16));
-    } catch(e) {}
-  }, []);
-
-  const saveTransportes = (data: Transporte[]) => {
-    setTransportes(data);
-    localStorage.setItem(`${hospitalId}_transpSolicitacoes`, JSON.stringify(data));
+      const resT = await fetch('/api/transporte');
+      if (resT.ok) {
+        setTransportes(await resT.json());
+      }
+      
+      const resP = await fetch('/api/pacientes');
+      if (resP.ok) {
+        setPacientes(await resP.json());
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const solicitarTransporte = () => {
+  useEffect(() => {
+    carregarDados();
+    setTranspData(new Date().toISOString().slice(0, 16));
+  }, []);
+
+  const solicitarTransporte = async () => {
     if (!transpPaciente) {
       alert("⚠️ Selecione o paciente!");
       return;
     }
 
-    const novoTransp: Transporte = {
-      id: Date.now(),
+    const payload = {
       paciente: transpPaciente,
       origem: transpOrigem,
       destino: transpDestino,
@@ -67,25 +68,44 @@ export default function TransportePage() {
       status: "Pendente"
     };
 
-    saveTransportes([...transportes, novoTransp]);
-    setTranspSolicitante('');
-    alert("✅ Transporte solicitado!");
-    setActiveTab('lista');
+    try {
+      const res = await fetch('/api/transporte', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Erro ao solicitar transporte');
+      
+      setTranspSolicitante('');
+      alert("✅ Transporte solicitado!");
+      setActiveTab('lista');
+      carregarDados();
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
-  const concluirTransporte = (id: number) => {
+  const concluirTransporte = async (id: string) => {
     if(confirm("Deseja marcar este transporte como Concluído?")) {
-      const novos = transportes.map(t => {
-        if (t.id === id) return { ...t, status: "Concluído" };
-        return t;
-      });
-      saveTransportes(novos);
+      try {
+        const res = await fetch(`/api/transporte/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'Concluído' })
+        });
+        if (!res.ok) throw new Error('Erro ao concluir transporte');
+        carregarDados();
+      } catch (error: any) {
+        alert(error.message);
+      }
     }
   };
 
   const hojeStr = new Date().toISOString().split('T')[0];
   const statTotal = transportes.filter(t => t.data.startsWith(hojeStr)).length;
   const statPendentes = transportes.filter(t => t.status === "Pendente").length;
+
+  if (loading && transportes.length === 0) return <div>Carregando...</div>;
 
   return (
     <div className="conteudo">
@@ -194,7 +214,7 @@ export default function TransportePage() {
                 {transportes.length === 0 ? (
                   <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhuma solicitação</td></tr>
                 ) : (
-                  transportes.slice().reverse().map(t => (
+                  transportes.map(t => (
                     <tr key={t.id}>
                       <td>{new Date(t.data).toLocaleString('pt-BR')}</td>
                       <td><strong>{t.paciente}</strong></td>

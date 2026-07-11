@@ -1,4 +1,5 @@
 'use client';
+import { getSessionUser } from '@/lib/session';
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -51,57 +52,27 @@ export default function RelatoriosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inicio, fim]);
 
-  const gerarRelatorios = () => {
+  const gerarRelatorios = async () => {
     try {
-      const u = localStorage.getItem('usuarioLogado');
+      const u = JSON.stringify(getSessionUser());
       const usuario = session?.user || (u ? JSON.parse(u) : null);
       const hid = usuario?.hospitalId || 'hospital_001';
 
-      const getDB = (chave: string) => JSON.parse(localStorage.getItem(`${hid}_${chave}`) || '[]');
+      let url = `/api/relatorios/geral?hospitalId=${hid}`;
+      if (inicio && fim) {
+        url += `&inicio=${inicio}&fim=${fim}`;
+      }
 
-      const pacientes = getDB("pacientes");
-      const farmaciaSaidas = getDB("farmaciaSaidas");
-      const almoxItens = getDB("almoxItens");
-      const cirurgias = getDB("ccCirurgias");
-      const exames = getDB("saskiaExames");
-      const transfusoes = getDB("bsTransfusoes");
-      const iras = getDB("ccihIRAS");
-      const hmObs = getDB("ccihHM");
-      const cssdLotes = getDB("cssdLotes");
-      const ouvidoria = getDB("ouvManifestacoes");
-      const utiLeitos = getDB("utiLeitos");
-
-      const filtrarPeriodo = (arr: any[], campo: string) => {
-        if (!inicio || !fim) return arr;
-        return arr.filter(item => {
-          const d = new Date(item[campo]);
-          return d >= new Date(inicio) && d <= new Date(fim + 'T23:59:59');
-        });
-      };
-
-      const utiOcupados = utiLeitos.filter((l: any) => l.status === "ocupado").length;
-      
-      setData({
-        totalPacientes: pacientes.length,
-        atendimentos: pacientes.filter((p: any) => p.status === "Finalizado" || p.status === "Alta Médica").length,
-        internacoes: pacientes.filter((p: any) => p.status === "Internado").length,
-        altas: pacientes.filter((p: any) => p.status === "Alta Médica").length,
-        obitos: pacientes.filter((p: any) => p.status === "Óbito").length,
-        taxaUTI: utiLeitos.length > 0 ? Math.round((utiOcupados / utiLeitos.length) * 100) + "%" : "0%",
-        tmp: "-", // Média de permanência (placeholder from legacy)
-        dispensacoes: filtrarPeriodo(farmaciaSaidas, 'data').length,
-        itensAlmox: almoxItens.length, // Total inventory is not time-filtered usually
-        cirurgias: filtrarPeriodo(cirurgias, 'data').length,
-        exames: filtrarPeriodo(exames, 'dataSolicitacao').length,
-        transfusoes: filtrarPeriodo(transfusoes, 'data').length,
-        iras: filtrarPeriodo(iras, 'data').length,
-        taxaIRAS: pacientes.length > 0 ? Math.round((iras.length / pacientes.length) * 100) + "%" : "0%",
-        hm: hmObs.length > 0 ? Math.round((hmObs.filter((o: any) => o.realizou === "Sim").length / hmObs.length) * 100) + "%" : "N/A",
-        cssd: filtrarPeriodo(cssdLotes, 'data').length,
-        ouvidoria: filtrarPeriodo(ouvidoria, 'data').length
-      });
-
-    } catch(e) {}
+      const response = await fetch(url);
+      if (response.ok) {
+        const newData = await response.json();
+        setData(newData);
+      } else {
+        console.error("Erro ao buscar relatórios");
+      }
+    } catch(e) {
+      console.error(e);
+    }
   };
 
   const handlePrint = () => {

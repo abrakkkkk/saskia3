@@ -63,20 +63,27 @@ export default function LembretesPage() {
     relacionado: ''
   });
 
-  useEffect(() => {
+  const carregarLembretes = () => {
     if (!hospitalId) return;
-    const saved = localStorage.getItem(`${hospitalId}_lembretes_sistema`);
-    if (saved) {
-      setLembretes(JSON.parse(saved));
-    }
-  }, [hospitalId]);
-
-  const salvar = (lista: Lembrete[]) => {
-    setLembretes(lista);
-    if (hospitalId) {
-      localStorage.setItem(`${hospitalId}_lembretes_sistema`, JSON.stringify(lista));
-    }
+    fetch(`/api/lembretes`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          // Normaliza os nomes de campos se necessário
+          const mapData = data.map(d => ({
+            ...d,
+            data: d.dataHora ? d.dataHora.split('T')[0] : (d.data || ''),
+            hora: d.dataHora ? new Date(d.dataHora).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) : (d.hora || '')
+          }));
+          setLembretes(mapData);
+        }
+      })
+      .catch(console.error);
   };
+
+  useEffect(() => {
+    carregarLembretes();
+  }, [hospitalId]);
 
   const abrirModal = (l?: Lembrete) => {
     if (l) {
@@ -103,42 +110,65 @@ export default function LembretesPage() {
     setIsModalOpen(true);
   };
 
-  const salvarLembrete = () => {
+  const salvarLembrete = async () => {
     if (!form.titulo || !form.data) {
       alert("Preencha título e data!");
       return;
     }
     
-    let atualizado = [...lembretes];
-    if (lembreteEditando) {
-      atualizado = atualizado.map(l => l.id === lembreteEditando.id ? {
-        ...l,
-        ...form,
-        atualizadoPor: usuario?.nome || "Usuário",
-        atualizadoEm: new Date().toISOString()
-      } : l);
-    } else {
-      atualizado.push({
-        id: Date.now(),
-        ...form,
-        concluido: false,
-        criadoPor: usuario?.nome || "Usuário",
-        criadoEm: new Date().toISOString()
-      });
+    try {
+      if (lembreteEditando) {
+        await fetch(`/api/lembretes/${lembreteEditando.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...form,
+            dataHora: `${form.data}T${form.hora}:00Z`
+          })
+        });
+      } else {
+        await fetch('/api/lembretes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...form,
+            dataHora: `${form.data}T${form.hora}:00Z`,
+            criadoPor: usuario?.nome || "Usuário"
+          })
+        });
+      }
+      carregarLembretes();
+      setIsModalOpen(false);
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao salvar lembrete!");
     }
-    
-    salvar(atualizado);
-    setIsModalOpen(false);
   };
 
-  const concluirLembrete = (id: number) => {
-    salvar(lembretes.map(l => l.id === id ? { ...l, concluido: true } : l));
+  const concluirLembrete = async (id: number | string) => {
+    try {
+      await fetch(`/api/lembretes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ concluido: true })
+      });
+      carregarLembretes();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const excluirLembrete = (id: number) => {
+  const excluirLembrete = async (id: number | string) => {
     const senha = prompt("Ação destrutiva: Digite sua senha para excluir este lembrete:");
-    if (senha === usuario?.senha || senha === "admin") {
-      salvar(lembretes.filter(l => l.id !== id));
+    if (senha === usuario?.senha) {
+      try {
+        await fetch(`/api/lembretes/${id}`, {
+          method: 'DELETE'
+        });
+        carregarLembretes();
+      } catch (e) {
+        console.error(e);
+      }
     } else if (senha !== null) {
       alert("Senha incorreta!");
     }

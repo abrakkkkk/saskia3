@@ -14,7 +14,13 @@ export async function GET (_: NextRequest, { params }: { params: Promise <{ id: 
         triagens: { orderBy: { createdAt: 'desc' } }, 
         evolucoes: { orderBy: { createdAt: 'desc' } }, 
         prescricoes: { orderBy: { createdAt: 'desc' } },
-        exames: { orderBy: { createdAt: 'desc' } }
+        exames: { orderBy: { createdAt: 'desc' } },
+        sinaisVitais: { orderBy: { createdAt: 'desc' } },
+        escoresClinicos: { orderBy: { createdAt: 'desc' } },
+        avaliacoesNutri: { orderBy: { createdAt: 'desc' } },
+        avaliacoesMedicas: { orderBy: { createdAt: 'desc' } },
+        anotacoesEnf: { orderBy: { createdAt: 'desc' } },
+        timelineEvents: { orderBy: { createdAt: 'desc' } }
       }
     })
 

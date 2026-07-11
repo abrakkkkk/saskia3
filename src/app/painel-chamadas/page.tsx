@@ -10,16 +10,16 @@ interface Paciente {
   cpf: string | null;
   status: string;
   classificacao: string | null;
-  dataCadastro: string | null;
+  createdAt: string;
 }
 
 interface Chamada {
-  cpf: string;
-  nome: string;
+  id: string;
+  cpf: string | null;
+  pacienteNome: string;
   status: string;
   consultorio: string;
-  horarioChamada: string;
-  dataChamada: string;
+  createdAt: string;
 }
 
 interface PacienteFila extends Paciente {
@@ -31,7 +31,7 @@ interface PacienteFila extends Paciente {
 export default function PainelChamadasTV() {
   const { data: session } = useSession();
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
-  const [chamadasStorage, setChamadasStorage] = useState<Chamada[]>([]);
+  const [chamadas, setChamadas] = useState<Chamada[]>([]);
   const [horaAtual, setHoraAtual] = useState(new Date());
   const [mounted, setMounted] = useState(false);
   
@@ -41,12 +41,6 @@ export default function PainelChamadasTV() {
   
   const audioCtxRef = useRef<any>(null);
   const ultimaChamadaIdRef = useRef<string>('');
-  
-  const getHospitalId = () => {
-    const u = localStorage.getItem('usuarioLogado');
-    const usuario = session?.user || (u ? JSON.parse(u) : null);
-    return usuario?.hospitalId || 'hospital_001';
-  };
 
   useEffect(() => {
     setMounted(true);
@@ -101,18 +95,17 @@ export default function PainelChamadasTV() {
     }, 800);
   };
 
-  const fetchDados = () => {
-    const hid = getHospitalId();
+  const fetchDados = async () => {
     try {
-      const p = JSON.parse(localStorage.getItem(`${hid}_pacientes`) || '[]');
-      setPacientes(p);
-      
-      const chamadasRaw = localStorage.getItem(`${hid}_chamadasPainel`);
-      if (chamadasRaw) {
-        setChamadasStorage(JSON.parse(chamadasRaw));
-      }
+      const [resPacientes, resChamadas] = await Promise.all([
+        fetch('/api/pacientes'),
+        fetch('/api/chamadas')
+      ]);
+
+      if (resPacientes.ok) setPacientes(await resPacientes.json());
+      if (resChamadas.ok) setChamadas(await resChamadas.json());
     } catch (e) {
-      console.error("Erro ao buscar dados", e);
+      console.error("Erro ao buscar dados do painel", e);
     }
   };
 
@@ -128,30 +121,30 @@ export default function PainelChamadasTV() {
   }, [session]);
 
   useEffect(() => {
-    if (chamadasStorage.length > 0) {
-      const ultima = chamadasStorage[chamadasStorage.length - 1];
-      const chamadaId = ultima.dataChamada + '_' + ultima.nome;
+    if (chamadas.length > 0) {
+      // API brings ordered by createdAt desc, so the first is the newest
+      const ultima = chamadas[0];
+      const chamadaId = ultima.id;
       
       if (chamadaId !== ultimaChamadaIdRef.current) {
         ultimaChamadaIdRef.current = chamadaId;
         tocarBeep();
-        falarMensagem(ultima.nome, ultima.consultorio);
+        falarMensagem(ultima.pacienteNome, ultima.consultorio);
       }
     }
-  }, [chamadasStorage, audioPermitido, vozAtivada]);
+  }, [chamadas, audioPermitido, vozAtivada]);
 
   // LÓGICA DE FILA
   const pacientesAtivos = pacientes.filter(p => !["Finalizado", "Alta Médica", "Evasão", "Transferido", "Óbito"].includes(p.status));
   const filaComChamadas: PacienteFila[] = pacientesAtivos.map(p => {
-    const chamada = chamadasStorage.find(c => (c.cpf && c.cpf === p.cpf) || (!c.cpf && c.nome === p.nome));
-    const dataRef = p.dataCadastro || new Date().toISOString();
+    const chamada = chamadas.find(c => (c.cpf && c.cpf === p.cpf) || (!c.cpf && c.pacienteNome === p.nome));
+    const dataRef = p.createdAt || new Date().toISOString();
     const tempoEsperaMin = Math.floor((new Date().getTime() - new Date(dataRef).getTime()) / 60000);
     return { ...p, foiChamado: !!chamada, dadosChamada: chamada, tempoEsperaMin };
   });
 
   // ESTATÍSTICAS
   const qtdAguardando = filaComChamadas.filter(p => p.status === "Aguardando Triagem" || p.status === "Recepção").length;
-  const qtdChamados = filaComChamadas.filter(p => p.foiChamado).length;
   const qtdAtendimento = filaComChamadas.filter(p => p.status.includes("Atendimento") || p.status === "Em Triagem").length;
   const qtdEmergencia = filaComChamadas.filter(p => ["Vermelho", "Laranja"].includes(p.classificacao || "")).length;
 
@@ -171,9 +164,8 @@ export default function PainelChamadasTV() {
     }
   });
 
-  const chamadasReversas = [...chamadasStorage].reverse();
-  const chamadaAtual = chamadasReversas.length > 0 ? chamadasReversas[0] : null;
-  const ultimasChamadasHistorico = chamadaAtual ? chamadasReversas.slice(1, 6) : [];
+  const chamadaAtual = chamadas.length > 0 ? chamadas[0] : null;
+  const ultimasChamadasHistorico = chamadaAtual ? chamadas.slice(1, 6) : [];
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans overflow-hidden">
@@ -213,7 +205,7 @@ export default function PainelChamadasTV() {
                 <Bell className="w-20 h-20 text-blue-500 mb-6" />
                 <p className="text-2xl font-bold text-slate-400 uppercase tracking-[0.3em] mb-4">Paciente</p>
                 <h2 className="text-5xl xl:text-6xl leading-tight font-black text-white tracking-tight drop-shadow-lg break-words w-full px-8">
-                  {chamadaAtual.nome}
+                  {chamadaAtual.pacienteNome}
                 </h2>
               </div>
               
@@ -248,10 +240,10 @@ export default function PainelChamadasTV() {
               ultimasChamadasHistorico.map((c, i) => (
                 <div key={i} className="bg-slate-800/80 rounded-2xl p-6 flex items-center justify-between border-l-[6px] border-slate-600 shadow-md">
                   <div className="flex-1 min-w-0 pr-6">
-                    <h4 className="text-2xl font-bold text-white truncate leading-tight">{c.nome}</h4>
+                    <h4 className="text-2xl font-bold text-white truncate leading-tight">{c.pacienteNome}</h4>
                     <span className="text-base text-slate-400 font-semibold mt-2 flex items-center gap-2">
                       <Clock className="w-4 h-4 text-blue-400" />
-                      Chamado às {c.horarioChamada}
+                      Chamado às {new Date(c.createdAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
                     </span>
                   </div>
                   <div className="shrink-0 flex flex-col items-end pl-8 border-l border-slate-700">

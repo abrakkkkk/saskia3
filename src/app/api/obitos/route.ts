@@ -11,7 +11,7 @@ export async function GET() {
     
     const obitos = await prisma.obito.findMany({
       where: { hospitalId },
-      orderBy: { dataHora: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
 
     return NextResponse.json(obitos);
@@ -31,12 +31,38 @@ export async function POST(request: NextRequest) {
     const obito = await prisma.obito.create({
       data: {
         hospitalId,
-        pacienteNome: body.pacienteNome,
-        dataHora: new Date(body.dataHora),
-        medicoCrm: body.medicoCrm,
-        causaBasi: body.causaBasi
+        nome: body.nome,
+        nascimento: body.nascimento,
+        cpf: body.cpf,
+        sexo: body.sexo,
+        data: body.data,
+        hora: body.hora,
+        local: body.local,
+        causa: body.causa,
+        causaSec: body.causaSec,
+        medico: body.medico,
+        prontuario: body.prontuario,
+        responsavel: body.responsavel,
+        telefone: body.telefone,
+        observacoes: body.observacoes,
+        registradoPor: body.registradoPor,
+        dataRegistro: body.dataRegistro,
+        certidaoEmitida: body.certidaoEmitida || false
       }
     });
+
+    // Opcional: Atualizar o paciente para status "Óbito" se o CPF bater
+    if (body.cpf) {
+      const paciente = await prisma.paciente.findFirst({
+        where: { cpf: body.cpf, hospitalId }
+      });
+      if (paciente) {
+        await prisma.paciente.update({
+          where: { id: paciente.id },
+          data: { status: 'Óbito' }
+        });
+      }
+    }
 
     return NextResponse.json(obito, { status: 201 });
   } catch (error: any) {

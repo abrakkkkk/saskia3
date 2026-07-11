@@ -62,39 +62,27 @@ export default function FichaPacientePage() {
           estadoCivil: data.estadoCivil || '', queixaPrincipal: data.queixaPrincipal || '',
           alergias: data.alergias || '', tipoSanguineo: data.tipoSanguineo || ''
         });
+        
+        if (data.sinaisVitais) setSinaisVitais(data.sinaisVitais);
+        if (data.timelineEvents) setTimelineEvents(data.timelineEvents);
+        if (data.avaliacoesNutri && data.avaliacoesNutri.length > 0) setNutricao(data.avaliacoesNutri[0]);
+        if (data.avaliacoesMedicas && data.avaliacoesMedicas.length > 0) setMedico(data.avaliacoesMedicas[0]);
+        if (data.anotacoesEnf && data.anotacoesEnf.length > 0) setEnfermagem(data.anotacoesEnf[0]);
+        if (data.escoresClinicos && data.escoresClinicos.length > 0) {
+          const e = data.escoresClinicos[0];
+          if (e.glasgow) setGlasgow(e.glasgow);
+          if (e.dor !== null && e.dor !== undefined) setDor(e.dor);
+          if (e.braden) setBraden(e.braden);
+        }
+
         setLoading(false);
       })
       .catch(() => setLoading(false))
   }
 
-  const carregarLocal = () => {
-    const h = getHospId()
-    const pId = params.id
-    try {
-      setSinaisVitais(JSON.parse(localStorage.getItem(`${h}_sinais_${pId}`) || '[]'))
-      setTimelineEvents(JSON.parse(localStorage.getItem(`${h}_timeline_${pId}`) || '[]'))
-      const savedNutri = JSON.parse(localStorage.getItem(`${h}_nutri_${pId}`) || 'null')
-      if (savedNutri) setNutricao(savedNutri)
-      const savedMedico = JSON.parse(localStorage.getItem(`${h}_medico_${pId}`) || 'null')
-      if (savedMedico) setMedico(savedMedico)
-      const savedEnf = JSON.parse(localStorage.getItem(`${h}_enf_${pId}`) || 'null')
-      if (savedEnf) setEnfermagem(savedEnf)
-      const savedEscores = JSON.parse(localStorage.getItem(`${h}_escores_${pId}`) || 'null')
-      if (savedEscores) {
-        if (savedEscores.glasgow) setGlasgow(savedEscores.glasgow)
-        if (savedEscores.dor !== undefined) setDor(savedEscores.dor)
-        if (savedEscores.braden) setBraden(savedEscores.braden)
-      }
-    } catch (e) { }
-  }
-
   useEffect(() => {
     carregarPaciente()
   }, [params.id])
-
-  useEffect(() => {
-    if (session) carregarLocal()
-  }, [session, params.id])
 
   // =================== HANDLERS ===================
   const salvarEdicao = async (e: React.FormEvent) => {
@@ -184,35 +172,68 @@ export default function FichaPacientePage() {
     } catch { } finally { setIsSaving(false) }
   }
 
-  const salvarEscores = () => {
-    localStorage.setItem(`${getHospId()}_escores_${params.id}`, JSON.stringify({ glasgow, dor, braden }))
-    registrarTimeline('Escores', 'Escores clínicos atualizados')
-    alert('Escores salvos!')
+  const salvarEscores = async () => {
+    try {
+      const res = await fetch(`/api/pacientes/${params.id}/escores`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ glasgow, dor, braden })
+      })
+      if (res.ok) {
+        registrarTimeline('Escores', 'Escores clínicos atualizados')
+        alert('Escores salvos!')
+      }
+    } catch { alert('Erro ao salvar escores') }
   }
 
-  const salvarNutricao = () => {
-    localStorage.setItem(`${getHospId()}_nutri_${params.id}`, JSON.stringify(nutricao))
-    registrarTimeline('Nutrição', 'Avaliação nutricional salva')
-    alert('Avaliação nutricional salva!')
+  const salvarNutricao = async () => {
+    try {
+      const res = await fetch(`/api/pacientes/${params.id}/nutricao`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nutricao)
+      })
+      if (res.ok) {
+        registrarTimeline('Nutrição', 'Avaliação nutricional salva')
+        alert('Avaliação nutricional salva!')
+      }
+    } catch { alert('Erro ao salvar nutricao') }
   }
 
-  const salvarMedico = () => {
-    localStorage.setItem(`${getHospId()}_medico_${params.id}`, JSON.stringify(medico))
-    registrarTimeline('Médico', 'Avaliação médica atualizada')
-    alert('Avaliação médica salva!')
+  const salvarMedico = async () => {
+    try {
+      const res = await fetch(`/api/pacientes/${params.id}/medico`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(medico)
+      })
+      if (res.ok) {
+        registrarTimeline('Médico', 'Avaliação médica atualizada')
+        alert('Avaliação médica salva!')
+      }
+    } catch { alert('Erro ao salvar médico') }
   }
 
-  const salvarEnfermagem = () => {
-    localStorage.setItem(`${getHospId()}_enf_${params.id}`, JSON.stringify(enfermagem))
-    registrarTimeline('Enfermagem', 'Anotação de enfermagem atualizada')
-    alert('Anotação de enfermagem salva!')
+  const salvarEnfermagem = async () => {
+    try {
+      const res = await fetch(`/api/pacientes/${params.id}/enfermagem`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(enfermagem)
+      })
+      if (res.ok) {
+        registrarTimeline('Enfermagem', 'Anotação de enfermagem atualizada')
+        alert('Anotação de enfermagem salva!')
+      }
+    } catch { alert('Erro ao salvar enfermagem') }
   }
 
-  const registrarTimeline = (tipo: string, desc: string) => {
-    const arr = [...timelineEvents]
-    arr.unshift({ id: Date.now(), data: new Date().toISOString(), tipo, descricao: desc, user: session?.user?.name || 'Sistema' })
-    setTimelineEvents(arr)
-    localStorage.setItem(`${getHospId()}_timeline_${params.id}`, JSON.stringify(arr))
+  const registrarTimeline = async (tipo: string, desc: string) => {
+    try {
+      const res = await fetch(`/api/pacientes/${params.id}/timeline`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo, descricao: desc })
+      })
+      if (res.ok) {
+        carregarPaciente()
+      }
+    } catch { }
   }
 
   const addTimelinePost = () => {
@@ -221,13 +242,17 @@ export default function FichaPacientePage() {
     setNovoTimeline({ ...novoTimeline, descricao: '' })
   }
 
-  const registrarSinalVital = () => {
-    const arr = [...sinaisVitais]
-    arr.unshift({ ...novoSinal, data: new Date().toISOString(), id: Date.now() })
-    setSinaisVitais(arr)
-    localStorage.setItem(`${getHospId()}_sinais_${params.id}`, JSON.stringify(arr))
-    registrarTimeline('Sinais Vitais', `PA: ${novoSinal.pressao || '-'} | FC: ${novoSinal.fc || '-'}`)
-    setNovoSinal({ pressao: '', fc: '', fr: '', temp: '', satO2: '', glicemia: '' })
+  const registrarSinalVital = async () => {
+    try {
+      const res = await fetch(`/api/pacientes/${params.id}/sinais`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(novoSinal)
+      })
+      if (res.ok) {
+        registrarTimeline('Sinais Vitais', `PA: ${novoSinal.pressao || '-'} | FC: ${novoSinal.fc || '-'}`)
+        setNovoSinal({ pressao: '', fc: '', fr: '', temp: '', satO2: '', glicemia: '' })
+      }
+    } catch { alert('Erro ao registrar sinal vital') }
   }
 
   const registrarEvolucao = async () => {
@@ -560,7 +585,7 @@ export default function FichaPacientePage() {
                     <thead><tr style={{ background: '#1e3a8a', color: 'white' }}><th style={{ padding: 10 }}>Data/Hora</th><th style={{ padding: 10 }}>PA</th><th style={{ padding: 10 }}>FC</th><th style={{ padding: 10 }}>FR</th><th style={{ padding: 10 }}>Temp</th><th style={{ padding: 10 }}>SpO2</th><th style={{ padding: 10 }}>HGT</th></tr></thead>
                     <tbody>
                       {sinaisVitais.length > 0 ? sinaisVitais.map((s, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}><td style={{ padding: 10 }}>{new Date(s.data).toLocaleString('pt-BR')}</td><td style={{ padding: 10 }}>{s.pressao || '-'}</td><td style={{ padding: 10 }}>{s.fc || '-'}</td><td style={{ padding: 10 }}>{s.fr || '-'}</td><td style={{ padding: 10 }}>{s.temp || '-'}</td><td style={{ padding: 10 }}>{s.satO2 || '-'}</td><td style={{ padding: 10 }}>{s.glicemia || '-'}</td></tr>
+                        <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}><td style={{ padding: 10 }}>{new Date(s.createdAt || s.data).toLocaleString('pt-BR')}</td><td style={{ padding: 10 }}>{s.pressao || '-'}</td><td style={{ padding: 10 }}>{s.fc || '-'}</td><td style={{ padding: 10 }}>{s.fr || '-'}</td><td style={{ padding: 10 }}>{s.temp || '-'}</td><td style={{ padding: 10 }}>{s.satO2 || '-'}</td><td style={{ padding: 10 }}>{s.glicemia || '-'}</td></tr>
                       )) : <tr><td colSpan={7} style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>Nenhum registro</td></tr>}
                     </tbody>
                   </table>
@@ -689,7 +714,7 @@ export default function FichaPacientePage() {
               {timelineEvents.length > 0 ? timelineEvents.map(t => (
                 <div key={t.id} style={{ position: 'relative', marginBottom: 25 }}>
                   <div style={{ position: 'absolute', left: -39, top: 0, width: 16, height: 16, borderRadius: '50%', background: '#1e3a8a', border: '4px solid white' }}></div>
-                  <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 5 }}>{t.user} - {new Date(t.data).toLocaleString('pt-BR')}</div>
+                  <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 5 }}>{t.user} - {new Date(t.createdAt || t.data).toLocaleString('pt-BR')}</div>
                   <div style={{ background: '#f8fafc', padding: 15, borderRadius: 10, border: '1px solid #e2e8f0' }}>
                     <strong>{t.tipo}</strong>
                     <p style={{ margin: '5px 0 0 0', fontSize: 13, color: '#475569', whiteSpace: 'pre-wrap' }}>{t.descricao}</p>

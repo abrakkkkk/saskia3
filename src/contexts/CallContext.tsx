@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { useSession } from 'next-auth/react';
 
 export interface ChamadaData {
   nome: string;
@@ -12,7 +11,7 @@ export interface ChamadaData {
 
 interface CallContextType {
   chamadaAtiva: ChamadaData | null;
-  chamarPaciente: (dados: ChamadaData) => void;
+  chamarPaciente: (dados: ChamadaData) => Promise<void>;
   fecharChamada: () => void;
 }
 
@@ -20,41 +19,24 @@ const CallContext = createContext<CallContextType | undefined>(undefined);
 
 export function CallProvider({ children }: { children: ReactNode }) {
   const [chamadaAtiva, setChamadaAtiva] = useState<ChamadaData | null>(null);
-  const { data: session } = useSession();
 
-  const chamarPaciente = (dados: ChamadaData) => {
+  const chamarPaciente = async (dados: ChamadaData) => {
     setChamadaAtiva(dados);
     
-    // Save to localStorage for painel-chamadas.html to pick up
     try {
-      const hid = (() => {
-        try {
-          const u = localStorage.getItem('usuarioLogado');
-          const usuario = session?.user || (u ? JSON.parse(u) : null);
-          return usuario?.hospitalId || 'hospital_001';
-        } catch(e) { return 'hospital_001'; }
-      })();
-      let chamadas = JSON.parse(localStorage.getItem(`${hid}_chamadasPainel`) || "[]");
-      chamadas = chamadas.filter((c: any) => {
-        if (c.cpf && dados.cpf) return c.cpf !== dados.cpf;
-        if (c.nome && dados.nome) return c.nome !== dados.nome;
-        return true;
+      await fetch('/api/chamadas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pacienteNome: dados.nome,
+          cpf: dados.cpf,
+          consultorio: dados.consultorio
+        })
       });
-      const novaChamada = { 
-        cpf: dados.cpf, 
-        nome: dados.nome, 
-        status: dados.status, 
-        consultorio: dados.consultorio, 
-        horarioChamada: new Date().toLocaleTimeString('pt-BR'), 
-        dataChamada: new Date().toISOString() 
-      };
-      chamadas.push(novaChamada);
-      localStorage.setItem(`${hid}_chamadasPainel`, JSON.stringify(chamadas));
-      
-      // Also trigger a storage event locally if possible (sometimes useful)
+      // Optionally trigger local storage event for instant feedback on the same browser if needed
       window.dispatchEvent(new Event('storage'));
     } catch(e) {
-      console.error("Erro ao salvar no localStorage", e);
+      console.error("Erro ao registrar chamada na API", e);
     }
     
     // Tocar sino (SASKIA_T1 logic)

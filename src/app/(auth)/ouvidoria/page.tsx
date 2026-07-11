@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import './ouvidoria.css';
@@ -7,6 +6,7 @@ import './ouvidoria.css';
 export default function OuvidoriaPage() {
   const { data: session } = useSession();
   const [tabAtiva, setTabAtiva] = useState('registrar');
+  const [loading, setLoading] = useState(true);
   
   // Dados
   const [manifestacoes, setManifestacoes] = useState<any[]>([]);
@@ -20,64 +20,86 @@ export default function OuvidoriaPage() {
     descricao: ''
   });
 
-  const getHospitalId = () => {
-    const u = localStorage.getItem('usuarioLogado');
-    const usuario = session?.user || (u ? JSON.parse(u) : null);
-    return usuario?.hospitalId || 'hospital_001';
+  const carregarDados = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/ouvidoria');
+      if (res.ok) {
+        setManifestacoes(await res.json());
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    const hid = getHospitalId();
-    try {
-      const o = JSON.parse(localStorage.getItem(`${hid}_ouvManifestacoes`) || '[]');
-      setManifestacoes(o);
-    } catch(e) {}
-  }, [session]);
+    carregarDados();
+  }, []);
 
-  const registrarManifestacao = () => {
+  const registrarManifestacao = async () => {
     if (!form.descricao.trim()) {
       alert("⚠️ Descreva a manifestação!");
       return;
     }
 
-    const nova = {
-      id: Date.now(),
+    const payload = {
       tipo: form.tipo,
-      nome: form.nome.trim() || "Anônimo",
-      contato: form.contato,
       setor: form.setor,
-      descricao: form.descricao,
+      paciente: form.nome.trim() || "Anônimo",
+      mensagem: form.descricao,
       status: "Pendente",
-      data: new Date().toISOString()
+      prazo: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // prazo de 7 dias
     };
 
-    const hid = getHospitalId();
-    const atualizadas = [...manifestacoes, nova];
-    setManifestacoes(atualizadas);
-    localStorage.setItem(`${hid}_ouvManifestacoes`, JSON.stringify(atualizadas));
-
-    setForm({
-      tipo: 'Elogio',
-      nome: '',
-      contato: '',
-      setor: 'Geral',
-      descricao: ''
-    });
-    alert(`✅ Manifestação registrada com sucesso! Protocolo: ${nova.id}`);
-    setTabAtiva('lista');
+    try {
+      const res = await fetch('/api/ouvidoria', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Erro ao registrar');
+      
+      const nova = await res.json();
+      
+      setForm({
+        tipo: 'Elogio',
+        nome: '',
+        contato: '',
+        setor: 'Geral',
+        descricao: ''
+      });
+      alert(`✅ Manifestação registrada com sucesso! Protocolo: ${nova.protocolo}`);
+      carregarDados();
+      setTabAtiva('lista');
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
-  const responderManifestacao = (id: number) => {
+  const responderManifestacao = async (id: string) => {
     if (!confirm("Confirmar que esta manifestação foi respondida/tratada?")) return;
-    const hid = getHospitalId();
-    const novas = manifestacoes.map(m => m.id === id ? { ...m, status: "Respondida" } : m);
-    setManifestacoes(novas);
-    localStorage.setItem(`${hid}_ouvManifestacoes`, JSON.stringify(novas));
+    
+    try {
+      const res = await fetch(`/api/ouvidoria/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: "Respondida" })
+      });
+      if (!res.ok) throw new Error('Erro ao responder');
+      
+      carregarDados();
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
   // Estatísticas
   const pendentes = manifestacoes.filter(m => m.status === "Pendente").length;
   const respondidas = manifestacoes.filter(m => m.status === "Respondida").length;
+
+  if (loading && manifestacoes.length === 0) return <div>Carregando...</div>;
 
   return (
     <div className="conteudo">
@@ -170,18 +192,18 @@ export default function OuvidoriaPage() {
                 {manifestacoes.length === 0 ? (
                   <tr><td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhuma manifestação registrada.</td></tr>
                 ) : (
-                  manifestacoes.slice().reverse().map((m, i) => {
+                  manifestacoes.slice().map((m) => {
                     let tipoBadge = "badge-info";
                     if (m.tipo === 'Elogio') tipoBadge = "badge-success";
                     if (m.tipo === 'Reclamação') tipoBadge = "badge-warning";
                     if (m.tipo === 'Denúncia') tipoBadge = "badge-danger";
 
                     return (
-                      <tr key={i}>
-                        <td><strong>#{m.id.toString().slice(-6)}</strong></td>
-                        <td>{new Date(m.data).toLocaleDateString('pt-BR')}</td>
+                      <tr key={m.id}>
+                        <td><strong>#{m.protocolo}</strong></td>
+                        <td>{new Date(m.createdAt).toLocaleDateString('pt-BR')}</td>
                         <td><span className={`badge ${tipoBadge}`}>{m.tipo}</span></td>
-                        <td>{m.nome}</td>
+                        <td>{m.paciente}</td>
                         <td>{m.setor}</td>
                         <td>
                           <span className={`badge ${m.status === 'Respondida' ? 'badge-success' : 'badge-warning'}`}>

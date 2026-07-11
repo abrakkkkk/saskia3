@@ -98,12 +98,12 @@ export default function DashboardPage() {
       .then(setStats)
       .catch(() => {})
 
-    try {
-      const conf = localStorage.getItem('saskiaConfigDashboard')
-      if (conf) {
-        setDashboardConfig(JSON.parse(conf))
-      }
-    } catch(e) {}
+    fetch('/api/config-dashboard')
+      .then(r => r.json())
+      .then(data => {
+        if (data && typeof data === 'object') setDashboardConfig(data);
+      })
+      .catch(() => {})
   }, [])
 
   const isModuleActive = (id: string) => {

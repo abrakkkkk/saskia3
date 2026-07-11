@@ -112,28 +112,31 @@ export default function AdminUsuariosPage() {
   const [formPermissoes, setFormPermissoes] = useState<Permissoes>(defaultPermissoes());
 
   useEffect(() => {
-    const uGlobais = JSON.parse(localStorage.getItem('saskiaUsuarios') || '[]');
-    const hGlobais = JSON.parse(localStorage.getItem('saskiaHospitais') || '[]');
-    
-    if (uGlobais.length === 0) {
-      const defaultUser: Usuario = {
-        id: "user_master",
-        hospitalId: "hosp_matriz",
-        nome: "Administrador Master",
-        email: "admin@saskiasaude.com.br",
-        senha: "admin123",
-        cargo: "diretor_geral",
-        nivel: "nivel1",
-        ativo: true,
-        permissoes: { ...defaultPermissoes(), perm_pacientes: true, perm_agenda: true, perm_receituario: true, perm_recepcao: true, perm_admin: true, perm_relatorios: true, perm_prontuarios: true, perm_financeiro: true }
-      };
-      setUsuarios([defaultUser]);
-      localStorage.setItem('saskiaUsuarios', JSON.stringify([defaultUser]));
-    } else {
-      setUsuarios(uGlobais);
-    }
+    fetch('/api/usuario').then(res => res.json()).then(data => {
+      if (Array.isArray(data)) {
+        if (data.length === 0) {
+          const defaultUser: Usuario = {
+            id: "user_master",
+            hospitalId: "hosp_matriz",
+            nome: "Administrador Master",
+            email: "admin@saskiasaude.com.br",
+            senha: "admin123",
+            cargo: "diretor_geral",
+            nivel: "nivel1",
+            ativo: true,
+            permissoes: { ...defaultPermissoes(), perm_pacientes: true, perm_agenda: true, perm_receituario: true, perm_recepcao: true, perm_admin: true, perm_relatorios: true, perm_prontuarios: true, perm_financeiro: true }
+          };
+          setUsuarios([defaultUser]);
+          fetch('/api/usuario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(defaultUser) }).catch(console.error);
+        } else {
+          setUsuarios(data);
+        }
+      }
+    }).catch(console.error);
 
-    setHospitais(hGlobais);
+    fetch('/api/hospital').then(res => res.json()).then(data => {
+      if (Array.isArray(data)) setHospitais(data);
+    }).catch(console.error);
   }, []);
 
   const handleChangeNivel = (nivel: string) => {
@@ -225,7 +228,26 @@ export default function AdminUsuariosPage() {
     }
 
     setUsuarios(newUsuarios);
-    localStorage.setItem('saskiaUsuarios', JSON.stringify(newUsuarios));
+    
+    if (editIndex) {
+      // Logic for editing would go here (e.g., PUT /api/usuario)
+    } else {
+      fetch('/api/usuario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hospitalId: formHospital,
+          nome: formNome,
+          email: formEmail.toLowerCase(),
+          senha: finalSenha,
+          nivel: formNivel,
+          cargo: formCargo,
+          permissoes: formPermissoes,
+          ativo: true
+        })
+      }).catch(console.error);
+    }
+
     setIsModalOpen(false);
     alert("✅ Usuário salvo com sucesso!");
   };
@@ -234,7 +256,7 @@ export default function AdminUsuariosPage() {
     if(confirm("Tem certeza que deseja excluir este usuário?")) {
       const filtrados = usuarios.filter(u => u.id !== id);
       setUsuarios(filtrados);
-      localStorage.setItem('saskiaUsuarios', JSON.stringify(filtrados));
+      // DELETE request would go here
     }
   };
 

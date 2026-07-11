@@ -9,12 +9,12 @@ export async function GET() {
 
     const hospitalId = session.user.hospitalId;
     
-    const veiculos = await prisma.veiculoTransporte.findMany({
+    const transportes = await prisma.transportePaciente.findMany({
       where: { hospitalId },
       orderBy: { createdAt: 'desc' }
     });
 
-    return NextResponse.json(veiculos);
+    return NextResponse.json(transportes);
   } catch (error) {
     return NextResponse.json([], { status: 500 });
   }
@@ -28,17 +28,20 @@ export async function POST(request: NextRequest) {
     const hospitalId = session.user.hospitalId;
     const body = await request.json();
 
-    const veiculo = await prisma.veiculoTransporte.create({
+    const transporte = await prisma.transportePaciente.create({
       data: {
         hospitalId,
+        paciente: body.paciente,
+        origem: body.origem,
+        destino: body.destino,
         tipo: body.tipo,
-        identificador: body.identificador,
-        local: body.local,
-        status: body.status || 'DISPONÍVEL'
+        solicitante: body.solicitante,
+        data: body.data,
+        status: body.status || 'Pendente'
       }
     });
 
-    return NextResponse.json(veiculo, { status: 201 });
+    return NextResponse.json(transporte, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

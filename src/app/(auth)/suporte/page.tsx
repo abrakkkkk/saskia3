@@ -71,20 +71,49 @@ export default function SuportePage() {
   const [alertMsg, setAlertMsg] = useState<{ texto: string, tipo: 'sucesso' | 'erro' } | null>(null);
 
   // Carregar Tickets
+  const carregarTickets = () => {
+    fetch('/api/tickets')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          // Mapear do formato DB para o formato local
+          const mapped = data.map((t: any) => ({
+            id: t.id,
+            numero: `SUP-${t.numero || t.id.slice(0,6)}`,
+            titulo: t.titulo,
+            descricao: t.descricao,
+            status: mapStatus(t.status),
+            prioridade: mapPrioridade(t.prioridade),
+            data: t.createdAt,
+            solicitante: t.solicitante,
+            anexos: [],
+            respostas: t.respostas || [],
+            arquivado: t.status === 'FECHADO'
+          }));
+          setTickets(mapped);
+        }
+      })
+      .catch(console.error);
+  };
+
+  const mapStatus = (s: string) => {
+    const m: Record<string, string> = { 'ENVIADO': 'Enviado', 'EM_ANALISE': 'Em Análise', 'RESOLVIDO': 'Concluído', 'FECHADO': 'Finalizado' };
+    return (m[s] || s) as any;
+  };
+  const mapPrioridade = (p: string) => {
+    const m: Record<string, string> = { 'BAIXA': 'Baixa', 'MEDIA': 'Média', 'ALTA': 'Alta', 'URGENTE': 'Urgente' };
+    return (m[p] || p) as any;
+  };
+  const mapPrioridadeToEnum = (p: string) => {
+    const m: Record<string, string> = { 'Baixa': 'BAIXA', 'Média': 'MEDIA', 'Alta': 'ALTA', 'Urgente': 'URGENTE' };
+    return m[p] || 'MEDIA';
+  };
+
   useEffect(() => {
     if (!hospitalId) return;
-    const stored = localStorage.getItem(`${hospitalId}_tickets_suporte`);
-    if (stored) {
-      setTickets(JSON.parse(stored));
-    }
+    carregarTickets();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hospitalId]);
-
-  const salvarTickets = (novos: Ticket[]) => {
-    setTickets(novos);
-    if (hospitalId) {
-      localStorage.setItem(`${hospitalId}_tickets_suporte`, JSON.stringify(novos));
-    }
-  };
 
   const showAlert = (texto: string, tipo: 'sucesso' | 'erro') => {
     setAlertMsg({ texto, tipo });
@@ -122,52 +151,68 @@ export default function SuportePage() {
     });
   };
 
-  const criarTicket = () => {
+  const criarTicket = async () => {
     if (!novoTitulo.trim() || !novaDescricao.trim()) {
       showAlert('Preencha título e descrição!', 'erro');
       return;
     }
     
-    const novo: Ticket = {
-      id: Date.now(),
-      numero: gerarProtocolo(),
-      titulo: novoTitulo,
-      descricao: novaDescricao,
-      prioridade: novaPrioridade,
-      status: 'Enviado',
-      data: new Date().toISOString(),
-      solicitante: usuario?.nome || usuario?.email || 'Usuário',
-      anexos: novosAnexos,
-      respostas: [],
-      arquivado: false
-    };
-    
-    salvarTickets([novo, ...tickets]);
-    setIsModalNovoOpen(false);
-    setNovoTitulo('');
-    setNovaDescricao('');
-    setNovaPrioridade('Média');
-    setNovosAnexos([]);
-    showAlert(`Solicitação enviada com sucesso! Protocolo: ${novo.numero}`, 'sucesso');
+    try {
+      const res = await fetch('/api/tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titulo: novoTitulo,
+          descricao: novaDescricao,
+          prioridade: mapPrioridadeToEnum(novaPrioridade)
+        })
+      });
+      if (res.ok) {
+        const novo = await res.json();
+        carregarTickets();
+        setIsModalNovoOpen(false);
+        setNovoTitulo('');
+        setNovaDescricao('');
+        setNovaPrioridade('Média');
+        setNovosAnexos([]);
+        showAlert(`Solicitação enviada com sucesso! Protocolo: SUP-${novo.numero || novo.id.slice(0,6)}`, 'sucesso');
+      } else {
+        showAlert('Erro ao criar ticket.', 'erro');
+      }
+    } catch {
+      showAlert('Falha na conexão.', 'erro');
+    }
   };
 
-  const excluirTicket = (id: number) => {
+  const excluirTicket = async (id: number | string) => {
     const senha = prompt("Ação destrutiva! Digite sua senha para confirmar a exclusão deste ticket:");
-    if (senha === usuario?.senha || senha === "admin") { // fallback para 'admin' apenas para simulação se senha for indefinida
-      const novos = tickets.filter(t => t.id !== id);
-      salvarTickets(novos);
-      setTicketDetalhe(null);
-      showAlert('Ticket excluído com sucesso.', 'sucesso');
+    if (senha === usuario?.senha) {
+      try {
+        await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
+        carregarTickets();
+        setTicketDetalhe(null);
+        showAlert('Ticket excluído com sucesso.', 'sucesso');
+      } catch {
+        showAlert('Erro ao excluir.', 'erro');
+      }
     } else if (senha !== null) {
       showAlert('Senha incorreta!', 'erro');
     }
   };
 
-  const arquivarTicket = (id: number) => {
-    const novos = tickets.map(t => t.id === id ? { ...t, arquivado: true, status: 'Finalizado' as const } : t);
-    salvarTickets(novos);
-    setTicketDetalhe(null);
-    showAlert('Ticket arquivado com sucesso.', 'sucesso');
+  const arquivarTicket = async (id: number | string) => {
+    try {
+      await fetch(`/api/tickets/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'FECHADO' })
+      });
+      carregarTickets();
+      setTicketDetalhe(null);
+      showAlert('Ticket arquivado com sucesso.', 'sucesso');
+    } catch {
+      showAlert('Erro ao arquivar.', 'erro');
+    }
   };
 
   const andamentoCount = tickets.filter(t => !t.arquivado && t.status !== 'Finalizado' && t.status !== 'Concluído').length;

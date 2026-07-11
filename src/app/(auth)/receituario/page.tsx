@@ -66,16 +66,24 @@ interface Medicamento {
   conteudo: string;
 }
 
+interface Paciente {
+  id: string;
+  nome: string;
+}
+
 export default function ReceituarioPage() {
   const [perfilAtual, setPerfilAtual] = useState('medico');
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
-  const [activeTab, setActiveTab] = useState<'receituario'|'adesivos'|'modelos'>('receituario');
+  const [pacientes, setPacientes] = useState<Paciente[]>([]);
+  const [activeTab, setActiveTab] = useState<'receituario'|'adesivos'|'modelos'|'historico'>('receituario');
   const [activeCategoria, setActiveCategoria] = useState<string | null>(null);
+  const [historico, setHistorico] = useState<any[]>([]);
   
   // Header form
   const [estabelecimento, setEstabelecimento] = useState('');
   const [registro, setRegistro] = useState('');
-  const [nomePaciente, setNomePaciente] = useState('');
+  const [pacienteId, setPacienteId] = useState('');
+  const [nomePaciente, setNomePaciente] = useState(''); // Only used as fallback if manual typing needed
 
   // Modals
   const [modalAdesivosAberto, setModalAdesivosAberto] = useState(false);
@@ -84,22 +92,25 @@ export default function ReceituarioPage() {
 
   const editorRefs = useRef<{[key: number]: HTMLDivElement | null}>({});
 
-  useEffect(() => {
+  const carregarDados = async () => {
     try {
-      const hid = localStorage.getItem('usuarioLogado') ? JSON.parse(localStorage.getItem('usuarioLogado')!).hospitalId || 'hospital_001' : 'hospital_001';
-      const saved = JSON.parse(localStorage.getItem(`${hid}_receita_medicamentos`) || '[]');
-      if (saved.length > 0) {
-        setMedicamentos(saved);
-      }
-    } catch(e) {}
+      const [resPacientes, resReceitas] = await Promise.all([
+        fetch('/api/pacientes'),
+        fetch('/api/receitas')
+      ]);
+      if(resPacientes.ok) setPacientes(await resPacientes.json());
+      if(resReceitas.ok) setHistorico(await resReceitas.json());
+    } catch(e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    carregarDados();
   }, []);
 
-  const saveDados = (meds: Medicamento[]) => {
+  const saveDadosMemoria = (meds: Medicamento[]) => {
     setMedicamentos(meds);
-    try {
-      const hid = localStorage.getItem('usuarioLogado') ? JSON.parse(localStorage.getItem('usuarioLogado')!).hospitalId || 'hospital_001' : 'hospital_001';
-      localStorage.setItem(`${hid}_receita_medicamentos`, JSON.stringify(meds));
-    } catch(e) {}
   };
 
   const mudarPerfil = (perfil: string) => {
@@ -120,24 +131,24 @@ export default function ReceituarioPage() {
 
   const addMedicamento = () => {
     const meds = [...medicamentos, { id: Date.now(), viaUso: "Oral", conteudo: "" }];
-    saveDados(meds);
+    saveDadosMemoria(meds);
   };
 
   const removerMedicamento = (idx: number) => {
     const meds = medicamentos.filter((_, i) => i !== idx);
-    saveDados(meds);
+    saveDadosMemoria(meds);
   };
 
   const atualizarViaUso = (idx: number, val: string) => {
     const meds = [...medicamentos];
     meds[idx].viaUso = val;
-    saveDados(meds);
+    saveDadosMemoria(meds);
   };
 
   const handleEditorInput = (idx: number, html: string) => {
     const meds = [...medicamentos];
     meds[idx].conteudo = html;
-    saveDados(meds);
+    saveDadosMemoria(meds);
   };
 
   const insertTextPronto = (text: string) => {
@@ -150,7 +161,7 @@ export default function ReceituarioPage() {
          editorRefs.current[meds.length - 1]!.innerHTML = meds[meds.length - 1].conteudo;
       }
     }
-    saveDados(meds);
+    saveDadosMemoria(meds);
   };
 
   const inserirTextoEditor = (idx: number, texto: string) => {
@@ -179,21 +190,54 @@ export default function ReceituarioPage() {
     setModalAdesivosAberto(false);
   };
 
+  const salvarPrescricao = async () => {
+    if (!pacienteId) {
+      alert("⚠️ Selecione um paciente cadastrado para salvar no prontuário!");
+      return;
+    }
+    if (medicamentos.length === 0) {
+      alert("⚠️ Adicione ao menos um item prescrito!");
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/receitas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pacienteId,
+          medicamentos: medicamentos,
+          observacoes: getTitulos().titulo
+        })
+      });
+
+      if (!res.ok) throw new Error("Erro ao salvar prescrição");
+
+      alert("✅ Prescrição salva no prontuário com sucesso!");
+      carregarDados();
+    } catch(e: any) {
+      alert(e.message);
+    }
+  };
+
   const imprimir = () => {
     window.print();
   };
 
   const limparTudo = () => {
     if (confirm("Limpar todo o receituário?")) {
-      saveDados([]);
+      saveDadosMemoria([]);
       setEstabelecimento('');
       setRegistro('');
+      setPacienteId('');
       setNomePaciente('');
     }
   };
 
   const categorias = categoriasData[perfilAtual] || [];
   const listaAdesivosFiltrados = filtroAdesivo === 'todos' ? todosAdesivos : todosAdesivos.filter(a => a.categoria === filtroAdesivo);
+
+  const pacienteNomeExibido = pacienteId ? pacientes.find(p => p.id === pacienteId)?.nome : nomePaciente;
 
   return (
     <div className="container-receituario">
@@ -233,18 +277,19 @@ export default function ReceituarioPage() {
 
       <div className="main-receita">
         <div className="tabs-receita hide-on-print">
-          <button className={`tab-btn ${activeTab === 'receituario' ? 'ativo' : ''}`} onClick={() => setActiveTab('receituario')}><i className="las la-prescription-bottle"></i> Receituário</button>
+          <button className={`tab-btn ${activeTab === 'receituario' ? 'ativo' : ''}`} onClick={() => setActiveTab('receituario')}><i className="las la-prescription-bottle"></i> Editor de Receita</button>
+          <button className={`tab-btn ${activeTab === 'historico' ? 'ativo' : ''}`} onClick={() => setActiveTab('historico')}><i className="las la-history"></i> Histórico do Paciente</button>
           <button className={`tab-btn ${activeTab === 'adesivos' ? 'ativo' : ''}`} onClick={() => setActiveTab('adesivos')}><i className="las la-tag"></i> Adesivos</button>
-          <button className={`tab-btn ${activeTab === 'modelos' ? 'ativo' : ''}`} onClick={() => setActiveTab('modelos')}><i className="las la-file-alt"></i> Modelos</button>
         </div>
 
-        <div className="toolbar-receita hide-on-print">
-          <button className="tool-btn"><i className="las la-exchange-alt"></i> Trocar</button>
-          <button className="tool-btn" onClick={() => { setEditorAtivoIndex(medicamentos.length > 0 ? medicamentos.length - 1 : null); setModalAdesivosAberto(true); }}><i className="las la-tag"></i> Criar Adesivos</button>
-          <button className="tool-btn" onClick={imprimir}><i className="las la-print"></i> Imprimir</button>
-          <div className="switch-label"><span><i className="las la-exclamation-triangle"></i> Controle Especial</span><label className="switch"><input type="checkbox" /><span className="slider"></span></label></div>
-          <button className="tool-btn danger" onClick={limparTudo}><i className="las la-trash-alt"></i> Limpar Tudo</button>
-        </div>
+        {activeTab === 'receituario' && (
+          <div className="toolbar-receita hide-on-print" style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
+            <button className="tool-btn" onClick={() => { setEditorAtivoIndex(medicamentos.length > 0 ? medicamentos.length - 1 : null); setModalAdesivosAberto(true); }}><i className="las la-tag"></i> Inserir Adesivo</button>
+            <button className="tool-btn" onClick={imprimir} style={{background: '#e2e8f0', color: '#1e293b'}}><i className="las la-print"></i> Imprimir</button>
+            <button className="tool-btn" onClick={salvarPrescricao} style={{background: '#16a34a', color: 'white'}}><i className="las la-save"></i> Salvar no Prontuário</button>
+            <button className="tool-btn danger" onClick={limparTudo}><i className="las la-trash-alt"></i> Limpar Tudo</button>
+          </div>
+        )}
 
         {activeTab === 'receituario' && (
           <div className="papel-receita" id="papelReceita">
@@ -262,15 +307,24 @@ export default function ReceituarioPage() {
               </div>
             </div>
             <div className="form-campo hide-on-print">
-              <label>NOME DO PACIENTE:</label>
-              <input type="text" value={nomePaciente} onChange={e => setNomePaciente(e.target.value)} placeholder="Nome completo do paciente" />
+              <label>PACIENTE CADASTRADO (Para Prontuário):</label>
+              <select value={pacienteId} onChange={e => {setPacienteId(e.target.value); setNomePaciente('');}}>
+                <option value="">Selecione...</option>
+                {pacientes.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+              </select>
             </div>
+            {!pacienteId && (
+              <div className="form-campo hide-on-print">
+                <label>NOME DO PACIENTE (Impressão Avulsa):</label>
+                <input type="text" value={nomePaciente} onChange={e => setNomePaciente(e.target.value)} placeholder="Nome completo do paciente" />
+              </div>
+            )}
 
             {/* Print Header */}
             <div className="print-header" style={{display:'none'}}>
               {estabelecimento && <p><strong>Estabelecimento:</strong> {estabelecimento}</p>}
               {registro && <p><strong>Registro:</strong> {registro}</p>}
-              {nomePaciente && <p style={{marginTop:'10px', fontSize:'18px'}}><strong>Paciente:</strong> {nomePaciente}</p>}
+              {pacienteNomeExibido && <p style={{marginTop:'10px', fontSize:'18px'}}><strong>Paciente:</strong> {pacienteNomeExibido}</p>}
               <hr style={{margin:'20px 0'}} />
             </div>
 
@@ -334,6 +388,27 @@ export default function ReceituarioPage() {
           </div>
         )}
 
+        {activeTab === 'historico' && (
+          <div className="papel-receita">
+            <h2><i className="las la-history"></i> Histórico de Receitas Salvas</h2>
+            {historico.length === 0 ? (
+              <p style={{color:'#94a3b8'}}>Nenhuma receita salva no banco de dados.</p>
+            ) : (
+              historico.map(h => (
+                <div key={h.id} style={{padding: '15px', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '10px'}}>
+                  <strong>{new Date(h.createdAt).toLocaleDateString()} - Paciente: {h.paciente.nome}</strong>
+                  <p style={{color: '#64748b', fontSize: '13px'}}>{h.observacoes} | Profissional: {h.profissional}</p>
+                  <ul style={{marginTop: '10px', fontSize: '14px'}}>
+                    {(h.medicamentos as any[]).map((m, i) => (
+                      <li key={i}><strong>Uso {m.viaUso}:</strong> <span dangerouslySetInnerHTML={{__html: m.conteudo}} /></li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {activeTab === 'adesivos' && (
           <div className="papel-receita">
             <h2><i className="las la-tag"></i> Gerador de Adesivos</h2>
@@ -341,12 +416,6 @@ export default function ReceituarioPage() {
           </div>
         )}
 
-        {activeTab === 'modelos' && (
-          <div className="papel-receita">
-            <h2><i className="las la-file-alt"></i> Modelos Prontos</h2>
-            <p>Em desenvolvimento...</p>
-          </div>
-        )}
       </div>
 
       {/* Modal Adesivos */}

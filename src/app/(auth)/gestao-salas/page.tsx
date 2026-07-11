@@ -1,53 +1,51 @@
 'use client';
+import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
 import './gestao-salas.css';
 
 interface Sala {
-  id: number;
+  id: string;
   nome: string;
   tipo: string;
   setor: string;
-  andar: string;
+  andar?: string;
   capacidade: number;
-  equipamentos: string;
-  status: 'livre' | 'ocupado' | 'reservado' | 'manutencao';
+  equipamentos?: string;
+  status: string; // LIVRE, OCUPADO, RESERVADO, MANUTENCAO
 }
 
 interface Reserva {
-  id: number;
-  salaId: number;
+  id: string;
+  salaId: string;
   profissional: string;
-  paciente: string;
+  paciente?: string;
   data: string;
   horaInicio: string;
   horaFim: string;
-  horaFimReal?: string;
-  status: 'ativa' | 'reservada' | 'finalizada';
-  liberacaoAutomatica?: boolean;
+  status: string; // ATIVA, RESERVADA, FINALIZADA, CANCELADA
 }
 
-const tiposSala: Record<string, string> = {
-  consultorio:"🏥 Consultório",
-  cirurgica:"🔪 Sala Cirúrgica",
-  exame:"🔬 Sala de Exames",
-  reuniao:"💼 Sala de Reunião",
-  triagem:"🩺 Sala de Triagem",
-  observacao:"🛏️ Observação",
-  procedimento:"💉 Procedimentos",
-  aula:"📚 Aula/Treinamento",
-  outro:"📋 Outro"
+const tiposSala: any = {
+  consultorio: "🏥 Consultório",
+  cirurgica: "🔪 Sala Cirúrgica",
+  exame: "🔬 Sala de Exames",
+  reuniao: "💼 Sala de Reunião",
+  triagem: "🩺 Sala de Triagem",
+  observacao: "🛏️ Sala de Observação",
+  procedimento: "💉 Sala de Procedimentos",
+  aula: "📚 Sala de Aula",
+  outro: "📋 Outro"
 };
 
-const statusLabel: Record<string, string> = {
-  livre:"✅ Livre",
-  ocupado:"🔴 Em Uso",
-  reservado:"🟡 Reservada",
-  manutencao:"⚫ Manutenção"
+const statusLabel: any = {
+  LIVRE: "🟢 Livre",
+  OCUPADO: "🔴 Em Uso",
+  RESERVADO: "🟡 Reservada",
+  MANUTENCAO: "⚫ Manutenção"
 };
 
 export default function GestaoSalasPage() {
   const [activeTab, setActiveTab] = useState<'mapa' | 'cadastro' | 'reservas' | 'historico'>('mapa');
-  const [hospitalId, setHospitalId] = useState<string>('hospital_001');
   const [loading, setLoading] = useState(true);
 
   const [salas, setSalas] = useState<Sala[]>([]);
@@ -65,122 +63,64 @@ export default function GestaoSalasPage() {
 
   // Modal Reserva
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formReserva, setFormReserva] = useState({
     salaId: '', profissional: '', paciente: '', data: '', horaInicio: '', horaFim: '', duracao: ''
   });
 
-  useEffect(() => {
+  const carregarDados = async () => {
     try {
-      const u = localStorage.getItem('usuarioLogado');
-      const usuario = u ? JSON.parse(u) : null;
-      const hid = usuario?.hospitalId || usuario?.id || 'hospital_001';
-      setHospitalId(hid);
-
-      let savedSalas = JSON.parse(localStorage.getItem(`${hid}_gestaoSalas`) || '[]');
-      if (savedSalas.length === 0) {
-        savedSalas = [
-          {id:1,nome:"Consultório 1",tipo:"consultorio",setor:"Consultórios",andar:"1º Andar",capacidade:2,equipamentos:"Maca, Computador",status:"livre"},
-          {id:2,nome:"Consultório 2",tipo:"consultorio",setor:"Consultórios",andar:"1º Andar",capacidade:1,equipamentos:"Maca",status:"livre"},
-          {id:3,nome:"Sala de Triagem",tipo:"triagem",setor:"Emergência",andar:"Térreo",capacidade:3,equipamentos:"Maca, Monitor, Oxímetro",status:"livre"},
-          {id:4,nome:"Sala de Reunião",tipo:"reuniao",setor:"Administração",andar:"2º Andar",capacidade:15,equipamentos:"Projetor, TV 65', Videoconferência",status:"livre"}
-        ];
-        localStorage.setItem(`${hid}_gestaoSalas`, JSON.stringify(savedSalas));
-      }
-      setSalas(savedSalas);
-
-      const savedReservas = JSON.parse(localStorage.getItem(`${hid}_gestaoReservas`) || '[]');
-      setReservas(savedReservas);
-
-      setLoading(false);
+      const [resSalas, resReservas] = await Promise.all([
+        fetch('/api/salas'),
+        fetch('/api/salas/reservas')
+      ]);
+      
+      if (resSalas.ok) setSalas(await resSalas.json());
+      if (resReservas.ok) setReservas(await resReservas.json());
     } catch (e) {
       console.error(e);
+    } finally {
       setLoading(false);
     }
-  }, []);
-
-  const saveSalas = (data: Sala[]) => {
-    setSalas(data);
-    localStorage.setItem(`${hospitalId}_gestaoSalas`, JSON.stringify(data));
-  };
-
-  const saveReservas = (data: Reserva[]) => {
-    setReservas(data);
-    localStorage.setItem(`${hospitalId}_gestaoReservas`, JSON.stringify(data));
-  };
-
-  const verificarTemposExpirados = () => {
-    if (salas.length === 0) return;
-    const agora = new Date();
-    let alterouReserva = false;
-    let alterouSala = false;
-    
-    let novasReservas = [...reservas];
-    let novasSalas = [...salas];
-
-    novasReservas = novasReservas.map(r => {
-      if (r.status === "ativa" || r.status === "reservada") {
-        const fim = new Date(r.data + 'T' + r.horaFim);
-        if (agora >= fim) {
-          alterouReserva = true;
-          const salaIdx = novasSalas.findIndex(s => s.id === r.salaId);
-          if (salaIdx !== -1 && (novasSalas[salaIdx].status === "ocupado" || novasSalas[salaIdx].status === "reservado")) {
-            novasSalas[salaIdx] = { ...novasSalas[salaIdx], status: "livre" };
-            alterouSala = true;
-          }
-          return { ...r, status: "finalizada", horaFimReal: new Date().toLocaleTimeString('pt-BR'), liberacaoAutomatica: true };
-        }
-      }
-      return r;
-    });
-
-    novasReservas = novasReservas.map(r => {
-      if (r.status === "reservada") {
-        const inicio = new Date(r.data + 'T' + r.horaInicio);
-        const fim = new Date(r.data + 'T' + r.horaFim);
-        if (agora >= inicio && agora < fim) {
-          alterouReserva = true;
-          const salaIdx = novasSalas.findIndex(s => s.id === r.salaId);
-          if (salaIdx !== -1 && novasSalas[salaIdx].status === "reservado") {
-            novasSalas[salaIdx] = { ...novasSalas[salaIdx], status: "ocupado" };
-            alterouSala = true;
-          }
-          return { ...r, status: "ativa" };
-        }
-      }
-      return r;
-    });
-
-    if (alterouReserva) saveReservas(novasReservas);
-    if (alterouSala) saveSalas(novasSalas);
   };
 
   useEffect(() => {
-    if (loading) return;
-    verificarTemposExpirados();
-    const interval = setInterval(verificarTemposExpirados, 30000);
-    return () => clearInterval(interval);
-  }, [loading, salas, reservas]);
+    carregarDados();
+  }, []);
 
-  const cadastrarSala = () => {
+  const cadastrarSala = async () => {
     if (!formSala.nome) { alert("⚠️ Digite o nome da sala!"); return; }
-    const novaSala: Sala = {
-      id: Date.now(),
-      nome: formSala.nome.trim(),
-      tipo: formSala.tipo,
-      setor: formSala.setor,
-      andar: formSala.andar.trim(),
-      capacidade: Number(formSala.capacidade) || 1,
-      equipamentos: formSala.equipamentos.trim(),
-      status: "livre"
-    };
-    saveSalas([...salas, novaSala]);
-    setFormSala({ nome: '', tipo: 'consultorio', setor: 'Consultórios', andar: '', capacidade: 1, equipamentos: '', obs: '' });
-    setActiveTab('mapa');
-    alert("✅ Sala cadastrada com sucesso!");
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/salas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: formSala.nome.trim(),
+          tipo: formSala.tipo,
+          setor: formSala.setor,
+          andar: formSala.andar.trim(),
+          capacidade: Number(formSala.capacidade) || 1,
+          equipamentos: formSala.equipamentos.trim(),
+          status: "LIVRE"
+        })
+      });
+
+      if (!res.ok) throw new Error("Erro ao cadastrar sala");
+
+      setFormSala({ nome: '', tipo: 'consultorio', setor: 'Consultórios', andar: '', capacidade: 1, equipamentos: '', obs: '' });
+      setActiveTab('mapa');
+      alert("✅ Sala cadastrada com sucesso!");
+      carregarDados();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const abrirReserva = (salaId?: number) => {
-    const u = localStorage.getItem('usuarioLogado');
+  const abrirReserva = (salaId?: string) => {
+    const u = JSON.stringify(getSessionUser());
     const usuario = u ? JSON.parse(u) : null;
     const agora = new Date();
     const horaInicio = agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
@@ -188,7 +128,7 @@ export default function GestaoSalasPage() {
     const horaFim = agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
 
     setFormReserva({
-      salaId: salaId ? salaId.toString() : '',
+      salaId: salaId || '',
       profissional: usuario?.nome || '',
       paciente: '',
       data: new Date().toISOString().split('T')[0],
@@ -209,91 +149,75 @@ export default function GestaoSalasPage() {
     setFormReserva(prev => ({ ...prev, duracao: duracaoStr, horaFim: d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) }));
   };
 
-  const confirmarReserva = () => {
-    const r: Reserva = {
-      id: Date.now(),
-      salaId: parseInt(formReserva.salaId),
-      profissional: formReserva.profissional.trim(),
-      paciente: formReserva.paciente.trim(),
-      data: formReserva.data,
-      horaInicio: formReserva.horaInicio,
-      horaFim: formReserva.horaFim,
-      status: "ativa"
-    };
-    
-    if(!r.salaId || !r.profissional || !r.data || !r.horaInicio || !r.horaFim){
+  const confirmarReserva = async () => {
+    if(!formReserva.salaId || !formReserva.profissional || !formReserva.data || !formReserva.horaInicio || !formReserva.horaFim){
       alert("⚠️ Preencha todos os campos obrigatórios (*)!");
       return;
     }
-    
-    const salaIdx = salas.findIndex(s => s.id === r.salaId);
-    if(salaIdx === -1) return;
-    
-    const agora = new Date();
-    const dataReserva = new Date(r.data + 'T' + r.horaInicio);
-    const diffMinutos = Math.floor((dataReserva.getTime() - agora.getTime()) / 60000);
-    
-    let novasSalas = [...salas];
-    if(diffMinutos <= 0){
-      novasSalas[salaIdx] = { ...novasSalas[salaIdx], status: "ocupado" };
-      r.status = "ativa";
-    } else {
-      novasSalas[salaIdx] = { ...novasSalas[salaIdx], status: "reservado" };
-      r.status = "reservada";
-    }
-    
-    saveSalas(novasSalas);
-    saveReservas([...reservas, r]);
-    setIsModalOpen(false);
-    
-    const msg = diffMinutos <= 0 ?
-      `🔴 Sala EM USO agora! Será liberada automaticamente às ${r.horaFim}` :
-      `🟡 Sala RESERVADA para ${new Date(r.data+'T00:00:00').toLocaleDateString('pt-BR')} às ${r.horaInicio}`;
-    alert("✅ " + msg);
-  };
-
-  const liberarSala = (id: number) => {
-    let novasSalas = [...salas];
-    let novasReservas = [...reservas];
-    const salaIdx = novasSalas.findIndex(s => s.id === id);
-    if (salaIdx !== -1) {
-      novasSalas[salaIdx] = { ...novasSalas[salaIdx], status: "livre" };
-      
-      novasReservas = novasReservas.map(r => {
-        if (r.salaId === id && (r.status === "ativa" || r.status === "reservada")) {
-          return { ...r, status: "finalizada", horaFimReal: new Date().toLocaleTimeString('pt-BR') };
-        }
-        return r;
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/salas/reservas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          salaId: formReserva.salaId,
+          profissional: formReserva.profissional.trim(),
+          paciente: formReserva.paciente.trim(),
+          data: formReserva.data,
+          horaInicio: formReserva.horaInicio,
+          horaFim: formReserva.horaFim
+        })
       });
 
-      saveSalas(novasSalas);
-      saveReservas(novasReservas);
+      if (!res.ok) throw new Error("Erro ao criar reserva");
+
+      setIsModalOpen(false);
+      alert("✅ Reserva confirmada com sucesso!");
+      carregarDados();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const liberarSala = async (reservaId: string, salaId: string) => {
+    try {
+      const res = await fetch(`/api/salas/reservas/${reservaId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'FINALIZADA' })
+      });
+
+      if (!res.ok) throw new Error("Erro ao liberar sala");
       alert("✅ Sala liberada com sucesso!");
+      carregarDados();
+    } catch (e: any) {
+      alert(e.message);
     }
   };
 
-  const alterarStatusSala = (id: number, status: 'livre' | 'manutencao') => {
-    let novasSalas = [...salas];
-    const salaIdx = novasSalas.findIndex(s => s.id === id);
-    if (salaIdx !== -1) {
-      novasSalas[salaIdx] = { ...novasSalas[salaIdx], status };
-      saveSalas(novasSalas);
+  const alterarStatusSala = async (id: string, status: string) => {
+    try {
+      const res = await fetch(`/api/salas/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (!res.ok) throw new Error("Erro ao atualizar status");
       alert(`✅ Status alterado para: ${statusLabel[status]}`);
+      carregarDados();
+    } catch (e: any) {
+      alert(e.message);
     }
-  };
-
-  const excluirSala = (id: number) => {
-    if(!confirm("Tem certeza que deseja EXCLUIR esta sala permanentemente?")) return;
-    saveSalas(salas.filter(s => s.id !== id));
-    alert("🗑️ Sala excluída!");
   };
 
   // Stats
   const stats = {
-    livres: salas.filter(s => s.status === 'livre').length,
-    ocupadas: salas.filter(s => s.status === 'ocupado').length,
-    reservadas: salas.filter(s => s.status === 'reservado').length,
-    manutencao: salas.filter(s => s.status === 'manutencao').length,
+    livres: salas.filter(s => s.status === 'LIVRE').length,
+    ocupadas: salas.filter(s => s.status === 'OCUPADO').length,
+    reservadas: salas.filter(s => s.status === 'RESERVADO').length,
+    manutencao: salas.filter(s => s.status === 'MANUTENCAO').length,
     total: salas.length
   };
 
@@ -305,10 +229,10 @@ export default function GestaoSalasPage() {
     salasFiltradas = salasFiltradas.filter(s => s.nome.toLowerCase().includes(t) || s.tipo.toLowerCase().includes(t) || s.setor.toLowerCase().includes(t));
   }
 
-  let reservasFiltradas = [...reservas].reverse();
+  let reservasFiltradas = [...reservas];
   if (buscarReserva) {
     const t = buscarReserva.toLowerCase();
-    reservasFiltradas = reservasFiltradas.filter(r => r.profissional.toLowerCase().includes(t) || r.paciente.toLowerCase().includes(t));
+    reservasFiltradas = reservasFiltradas.filter(r => r.profissional.toLowerCase().includes(t) || (r.paciente || '').toLowerCase().includes(t));
   }
 
   if (loading) return <div>Carregando Gestão de Salas...</div>;
@@ -320,7 +244,7 @@ export default function GestaoSalasPage() {
         <div className="banner-salas">
           <div>
             <h1><i className="las la-door-open"></i> Gestão de Salas & Consultórios</h1>
-            <p>Cadastro, reserva e monitoramento em tempo real de salas, consultórios e espaços</p>
+            <p>Cadastro, reserva e monitoramento em tempo real de salas e espaços</p>
           </div>
           <div style={{display:'flex', gap:'10px', flexWrap:'wrap'}}>
             <button className="btn btn-success" onClick={() => setActiveTab('cadastro')}><i className="las la-plus-circle"></i> Nova Sala</button>
@@ -356,10 +280,10 @@ export default function GestaoSalasPage() {
               <input type="text" placeholder="Buscar sala por nome, tipo ou setor..." value={buscarSala} onChange={e => setBuscarSala(e.target.value)} />
               <select value={filtroStatusSala} onChange={e => setFiltroStatusSala(e.target.value)}>
                 <option value="todos">Todos os Status</option>
-                <option value="livre">🟢 Livres</option>
-                <option value="reservado">🟡 Reservadas</option>
-                <option value="ocupado">🔴 Em Uso</option>
-                <option value="manutencao">⚫ Manutenção</option>
+                <option value="LIVRE">🟢 Livres</option>
+                <option value="RESERVADO">🟡 Reservadas</option>
+                <option value="OCUPADO">🔴 Em Uso</option>
+                <option value="MANUTENCAO">⚫ Manutenção</option>
               </select>
             </div>
             <div className="mapa-salas">
@@ -367,7 +291,7 @@ export default function GestaoSalasPage() {
                 <div style={{textAlign:'center', padding:'50px', color:'#94a3b8', gridColumn:'1/-1'}}><i className="las la-door-open" style={{fontSize:'64px', opacity:0.3}}></i><p>Nenhuma sala encontrada</p></div>
               ) : (
                 salasFiltradas.map(s => {
-                  const resAtiva = reservas.find(r => r.salaId === s.id && (r.status === "ativa" || r.status === "reservada"));
+                  const resAtiva = reservas.find(r => r.salaId === s.id && r.status === "ATIVA");
                   let tempoRestante = '';
                   let classeUrgente = '';
                   
@@ -389,11 +313,11 @@ export default function GestaoSalasPage() {
                           classeUrgente = 'urgente';
                       }
                   }
-                  
-                  const resFutura = reservas.find(r => r.salaId === s.id && r.status === "reservada");
+
+                  const salaStatusCss = s.status.toLowerCase();
 
                   return (
-                    <div key={s.id} className={`sala-card ${s.status}`}>
+                    <div key={s.id} className={`sala-card ${salaStatusCss}`}>
                       <div className="sala-numero"><span>{s.nome}</span><span className="sala-status">{statusLabel[s.status]}</span></div>
                       <div className="sala-info">
                           <p><i className="las la-tag"></i> {tiposSala[s.tipo] || s.tipo}</p>
@@ -406,30 +330,26 @@ export default function GestaoSalasPage() {
                               <p className={`tempo-restante ${classeUrgente}`}><i className="las la-hourglass-half"></i> {tempoRestante}</p>
                             </>
                           )}
-                          {!resAtiva && resFutura && (
-                            <p><i className="las la-clock"></i> <strong>Reservado para:</strong> {new Date(resFutura.data+'T00:00:00').toLocaleDateString('pt-BR')} às {resFutura.horaInicio}</p>
-                          )}
                       </div>
                       <div className="sala-acoes">
-                          {s.status === 'livre' && (
+                          {s.status === 'LIVRE' && (
                             <>
                               <button className="btn btn-primary btn-sm" onClick={() => abrirReserva(s.id)}><i className="las la-calendar-plus"></i> Reservar</button>
-                              <button className="btn btn-warning btn-sm" onClick={() => alterarStatusSala(s.id, 'manutencao')}><i className="las la-tools"></i> Manutenção</button>
+                              <button className="btn btn-warning btn-sm" onClick={() => alterarStatusSala(s.id, 'MANUTENCAO')}><i className="las la-tools"></i> Manutenção</button>
                             </>
                           )}
-                          {s.status === 'reservado' && (
+                          {s.status === 'RESERVADO' && (
                             <>
                               <button className="btn btn-primary btn-sm" onClick={() => abrirReserva(s.id)}><i className="las la-calendar-plus"></i> Reservar</button>
-                              <button className="btn btn-warning btn-sm" onClick={() => alterarStatusSala(s.id, 'manutencao')}><i className="las la-tools"></i> Manutenção</button>
+                              <button className="btn btn-warning btn-sm" onClick={() => alterarStatusSala(s.id, 'MANUTENCAO')}><i className="las la-tools"></i> Manutenção</button>
                             </>
                           )}
-                          {(s.status === 'ocupado' || s.status === 'reservado') && (
-                            <button className="btn btn-success btn-sm" onClick={() => liberarSala(s.id)}><i className="las la-check-circle"></i> Liberar Agora</button>
+                          {s.status === 'OCUPADO' && resAtiva && (
+                            <button className="btn btn-success btn-sm" onClick={() => liberarSala(resAtiva.id, s.id)}><i className="las la-check-circle"></i> Liberar Agora</button>
                           )}
-                          {s.status === 'manutencao' && (
-                            <button className="btn btn-success btn-sm" onClick={() => alterarStatusSala(s.id, 'livre')}><i className="las la-check"></i> Liberar</button>
+                          {s.status === 'MANUTENCAO' && (
+                            <button className="btn btn-success btn-sm" onClick={() => alterarStatusSala(s.id, 'LIVRE')}><i className="las la-check"></i> Liberar</button>
                           )}
-                          <button className="btn btn-danger btn-sm" onClick={() => excluirSala(s.id)}><i className="las la-trash"></i></button>
                       </div>
                     </div>
                   );
@@ -461,7 +381,7 @@ export default function GestaoSalasPage() {
               <div className="form-grupo"><label>Equipamentos</label><input type="text" placeholder="Maca, Computador, Projetor..." value={formSala.equipamentos} onChange={e => setFormSala({...formSala, equipamentos: e.target.value})} /></div>
               <div className="form-grupo full"><label>Observações</label><textarea rows={2} value={formSala.obs} onChange={e => setFormSala({...formSala, obs: e.target.value})}></textarea></div>
             </div>
-            <button className="btn btn-success" onClick={cadastrarSala} style={{width:'100%', marginTop:'15px', justifyContent:'center', padding:'14px'}}><i className="las la-save"></i> Cadastrar Sala</button>
+            <button className="btn btn-success" onClick={cadastrarSala} disabled={isSaving} style={{width:'100%', marginTop:'15px', justifyContent:'center', padding:'14px'}}><i className="las la-save"></i> {isSaving ? 'Cadastrando...' : 'Cadastrar Sala'}</button>
           </div>
         )}
 
@@ -471,27 +391,24 @@ export default function GestaoSalasPage() {
             <div style={{background:'white', borderRadius:'20px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)'}}>
               <table className="tabela-salas"><thead><tr><th>Sala</th><th>Profissional</th><th>Paciente/Evento</th><th>Data</th><th>Horário</th><th>Status</th><th>Ações</th></tr></thead>
               <tbody>
-                {reservasFiltradas.length === 0 ? (
-                  <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhuma reserva encontrada</td></tr>
+                {reservasFiltradas.filter(r => r.status === 'ATIVA' || r.status === 'RESERVADA').length === 0 ? (
+                  <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhuma reserva ativa encontrada</td></tr>
                 ) : (
-                  reservasFiltradas.map(r => {
+                  reservasFiltradas.filter(r => r.status === 'ATIVA' || r.status === 'RESERVADA').map(r => {
                     const sala = salas.find(s => s.id === r.salaId);
-                    const stB = r.status === 'ativa' ? 'badge-ocupado' : r.status === 'reservada' ? 'badge-reservado' : 'badge-livre';
-                    const stL = r.status === 'ativa' ? '🔴 Em Uso' : r.status === 'reservada' ? '🟡 Reservada' : '✅ Finalizada';
+                    const stB = r.status === 'ATIVA' ? 'badge-ocupado' : 'badge-reservado';
+                    const stL = r.status === 'ATIVA' ? '🔴 Em Uso' : '🟡 Reservada';
                     return (
                       <tr key={r.id}>
                         <td><strong>{sala ? sala.nome : '—'}</strong></td>
                         <td>{r.profissional}</td>
                         <td>{r.paciente || '—'}</td>
                         <td>{new Date(r.data+'T00:00:00').toLocaleDateString('pt-BR')}</td>
-                        <td>{r.horaInicio} - {r.horaFim}{r.horaFimReal ? ` (Real: ${r.horaFimReal})` : ''}</td>
+                        <td>{r.horaInicio} - {r.horaFim}</td>
+                        <td><span className={`badge ${stB}`}>{stL}</span></td>
                         <td>
-                          <span className={`badge ${stB}`}>{stL}</span>
-                          {r.liberacaoAutomatica && <><br /><small style={{color:'#64748b'}}>Auto-liberada</small></>}
-                        </td>
-                        <td>
-                          {r.status === 'ativa' || r.status === 'reservada' ? (
-                            <button className="btn btn-success btn-xs" onClick={() => liberarSala(r.salaId)}><i className="las la-check"></i> Liberar</button>
+                          {r.status === 'ATIVA' || r.status === 'RESERVADA' ? (
+                            <button className="btn btn-success btn-xs" onClick={() => liberarSala(r.id, r.salaId)}><i className="las la-check"></i> Liberar</button>
                           ) : <span style={{color:'#94a3b8', fontSize:'11px'}}>—</span>}
                         </td>
                       </tr>
@@ -511,17 +428,17 @@ export default function GestaoSalasPage() {
               {reservas.length === 0 ? (
                 <tr><td colSpan={5} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhum histórico</td></tr>
               ) : (
-                [...reservas].reverse().map(r => {
+                reservas.map(r => {
                   const sala = salas.find(s => s.id === r.salaId);
-                  const stB = r.status === 'ativa' ? 'badge-ocupado' : r.status === 'reservada' ? 'badge-reservado' : 'badge-livre';
-                  const stL = r.status === 'ativa' ? '🔴 Em Uso' : r.status === 'reservada' ? '🟡 Reservada' : '✅ Finalizada';
+                  const stB = r.status === 'ATIVA' ? 'badge-ocupado' : r.status === 'RESERVADA' ? 'badge-reservado' : 'badge-livre';
+                  const stL = r.status === 'ATIVA' ? '🔴 Em Uso' : r.status === 'RESERVADA' ? '🟡 Reservada' : (r.status === 'FINALIZADA' ? '✅ Finalizada' : '✖️ Cancelada');
                   return (
                     <tr key={r.id}>
                         <td>{new Date(r.data+'T00:00:00').toLocaleDateString('pt-BR')}</td>
                         <td>{sala ? sala.nome : '—'}</td>
                         <td>{r.profissional}</td>
                         <td><span className={`badge ${stB}`}>{stL}</span></td>
-                        <td>{r.horaInicio} - {r.horaFim} | {r.paciente || 'N/I'}{r.liberacaoAutomatica ? ' | <span style="color:#64748b;">Auto-liberada</span>' : ''}</td>
+                        <td>{r.horaInicio} - {r.horaFim} | {r.paciente || 'N/I'}</td>
                     </tr>
                   );
                 })
@@ -542,7 +459,7 @@ export default function GestaoSalasPage() {
                 <label>Sala *</label>
                 <select value={formReserva.salaId} onChange={e => setFormReserva({...formReserva, salaId: e.target.value})}>
                   <option value="">Selecione...</option>
-                  {salas.filter(s => s.status === "livre").map(s => <option key={s.id} value={s.id}>{s.nome} ({s.setor})</option>)}
+                  {salas.filter(s => s.status === "LIVRE").map(s => <option key={s.id} value={s.id}>{s.nome} ({s.setor})</option>)}
                 </select>
               </div>
               <div className="form-grupo"><label>Profissional *</label><input type="text" value={formReserva.profissional} onChange={e => setFormReserva({...formReserva, profissional: e.target.value})} /></div>
@@ -558,8 +475,8 @@ export default function GestaoSalasPage() {
                 </select>
               </div>
             </div>
-            <button className="btn btn-success" onClick={confirmarReserva} style={{width:'100%', marginTop:'15px', justifyContent:'center'}}><i className="las la-save"></i> Confirmar</button>
-            <button className="btn btn-danger" onClick={() => setIsModalOpen(false)} style={{width:'100%', marginTop:'8px', justifyContent:'center'}}>Cancelar</button>
+            <button className="btn btn-success" onClick={confirmarReserva} disabled={isSaving} style={{width:'100%', marginTop:'15px', justifyContent:'center'}}><i className="las la-save"></i> {isSaving ? 'Confirmando...' : 'Confirmar'}</button>
+            <button className="btn btn-danger" onClick={() => setIsModalOpen(false)} disabled={isSaving} style={{width:'100%', marginTop:'8px', justifyContent:'center'}}>Cancelar</button>
           </div>
         </div>
       )}

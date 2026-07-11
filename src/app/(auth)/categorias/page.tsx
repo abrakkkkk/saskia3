@@ -1,7 +1,6 @@
 'use client';
-
 import { useState, useEffect } from 'react';
-import { Tags, Plus, Trash2, Tag, Edit2 } from 'lucide-react';
+import { Tags, Plus, Trash2, Tag } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
 interface Categoria {
@@ -11,52 +10,57 @@ interface Categoria {
 
 export default function CategoriasPage() {
   const { data: session } = useSession();
-  const hospitalId = session?.user?.hospitalId || 'default';
   
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [novaCategoria, setNovaCategoria] = useState('');
   
-  const storageKey = `${hospitalId}_categorias`;
+  const carregarCategorias = async () => {
+    try {
+      const res = await fetch('/api/categorias');
+      if (res.ok) {
+        const data = await res.json();
+        setCategorias(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      try {
-        setCategorias(JSON.parse(saved));
-      } catch (e) {}
-    } else {
-      // Default categories
-      const defaultCategorias = [
-        { id: '1', nome: 'Diabetes' },
-        { id: '2', nome: 'Hipertensão' },
-        { id: '3', nome: 'Pediatria' },
-        { id: '4', nome: 'Ortopedia' }
-      ];
-      setCategorias(defaultCategorias);
-      localStorage.setItem(storageKey, JSON.stringify(defaultCategorias));
-    }
-  }, [storageKey]);
+    carregarCategorias();
+  }, []);
 
-  const handleAddCategoria = (e: React.FormEvent) => {
+  const handleAddCategoria = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!novaCategoria.trim()) return;
 
-    const newCat = {
-      id: Date.now().toString(),
-      nome: novaCategoria.trim()
-    };
-
-    const updated = [...categorias, newCat];
-    setCategorias(updated);
-    localStorage.setItem(storageKey, JSON.stringify(updated));
-    setNovaCategoria('');
+    try {
+      const res = await fetch('/api/categorias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: novaCategoria.trim(), tipo: 'GERAL' })
+      });
+      if (res.ok) {
+        setNovaCategoria('');
+        carregarCategorias();
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const handleRemoveCategoria = (id: string) => {
+  const handleRemoveCategoria = async (id: string) => {
     if (confirm('Tem certeza que deseja remover esta categoria?')) {
-      const updated = categorias.filter(c => c.id !== id);
-      setCategorias(updated);
-      localStorage.setItem(storageKey, JSON.stringify(updated));
+      try {
+        const res = await fetch(`/api/categorias/${id}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          carregarCategorias();
+        }
+      } catch (e) {
+        console.error(e);
+      }
     }
   };
 

@@ -1,4 +1,5 @@
 'use client';
+import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
 import './prontuarios.css';
 
@@ -26,22 +27,24 @@ export default function AdminProntuariosPage() {
   const [formDescricao, setFormDescricao] = useState('');
   const [formCampos, setFormCampos] = useState<CampoProntuario[]>([]);
 
+  const carregarModelos = () => {
+    fetch('/api/prontuarios-modelos')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setModelos(data);
+      })
+      .catch(console.error);
+  };
+
   useEffect(() => {
     try {
-      const u = localStorage.getItem('usuarioLogado');
+      const u = JSON.stringify(getSessionUser());
       const usuario = u ? JSON.parse(u) : null;
       const hid = usuario?.hospitalId || usuario?.id || 'hospital_001';
       setHospitalId(hid);
-
-      const m = JSON.parse(localStorage.getItem(`${hid}_modelosProntuarios`) || '[]');
-      setModelos(m);
     } catch(e) {}
+    carregarModelos();
   }, []);
-
-  const saveModelos = (data: ModeloProntuario[]) => {
-    setModelos(data);
-    localStorage.setItem(`${hospitalId}_modelosProntuarios`, JSON.stringify(data));
-  };
 
   const abrirModal = (index: number | null = null) => {
     if (index !== null) {
@@ -83,7 +86,7 @@ export default function AdminProntuariosPage() {
     setFormCampos(novosCampos);
   };
 
-  const salvarModelo = () => {
+  const salvarModelo = async () => {
     if (!formTitulo.trim()) {
       alert("Informe o título do modelo!");
       return;
@@ -93,29 +96,45 @@ export default function AdminProntuariosPage() {
       return;
     }
 
-    const m: ModeloProntuario = {
+    const payload = {
       titulo: formTitulo,
       descricao: formDescricao,
       campos: formCampos
     };
 
-    let novaLista = [...modelos];
-    if (editIndex !== null) {
-      novaLista[editIndex] = m;
-    } else {
-      novaLista.push(m);
+    try {
+      if (editIndex !== null) {
+        const id = (modelos[editIndex] as any).id;
+        await fetch(`/api/prontuarios-modelos/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        await fetch('/api/prontuarios-modelos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+      carregarModelos();
+      fecharModal();
+      alert("✅ Modelo salvo com sucesso!");
+    } catch {
+      alert("Erro ao salvar modelo.");
     }
-
-    saveModelos(novaLista);
-    fecharModal();
-    alert("✅ Modelo de prontuário salvo com sucesso!");
   };
 
-  const excluirModelo = (index: number) => {
-    if(confirm("Tem certeza que deseja excluir este modelo permanentemente?")) {
-      let novaLista = [...modelos];
-      novaLista.splice(index, 1);
-      saveModelos(novaLista);
+  const excluirModelo = async (index: number) => {
+    if(confirm("Deseja realmente excluir este modelo?")) {
+      const id = (modelos[index] as any).id;
+      if (!id) return;
+      try {
+        await fetch(`/api/prontuarios-modelos/${id}`, { method: 'DELETE' });
+        carregarModelos();
+      } catch {
+        alert("Erro ao excluir.");
+      }
     }
   };
 

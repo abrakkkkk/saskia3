@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './config-dashboard.css';
 
-const SENHA_SUPORTE = "saskia2024";
+
 
 const modulosConfigOriginal = [
   { id: "card_pacientes", nome: "Card - Pacientes", desc: "Link rápido para Pacientes", icone: "las la-user-injured", secao: "Cards de Navegação", categoria: "cards_nav" },
@@ -64,32 +64,58 @@ export default function AdminConfigDashboardPage() {
   const [activeProfile, setActiveProfile] = useState<string>('');
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('saskiaConfigDashboard');
-      let parsed: Record<string, boolean> = {};
-      if (stored) {
-        parsed = JSON.parse(stored);
-      } else {
-        // Default: everything is active unless stored explicitly
+    fetch('/api/config-dashboard')
+      .then(r => r.json())
+      .then(stored => {
+        let parsed: Record<string, boolean> = {};
+        if (stored && Object.keys(stored).length > 0) {
+          parsed = stored;
+        } else {
+          // Default: everything is active unless stored explicitly
+          modulosConfigOriginal.forEach(m => { parsed[m.id] = true; });
+        }
+        
+        // Ensure all current modules exist in config
+        modulosConfigOriginal.forEach(m => {
+          if (parsed[m.id] === undefined) parsed[m.id] = true;
+        });
+
+        setConfigState(parsed);
+      })
+      .catch(() => {
+        let parsed: Record<string, boolean> = {};
         modulosConfigOriginal.forEach(m => { parsed[m.id] = true; });
-      }
-      
-      // Ensure all current modules exist in config
-      modulosConfigOriginal.forEach(m => {
-        if (parsed[m.id] === undefined) parsed[m.id] = true;
+        setConfigState(parsed);
       });
-      
-      setConfigState(parsed);
-    } catch(e) {}
   }, []);
 
-  const handleVerifyPassword = () => {
-    if (passwordInput === SENHA_SUPORTE) {
-      setIsLocked(false);
-      setPassError(false);
-    } else {
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const handleVerifyPassword = async () => {
+    if (!passwordInput) return;
+    
+    setIsVerifying(true);
+    setPassError(false);
+    
+    try {
+      const response = await fetch('/api/verify-support-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senha: passwordInput })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsLocked(false);
+      } else {
+        setPassError(true);
+        setPasswordInput('');
+      }
+    } catch (error) {
       setPassError(true);
-      setPasswordInput('');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -132,19 +158,35 @@ export default function AdminConfigDashboardPage() {
     setConfigState(newState);
   };
 
-  const saveConfig = () => {
-    localStorage.setItem('saskiaConfigDashboard', JSON.stringify(configState));
-    alert("✅ Configuração salva com sucesso! O dashboard será atualizado na próxima carga.");
+  const saveConfig = async () => {
+    try {
+      await fetch('/api/config-dashboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(configState)
+      });
+      alert("✅ Configuração salva com sucesso! O dashboard será atualizado na próxima carga.");
+    } catch {
+      alert("❌ Erro ao salvar configuração!");
+    }
   };
 
-  const resetConfig = () => {
+  const resetConfig = async () => {
     if(confirm("⚠️ Tem certeza que deseja restaurar TODOS os módulos para o padrão (ativados)?")) {
       let newState = { ...configState };
       modulosConfigOriginal.forEach(m => newState[m.id] = true);
       setConfigState(newState);
-      localStorage.removeItem('saskiaConfigDashboard');
-      setActiveProfile('todos');
-      alert("✅ Configuração restaurada para o padrão!");
+      try {
+        await fetch('/api/config-dashboard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newState)
+        });
+        setActiveProfile('todos');
+        alert("✅ Configuração restaurada para o padrão!");
+      } catch {
+        alert("❌ Erro ao restaurar configuração!");
+      }
     }
   };
 

@@ -2,38 +2,11 @@
 import { useState, useEffect } from 'react';
 import './cssd.css';
 
-interface Lote {
-  id: number;
-  numero: string;
-  setor: string;
-  operador: string;
-  data: string;
-  equipamento: string;
-  ciclo: string;
-  indicadorQuimico: string;
-  indicadorBiologico: string;
-  bowieDick: string;
-  obs: string;
-  status: string;
-  dataCriacao: string;
-}
-
-interface Item {
-  id: number;
-  loteId: number;
-  nome: string;
-  tipo: string;
-  quantidade: number;
-  embalagem: string;
-  integridade: string;
-}
-
 export default function CSSDPage() {
-  const [hospitalId, setHospitalId] = useState('hospital_001');
   const [activeTab, setActiveTab] = useState<'lotes'|'novo'|'itens'|'historico'>('lotes');
+  const [loading, setLoading] = useState(true);
   
-  const [lotes, setLotes] = useState<Lote[]>([]);
-  const [itens, setItens] = useState<Item[]>([]);
+  const [lotes, setLotes] = useState<any[]>([]);
 
   // Filtros
   const [buscarLote, setBuscarLote] = useState('');
@@ -59,58 +32,40 @@ export default function CSSDPage() {
   const [itemEmbalagem, setItemEmbalagem] = useState('Grau Cirúrgico (SMS)');
   const [itemIntegridade, setItemIntegridade] = useState('Íntegra');
 
-  useEffect(() => {
+  const carregarDados = async () => {
+    setLoading(true);
     try {
-      const u = localStorage.getItem('usuarioLogado');
-      const usuario = u ? JSON.parse(u) : null;
-      const hid = usuario?.hospitalId || usuario?.id || 'hospital_001';
-      setHospitalId(hid);
-
-      let storedLotes = JSON.parse(localStorage.getItem(`${hid}_cssdLotes`) || '[]');
-      let storedItens = JSON.parse(localStorage.getItem(`${hid}_cssdItens`) || '[]');
-
-      if (storedLotes.length === 0) {
-        storedLotes = [
-          {id:1,numero:"CSSD-2026-001",setor:"Centro Cirúrgico",operador:"Maria Silva",data:"2026-05-03",equipamento:"Autoclave 01",ciclo:"134°C - 7 min (Padrão)",indicadorQuimico:"Virado (OK)",indicadorBiologico:"Negativo (OK)",bowieDick:"Aprovado",status:"Pronto",dataCriacao:"2026-05-03T08:00:00"},
-          {id:2,numero:"CSSD-2026-002",setor:"UTI",operador:"João Santos",data:"2026-05-04",equipamento:"Autoclave 02",ciclo:"134°C - 7 min (Padrão)",indicadorQuimico:"Virado (OK)",indicadorBiologico:"Aguardando",bowieDick:"Aprovado",status:"Esterilização",dataCriacao:"2026-05-04T10:00:00"},
-          {id:3,numero:"CSSD-2026-003",setor:"Emergência",operador:"Ana Costa",data:"2026-05-04",equipamento:"Autoclave 01",ciclo:"121°C - 15 min",indicadorQuimico:"Não Aplicável",indicadorBiologico:"Não Aplicável",bowieDick:"Não Realizado",status:"Recepção",dataCriacao:"2026-05-04T14:00:00"}
-        ];
-        localStorage.setItem(`${hid}_cssdLotes`, JSON.stringify(storedLotes));
+      const res = await fetch('/api/cssd');
+      if (res.ok) {
+        const data = await res.json();
+        setLotes(data);
         
-        storedItens = [
-          {id:1,loteId:1,nome:"Pinça Kelly Curva",tipo:"Pinça",quantidade:5,embalagem:"Grau Cirúrgico (SMS)",integridade:"Íntegra"},
-          {id:2,loteId:1,nome:"Tesoura Mayo",tipo:"Tesoura",quantidade:3,embalagem:"Grau Cirúrgico (SMS)",integridade:"Íntegra"},
-          {id:3,loteId:1,nome:"Cabo de Bisturi nº 3",tipo:"Cabo de Bisturi",quantidade:2,embalagem:"Grau Cirúrgico (SMS)",integridade:"Íntegra"},
-          {id:4,loteId:2,nome:"Pinça Anatômica",tipo:"Pinça",quantidade:4,embalagem:"Contêiner Rígido",integridade:"Íntegra"}
-        ];
-        localStorage.setItem(`${hid}_cssdItens`, JSON.stringify(storedItens));
+        if (!loteNumero && data.length > 0) {
+          setLoteNumero(`CSSD-${new Date().getFullYear()}-${String(data.length + 1).padStart(3,'0')}`);
+        } else if (!loteNumero) {
+          setLoteNumero(`CSSD-${new Date().getFullYear()}-001`);
+        }
       }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      setLotes(storedLotes);
-      setItens(storedItens);
-
-      const today = new Date().toISOString().split('T')[0];
-      setLoteData(today);
-      setLoteNumero(`CSSD-${new Date().getFullYear()}-${String(storedLotes.length + 1).padStart(3,'0')}`);
-    } catch(e) {}
+  useEffect(() => {
+    carregarDados();
+    const today = new Date().toISOString().split('T')[0];
+    setLoteData(today);
   }, []);
 
-  const saveLotes = (data: Lote[]) => {
-    setLotes(data);
-    localStorage.setItem(`${hospitalId}_cssdLotes`, JSON.stringify(data));
-  };
-  const saveItens = (data: Item[]) => {
-    setItens(data);
-    localStorage.setItem(`${hospitalId}_cssdItens`, JSON.stringify(data));
-  };
-
-  const criarLote = () => {
+  const criarLote = async () => {
     if(!loteNumero || !loteSetor || !loteOperador){
       alert("⚠️ Preencha lote, setor e operador!");
       return;
     }
-    const novoLote: Lote = {
-      id: Date.now(),
+    
+    const payload = {
       numero: loteNumero.trim(),
       setor: loteSetor,
       operador: loteOperador.trim(),
@@ -121,69 +76,100 @@ export default function CSSDPage() {
       indicadorBiologico: loteIndicadorBiologico,
       bowieDick: loteBowieDick,
       obs: loteObs.trim(),
-      status: "Recepção",
-      dataCriacao: new Date().toISOString()
     };
     
-    const novosLotes = [...lotes, novoLote];
-    saveLotes(novosLotes);
-    
-    setLoteNumero(`CSSD-${new Date().getFullYear()}-${String(novosLotes.length + 1).padStart(3,'0')}`);
-    setLoteOperador('');
-    setLoteObs('');
-    alert("✅ Lote criado com sucesso!");
-    setActiveTab('lotes');
+    try {
+      const res = await fetch('/api/cssd', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error('Erro ao criar lote');
+      
+      setLoteOperador('');
+      setLoteObs('');
+      alert("✅ Lote criado com sucesso!");
+      setActiveTab('lotes');
+      carregarDados();
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
-  const avancarStatus = (id: number) => {
-    const lIdx = lotes.findIndex(lo => lo.id === id);
-    if(lIdx < 0) return;
-    const l = lotes[lIdx];
-    
+  const avancarStatus = async (id: string, statusAtual: string) => {
     const fluxo = ["Recepção", "Limpeza", "Preparo", "Esterilização", "Pronto"];
-    const idx = fluxo.indexOf(l.status);
+    const idx = fluxo.indexOf(statusAtual);
     if(idx < fluxo.length - 1) {
-      const novosLotes = [...lotes];
-      novosLotes[lIdx].status = fluxo[idx+1];
-      saveLotes(novosLotes);
+      const proximoStatus = fluxo[idx+1];
+      try {
+        const res = await fetch(`/api/cssd/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: proximoStatus })
+        });
+        if (!res.ok) throw new Error('Erro ao atualizar status');
+        carregarDados();
+      } catch (error: any) {
+        alert(error.message);
+      }
     } else {
       alert("Lote já está no status final!");
     }
   };
 
-  const rejeitarLote = (id: number) => {
-    const lIdx = lotes.findIndex(lo => lo.id === id);
-    if(lIdx < 0) return;
-    if(confirm(`Rejeitar lote ${lotes[lIdx].numero}?`)){
-      const novosLotes = [...lotes];
-      novosLotes[lIdx].status = "Rejeitado";
-      saveLotes(novosLotes);
+  const rejeitarLote = async (id: string, numero: string) => {
+    if(confirm(`Rejeitar lote ${numero}?`)){
+      try {
+        const res = await fetch(`/api/cssd/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'Rejeitado' })
+        });
+        if (!res.ok) throw new Error('Erro ao rejeitar lote');
+        carregarDados();
+      } catch (error: any) {
+        alert(error.message);
+      }
     }
   };
 
-  const adicionarItem = () => {
+  const adicionarItem = async () => {
     if(!itemLote || !itemNome){
       alert("⚠️ Selecione o lote e digite o nome do material!");
       return;
     }
-    const novoItem: Item = {
-      id: Date.now(),
-      loteId: parseInt(itemLote),
+    
+    const payload = {
+      loteId: itemLote,
       nome: itemNome.trim(),
       tipo: itemTipo,
       quantidade: itemQuantidade,
       embalagem: itemEmbalagem,
       integridade: itemIntegridade
     };
-    saveItens([...itens, novoItem]);
-    setItemNome('');
-    setItemQuantidade(1);
-    alert("✅ Item adicionado ao lote!");
-    setActiveTab('lotes');
+
+    try {
+      const res = await fetch('/api/cssd/itens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!res.ok) throw new Error('Erro ao adicionar item');
+      
+      setItemNome('');
+      setItemQuantidade(1);
+      alert("✅ Item adicionado ao lote!");
+      setActiveTab('lotes');
+      carregarDados();
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
   // Filtros
-  let lotesFiltrados = [...lotes].reverse();
+  let lotesFiltrados = [...lotes];
   if (filtroStatusLote !== 'todos') {
     lotesFiltrados = lotesFiltrados.filter(l => l.status === filtroStatusLote);
   }
@@ -195,41 +181,12 @@ export default function CSSDPage() {
   const lotesAtivos = lotes.filter(l => l.status !== "Pronto" && l.status !== "Rejeitado");
 
   // Indicadores
-  const hoje = new Date().toISOString().split('T')[0];
   const qtdRecepcao = lotes.filter(l => l.status === "Recepção").length;
   const qtdLimpeza = lotes.filter(l => l.status === "Limpeza").length;
   const qtdPreparo = lotes.filter(l => l.status === "Preparo").length;
-  const qtdEsterilizacao = lotes.filter(l => l.status === "Esterilização").length;
-  const qtdPronto = lotes.filter(l => l.status === "Pronto").length;
+  const qtdEsteril = lotes.filter(l => l.status === "Esterilização").length;
 
-  const indEmProcesso = lotes.filter(l => l.status !== "Pronto" && l.status !== "Rejeitado").length;
-  const indEsterilizados = lotes.filter(l => l.status === "Pronto" && l.data === hoje).length;
-  const indFalhas = lotes.filter(l => l.status === "Rejeitado").length;
-  const indItens = itens.reduce((acc, i) => acc + i.quantidade, 0);
-
-  const getStatusClasse = (status: string) => {
-    switch(status) {
-      case "Recepção": return "badge-sujo";
-      case "Limpeza": return "badge-warning";
-      case "Preparo": return "badge-info";
-      case "Esterilização": return "badge-processo";
-      case "Pronto": return "badge-esteril";
-      case "Rejeitado": return "badge-danger";
-      default: return "badge-gray";
-    }
-  };
-
-  const getLoteBorderClasse = (status: string) => {
-    switch(status) {
-      case "Recepção": return "sujo";
-      case "Limpeza": return "processando";
-      case "Preparo": return "processando";
-      case "Esterilização": return "processando";
-      case "Pronto": return "esteril";
-      case "Rejeitado": return "sujo";
-      default: return "processando";
-    }
-  };
+  if (loading && lotes.length === 0) return <div>Carregando...</div>;
 
   return (
     <div className="conteudo">
@@ -237,140 +194,280 @@ export default function CSSDPage() {
 
         <div className="banner-cssd">
           <div>
-            <h1><i className="las la-pump-soap"></i> CSSD - Central de Esterilização</h1>
-            <p>Rastreabilidade de materiais, controle de lotes e monitoramento do processo de esterilização</p>
+            <h1><i className="las la-box"></i> CME - Central de Material e Esterilização</h1>
+            <p>Controle de ciclos de esterilização e rastreabilidade de instrumentais</p>
           </div>
-          <div style={{display:'flex', gap:'10px', flexWrap:'wrap'}}>
-            <button className="btn btn-success" onClick={() => setActiveTab('novo')}><i className="las la-plus-circle"></i> Novo Lote</button>
-          </div>
+          <button className="btn btn-success" onClick={() => setActiveTab('novo')}>
+            <i className="las la-plus-circle"></i> Novo Lote
+          </button>
         </div>
 
-        <div className="indicadores-grid">
-          <div className="ind-card"><div className="ind-icon" style={{color:'#1e3a8a'}}><i className="las la-boxes"></i></div><div className="ind-valor">{lotes.length}</div><div className="ind-label">Lotes Processados</div></div>
-          <div className="ind-card"><div className="ind-icon" style={{color:'#f59e0b'}}><i className="las la-clock"></i></div><div className="ind-valor">{indEmProcesso}</div><div className="ind-label">Em Processamento</div></div>
-          <div className="ind-card"><div className="ind-icon" style={{color:'#16a34a'}}><i className="las la-check-circle"></i></div><div className="ind-valor">{indEsterilizados}</div><div className="ind-label">Esterilizados Hoje</div></div>
-          <div className="ind-card"><div className="ind-icon" style={{color:'#dc2626'}}><i className="las la-exclamation-triangle"></i></div><div className="ind-valor">{indFalhas}</div><div className="ind-label">Falhas / Rejeitados</div></div>
-          <div className="ind-card"><div className="ind-icon" style={{color:'#7c3aed'}}><i className="las la-tools"></i></div><div className="ind-valor">{indItens}</div><div className="ind-label">Total de Itens</div></div>
-        </div>
-
-        <div className="fluxo-grid">
-          <div className={`fluxo-card ${qtdRecepcao > 0 ? 'ativo' : ''}`}><div className="fluxo-numero">{qtdRecepcao}</div><div className="fluxo-nome">1. Recepção</div><div className="fluxo-qtd">Materiais Sujos</div></div>
-          <div className={`fluxo-card ${qtdLimpeza > 0 ? 'ativo' : ''}`}><div className="fluxo-numero">{qtdLimpeza}</div><div className="fluxo-nome">2. Limpeza</div><div className="fluxo-qtd">Em Lavagem</div></div>
-          <div className={`fluxo-card ${qtdPreparo > 0 ? 'ativo' : ''}`}><div className="fluxo-numero">{qtdPreparo}</div><div className="fluxo-nome">3. Preparo</div><div className="fluxo-qtd">Embalagem</div></div>
-          <div className={`fluxo-card ${qtdEsterilizacao > 0 ? 'ativo' : ''}`}><div className="fluxo-numero">{qtdEsterilizacao}</div><div className="fluxo-nome">4. Esterilização</div><div className="fluxo-qtd">Autoclave</div></div>
-          <div className={`fluxo-card ${qtdPronto > 0 ? 'concluido' : ''}`}><div className="fluxo-numero">{qtdPronto}</div><div className="fluxo-nome">5. Pronto</div><div className="fluxo-qtd">Disponível</div></div>
+        <div className="stats-grid">
+          <div className="stat-card" style={{borderLeftColor: '#3b82f6'}}>
+            <div className="stat-numero" style={{color:'#3b82f6'}}>{qtdRecepcao}</div>
+            <div className="stat-label">Na Recepção</div>
+          </div>
+          <div className="stat-card" style={{borderLeftColor: '#8b5cf6'}}>
+            <div className="stat-numero" style={{color:'#8b5cf6'}}>{qtdLimpeza}</div>
+            <div className="stat-label">Em Limpeza</div>
+          </div>
+          <div className="stat-card" style={{borderLeftColor: '#f59e0b'}}>
+            <div className="stat-numero" style={{color:'#f59e0b'}}>{qtdPreparo}</div>
+            <div className="stat-label">Em Preparo</div>
+          </div>
+          <div className="stat-card" style={{borderLeftColor: '#10b981'}}>
+            <div className="stat-numero" style={{color:'#10b981'}}>{qtdEsteril}</div>
+            <div className="stat-label">Esterilizando</div>
+          </div>
         </div>
 
         <div className="tabs-cssd">
-          <button className={`tab-btn ${activeTab === 'lotes' ? 'ativo' : ''}`} onClick={() => setActiveTab('lotes')}><i className="las la-boxes"></i> Lotes</button>
-          <button className={`tab-btn ${activeTab === 'novo' ? 'ativo' : ''}`} onClick={() => setActiveTab('novo')}><i className="las la-plus-circle"></i> Novo Lote</button>
-          <button className={`tab-btn ${activeTab === 'itens' ? 'ativo' : ''}`} onClick={() => setActiveTab('itens')}><i className="las la-tools"></i> Itens</button>
-          <button className={`tab-btn ${activeTab === 'historico' ? 'ativo' : ''}`} onClick={() => setActiveTab('historico')}><i className="las la-history"></i> Histórico</button>
+          <button className={`tab-btn ${activeTab === 'lotes' ? 'ativo' : ''}`} onClick={() => setActiveTab('lotes')}>
+            <i className="las la-list"></i> Painel de Lotes
+          </button>
+          <button className={`tab-btn ${activeTab === 'novo' ? 'ativo' : ''}`} onClick={() => setActiveTab('novo')}>
+            <i className="las la-plus"></i> Registrar Lote
+          </button>
+          <button className={`tab-btn ${activeTab === 'itens' ? 'ativo' : ''}`} onClick={() => setActiveTab('itens')}>
+            <i className="las la-tools"></i> Adicionar Itens ao Lote
+          </button>
+          <button className={`tab-btn ${activeTab === 'historico' ? 'ativo' : ''}`} onClick={() => setActiveTab('historico')}>
+            <i className="las la-history"></i> Histórico Completo
+          </button>
         </div>
-
-        {activeTab === 'lotes' && (
-          <div>
-            <div className="search-box">
-              <input type="text" placeholder="Buscar por nº lote, setor ou operador..." value={buscarLote} onChange={e => setBuscarLote(e.target.value)} />
-              <select value={filtroStatusLote} onChange={e => setFiltroStatusLote(e.target.value)}>
-                <option value="todos">Todos os Status</option>
-                <option value="Recepção">Recepção</option>
-                <option value="Limpeza">Limpeza</option>
-                <option value="Preparo">Preparo</option>
-                <option value="Esterilização">Esterilização</option>
-                <option value="Pronto">Pronto (Esterilizado)</option>
-                <option value="Rejeitado">Rejeitado</option>
-              </select>
-            </div>
-            <div className="lotes-grid">
-              {lotesFiltrados.length === 0 ? (
-                <p style={{textAlign:'center', color:'#94a3b8', padding:'30px', gridColumn:'1/-1'}}>Nenhum lote encontrado</p>
-              ) : (
-                lotesFiltrados.map(l => {
-                  const itensLote = itens.filter(i => i.loteId === l.id);
-                  return (
-                    <div key={l.id} className={`lote-card ${getLoteBorderClasse(l.status)}`}>
-                      <div className="lote-header">
-                        <span className="lote-numero">📦 {l.numero}</span>
-                        <span className={`badge ${getStatusClasse(l.status)}`}>{l.status}</span>
-                      </div>
-                      <p className="lote-info"><i className="las la-door-open"></i> Setor: {l.setor}</p>
-                      <p className="lote-info"><i className="las la-user"></i> Operador: {l.operador}</p>
-                      <p className="lote-info"><i className="las la-calendar"></i> Data: {new Date(l.data).toLocaleDateString('pt-BR')}</p>
-                      <p className="lote-info"><i className="las la-cog"></i> {l.equipamento} | {l.ciclo}</p>
-                      <p className="lote-info"><i className="las la-tools"></i> <strong>{itensLote.length} itens</strong></p>
-                      <div className="lote-acoes">
-                        {l.status !== 'Pronto' && l.status !== 'Rejeitado' && (
-                          <button className="btn btn-xs btn-primary" onClick={() => avancarStatus(l.id)}><i className="las la-arrow-right"></i> Avançar</button>
-                        )}
-                        {l.status === 'Pronto' && (
-                          <button className="btn btn-xs btn-success" onClick={() => alert(`Lote ${l.numero} liberado!`)}><i className="las la-check"></i> Liberar</button>
-                        )}
-                        {l.status !== 'Pronto' && l.status !== 'Rejeitado' && (
-                          <button className="btn btn-xs btn-danger" onClick={() => rejeitarLote(l.id)}><i className="las la-times"></i> Rejeitar</button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        )}
 
         {activeTab === 'novo' && (
           <div className="form-panel">
-            <h3><i className="las la-plus-circle"></i> Criar Novo Lote de Esterilização</h3>
+            <h3><i className="las la-plus-circle"></i> Abertura de Novo Lote de Esterilização</h3>
             <div className="form-grid">
-              <div className="form-grupo"><label>Nº do Lote *</label><input type="text" value={loteNumero} onChange={e => setLoteNumero(e.target.value)} placeholder="Ex: CSSD-2026-001" /></div>
-              <div className="form-grupo"><label>Setor de Origem *</label><select value={loteSetor} onChange={e => setLoteSetor(e.target.value)}><option value="">Selecione...</option><option>Centro Cirúrgico</option><option>UTI</option><option>Emergência</option><option>Enfermaria</option><option>Ambulatório</option><option>Hemodinâmica</option></select></div>
-              <div className="form-grupo"><label>Operador *</label><input type="text" value={loteOperador} onChange={e => setLoteOperador(e.target.value)} placeholder="Nome do operador" /></div>
-              <div className="form-grupo"><label>Data de Criação</label><input type="date" value={loteData} onChange={e => setLoteData(e.target.value)} /></div>
-              <div className="form-grupo"><label>Equipamento (Autoclave)</label><select value={loteEquipamento} onChange={e => setLoteEquipamento(e.target.value)}><option>Autoclave 01</option><option>Autoclave 02</option><option>Autoclave 03</option><option>Termodesinfectora</option><option>Óxido de Etileno</option></select></div>
-              <div className="form-grupo"><label>Ciclo</label><select value={loteCiclo} onChange={e => setLoteCiclo(e.target.value)}><option>134°C - 7 min (Padrão)</option><option>121°C - 15 min</option><option>134°C - 18 min (Príons)</option><option>Baixa Temperatura</option></select></div>
-              <div className="form-grupo"><label>Indicador Químico (Classe 5)</label><select value={loteIndicadorQuimico} onChange={e => setLoteIndicadorQuimico(e.target.value)}><option>Virado (OK)</option><option>Não Virado (Falha)</option><option>Não Aplicável</option></select></div>
-              <div className="form-grupo"><label>Indicador Biológico</label><select value={loteIndicadorBiologico} onChange={e => setLoteIndicadorBiologico(e.target.value)}><option>Negativo (OK)</option><option>Positivo (Falha)</option><option>Aguardando</option><option>Não Aplicável</option></select></div>
-              <div className="form-grupo"><label>Teste Bowie-Dick</label><select value={loteBowieDick} onChange={e => setLoteBowieDick(e.target.value)}><option>Aprovado</option><option>Reprovado</option><option>Não Realizado</option></select></div>
-              <div className="form-grupo full"><label>Observações</label><textarea rows={2} value={loteObs} onChange={e => setLoteObs(e.target.value)}></textarea></div>
+              <div className="form-grupo">
+                <label>Nº do Lote</label>
+                <input type="text" value={loteNumero} onChange={e=>setLoteNumero(e.target.value)} disabled style={{backgroundColor:'#f1f5f9', fontWeight:'bold'}} />
+              </div>
+              <div className="form-grupo">
+                <label>Setor de Origem *</label>
+                <select value={loteSetor} onChange={e=>setLoteSetor(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  <option>Centro Cirúrgico</option>
+                  <option>UTI</option>
+                  <option>Emergência</option>
+                  <option>Enfermaria</option>
+                  <option>Ambulatório</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Data *</label>
+                <input type="date" value={loteData} onChange={e=>setLoteData(e.target.value)} />
+              </div>
+              <div className="form-grupo">
+                <label>Operador (Técnico CME) *</label>
+                <input type="text" value={loteOperador} onChange={e=>setLoteOperador(e.target.value)} placeholder="Nome do responsável" />
+              </div>
+              <div className="form-grupo">
+                <label>Equipamento (Autoclave/Estufa)</label>
+                <select value={loteEquipamento} onChange={e=>setLoteEquipamento(e.target.value)}>
+                  <option>Autoclave 01</option>
+                  <option>Autoclave 02</option>
+                  <option>Autoclave 03 (Rápida)</option>
+                  <option>Estufa Térmica</option>
+                  <option>Lavadora Termodesinfectora</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Ciclo Selecionado</label>
+                <select value={loteCiclo} onChange={e=>setLoteCiclo(e.target.value)}>
+                  <option>134°C - 7 min (Padrão)</option>
+                  <option>134°C - 4 min (Flash)</option>
+                  <option>121°C - 15 min</option>
+                  <option>Ciclo Príon</option>
+                  <option>Lavagem Térmica</option>
+                </select>
+              </div>
             </div>
-            <button className="btn btn-primary" onClick={criarLote} style={{width:'100%', marginTop:'15px', justifyContent:'center'}}><i className="las la-save"></i> Criar Lote</button>
+
+            <h4 style={{marginTop:'25px', marginBottom:'15px', color:'#1e293b', borderBottom:'1px solid #e2e8f0', paddingBottom:'5px'}}>Indicadores de Qualidade</h4>
+            <div className="form-grid">
+              <div className="form-grupo">
+                <label>Indicador Químico (Classe 5 ou 6)</label>
+                <select value={loteIndicadorQuimico} onChange={e=>setLoteIndicadorQuimico(e.target.value)}>
+                  <option>Virado (OK)</option>
+                  <option>Falho (Rejeitar)</option>
+                  <option>Não Aplicável</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Indicador Biológico</label>
+                <select value={loteIndicadorBiologico} onChange={e=>setLoteIndicadorBiologico(e.target.value)}>
+                  <option>Negativo (OK)</option>
+                  <option>Positivo (Rejeitar Lote)</option>
+                  <option>Aguardando Incubação</option>
+                  <option>Não Aplicável</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Teste Bowie-Dick (Vácuo)</label>
+                <select value={loteBowieDick} onChange={e=>setLoteBowieDick(e.target.value)}>
+                  <option>Aprovado</option>
+                  <option>Reprovado (Manutenção)</option>
+                  <option>Não Realizado</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Observações Extras</label>
+                <input type="text" value={loteObs} onChange={e=>setLoteObs(e.target.value)} placeholder="Opcional..." />
+              </div>
+            </div>
+
+            <button className="btn btn-success" onClick={criarLote} style={{width:'100%', marginTop:'20px', padding:'14px', justifyContent:'center'}}>
+              <i className="las la-save"></i> Criar Lote
+            </button>
           </div>
         )}
 
         {activeTab === 'itens' && (
           <div className="form-panel">
-            <h3><i className="las la-tools"></i> Adicionar Itens ao Lote</h3>
+            <h3><i className="las la-tools"></i> Vincular Instrumentais ao Lote</h3>
+            <p style={{color:'#64748b', marginBottom:'20px'}}>Adicione as pinças, caixas e materiais que compõem o lote ativo.</p>
+            
             <div className="form-grid">
-              <div className="form-grupo"><label>Lote *</label><select value={itemLote} onChange={e => setItemLote(e.target.value)}><option value="">Selecione o lote...</option>{lotesAtivos.map(l => <option key={l.id} value={l.id}>{l.numero} - {l.setor} ({l.status})</option>)}</select></div>
-              <div className="form-grupo"><label>Nome do Material *</label><input type="text" value={itemNome} onChange={e => setItemNome(e.target.value)} placeholder="Nome do instrumento" /></div>
-              <div className="form-grupo"><label>Tipo</label><select value={itemTipo} onChange={e => setItemTipo(e.target.value)}><option>Instrumental Cirúrgico</option><option>Pinça</option><option>Tesoura</option><option>Afastador</option><option>Cabo de Bisturi</option><option>Campo Cirúrgico</option><option>Bandeja</option><option>Cuba</option><option>Outro</option></select></div>
-              <div className="form-grupo"><label>Quantidade</label><input type="number" min="1" value={itemQuantidade} onChange={e => setItemQuantidade(parseInt(e.target.value))} /></div>
-              <div className="form-grupo"><label>Embalagem</label><select value={itemEmbalagem} onChange={e => setItemEmbalagem(e.target.value)}><option>Grau Cirúrgico (SMS)</option><option>Papel Crepe</option><option>Contêiner Rígido</option><option>Tyvek</option></select></div>
-              <div className="form-grupo"><label>Integridade da Embalagem</label><select value={itemIntegridade} onChange={e => setItemIntegridade(e.target.value)}><option>Íntegra</option><option>Danificada</option></select></div>
+              <div className="form-grupo">
+                <label>Selecione o Lote Aberto *</label>
+                <select value={itemLote} onChange={e=>setItemLote(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  {lotesAtivos.map(l => <option key={l.id} value={l.id}>{l.numero} ({l.status})</option>)}
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Nome do Material / Caixa *</label>
+                <input type="text" value={itemNome} onChange={e=>setItemNome(e.target.value)} placeholder="Ex: Caixa de Pequena Cirurgia" />
+              </div>
+              <div className="form-grupo">
+                <label>Tipo</label>
+                <select value={itemTipo} onChange={e=>setItemTipo(e.target.value)}>
+                  <option>Instrumental Cirúrgico</option>
+                  <option>Caixa Montada</option>
+                  <option>Tecido / Avental</option>
+                  <option>Vidraria</option>
+                  <option>Motor / Perfurador</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Quantidade</label>
+                <input type="number" min="1" value={itemQuantidade} onChange={e=>setItemQuantidade(Number(e.target.value))} />
+              </div>
+              <div className="form-grupo">
+                <label>Embalagem</label>
+                <select value={itemEmbalagem} onChange={e=>setItemEmbalagem(e.target.value)}>
+                  <option>Grau Cirúrgico (SMS)</option>
+                  <option>Contêiner Rígido</option>
+                  <option>Papel Crepado</option>
+                  <option>Tyvek</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Integridade Visual</label>
+                <select value={itemIntegridade} onChange={e=>setItemIntegridade(e.target.value)}>
+                  <option>Íntegra</option>
+                  <option>Com Manchas (Aceitável)</option>
+                  <option>Danificada (Rejeitar)</option>
+                </select>
+              </div>
             </div>
-            <button className="btn btn-success" onClick={adicionarItem} style={{width:'100%', marginTop:'15px', justifyContent:'center'}}><i className="las la-plus-circle"></i> Adicionar Item</button>
+
+            <button className="btn btn-primary" onClick={adicionarItem} style={{width:'100%', marginTop:'20px', padding:'14px', justifyContent:'center'}}>
+              <i className="las la-plus"></i> Adicionar Material ao Lote
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'lotes' && (
+          <div className="painel-operacional">
+            <div className="controles-topo" style={{display:'flex', gap:'15px', marginBottom:'20px'}}>
+              <div className="pesquisa-box" style={{flex:1}}>
+                <i className="las la-search"></i>
+                <input type="text" placeholder="Buscar lote, setor ou operador..." value={buscarLote} onChange={e=>setBuscarLote(e.target.value)} />
+              </div>
+              <select value={filtroStatusLote} onChange={e=>setFiltroStatusLote(e.target.value)} style={{padding:'10px', borderRadius:'10px', border:'1px solid #cbd5e1'}}>
+                <option value="todos">Todos os Status</option>
+                <option value="Recepção">Recepção</option>
+                <option value="Limpeza">Limpeza</option>
+                <option value="Preparo">Preparo</option>
+                <option value="Esterilização">Esterilização</option>
+              </select>
+            </div>
+
+            <div className="lotes-grid">
+              {lotesFiltrados.filter(l => l.status !== "Pronto" && l.status !== "Rejeitado").map(l => (
+                <div className="lote-card" key={l.id}>
+                  <div className="lote-header">
+                    <h4><i className="las la-box"></i> {l.numero}</h4>
+                    <span className={`status-badge ${l.status.toLowerCase().replace('ç','c').replace('ã','a')}`}>{l.status}</span>
+                  </div>
+                  <div className="lote-body">
+                    <p><strong>Setor:</strong> {l.setor}</p>
+                    <p><strong>Operador:</strong> {l.operador}</p>
+                    <p><strong>Equipamento:</strong> {l.equipamento}</p>
+                    <p><strong>Ciclo:</strong> {l.ciclo}</p>
+                    <div className="lote-itens-preview">
+                      <p><strong>Itens:</strong> {l.itens?.length || 0} cadastrados</p>
+                    </div>
+                  </div>
+                  <div className="lote-actions">
+                    <button className="btn btn-primary btn-sm" onClick={() => avancarStatus(l.id, l.status)}>
+                      Avançar Passo <i className="las la-arrow-right"></i>
+                    </button>
+                    <button className="btn btn-danger btn-sm" onClick={() => rejeitarLote(l.id, l.numero)} title="Reprovar Lote">
+                      <i className="las la-times-circle"></i>
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {lotesFiltrados.filter(l => l.status !== "Pronto" && l.status !== "Rejeitado").length === 0 && (
+                <div style={{gridColumn:'1 / -1', textAlign:'center', padding:'40px', color:'#64748b', background:'white', borderRadius:'15px'}}>
+                  Nenhum lote ativo encontrado nos filtros selecionados.
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {activeTab === 'historico' && (
           <div style={{background:'white', borderRadius:'20px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)', overflowX:'auto'}}>
             <table className="tabela-cssd">
-              <thead><tr><th>Lote</th><th>Setor</th><th>Status</th><th>Data</th><th>Operador</th><th>Equipamento</th><th>Ind. Biológico</th><th>Ind. Químico</th><th>Bowie-Dick</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Nº Lote</th>
+                  <th>Data</th>
+                  <th>Setor</th>
+                  <th>Operador</th>
+                  <th>Equipamento</th>
+                  <th>Qtd. Itens</th>
+                  <th>Biológico</th>
+                  <th>Status Final</th>
+                </tr>
+              </thead>
               <tbody>
                 {lotes.length === 0 ? (
-                  <tr><td colSpan={9} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhum lote registrado</td></tr>
+                  <tr><td colSpan={8} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhum lote registrado</td></tr>
                 ) : (
-                  lotes.slice().reverse().map(l => (
+                  lotes.map(l => (
                     <tr key={l.id}>
                       <td><strong>{l.numero}</strong></td>
-                      <td>{l.setor}</td>
-                      <td><span className={`badge ${l.status==='Pronto'?'badge-success':l.status==='Rejeitado'?'badge-danger':'badge-warning'}`}>{l.status}</span></td>
                       <td>{new Date(l.data).toLocaleDateString('pt-BR')}</td>
+                      <td>{l.setor}</td>
                       <td>{l.operador}</td>
                       <td>{l.equipamento}</td>
-                      <td>{l.indicadorBiologico}</td>
-                      <td>{l.indicadorQuimico}</td>
-                      <td><span className={`badge ${l.bowieDick==='Aprovado'?'badge-success':l.bowieDick==='Reprovado'?'badge-danger':'badge-warning'}`}>{l.bowieDick}</span></td>
+                      <td>{l.itens?.length || 0}</td>
+                      <td>
+                        <span style={{color: l.indicadorBiologico.includes('Negativo') ? '#10b981' : (l.indicadorBiologico.includes('Positivo') ? '#ef4444' : '#64748b')}}>
+                          {l.indicadorBiologico}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge ${l.status === 'Pronto' ? 'badge-success' : (l.status === 'Rejeitado' ? 'badge-danger' : 'badge-warning')}`}>
+                          {l.status}
+                        </span>
+                      </td>
                     </tr>
                   ))
                 )}

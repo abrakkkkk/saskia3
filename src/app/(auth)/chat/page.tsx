@@ -45,31 +45,40 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!hospitalId || !usuario) return;
-    const allUsersStr = localStorage.getItem('usuarios');
-    let lista: any[] = allUsersStr ? JSON.parse(allUsersStr) : [
-      { id: 'u1', nome: 'Dr. Carlos Silva', email: 'carlos@saskia.com', cargo: 'Médico', setor: 'Cardiologia', hospitalId },
-      { id: 'u2', nome: 'Enf. Joana', email: 'joana@saskia.com', cargo: 'Enfermeira', setor: 'UTI', hospitalId },
-      { id: 'u3', nome: 'Ana Recepção', email: 'ana@saskia.com', cargo: 'Recepcionista', setor: 'Recepção', hospitalId },
-    ];
-    const filtrados = lista.filter(u => u.hospitalId === hospitalId && u.email !== usuario.email);
-    setContatos(filtrados.map((u, i) => ({
-      id: u.id || `u${i}`,
-      nome: u.nome || u.email,
-      email: u.email,
-      cargo: u.cargo || 'Profissional',
-      setor: u.setor || 'Hospital',
-      cor: CORES[i % CORES.length]
-    })));
+    fetch('/api/usuarios')
+      .then(r => r.json())
+      .then(data => {
+        let lista: any[] = Array.isArray(data) ? data : [];
+        if (lista.length === 0) {
+          lista = [
+            { id: 'u1', nome: 'Dr. Carlos Silva', email: 'carlos@saskia.com', cargo: 'Médico', setor: 'Cardiologia', hospitalId },
+            { id: 'u2', nome: 'Enf. Joana', email: 'joana@saskia.com', cargo: 'Enfermeira', setor: 'UTI', hospitalId },
+            { id: 'u3', nome: 'Ana Recepção', email: 'ana@saskia.com', cargo: 'Recepcionista', setor: 'Recepção', hospitalId },
+          ];
+        }
+        const filtrados = lista.filter(u => u.hospitalId === hospitalId && u.email !== usuario.email);
+        setContatos(filtrados.map((u, i) => ({
+          id: u.id || `u${i}`,
+          nome: u.nome || u.name || u.email,
+          email: u.email,
+          cargo: u.cargo || 'Profissional',
+          setor: u.setor || 'Hospital',
+          cor: CORES[i % CORES.length]
+        })));
+      })
+      .catch(console.error);
   }, [hospitalId, usuario]);
 
   useEffect(() => {
     if (!hospitalId) return;
     const load = () => {
-      const raw = localStorage.getItem(`${hospitalId}_chatMensagens`);
-      if (raw) setMensagens(JSON.parse(raw));
+      fetch('/api/chat')
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setMensagens(data); })
+        .catch(console.error);
     };
     load();
-    const iv = setInterval(load, 3000);
+    const iv = setInterval(load, 5000);
     return () => clearInterval(iv);
   }, [hospitalId]);
 
@@ -84,14 +93,21 @@ export default function ChatPage() {
     .filter(m => ativo && ((m.de === usuario?.email && m.para === ativo.email) || (m.de === ativo.email && m.para === usuario?.email)))
     .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
 
-  const enviar = (e: React.FormEvent) => {
+  const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!texto.trim() || !ativo || !usuario || !hospitalId) return;
     const nova: Mensagem = { id: Date.now(), de: usuario.email, para: ativo.email, texto, data: new Date().toISOString(), lida: false };
-    const atualizado = [...mensagens, nova];
-    setMensagens(atualizado);
-    localStorage.setItem(`${hospitalId}_chatMensagens`, JSON.stringify(atualizado));
+    setMensagens(prev => [...prev, nova]);
     setTexto('');
+    try {
+      await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ de: usuario.email, para: ativo.email, texto, data: nova.data })
+      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const contatosFiltrados = contatos.filter(c =>

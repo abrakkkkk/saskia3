@@ -54,50 +54,51 @@ export default function AgendaPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [agendaSelecionada, setAgendaSelecionada] = useState<Agendamento | null>(null);
 
-  useEffect(() => {
-    if (!hospitalId) return;
-    
-    // Tenta carregar do localStorage conforme plano
-    const local = localStorage.getItem(`${hospitalId}_agenda_eventos`);
-    if (local) {
-      setAgendamentos(JSON.parse(local));
+  const carregarAgendamentos = async () => {
+    try {
+      const res = await fetch('/api/agendamentos');
+      if (res.ok) {
+        const data = await res.json();
+        setAgendamentos(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar agendamentos', error);
+    } finally {
       setLoading(false);
-    } else {
-      // Tenta API (Legado) apenas na primeira vez se não tiver localStorage
-      fetch('/api/agendamentos')
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data) && data.length > 0) {
-            setAgendamentos(data);
-            localStorage.setItem(`${hospitalId}_agenda_eventos`, JSON.stringify(data));
-          }
-          setLoading(false);
-        })
-        .catch(() => {
-          setLoading(false);
-        });
-    }
-  }, [hospitalId]);
-
-  const salvar = (lista: Agendamento[]) => {
-    setAgendamentos(lista);
-    if (hospitalId) {
-      localStorage.setItem(`${hospitalId}_agenda_eventos`, JSON.stringify(lista));
     }
   };
 
-  const alterarStatus = (id: string, novoStatus: Agendamento['status']) => {
+  useEffect(() => {
+    if (hospitalId) {
+      carregarAgendamentos();
+    }
+  }, [hospitalId]);
+
+  const alterarStatus = async (id: string, novoStatus: Agendamento['status']) => {
     if (novoStatus === 'CANCELADO') {
       const senha = prompt("Ação Restrita: Digite sua senha para cancelar este agendamento:");
-      if (senha !== usuario?.senha && senha !== "admin") {
+      if (senha !== usuario?.senha) {
         alert("Senha incorreta!");
         return;
       }
     }
     
-    const atualizado = agendamentos.map(a => a.id === id ? { ...a, status: novoStatus } : a);
-    salvar(atualizado);
-    setAgendaSelecionada(null);
+    try {
+      const res = await fetch(`/api/agendamentos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: novoStatus })
+      });
+      
+      if (res.ok) {
+        carregarAgendamentos();
+        setAgendaSelecionada(null);
+      } else {
+        alert("Erro ao alterar o status do agendamento");
+      }
+    } catch (error) {
+      alert("Erro de conexão");
+    }
   };
 
   const getStatusColor = (status: string) => {

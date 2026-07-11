@@ -7,6 +7,7 @@ import './manutencao.css';
 export default function ManutencaoPage() {
   const { data: session } = useSession();
   const [tabAtiva, setTabAtiva] = useState('nova');
+  const [loading, setLoading] = useState(true);
   
   // Dados
   const [ordens, setOrdens] = useState<any[]>([]);
@@ -22,63 +23,79 @@ export default function ManutencaoPage() {
     descricao: ''
   });
 
-  const getHospitalId = () => {
-    const u = localStorage.getItem('usuarioLogado');
-    const usuario = session?.user || (u ? JSON.parse(u) : null);
-    return usuario?.hospitalId || 'hospital_001';
+  const carregarOrdens = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/manutencao');
+      if (res.ok) {
+        const data = await res.json();
+        setOrdens(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    const hid = getHospitalId();
-    try {
-      const o = JSON.parse(localStorage.getItem(`${hid}_mntOrdens`) || '[]');
-      setOrdens(o);
-      
-      const hoje = new Date().toISOString().split('T')[0];
-      setForm(prev => ({ ...prev, data: hoje }));
+    carregarOrdens();
+    
+    const hoje = new Date().toISOString().split('T')[0];
+    setForm(prev => ({ ...prev, data: hoje }));
 
-      // Autopreencher solicitante
-      const u = localStorage.getItem('usuarioLogado');
-      const usuario = session?.user || (u ? JSON.parse(u) : null);
-      if (usuario?.name || usuario?.nome) {
-        setForm(prev => ({ ...prev, solicitante: usuario.name || usuario.nome }));
-      }
-    } catch(e) {}
+    if (session?.user?.name) {
+      setForm(prev => ({ ...prev, solicitante: session.user.name as string }));
+    }
   }, [session]);
 
-  const criarOS = () => {
+  const criarOS = async () => {
     if (!form.equipamento || !form.solicitante) {
       alert("⚠️ Preencha o equipamento/local e o solicitante!");
       return;
     }
 
-    const nova = {
-      id: Date.now(),
-      ...form,
-      status: "Aberta"
-    };
+    try {
+      const res = await fetch('/api/manutencao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
 
-    const hid = getHospitalId();
-    const atualizados = [...ordens, nova];
-    setOrdens(atualizados);
-    localStorage.setItem(`${hid}_mntOrdens`, JSON.stringify(atualizados));
+      if (!res.ok) throw new Error('Erro ao criar OS');
 
-    setForm(prev => ({ ...prev, equipamento: '', descricao: '' }));
-    alert(`✅ OS criada com sucesso! Nº ${atualizados.length}`);
-    setTabAtiva('lista');
+      setForm(prev => ({ ...prev, equipamento: '', descricao: '' }));
+      alert(`✅ OS criada com sucesso!`);
+      setTabAtiva('lista');
+      carregarOrdens();
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
-  const concluirOS = (id: number) => {
+  const concluirOS = async (id: string) => {
     if (!confirm("Confirmar a conclusão desta OS?")) return;
-    const hid = getHospitalId();
-    const novas = ordens.map(o => o.id === id ? { ...o, status: "Concluída" } : o);
-    setOrdens(novas);
-    localStorage.setItem(`${hid}_mntOrdens`, JSON.stringify(novas));
+    
+    try {
+      const res = await fetch(`/api/manutencao/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Concluída' })
+      });
+
+      if (!res.ok) throw new Error('Erro ao concluir OS');
+      
+      carregarOrdens();
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
   // Estatísticas
   const abertas = ordens.filter(o => o.status !== "Concluída").length;
   const concluidas = ordens.filter(o => o.status === "Concluída").length;
+
+  if (loading && ordens.length === 0) return <div>Carregando...</div>;
 
   return (
     <div className="conteudo">
@@ -184,13 +201,13 @@ export default function ManutencaoPage() {
                 {ordens.length === 0 ? (
                   <tr><td colSpan={8} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhuma OS registrada.</td></tr>
                 ) : (
-                  ordens.slice().reverse().map((o, i) => {
+                  ordens.map((o, i) => {
                     let prioridadeBadge = "badge-info";
                     if (o.prioridade === 'Emergência') prioridadeBadge = "badge-danger";
                     if (o.prioridade === 'Urgente') prioridadeBadge = "badge-warning";
 
                     return (
-                      <tr key={i}>
+                      <tr key={o.id}>
                         <td><strong>#{String(ordens.length - i).padStart(3, '0')}</strong></td>
                         <td>{new Date(o.data + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                         <td>{o.equipamento}</td>

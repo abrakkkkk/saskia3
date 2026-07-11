@@ -1,4 +1,5 @@
 'use client';
+import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import './admin.css';
@@ -25,15 +26,44 @@ export default function AdminPage() {
   const [respostaTexto, setRespostaTexto] = useState('');
   const [respostaStatus, setRespostaStatus] = useState('Enviado');
 
+  const mapStatus = (s: string) => {
+    const m: Record<string, string> = { 'ENVIADO': 'Enviado', 'EM_ANALISE': 'Em Análise', 'RESOLVIDO': 'Concluído', 'FECHADO': 'Finalizado' };
+    return m[s] || s;
+  };
+  const mapStatusToEnum = (s: string) => {
+    const m: Record<string, string> = { 'Enviado': 'ENVIADO', 'Em Análise': 'EM_ANALISE', 'Concluído': 'RESOLVIDO', 'Finalizado': 'FECHADO' };
+    return m[s] || 'ENVIADO';
+  };
+  const mapPrioridade = (p: string) => {
+    const m: Record<string, string> = { 'BAIXA': 'Baixa', 'MEDIA': 'Média', 'ALTA': 'Alta', 'URGENTE': 'Urgente' };
+    return m[p] || p;
+  };
+
   const fetchTickets = () => {
     try {
-      const u = localStorage.getItem('usuarioLogado');
+      const u = JSON.stringify(getSessionUser());
       const usuario = u ? JSON.parse(u) : null;
       const hid = usuario?.hospitalId || usuario?.id || 'hospital_001';
       setHospitalId(hid);
 
-      const tks = JSON.parse(localStorage.getItem(`${hid}_tickets_suporte`) || '[]');
-      setTickets(tks);
+      fetch('/api/tickets')
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setTickets(data.map((t: any) => ({
+              id: t.id,
+              numero: `SUP-${t.numero || t.id.slice(0,6)}`,
+              titulo: t.titulo,
+              descricao: t.descricao,
+              status: mapStatus(t.status),
+              prioridade: mapPrioridade(t.prioridade),
+              data: t.createdAt,
+              solicitante: t.solicitante,
+              respostas: t.respostas || []
+            })));
+          }
+        })
+        .catch(console.error);
     } catch(e) {}
   };
 
@@ -44,11 +74,6 @@ export default function AdminPage() {
     }, 5000);
     return () => clearInterval(interval);
   }, []);
-
-  const saveTickets = (data: Ticket[]) => {
-    setTickets(data);
-    localStorage.setItem(`${hospitalId}_tickets_suporte`, JSON.stringify(data));
-  };
 
   const abrirModal = (ticket: Ticket) => {
     setTicketSelecionado(ticket);
@@ -62,31 +87,34 @@ export default function AdminPage() {
     setTicketSelecionado(null);
   };
 
-  const enviarResposta = () => {
+  const enviarResposta = async () => {
     if(!ticketSelecionado) return;
     if(!respostaTexto.trim()){
       alert("Digite uma resposta!");
       return;
     }
 
-    const tksAtualizados = tickets.map(t => {
-      if(t.id === ticketSelecionado.id) {
-        const respostas = t.respostas || [];
-        return {
-          ...t,
-          status: respostaStatus,
-          respostas: [
-            ...respostas, 
-            { data: new Date().toISOString(), resposta: respostaTexto, respondente: "Administrador" }
-          ]
-        };
-      }
-      return t;
-    });
+    const respostasAtuais = ticketSelecionado.respostas || [];
+    const novasRespostas = [
+      ...respostasAtuais, 
+      { data: new Date().toISOString(), resposta: respostaTexto, respondente: "Administrador" }
+    ];
 
-    saveTickets(tksAtualizados);
-    fecharModal();
-    alert(`Resposta enviada! Ticket atualizado para: ${respostaStatus}`);
+    try {
+      await fetch(`/api/tickets/${ticketSelecionado.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          status: mapStatusToEnum(respostaStatus),
+          respostas: novasRespostas 
+        })
+      });
+      fetchTickets();
+      fecharModal();
+      alert(`Resposta enviada! Ticket atualizado para: ${respostaStatus}`);
+    } catch {
+      alert('Erro ao enviar resposta.');
+    }
   };
 
   const verTicket = (ticket: Ticket) => {

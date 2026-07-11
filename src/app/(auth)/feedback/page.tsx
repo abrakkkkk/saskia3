@@ -67,24 +67,39 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     if (!hospitalId) return;
-    const saved = localStorage.getItem(`${hospitalId}_feedbacks_sistema`);
-    if (saved) {
-      setFeedbacks(JSON.parse(saved));
-    } else {
-      // Mock Data
-      const mock: Feedback[] = [
-        { id: 1, tipo: 'sugestao', assunto: 'Melhoria no módulo de pacientes', mensagem: 'Sugiro adicionar um campo para parentesco nos dados do paciente.', data: new Date().toISOString(), usuario: 'Dr. Carlos Silva', respondido: false, resposta: null },
-        { id: 2, tipo: 'elogio', assunto: 'Sistema muito intuitivo', mensagem: 'Parabéns pela plataforma, muito fácil de usar!', data: new Date().toISOString(), usuario: 'Ana Recepção', respondido: true, resposta: 'Agradecemos seu feedback!' },
-      ];
-      setFeedbacks(mock);
-      localStorage.setItem(`${hospitalId}_feedbacks_sistema`, JSON.stringify(mock));
-    }
+    fetch(`/api/feedback?hospitalId=${hospitalId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setFeedbacks(data);
+        } else {
+          // Mock Data
+          const mock: Feedback[] = [
+            { id: 1, tipo: 'sugestao', assunto: 'Melhoria no módulo de pacientes', mensagem: 'Sugiro adicionar um campo para parentesco nos dados do paciente.', data: new Date().toISOString(), usuario: 'Dr. Carlos Silva', respondido: false, resposta: null },
+            { id: 2, tipo: 'elogio', assunto: 'Sistema muito intuitivo', mensagem: 'Parabéns pela plataforma, muito fácil de usar!', data: new Date().toISOString(), usuario: 'Ana Recepção', respondido: true, resposta: 'Agradecemos seu feedback!' },
+          ];
+          setFeedbacks(mock);
+        }
+      })
+      .catch(console.error);
   }, [hospitalId]);
 
   const salvar = (lista: Feedback[]) => {
     setFeedbacks(lista);
-    if (hospitalId) {
-      localStorage.setItem(`${hospitalId}_feedbacks_sistema`, JSON.stringify(lista));
+    const novo = lista[0]; // the newest is at the top
+    const sess = session?.user as any;
+    
+    if (hospitalId && novo) {
+      fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hospitalId,
+          usuarioId: sess?.id || 'usuario_anonimo',
+          tipo: novo.tipo,
+          mensagem: novo.mensagem + ' (' + novo.assunto + ')'
+        })
+      }).catch(console.error);
     }
   };
 
@@ -114,7 +129,7 @@ export default function FeedbackPage() {
     if (!respostaTexto.trim() || !modalFeedback) return;
     
     const senha = prompt("Ação Administrativa: Digite sua senha para responder:");
-    if (senha === usuario?.senha || senha === "admin") {
+    if (senha === usuario?.senha) {
       const atualizado = feedbacks.map(f =>
         f.id === modalFeedback.id ? { ...f, respondido: true, resposta: respostaTexto } : f
       );

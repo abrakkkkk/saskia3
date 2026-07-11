@@ -1,5 +1,5 @@
 'use client';
-
+import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import './servico-social.css';
@@ -7,6 +7,7 @@ import './servico-social.css';
 export default function ServicoSocialPage() {
   const { data: session } = useSession();
   const [tabAtiva, setTabAtiva] = useState('atendimento');
+  const [loading, setLoading] = useState(true);
   
   // Dados
   const [pacientes, setPacientes] = useState<any[]>([]);
@@ -27,60 +28,70 @@ export default function ServicoSocialPage() {
   // Filtros
   const [buscaLista, setBuscaLista] = useState('');
 
-  const getHospitalId = () => {
-    const u = localStorage.getItem('usuarioLogado');
-    const usuario = session?.user || (u ? JSON.parse(u) : null);
-    return usuario?.hospitalId || 'hospital_001';
+  const carregarDados = async () => {
+    setLoading(true);
+    try {
+      const resP = await fetch('/api/pacientes');
+      if (resP.ok) setPacientes(await resP.json());
+
+      const resA = await fetch('/api/servico-social');
+      if (resA.ok) setAtendimentos(await resA.json());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    const hid = getHospitalId();
-    try {
-      const p = JSON.parse(localStorage.getItem(`${hid}_pacientes`) || '[]');
-      const a = JSON.parse(localStorage.getItem(`${hid}_ssAtendimentos`) || '[]');
-      setPacientes(p);
-      setAtendimentos(a);
-      
-      const hoje = new Date().toISOString().split('T')[0];
-      setForm(prev => ({ ...prev, data: hoje }));
+    carregarDados();
+    
+    const hoje = new Date().toISOString().split('T')[0];
+    setForm(prev => ({ ...prev, data: hoje }));
 
-      // Se houver session.user, preenche profissional
-      const u = localStorage.getItem('usuarioLogado');
-      const usuario = session?.user || (u ? JSON.parse(u) : null);
-      if (usuario?.name || usuario?.nome) {
-        setForm(prev => ({ ...prev, profissional: usuario.name || usuario.nome }));
-      }
-    } catch(e) {}
+    const u = JSON.stringify(getSessionUser());
+    const usuario = session?.user || (u ? JSON.parse(u) : null);
+    if (usuario?.name || usuario?.nome) {
+      setForm(prev => ({ ...prev, profissional: usuario.name || usuario.nome }));
+    }
   }, [session]);
 
-  const registrarAtendimento = () => {
+  const registrarAtendimento = async () => {
     if (!form.paciente || !form.profissional) {
       alert("⚠️ Preencha paciente e assistente social!");
       return;
     }
 
-    const novo = {
-      id: Date.now(),
-      ...form,
-      dataCriacao: new Date().toISOString()
+    const payload = {
+      pacienteNome: form.paciente,
+      situacao: form.demanda,
+      detalhe: form.relato || (form.tipo + ' - ' + form.demanda)
     };
 
-    const hid = getHospitalId();
-    const atualizados = [...atendimentos, novo];
-    setAtendimentos(atualizados);
-    localStorage.setItem(`${hid}_ssAtendimentos`, JSON.stringify(atualizados));
-    
-    setForm(prev => ({ ...prev, relato: '', encaminhamentos: '', paciente: '' }));
-    alert("✅ Atendimento registrado com sucesso!");
+    try {
+      const res = await fetch('/api/servico-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Erro ao registrar atendimento');
+      
+      setForm(prev => ({ ...prev, relato: '', encaminhamentos: '', paciente: '' }));
+      alert("✅ Atendimento registrado com sucesso!");
+      carregarDados();
+      setTabAtiva('lista');
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
   // Filtros de Tabela
-  let listaFiltrada = atendimentos.slice().reverse();
+  let listaFiltrada = atendimentos.slice();
   if (buscaLista) {
     const t = buscaLista.toLowerCase();
     listaFiltrada = listaFiltrada.filter(a => 
-      a.paciente.toLowerCase().includes(t) || 
-      a.demanda.toLowerCase().includes(t)
+      a.pacienteNome.toLowerCase().includes(t) || 
+      a.situacao.toLowerCase().includes(t)
     );
   }
 
@@ -88,13 +99,15 @@ export default function ServicoSocialPage() {
   const mesAtual = new Date().getMonth() + 1;
   const anoAtual = new Date().getFullYear();
   const atendimentosMes = atendimentos.filter(a => {
-    const d = new Date(a.data);
+    const d = new Date(a.createdAt);
     return (d.getMonth() + 1) === mesAtual && d.getFullYear() === anoAtual;
   }).length;
   
   const pendentes = atendimentos.filter(a => a.status !== "Concluído").length;
   const concluidos = atendimentos.filter(a => a.status === "Concluído").length;
-  const comEncaminhamentos = atendimentos.filter(a => a.encaminhamentos && a.encaminhamentos.trim() !== "").length;
+  const comEncaminhamentos = atendimentos.filter(a => a.status === "Encaminhado").length; // ou algo similar
+
+  if (loading && atendimentos.length === 0) return <div>Carregando...</div>;
 
   return (
     <div className="conteudo">
@@ -153,7 +166,7 @@ export default function ServicoSocialPage() {
                 <label>Paciente *</label>
                 <select value={form.paciente} onChange={e => setForm({...form, paciente: e.target.value})}>
                   <option value="">Selecione um paciente...</option>
-                  {pacientes.map((p, i) => <option key={i} value={p.nome}>{p.nome}</option>)}
+                  {pacientes.map((p, i) => <option key={p.id} value={p.nome}>{p.nome}</option>)}
                 </select>
               </div>
               <div className="form-grupo">
@@ -220,24 +233,23 @@ export default function ServicoSocialPage() {
             <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
               <table className="tabela-ss">
                 <thead>
-                  <tr><th>Data</th><th>Paciente</th><th>Tipo</th><th>Demanda</th><th>Profissional</th><th>Status</th></tr>
+                  <tr><th>Data</th><th>Paciente</th><th>Demanda</th><th>Detalhe</th><th>Status</th></tr>
                 </thead>
                 <tbody>
                   {listaFiltrada.length === 0 ? (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhum atendimento registrado.</td></tr>
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhum atendimento registrado.</td></tr>
                   ) : (
-                    listaFiltrada.map((a, i) => {
+                    listaFiltrada.map((a) => {
                       let badge = "badge-info";
                       if (a.status === 'Concluído') badge = "badge-success";
                       if (a.status === 'Aguardando Retorno') badge = "badge-warning";
                       
                       return (
-                        <tr key={i}>
-                          <td>{new Date(a.data).toLocaleDateString('pt-BR')}</td>
-                          <td><strong>{a.paciente}</strong></td>
-                          <td>{a.tipo}</td>
-                          <td>{a.demanda}</td>
-                          <td>{a.profissional}</td>
+                        <tr key={a.id}>
+                          <td>{new Date(a.createdAt).toLocaleDateString('pt-BR')}</td>
+                          <td><strong>{a.pacienteNome}</strong></td>
+                          <td>{a.situacao}</td>
+                          <td>{a.detalhe}</td>
                           <td><span className={`badge ${badge}`}>{a.status}</span></td>
                         </tr>
                       )
@@ -250,24 +262,37 @@ export default function ServicoSocialPage() {
         )}
 
         {tabAtiva === 'encaminhamentos' && (
-          <div style={{ background: 'white', borderRadius: '20px', padding: '25px', border: '1px solid #e2e8f0' }}>
-            <h3 style={{ margin: '0 0 20px 0', color: '#0a1f44', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <i className="las la-share"></i> Encaminhamentos Registrados
-            </h3>
-            {atendimentos.filter(a => a.encaminhamentos && a.encaminhamentos.trim() !== '').length === 0 ? (
-              <p style={{ color: '#94a3b8', textAlign: 'center' }}>Nenhum encaminhamento registrado.</p>
-            ) : (
-              atendimentos.filter(a => a.encaminhamentos && a.encaminhamentos.trim() !== '').reverse().map((a, i) => (
-                <div key={i} className="encaminhamento-card">
-                  <p style={{ margin: '0 0 5px 0', fontSize: '15px' }}>
-                    <strong>{a.paciente}</strong> - {new Date(a.data).toLocaleDateString('pt-BR')}
-                  </p>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#475569' }}>
-                    <i className="las la-arrow-right"></i> {a.encaminhamentos}
-                  </p>
-                </div>
-              ))
-            )}
+          <div className="encaminhamentos-grid">
+            <div className="enc-card">
+              <h4>CRAS / CREAS</h4>
+              <p>Centro de Referência de Assistência Social</p>
+              <button className="btn btn-outline">Emitir Ofício</button>
+            </div>
+            <div className="enc-card">
+              <h4>Conselho Tutelar</h4>
+              <p>Para casos de vulnerabilidade infantil</p>
+              <button className="btn btn-outline">Emitir Notificação</button>
+            </div>
+            <div className="enc-card">
+              <h4>Delegacia da Mulher (DEAM)</h4>
+              <p>Violência doméstica</p>
+              <button className="btn btn-outline">Comunicar Fato</button>
+            </div>
+            <div className="enc-card">
+              <h4>Abrigos Institucionais</h4>
+              <p>Pessoas em situação de rua</p>
+              <button className="btn btn-outline">Solicitar Vaga</button>
+            </div>
+            <div className="enc-card">
+              <h4>INSS</h4>
+              <p>Auxílio doença e benefícios</p>
+              <button className="btn btn-outline">Relatório Social</button>
+            </div>
+            <div className="enc-card">
+              <h4>Vara da Infância/Idoso</h4>
+              <p>Ministério Público</p>
+              <button className="btn btn-outline">Enviar Relatório</button>
+            </div>
           </div>
         )}
 

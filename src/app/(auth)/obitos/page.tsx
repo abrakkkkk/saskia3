@@ -1,5 +1,5 @@
 'use client';
-
+import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import './obitos.css';
@@ -7,6 +7,7 @@ import './obitos.css';
 export default function ObitosPage() {
   const { data: session } = useSession();
   const [tabAtiva, setTabAtiva] = useState('registro');
+  const [loading, setLoading] = useState(true);
   
   // Dados
   const [obitos, setObitos] = useState<any[]>([]);
@@ -36,58 +37,57 @@ export default function ObitosPage() {
   // Modal
   const [modalVisualizar, setModalVisualizar] = useState<any>(null);
 
-  const getHospitalId = () => {
-    const u = localStorage.getItem('usuarioLogado');
-    const usuario = session?.user || (u ? JSON.parse(u) : null);
-    return usuario?.hospitalId || 'hospital_001';
+  const carregarDados = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/obitos');
+      if (res.ok) {
+        setObitos(await res.json());
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    const hid = getHospitalId();
-    try {
-      const o = JSON.parse(localStorage.getItem(`${hid}_registroObitos`) || '[]');
-      setObitos(o);
-      
-      const hoje = new Date().toISOString().split('T')[0];
-      setForm(prev => ({ ...prev, data: hoje }));
+    carregarDados();
+    const hoje = new Date().toISOString().split('T')[0];
+    setForm(prev => ({ ...prev, data: hoje }));
+  }, []);
 
-    } catch(e) {}
-  }, [session]);
-
-  const registrarObito = () => {
+  const registrarObito = async () => {
     if (!form.nome || !form.data || !form.hora || !form.causa || !form.medico) {
       alert("⚠️ Preencha os campos obrigatórios (*): Nome, Data, Hora, Causa Principal e Médico!");
       return;
     }
 
-    const u = localStorage.getItem('usuarioLogado');
+    const u = JSON.stringify(getSessionUser());
     const usuario = session?.user || (u ? JSON.parse(u) : null);
 
-    const novo = {
-      id: Date.now(),
+    const payload = {
       ...form,
       registradoPor: usuario?.name || usuario?.nome || "Sistema",
       dataRegistro: new Date().toLocaleString('pt-BR'),
       certidaoEmitida: false
     };
 
-    const hid = getHospitalId();
-    const atualizados = [...obitos, novo];
-    setObitos(atualizados);
-    localStorage.setItem(`${hid}_registroObitos`, JSON.stringify(atualizados));
-
-    // Atualiza status do paciente para Óbito
     try {
-      const pacientes = JSON.parse(localStorage.getItem(`${hid}_pacientes`) || '[]');
-      const pIndex = pacientes.findIndex((p: any) => p.nome && p.nome.toLowerCase() === form.nome.toLowerCase());
-      if (pIndex >= 0) {
-        pacientes[pIndex].status = "Óbito";
-        localStorage.setItem(`${hid}_pacientes`, JSON.stringify(pacientes));
-      }
-    } catch(e) {}
-    
-    limparFormulario();
-    alert("✅ Óbito registrado com sucesso!");
+      const res = await fetch('/api/obitos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!res.ok) throw new Error('Erro ao registrar óbito');
+
+      limparFormulario();
+      alert("✅ Óbito registrado com sucesso!");
+      carregarDados();
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
   const limparFormulario = () => {
@@ -109,13 +109,22 @@ export default function ObitosPage() {
     });
   };
 
-  const emitirCertidao = (id: number) => {
+  const emitirCertidao = async (id: string) => {
     if(!confirm("Deseja emitir a certidão para este óbito?")) return;
-    const hid = getHospitalId();
-    const novas = obitos.map(o => o.id === id ? { ...o, certidaoEmitida: true } : o);
-    setObitos(novas);
-    localStorage.setItem(`${hid}_registroObitos`, JSON.stringify(novas));
-    alert("✅ Certidão emitida com sucesso!");
+    
+    try {
+      const res = await fetch(`/api/obitos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ certidaoEmitida: true })
+      });
+      if (!res.ok) throw new Error('Erro ao emitir certidão');
+      
+      alert("✅ Certidão emitida com sucesso!");
+      carregarDados();
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
   const imprimirObito = (o: any) => {
@@ -126,7 +135,7 @@ export default function ObitosPage() {
   };
 
   // Filtros de Tabela
-  let listaFiltrada = obitos.slice().reverse();
+  let listaFiltrada = obitos.slice();
   if (filtroMes !== 'todos') {
     listaFiltrada = listaFiltrada.filter(o => {
       const mesObito = new Date(o.data + 'T00:00:00').getMonth() + 1;
@@ -142,7 +151,7 @@ export default function ObitosPage() {
     );
   }
 
-  const certidoesEmitidas = obitos.filter(o => o.certidaoEmitida).reverse();
+  const certidoesEmitidas = obitos.filter(o => o.certidaoEmitida);
 
   // Estatísticas
   const mesAtual = new Date().getMonth() + 1;
@@ -154,6 +163,8 @@ export default function ObitosPage() {
   
   const pendentes = obitos.filter(o => !o.certidaoEmitida).length;
   const emitidasCount = obitos.filter(o => o.certidaoEmitida).length;
+
+  if (loading && obitos.length === 0) return <div>Carregando...</div>;
 
   return (
     <div className="conteudo">
@@ -310,8 +321,8 @@ export default function ObitosPage() {
                   <p>Nenhum registro encontrado</p>
                 </div>
               ) : (
-                listaFiltrada.map((o, i) => (
-                  <div key={i} className="registro-card">
+                listaFiltrada.map((o) => (
+                  <div key={o.id} className="registro-card">
                     <div className="registro-header">
                       <h4><i className="las la-user"></i> {o.nome}</h4>
                       <span className={`badge ${o.certidaoEmitida ? 'badge-success' : 'badge-warning'}`}>
@@ -351,8 +362,8 @@ export default function ObitosPage() {
                 <p>Nenhuma certidão emitida</p>
               </div>
             ) : (
-              certidoesEmitidas.map((o, i) => (
-                <div key={i} className="certidao-preview">
+              certidoesEmitidas.map((o) => (
+                <div key={o.id} className="certidao-preview">
                   <h4>CERTIDÃO DE ÓBITO</h4>
                   <p style={{ lineHeight: '1.6' }}>
                     Certifico para os devidos fins que <strong>{o.nome}</strong>, faleceu nas dependências desta instituição 

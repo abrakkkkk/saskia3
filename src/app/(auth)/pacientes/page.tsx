@@ -1,4 +1,6 @@
 'use client';
+import { getSessionUser } from '@/lib/session';
+
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -48,15 +50,12 @@ export default function PacientesPage() {
     fetchPacientes();
     
     // Load salas
-    const sessaoRaw = localStorage.getItem("saskiaSessao");
-    if (sessaoRaw) {
-      try {
-        const sessao = JSON.parse(sessaoRaw);
-        const hid = sessao.hospitalId || "hosp_matriz";
-        const salasRaw = localStorage.getItem(hid + "_gestaoSalas");
-        if (salasRaw) setSalasCadastradas(JSON.parse(salasRaw));
-      } catch (e) {}
-    }
+    fetch('/api/salas')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setSalasCadastradas(data);
+      })
+      .catch(console.error);
   }, []);
 
   const criarPaciente = async (e: React.FormEvent) => {

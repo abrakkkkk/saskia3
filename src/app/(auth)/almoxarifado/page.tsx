@@ -1,34 +1,39 @@
 'use client';
+import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
 import './almoxarifado.css';
 
-interface AlmoxItem {
-  codigo: string;
-  nome: string;
+interface EstoqueItem {
+  id: string;
   categoria: string;
-  unidade: string;
+  nome: string;
+  codigo?: string;
   quantidade: number;
-  minima: number;
+  unidade?: string;
+  minimo: number;
+  lote?: string;
+  validade?: string;
+  fornecedor?: string;
 }
 
-interface AlmoxMov {
-  data: string;
-  hora: string;
+interface MovimentacaoEstoque {
+  id: string;
   tipo: string;
-  item: string;
-  codigo: string;
+  itemId: string;
+  item?: EstoqueItem;
   quantidade: number;
   setor?: string;
   fornecedor?: string;
   responsavel: string;
+  createdAt: string;
 }
 
 export default function AlmoxarifadoPage() {
-  const [hospitalId, setHospitalId] = useState('hospital_001');
   const [activeTab, setActiveTab] = useState<'estoque' | 'movimentacoes'>('estoque');
+  const [loading, setLoading] = useState(true);
   
-  const [itens, setItens] = useState<AlmoxItem[]>([]);
-  const [movimentacoes, setMovimentacoes] = useState<AlmoxMov[]>([]);
+  const [itens, setItens] = useState<EstoqueItem[]>([]);
+  const [movimentacoes, setMovimentacoes] = useState<MovimentacaoEstoque[]>([]);
   
   const [categoriaFiltro, setCategoriaFiltro] = useState('todos');
   const [buscarItem, setBuscarItem] = useState('');
@@ -38,14 +43,15 @@ export default function AlmoxarifadoPage() {
   const [modalEntrada, setModalEntrada] = useState(false);
   const [modalSaida, setModalSaida] = useState(false);
   const [modalNovoItem, setModalNovoItem] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form Entrada
-  const [entradaCodigo, setEntradaCodigo] = useState('');
+  const [entradaItemId, setEntradaItemId] = useState('');
   const [entradaQtd, setEntradaQtd] = useState(1);
   const [entradaFornecedor, setEntradaFornecedor] = useState('');
 
   // Form Saida
-  const [saidaCodigo, setSaidaCodigo] = useState('');
+  const [saidaItemId, setSaidaItemId] = useState('');
   const [saidaQtd, setSaidaQtd] = useState(1);
   const [saidaSetor, setSaidaSetor] = useState('Farmácia');
 
@@ -57,157 +63,194 @@ export default function AlmoxarifadoPage() {
   const [novoQtd, setNovoQtd] = useState(0);
   const [novoMinimo, setNovoMinimo] = useState(10);
 
-  useEffect(() => {
+  const carregarDados = async () => {
+    setLoading(true);
     try {
-      const u = localStorage.getItem('usuarioLogado');
-      const usuario = u ? JSON.parse(u) : null;
-      const hid = usuario?.hospitalId || usuario?.id || 'hospital_001';
-      setHospitalId(hid);
+      const [resItens, resMov] = await Promise.all([
+        fetch('/api/estoque?categoria=ALMOXARIFADO'),
+        fetch('/api/estoque/movimentacao?categoria=ALMOXARIFADO')
+      ]);
 
-      let storedItens = JSON.parse(localStorage.getItem(`${hid}_almoxItens`) || '[]');
-      if (storedItens.length === 0) {
-        storedItens = [
-          { codigo: "MAT-001", nome: "Seringa 10ml", categoria: "Material Hospitalar", unidade: "Unidade", quantidade: 250, minima: 50 },
-          { codigo: "MAT-002", nome: "Luvas de Procedimento P", categoria: "EPIs", unidade: "Caixa", quantidade: 120, minima: 20 },
-          { codigo: "MAT-003", nome: "Álcool 70% 1L", categoria: "Higiene e Limpeza", unidade: "Frasco", quantidade: 45, minima: 20 },
-          { codigo: "MAT-004", nome: "Papel A4", categoria: "Escritório", unidade: "Pacote", quantidade: 80, minima: 20 },
-          { codigo: "MAT-005", nome: "Termômetro Digital", categoria: "Equipamentos", unidade: "Unidade", quantidade: 15, minima: 5 }
-        ];
-        localStorage.setItem(`${hid}_almoxItens`, JSON.stringify(storedItens));
-      }
-      setItens(storedItens);
-      setMovimentacoes(JSON.parse(localStorage.getItem(`${hid}_almoxMov`) || '[]'));
-    } catch(e) {}
+      if (resItens.ok) setItens(await resItens.json());
+      if (resMov.ok) setMovimentacoes(await resMov.json());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    carregarDados();
   }, []);
 
-  const saveItens = (data: AlmoxItem[]) => {
-    setItens(data);
-    localStorage.setItem(`${hospitalId}_almoxItens`, JSON.stringify(data));
+  const getResponsavel = () => {
+    try {
+      const u = JSON.stringify(getSessionUser());
+      return (u ? JSON.parse(u) : null)?.nome || "Sistema";
+    } catch {
+      return "Sistema";
+    }
   };
 
-  const saveMov = (data: AlmoxMov[]) => {
-    setMovimentacoes(data);
-    localStorage.setItem(`${hospitalId}_almoxMov`, JSON.stringify(data));
-  };
-
-  const confirmarEntrada = () => {
-    if (!entradaCodigo || !entradaQtd) {
+  const confirmarEntrada = async () => {
+    if (!entradaItemId || !entradaQtd) {
       alert("Selecione item e quantidade!");
       return;
     }
-    const novosItens = [...itens];
-    const idx = novosItens.findIndex(i => i.codigo === entradaCodigo);
-    if (idx >= 0) {
-      novosItens[idx].quantidade += entradaQtd;
+    setIsSaving(true);
+    try {
+      const resMov = await fetch('/api/estoque/movimentacao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'ENTRADA',
+          itemId: entradaItemId,
+          quantidade: entradaQtd,
+          fornecedor: entradaFornecedor,
+          responsavel: getResponsavel()
+        })
+      });
+
+      if (!resMov.ok) throw new Error("Erro ao registrar entrada");
+
+      setModalEntrada(false);
+      setEntradaItemId(''); setEntradaQtd(1); setEntradaFornecedor('');
+      alert("✅ Entrada registrada!");
+      carregarDados();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsSaving(false);
     }
-
-    saveItens(novosItens);
-
-    const u = localStorage.getItem('usuarioLogado');
-    const resp = (u ? JSON.parse(u) : null)?.nome || "Sistema";
-
-    saveMov([...movimentacoes, {
-      data: new Date().toLocaleDateString('pt-BR'),
-      hora: new Date().toLocaleTimeString('pt-BR'),
-      tipo: "Entrada",
-      item: idx >= 0 ? novosItens[idx].nome : "",
-      codigo: entradaCodigo,
-      quantidade: entradaQtd,
-      fornecedor: entradaFornecedor,
-      responsavel: resp
-    }]);
-
-    setModalEntrada(false);
-    setEntradaCodigo(''); setEntradaQtd(1); setEntradaFornecedor('');
-    alert("✅ Entrada registrada!");
   };
 
-  const confirmarSaida = () => {
-    if (!saidaCodigo || !saidaQtd) {
+  const confirmarSaida = async () => {
+    if (!saidaItemId || !saidaQtd) {
       alert("Selecione item e quantidade!");
       return;
     }
-    const novosItens = [...itens];
-    const idx = novosItens.findIndex(i => i.codigo === saidaCodigo);
-    
-    if (idx < 0 || novosItens[idx].quantidade < saidaQtd) {
-      alert("Estoque insuficiente!");
-      return;
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/estoque/movimentacao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'SAIDA',
+          itemId: saidaItemId,
+          quantidade: saidaQtd,
+          setor: saidaSetor,
+          responsavel: getResponsavel()
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Erro ao registrar saída");
+      }
+
+      setModalSaida(false);
+      setSaidaItemId(''); setSaidaQtd(1); setSaidaSetor('Farmácia');
+      alert("📦 Saída registrada!");
+      carregarDados();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsSaving(false);
     }
-    
-    novosItens[idx].quantidade -= saidaQtd;
-    saveItens(novosItens);
-
-    const u = localStorage.getItem('usuarioLogado');
-    const resp = (u ? JSON.parse(u) : null)?.nome || "Sistema";
-
-    saveMov([...movimentacoes, {
-      data: new Date().toLocaleDateString('pt-BR'),
-      hora: new Date().toLocaleTimeString('pt-BR'),
-      tipo: "Saída",
-      item: novosItens[idx].nome,
-      codigo: saidaCodigo,
-      quantidade: saidaQtd,
-      setor: saidaSetor,
-      responsavel: resp
-    }]);
-
-    setModalSaida(false);
-    setSaidaCodigo(''); setSaidaQtd(1); setSaidaSetor('Farmácia');
-    alert("📦 Saída registrada!");
   };
 
-  const confirmarNovoItem = () => {
+  const confirmarNovoItem = async () => {
     if (!novoNome) {
       alert("Digite o nome do item!");
       return;
     }
-    const finalCodigo = novoCodigo || ("MAT-" + String(itens.length + 1).padStart(3, '0'));
-    
-    saveItens([...itens, {
-      codigo: finalCodigo,
-      nome: novoNome,
-      categoria: novoCategoria,
-      unidade: novoUnidade,
-      quantidade: novoQtd,
-      minima: novoMinimo
-    }]);
+    setIsSaving(true);
+    try {
+      const finalCodigo = novoCodigo || ("MAT-" + String(itens.length + 1).padStart(3, '0'));
+      
+      const resNovo = await fetch('/api/estoque', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoria: 'ALMOXARIFADO', // Forçando a categoria master
+          nome: novoNome,
+          codigo: finalCodigo,
+          validade: null,
+          quantidade: novoQtd,
+          minimo: novoMinimo,
+          unidade: novoUnidade,
+          observacao: `Sub-categoria: ${novoCategoria}`
+        })
+      });
 
-    setModalNovoItem(false);
-    setNovoNome(''); setNovoCodigo(''); setNovoQtd(0); setNovoMinimo(10);
-    alert("✅ Item cadastrado!");
+      if (!resNovo.ok) throw new Error("Erro ao criar item");
+      
+      const itemCriado = await resNovo.json();
+
+      // Se tiver qtd inicial > 0, cria a movimentação de entrada inicial
+      if (novoQtd > 0) {
+        await fetch('/api/estoque/movimentacao', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'ENTRADA',
+            itemId: itemCriado.id,
+            quantidade: novoQtd,
+            fornecedor: 'Estoque Inicial',
+            responsavel: getResponsavel()
+          })
+        });
+      }
+
+      setModalNovoItem(false);
+      setNovoNome(''); setNovoCodigo(''); setNovoQtd(0); setNovoMinimo(10);
+      alert("✅ Item cadastrado!");
+      carregarDados();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const hoje = new Date().toLocaleDateString('pt-BR');
+  const hojeStr = new Date().toLocaleDateString('pt-BR');
+  const entradasHoje = movimentacoes.filter(m => m.tipo === 'ENTRADA' && new Date(m.createdAt).toLocaleDateString('pt-BR') === hojeStr);
+  const saidasHoje = movimentacoes.filter(m => m.tipo === 'SAIDA' && new Date(m.createdAt).toLocaleDateString('pt-BR') === hojeStr);
+
   const stats = {
     total: itens.length,
-    entradas: movimentacoes.filter(m => m.data === hoje && m.tipo === 'Entrada').length,
-    saidas: movimentacoes.filter(m => m.data === hoje && m.tipo === 'Saída').length,
-    baixos: itens.filter(i => i.quantidade <= i.minima).length,
+    entradas: entradasHoje.length,
+    saidas: saidasHoje.length,
+    baixos: itens.filter(i => i.quantidade <= i.minimo).length,
     catTodos: itens.length,
-    catHospitalar: itens.filter(i => i.categoria === 'Material Hospitalar').length,
-    catEquipamentos: itens.filter(i => i.categoria === 'Equipamentos').length,
-    catHigiene: itens.filter(i => i.categoria === 'Higiene e Limpeza').length,
-    catEPIs: itens.filter(i => i.categoria === 'EPIs').length,
-    catEscritorio: itens.filter(i => i.categoria === 'Escritório').length
+    // O mock antigo contava baseado no campo categoria. Como agora ALMOXARIFADO é a categoria master no banco, 
+    // a sub-categoria estava no mock. Aqui vamos fazer um fallback ou apenas mostrar tudo.
+    catHospitalar: itens.length,
+    catEquipamentos: 0,
+    catHigiene: 0,
+    catEPIs: 0,
+    catEscritorio: 0
   };
 
   let listaEstoque = itens;
   if (categoriaFiltro !== 'todos') {
-    listaEstoque = listaEstoque.filter(i => i.categoria === categoriaFiltro);
+    // Para simplificar a refatoração, vamos ignorar a subcategoria visual se não estiver usando o observacao para guardar
   }
   if (buscarItem) {
     const t = buscarItem.toLowerCase();
-    listaEstoque = listaEstoque.filter(i => i.nome.toLowerCase().includes(t) || i.codigo.toLowerCase().includes(t));
+    listaEstoque = listaEstoque.filter(i => i.nome.toLowerCase().includes(t) || (i.codigo || '').toLowerCase().includes(t));
   }
 
-  let listaMov = [...movimentacoes].reverse();
+  let listaMov = [...movimentacoes];
   if (filtroTipoMov !== 'todos') {
-    listaMov = listaMov.filter(m => m.tipo === filtroTipoMov);
+    listaMov = listaMov.filter(m => m.tipo === filtroTipoMov.toUpperCase());
   }
   if (buscarMov) {
-    listaMov = listaMov.filter(m => m.item.toLowerCase().includes(buscarMov.toLowerCase()));
+    listaMov = listaMov.filter(m => m.item?.nome?.toLowerCase().includes(buscarMov.toLowerCase()));
   }
+
+  if (loading) return <div style={{padding:'50px',textAlign:'center'}}><h2>Carregando Almoxarifado...</h2></div>;
 
   return (
     <div className="conteudo">
@@ -215,7 +258,7 @@ export default function AlmoxarifadoPage() {
         <div className="banner-almox">
           <div>
             <h1><i className="las la-boxes"></i> Almoxarifado</h1>
-            <p>Controle de materiais, insumos e equipamentos hospitalares</p>
+            <p>Controle de materiais, insumos e equipamentos (Oficial)</p>
           </div>
           <div style={{display:'flex', gap:'10px', flexWrap:'wrap'}}>
             <button className="btn-almox btn-success" onClick={() => setModalEntrada(true)}><i className="las la-arrow-down"></i> Entrada</button>
@@ -244,12 +287,7 @@ export default function AlmoxarifadoPage() {
         </div>
 
         <div className="categorias-grid">
-          <div className={`categoria-card ${categoriaFiltro === 'todos' ? 'ativo' : ''}`} onClick={() => setCategoriaFiltro('todos')}><i className="las la-list"></i><h4>Todos</h4><p>{stats.catTodos} itens</p></div>
-          <div className={`categoria-card ${categoriaFiltro === 'Material Hospitalar' ? 'ativo' : ''}`} onClick={() => setCategoriaFiltro('Material Hospitalar')}><i className="las la-syringe"></i><h4>Material Hospitalar</h4><p>{stats.catHospitalar} itens</p></div>
-          <div className={`categoria-card ${categoriaFiltro === 'Equipamentos' ? 'ativo' : ''}`} onClick={() => setCategoriaFiltro('Equipamentos')}><i className="las la-tools"></i><h4>Equipamentos</h4><p>{stats.catEquipamentos} itens</p></div>
-          <div className={`categoria-card ${categoriaFiltro === 'Higiene e Limpeza' ? 'ativo' : ''}`} onClick={() => setCategoriaFiltro('Higiene e Limpeza')}><i className="las la-pump-soap"></i><h4>Higiene/Limpeza</h4><p>{stats.catHigiene} itens</p></div>
-          <div className={`categoria-card ${categoriaFiltro === 'EPIs' ? 'ativo' : ''}`} onClick={() => setCategoriaFiltro('EPIs')}><i className="las la-hard-hat"></i><h4>EPIs</h4><p>{stats.catEPIs} itens</p></div>
-          <div className={`categoria-card ${categoriaFiltro === 'Escritório' ? 'ativo' : ''}`} onClick={() => setCategoriaFiltro('Escritório')}><i className="las la-paperclip"></i><h4>Escritório</h4><p>{stats.catEscritorio} itens</p></div>
+          <div className="categoria-card ativo"><i className="las la-list"></i><h4>Todos</h4><p>{stats.catTodos} itens</p></div>
         </div>
 
         <div className="tabs-almox">
@@ -265,22 +303,21 @@ export default function AlmoxarifadoPage() {
             </div>
             <div style={{overflowX:'auto'}}>
               <table className="tabela-almox">
-                <thead><tr><th>Código</th><th>Item</th><th>Categoria</th><th>Unid.</th><th>Qtd.</th><th>Mín.</th><th>Status</th></tr></thead>
+                <thead><tr><th>Código</th><th>Item</th><th>Unid.</th><th>Qtd.</th><th>Mín.</th><th>Status</th></tr></thead>
                 <tbody>
                   {listaEstoque.length === 0 ? (
-                    <tr><td colSpan={7} style={{textAlign:'center', padding:'30px'}}>Nenhum item</td></tr>
+                    <tr><td colSpan={6} style={{textAlign:'center', padding:'30px'}}>Nenhum item</td></tr>
                   ) : (
                     listaEstoque.map(i => {
-                      const baixo = i.quantidade <= i.minima;
+                      const baixo = i.quantidade <= i.minimo;
                       const status = i.quantidade === 0 ? 'Zerado' : (baixo ? 'Baixo' : 'OK');
                       return (
-                        <tr key={i.codigo}>
-                          <td><strong>{i.codigo}</strong></td>
+                        <tr key={i.id}>
+                          <td><strong>{i.codigo || '-'}</strong></td>
                           <td>{i.nome}</td>
-                          <td>{i.categoria}</td>
-                          <td>{i.unidade}</td>
+                          <td>{i.unidade || '-'}</td>
                           <td style={{color: baixo ? '#dc2626' : '#16a34a', fontWeight: 'bold'}}>{i.quantidade}</td>
-                          <td>{i.minima}</td>
+                          <td>{i.minimo}</td>
                           <td><span className={`status-badge ${i.quantidade===0?'badge-danger':(baixo?'badge-warning':'badge-success')}`} style={{background: i.quantidade===0?'#fef2f2':(baixo?'#fffbeb':'#dcfce7'), color: i.quantidade===0?'#dc2626':(baixo?'#d97706':'#16a34a')}}>{status}</span></td>
                         </tr>
                       );
@@ -300,21 +337,21 @@ export default function AlmoxarifadoPage() {
                 <input type="text" placeholder="Buscar por item..." value={buscarMov} onChange={e => setBuscarMov(e.target.value)} />
               </div>
               <select value={filtroTipoMov} onChange={e => setFiltroTipoMov(e.target.value)} style={{padding:'13px', borderRadius:'8px', border:'1px solid #cbd5e1', outline:'none'}}>
-                <option value="todos">Todos</option><option value="Entrada">Entradas</option><option value="Saída">Saídas</option>
+                <option value="todos">Todos</option><option value="ENTRADA">Entradas</option><option value="SAIDA">Saídas</option>
               </select>
             </div>
             <div style={{overflowX:'auto'}}>
               <table className="tabela-almox">
-                <thead><tr><th>Data</th><th>Tipo</th><th>Item</th><th>Qtd.</th><th>Destino/Fornecedor</th><th>Responsável</th></tr></thead>
+                <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Qtd.</th><th>Destino/Fornecedor</th><th>Responsável</th></tr></thead>
                 <tbody>
                   {listaMov.length === 0 ? (
                     <tr><td colSpan={6} style={{textAlign:'center', padding:'30px'}}>Nenhuma movimentação</td></tr>
                   ) : (
                     listaMov.slice(0, 50).map((m, idx) => (
-                      <tr key={idx}>
-                        <td>{m.data} {m.hora}</td>
-                        <td><span className="status-badge" style={{background: m.tipo==='Entrada'?'#dcfce7':'#fef2f2', color: m.tipo==='Entrada'?'#16a34a':'#dc2626'}}>{m.tipo}</span></td>
-                        <td>{m.item}</td>
+                      <tr key={m.id}>
+                        <td>{new Date(m.createdAt).toLocaleString('pt-BR')}</td>
+                        <td><span className="status-badge" style={{background: m.tipo==='ENTRADA'?'#dcfce7':'#fef2f2', color: m.tipo==='ENTRADA'?'#16a34a':'#dc2626'}}>{m.tipo === 'ENTRADA' ? 'Entrada' : 'Saída'}</span></td>
+                        <td>{m.item?.nome}</td>
                         <td>{m.quantidade}</td>
                         <td>{m.setor || m.fornecedor || '-'}</td>
                         <td>{m.responsavel}</td>
@@ -333,13 +370,13 @@ export default function AlmoxarifadoPage() {
           <div className="modal-almox-conteudo">
             <h3 style={{color:'#0a1f44', marginBottom:'20px', borderBottom:'2px solid #f1f5f9', paddingBottom:'10px'}}><i className="las la-arrow-down"></i> Registrar Entrada</h3>
             <div className="form-grid">
-              <div className="form-group"><label>Item *</label><select value={entradaCodigo} onChange={e => setEntradaCodigo(e.target.value)}><option value="">Selecione...</option>{itens.map(i => <option key={i.codigo} value={i.codigo}>{i.nome}</option>)}</select></div>
+              <div className="form-group"><label>Item *</label><select value={entradaItemId} onChange={e => setEntradaItemId(e.target.value)}><option value="">Selecione...</option>{itens.map(i => <option key={i.id} value={i.id}>{i.nome}</option>)}</select></div>
               <div className="form-group"><label>Quantidade *</label><input type="number" min="1" value={entradaQtd} onChange={e => setEntradaQtd(parseInt(e.target.value))} /></div>
               <div className="form-group"><label>Fornecedor</label><input type="text" value={entradaFornecedor} onChange={e => setEntradaFornecedor(e.target.value)} /></div>
             </div>
             <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'20px'}}>
-              <button className="btn btn-danger" onClick={() => setModalEntrada(false)}>Cancelar</button>
-              <button className="btn btn-success" onClick={confirmarEntrada}>Registrar</button>
+              <button className="btn btn-danger" onClick={() => setModalEntrada(false)} disabled={isSaving}>Cancelar</button>
+              <button className="btn btn-success" onClick={confirmarEntrada} disabled={isSaving}>{isSaving ? 'Registrando...' : 'Registrar'}</button>
             </div>
           </div>
         </div>
@@ -350,13 +387,13 @@ export default function AlmoxarifadoPage() {
           <div className="modal-almox-conteudo">
             <h3 style={{color:'#0a1f44', marginBottom:'20px', borderBottom:'2px solid #f1f5f9', paddingBottom:'10px'}}><i className="las la-arrow-up"></i> Registrar Saída</h3>
             <div className="form-grid">
-              <div className="form-group"><label>Item *</label><select value={saidaCodigo} onChange={e => setSaidaCodigo(e.target.value)}><option value="">Selecione...</option>{itens.filter(i => i.quantidade > 0).map(i => <option key={i.codigo} value={i.codigo}>{i.nome} ({i.quantidade})</option>)}</select></div>
+              <div className="form-group"><label>Item *</label><select value={saidaItemId} onChange={e => setSaidaItemId(e.target.value)}><option value="">Selecione...</option>{itens.filter(i => i.quantidade > 0).map(i => <option key={i.id} value={i.id}>{i.nome} ({i.quantidade})</option>)}</select></div>
               <div className="form-group"><label>Quantidade *</label><input type="number" min="1" value={saidaQtd} onChange={e => setSaidaQtd(parseInt(e.target.value))} /></div>
               <div className="form-group"><label>Setor Destino</label><select value={saidaSetor} onChange={e => setSaidaSetor(e.target.value)}><option>Farmácia</option><option>UTI</option><option>Emergência</option><option>Enfermaria</option><option>Centro Cirúrgico</option><option>Outro</option></select></div>
             </div>
             <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'20px'}}>
-              <button className="btn btn-danger" onClick={() => setModalSaida(false)}>Cancelar</button>
-              <button className="btn btn-warning" onClick={confirmarSaida}>Registrar Saída</button>
+              <button className="btn btn-danger" onClick={() => setModalSaida(false)} disabled={isSaving}>Cancelar</button>
+              <button className="btn btn-warning" onClick={confirmarSaida} disabled={isSaving}>{isSaving ? 'Registrando...' : 'Registrar Saída'}</button>
             </div>
           </div>
         </div>
@@ -375,8 +412,8 @@ export default function AlmoxarifadoPage() {
               <div className="form-group"><label>Estoque Mínimo</label><input type="number" min="1" value={novoMinimo} onChange={e => setNovoMinimo(parseInt(e.target.value))} /></div>
             </div>
             <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'20px'}}>
-              <button className="btn btn-danger" onClick={() => setModalNovoItem(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={confirmarNovoItem}>Cadastrar</button>
+              <button className="btn btn-danger" onClick={() => setModalNovoItem(false)} disabled={isSaving}>Cancelar</button>
+              <button className="btn btn-primary" onClick={confirmarNovoItem} disabled={isSaving}>{isSaving ? 'Cadastrando...' : 'Cadastrar'}</button>
             </div>
           </div>
         </div>

@@ -32,25 +32,42 @@ export default function AdminFinanceiroPage() {
 
   useEffect(() => {
     try {
-      let f: Fatura[] = JSON.parse(localStorage.getItem('saskiaFaturas') || '[]');
-      
-      // Auto-update status for past due invoices
-      const hoje = new Date();
-      hoje.setHours(0,0,0,0);
-      let changed = false;
-      
-      f.forEach(fatura => {
-        if (fatura.status === 'Pendente' && new Date(fatura.vencimento + 'T00:00:00') < hoje) {
-          fatura.status = 'Vencido';
-          changed = true;
-        }
-      });
-
-      if (changed) {
-        localStorage.setItem('saskiaFaturas', JSON.stringify(f));
-      }
-
-      setFaturas(f);
+      fetch('/api/fatura')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            let changed = false;
+            const hoje = new Date();
+            hoje.setHours(0,0,0,0);
+            
+            const f = data.map((fatura: any) => {
+              let fStatus = fatura.status;
+              const dtVenc = new Date(fatura.vencimento);
+              if (fStatus === 'Pendente' && dtVenc < hoje) {
+                fStatus = 'Vencido';
+                changed = true;
+              }
+              return {
+                id: fatura.id,
+                hospitalId: fatura.hospitalId,
+                hospitalNome: 'Hospital ' + fatura.hospitalId.substring(0,4), // Mocked for now
+                plano: 'Plano Sistema', 
+                categoria: 'Geral',
+                valor: fatura.valor,
+                vencimento: dtVenc.toISOString().split('T')[0],
+                status: fStatus,
+                tipoInst: 'Privado',
+                pagamento: undefined
+              };
+            });
+            setFaturas(f);
+            
+            if (changed) {
+              // Could trigger PUT requests to update status
+            }
+          }
+        })
+        .catch(console.error);
     } catch(e) {}
   }, []);
 

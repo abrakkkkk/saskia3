@@ -1,4 +1,5 @@
 'use client';
+import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import './configuracao.css';
@@ -26,59 +27,45 @@ export default function AdminConfiguracaoPage() {
 
   useEffect(() => {
     try {
-      const u = localStorage.getItem('usuarioLogado');
+      const u = JSON.stringify(getSessionUser());
       const usuario = u ? JSON.parse(u) : null;
       const hid = usuario?.hospitalId || usuario?.id || 'hosp_matriz';
       setHospitalId(hid);
 
-      const hospitais: Hospital[] = JSON.parse(localStorage.getItem('saskiaHospitais') || '[]');
-      const current = hospitais.find(h => h.id === hid);
-      
-      if(current) {
-        setHospital(current);
-        setNome(current.nome || '');
-        setCnpj(current.cnpj || '');
-        setEndereco(current.endereco || '');
-        setTelefone(current.telefone || '');
-        setLogoUrl(current.logoUrl || '');
-      }
+      fetch(`/api/hospitais/${hid}`)
+        .then(r => r.json())
+        .then(current => {
+          if (current && !current.error) {
+            setHospital({ ...current, logoUrl: current.logo });
+            setNome(current.nome || '');
+            setCnpj(current.cnpj || '');
+            setEndereco(current.endereco || '');
+            setTelefone(current.telefone || '');
+            setLogoUrl(current.logo || '');
+          }
+        })
+        .catch(console.error);
     } catch(e) {}
   }, []);
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     if(!nome.trim()) {
       alert("O nome da instituição é obrigatório!");
       return;
     }
 
     try {
-      const hospitais: Hospital[] = JSON.parse(localStorage.getItem('saskiaHospitais') || '[]');
-      const index = hospitais.findIndex(h => h.id === hospitalId);
-      
-      if(index >= 0) {
-        hospitais[index] = {
-          ...hospitais[index],
-          nome,
-          cnpj,
-          endereco,
-          telefone,
-          logoUrl
-        };
-      } else {
-        // Fallback case (should not happen if hospital exists, but safety first)
-        hospitais.push({
-          id: hospitalId,
-          nome,
-          cnpj,
-          endereco,
-          telefone,
-          logoUrl,
-          ativo: true
-        });
-      }
+      const response = await fetch(`/api/hospitais/${hospitalId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, cnpj, endereco, telefone, logoUrl })
+      });
 
-      localStorage.setItem('saskiaHospitais', JSON.stringify(hospitais));
-      alert("✅ Configurações salvas com sucesso!");
+      if (response.ok) {
+        alert("✅ Configurações salvas com sucesso!");
+      } else {
+        alert("Erro ao salvar configurações.");
+      }
     } catch(e) {
       alert("Erro ao salvar configurações.");
     }

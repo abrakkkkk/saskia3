@@ -72,35 +72,45 @@ export default function AdminHospitaisPage() {
 
   useEffect(() => {
     try {
-      const h = JSON.parse(localStorage.getItem('saskiaHospitais') || '[]');
-      const u = JSON.parse(localStorage.getItem('saskiaUsuarios') || '[]');
-      const f = JSON.parse(localStorage.getItem('saskiaFaturas') || '[]');
-      
-      // Auto-update overdue status
-      const hoje = new Date();
-      hoje.setHours(0,0,0,0);
-      let faturasAtualizadas = false;
-      f.forEach((fat: any) => {
-        if ((fat.status === 'Pendente' || fat.status === 'Vencido') && new Date(fat.vencimento + 'T00:00:00') < hoje) {
-          fat.status = 'Vencido';
-          faturasAtualizadas = true;
+      fetch('/api/hospital').then(res => res.json()).then(data => {
+        if (Array.isArray(data)) setHospitais(data.map((h: any) => ({ ...h, ativo: h.ativo !== false })));
+      }).catch(console.error);
+
+      fetch('/api/usuario').then(res => res.json()).then(data => {
+        if (Array.isArray(data)) setUsuarios(data.map((u: any) => ({ ...u, ativo: u.ativo !== false })));
+      }).catch(console.error);
+
+      fetch('/api/fatura').then(res => res.json()).then(data => {
+        if (Array.isArray(data)) {
+          const hoje = new Date();
+          hoje.setHours(0,0,0,0);
+          setFaturas(data.map((fat: any) => {
+            const dtVenc = new Date(fat.vencimento);
+            let s = fat.status;
+            if ((s === 'Pendente' || s === 'Vencido') && dtVenc < hoje) {
+              s = 'Vencido';
+            }
+            return {
+              id: fat.id,
+              hospitalId: fat.hospitalId,
+              hospitalNome: fat.hospital?.nome || 'Hospital ' + fat.hospitalId.substring(0,4),
+              plano: 'Plano',
+              valor: fat.valor,
+              vencimento: dtVenc.toISOString().split('T')[0],
+              status: s,
+              tipoInst: 'Privado',
+              pagamento: null,
+            };
+          }));
         }
-      });
-      if (faturasAtualizadas) {
-        localStorage.setItem('saskiaFaturas', JSON.stringify(f));
-      }
+      }).catch(console.error);
 
-      setHospitais(h);
-      setUsuarios(u);
-      setFaturas(f);
-
-      // Initialize forms default dates
+      const hoje = new Date();
       setFormFatura(prev => ({
         ...prev,
         vencimento: new Date(new Date().setMonth(hoje.getMonth() + 1)).toISOString().split('T')[0],
         referencia: hoje.toISOString().split('T')[0].substring(0, 7)
       }));
-
     } catch (e) {}
   }, []);
 
@@ -128,7 +138,12 @@ export default function AdminHospitaisPage() {
 
     const novosHospitais = [...hospitais, novo];
     setHospitais(novosHospitais);
-    localStorage.setItem('saskiaHospitais', JSON.stringify(novosHospitais));
+    
+    fetch('/api/hospital', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome, cnpj, endereco, telefone })
+    }).catch(console.error);
     setFormHospital({ nome: '', cnpj: '', endereco: '', telefone: '' });
     alert("✅ Hospital cadastrado com sucesso!");
   };
@@ -137,7 +152,6 @@ export default function AdminHospitaisPage() {
     if (!confirm("Tem certeza que deseja alterar o status deste hospital?")) return;
     const novosHospitais = hospitais.map(h => h.id === id ? { ...h, ativo: !h.ativo } : h);
     setHospitais(novosHospitais);
-    localStorage.setItem('saskiaHospitais', JSON.stringify(novosHospitais));
   };
 
   const handleCadastrarUsuario = () => {
@@ -155,7 +169,12 @@ export default function AdminHospitaisPage() {
 
     const novosUsuarios = [...usuarios, novo];
     setUsuarios(novosUsuarios);
-    localStorage.setItem('saskiaUsuarios', JSON.stringify(novosUsuarios));
+    
+    fetch('/api/usuario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hospitalId, nome, email, senha, cargo })
+    }).catch(console.error);
     setFormUsuario(prev => ({ ...prev, nome: '', email: '', senha: '123456' }));
     alert("✅ Usuário cadastrado com sucesso!");
   };
@@ -164,7 +183,6 @@ export default function AdminHospitaisPage() {
     if (!confirm("Tem certeza que deseja alterar o status deste usuário?")) return;
     const novosUsuarios = usuarios.map(u => u.id === id ? { ...u, ativo: !u.ativo } : u);
     setUsuarios(novosUsuarios);
-    localStorage.setItem('saskiaUsuarios', JSON.stringify(novosUsuarios));
   };
 
   const handlePlanoChange = (e: any) => {
@@ -218,7 +236,17 @@ export default function AdminHospitaisPage() {
 
     const novasFaturas = [...faturas, fatura];
     setFaturas(novasFaturas);
-    localStorage.setItem('saskiaFaturas', JSON.stringify(novasFaturas));
+    
+    fetch('/api/fatura', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hospitalId,
+        valor: parseFloat(valor.toString()),
+        vencimento: new Date(vencimento).toISOString(),
+        status: fatura.status
+      })
+    }).catch(console.error);
     setFormFatura(prev => ({ ...prev, obs: '' }));
     alert("✅ Fatura emitida com sucesso!");
   };
@@ -252,7 +280,6 @@ export default function AdminHospitaisPage() {
     });
 
     setFaturas(novasFaturas);
-    localStorage.setItem('saskiaFaturas', JSON.stringify(novasFaturas));
     setModalPgOpen(false);
     alert("✅ Pagamento registrado com sucesso!");
   };
@@ -262,7 +289,6 @@ export default function AdminHospitaisPage() {
     if (!confirm("🔴 CONFIRMAÇÃO FINAL: Deseja realmente excluir esta fatura permanentemente?")) return;
     const novasFaturas = faturas.filter(f => f.id !== id);
     setFaturas(novasFaturas);
-    localStorage.setItem('saskiaFaturas', JSON.stringify(novasFaturas));
     alert("🗑️ Fatura excluída com sucesso!");
   };
 

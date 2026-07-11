@@ -30,12 +30,42 @@ interface ATM {
   duracao: string; indicacao: string; status: string;
 }
 
-// ── storage helpers (multi-tenancy) ────────────────────
-function loadStore<T>(prefix: string, k: string): T[] {
-  try { return JSON.parse(localStorage.getItem(`${prefix}_ccih_${k}`) || '[]'); } catch { return []; }
+// ── API helpers ────────────────────────────────────────
+async function loadFromAPI(tipo: string): Promise<any[]> {
+  try {
+    const res = await fetch(`/api/ccih?tipo=${tipo}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.map((r: any) => ({ ...r.dados, id: r.id, _registroId: r.id, status: r.status === 'ATIVO' ? (r.dados?.status || 'Ativa') : r.status }));
+  } catch { return []; }
 }
-function saveStore<T>(prefix: string, k: string, data: T[]) {
-  localStorage.setItem(`${prefix}_ccih_${k}`, JSON.stringify(data));
+async function saveToAPI(tipo: string, item: any, criadoPor: string): Promise<any> {
+  try {
+    const res = await fetch('/api/ccih', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tipo,
+        subtipo: item.tipo || item.momento || null,
+        descricao: item.paciente || item.setor || item.nome || '',
+        dados: item,
+        data: item.data || item.dataNotificacao || new Date().toISOString(),
+        status: item.status === 'Tratada' ? 'TRATADO' : 'ATIVO',
+        criadoPor
+      })
+    });
+    if (res.ok) return await res.json();
+  } catch {}
+  return null;
+}
+async function updateAPIStatus(id: string, status: string, dados?: any): Promise<void> {
+  try {
+    await fetch(`/api/ccih/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, ...(dados ? { dados } : {}) })
+    });
+  } catch {}
 }
 
 const HOJE = () => new Date().toISOString().split('T')[0];
@@ -48,9 +78,19 @@ export default function CcihPage() {
   const nomeUsuario = (session?.user as any)?.name || session?.user?.name || 'Sistema';
   const hospitalId = (session?.user as any)?.hospitalId || (session?.user as any)?.id || 'hospital_001';
 
-  // bound storage helpers (isola dados por hospital)
-  const load = <T,>(k: string) => loadStore<T>(hospitalId, k);
-  const save = <T,>(k: string, data: T[]) => saveStore<T>(hospitalId, k, data);
+  // carregar dados
+  const reloadAll = async () => {
+    const [irasData, culturasData, hmData, atmData] = await Promise.all([
+      loadFromAPI('IRAS'),
+      loadFromAPI('CULTURA'),
+      loadFromAPI('HM'),
+      loadFromAPI('ATM')
+    ]);
+    setIras(irasData);
+    setCulturas(culturasData);
+    setHmObs(hmData);
+    setAntimicrobianos(atmData);
+  };
 
   const [tab, setTab] = useState<Tab>('notificacao');
 
@@ -103,15 +143,13 @@ export default function CcihPage() {
   const [pacientes, setPacientes] = useState<{id:string; nome:string}[]>([]);
 
   useEffect(() => {
-    setIras(loadStore<IRAS>(hospitalId, 'iras'));
-    setCulturas(loadStore<Cultura>(hospitalId, 'culturas'));
-    setHmObs(loadStore<HMObs>(hospitalId, 'hm'));
-    setAntimicrobianos(loadStore<ATM>(hospitalId, 'atm'));
+    reloadAll();
     // buscar pacientes
     fetch('/api/pacientes?limit=200')
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.pacientes) setPacientes(d.pacientes.map((p:any) => ({ id: p.id, nome: p.nome }))); })
+      .then(d => { if (d?.pacientes) setPacientes(d.pacientes.map((p:any) => ({ id: p.id, nome: p.nome }))); else if (Array.isArray(d)) setPacientes(d.map((p:any) => ({ id: p.id, nome: p.nome }))); })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hospitalId]);
 
   const msg = (texto: string) => { setAviso(texto); setTimeout(() => setAviso(''), 3000); };
@@ -125,54 +163,51 @@ export default function CcihPage() {
   const atmEmUso     = antimicrobianos.filter(a => a.status === 'Em uso').length;
   const taxaInfec    = pacientes.length > 0 ? Math.round((irasAtivas / pacientes.length) * 100) : 0;
 
-  // ── notificar IRAS ───────────────────────────────────
-  const notificarIRAS = (e: React.FormEvent) => {
+  const notificarIRAS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fPaciente || !fTipo) { msg('Preencha paciente e tipo!'); return; }
-    const nova: IRAS = {
-      id: Date.now(), paciente: fPaciente, tipo: fTipo, data: fData,
+    const nova: any = {
+      paciente: fPaciente, tipo: fTipo, data: fData,
       local: fLocal, gravidade: fGrav, material: fMaterial,
       microorganismo: fMicro, antibiotico: fAtb, obs: fObs,
       status: 'Ativa', dataNotificacao: new Date().toISOString(), notificadoPor: nomeUsuario,
     };
-    const novasIras = [...iras, nova];
-    save('iras', novasIras); setIras(novasIras);
+    await saveToAPI('IRAS', nova, nomeUsuario);
 
     if (fMaterial !== 'Não coletado') {
-      const novaCultura: Cultura = {
-        id: Date.now() + 1, paciente: fPaciente, material: fMaterial,
+      const novaCultura: any = {
+        paciente: fPaciente, material: fMaterial,
         microorganismo: fMicro, antibiotico: fAtb,
         sensibilidade: 'Aguardando', status: 'Pendente', data: fData,
       };
-      const novasCulturas = [...culturas, novaCultura];
-      save('culturas', novasCulturas); setCulturas(novasCulturas);
+      await saveToAPI('CULTURA', novaCultura, nomeUsuario);
     }
+    await reloadAll();
     setFPaciente(''); setFTipo(''); setFMicro(''); setFAtb(''); setFObs(''); setFData(HOJE());
     msg('IRAS notificada com sucesso!');
     setTab('iras');
   };
 
-  // ── tratar IRAS ──────────────────────────────────────
-  const tratarIRAS = (id: number) => {
-    const lista = iras.map(i => i.id === id ? { ...i, status: 'Tratada' as StatusIRAS, dataTratamento: new Date().toISOString() } : i);
-    save('iras', lista); setIras(lista); msg('IRAS marcada como tratada!');
+  const tratarIRAS = async (id: number | string) => {
+    await updateAPIStatus(String(id), 'TRATADO', { dataTratamento: new Date().toISOString() });
+    await reloadAll();
+    msg('IRAS marcada como tratada!');
   };
 
-  // ── higiene mãos ─────────────────────────────────────
-  const registrarHM = (e: React.FormEvent) => {
+  const registrarHM = async (e: React.FormEvent) => {
     e.preventDefault();
-    const nova: HMObs = { id: Date.now(), data: new Date().toISOString(), setor: hmSetor, categoria: hmCategoria, momento: hmMomento, realizou: hmRealizou };
-    const lista = [...hmObs, nova];
-    save('hm', lista); setHmObs(lista); msg('Observação registrada!');
+    const nova: any = { data: new Date().toISOString(), setor: hmSetor, categoria: hmCategoria, momento: hmMomento, realizou: hmRealizou };
+    await saveToAPI('HM', nova, nomeUsuario);
+    await reloadAll();
+    msg('Observação registrada!');
   };
 
-  // ── ATM ──────────────────────────────────────────────
-  const prescreverATM = (e: React.FormEvent) => {
+  const prescreverATM = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!atmPaciente || !atmNome) { msg('Preencha paciente e antimicrobiano!'); return; }
-    const novo: ATM = { id: Date.now(), paciente: atmPaciente, nome: atmNome, dose: atmDose, via: atmVia, frequencia: atmFreq, inicio: atmInicio, duracao: atmDuracao, indicacao: atmIndicacao, status: 'Em uso' };
-    const lista = [...antimicrobianos, novo];
-    save('atm', lista); setAntimicrobianos(lista);
+    const novo: any = { paciente: atmPaciente, nome: atmNome, dose: atmDose, via: atmVia, frequencia: atmFreq, inicio: atmInicio, duracao: atmDuracao, indicacao: atmIndicacao, status: 'Em uso' };
+    await saveToAPI('ATM', novo, nomeUsuario);
+    await reloadAll();
     setAtmNome(''); setAtmDose(''); setAtmFreq('');
     msg('Antimicrobiano prescrito!');
   };
