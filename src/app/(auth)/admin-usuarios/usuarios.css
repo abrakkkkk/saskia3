@@ -1,0 +1,297 @@
+/* usuarios.css */
+
+.filtro-cargos {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.filtro-btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    background: white;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.filtro-btn:hover {
+    background: #f8fafc;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.filtro-btn.active {
+    background: #1e3a8a;
+    color: white;
+    border-color: #1e3a8a;
+    box-shadow: 0 4px 15px rgba(30,58,138,0.2);
+}
+
+.lista-usuarios {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.usuario-item {
+    background: #ffffff; /* Fundo totalmente branco para não parecer cinza */
+    padding: 20px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.usuario-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+}
+
+.usuario-info h4 {
+    margin: 0 0 10px 0;
+    color: #0a1f44;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.usuario-info p {
+    margin: 0 0 8px 0;
+    color: #64748b;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.usuario-acoes {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #f1f5f9;
+    justify-content: flex-end;
+}
+
+.badge-nivel {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-nivel1 { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; } /* Estratégico */
+.badge-nivel2 { background: #ffedd5; color: #c2410c; border: 1px solid #fdba74; } /* Tático */
+.badge-nivel3 { background: #dcfce7; color: #15803d; border: 1px solid #86efac; } /* Operacional */
+.badge-nivel4 { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; } /* Técnico */
+.badge-nivel5 { background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; } /* Apoio */
+.badge-nivel6 { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; } /* Infraestrutura */
+
+.btn-excluir {
+    background: #fef2f2;
+    color: #dc2626;
+    padding: 8px 12px;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-excluir:hover { background: #dc2626; color: white; border-color: #dc2626; }
+
+.btn-editar {
+    background: #fffbeb;
+    color: #d97706;
+    padding: 8px 12px;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-editar:hover { background: #f59e0b; color: white; border-color: #f59e0b; }
+
+/* Modal User */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+    background: #ffffff;
+    width: 650px;
+    max-width: 95%;
+    max-height: 90vh;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    animation: slideUp 0.3s ease-out;
+    overflow: hidden;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: white;
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.form-grid-modal {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.form-group {
+    margin-bottom: 5px;
+}
+
+.form-group.full {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 6px;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    background: #f8fafc;
+    transition: all 0.2s;
+}
+
+.form-group input:focus, .form-group select:focus {
+    border-color: #1e3a8a;
+    outline: none;
+    background: white;
+}
+
+.nivel-info {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #166534;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.permissoes {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 18px;
+    border-radius: 12px;
+    margin-top: 20px;
+}
+
+.permissoes h4 {
+    margin: 0 0 15px 0;
+    font-size: 14px;
+    color: #0a1f44;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.permissoes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.perm-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.perm-item:hover {
+    border-color: #cbd5e1;
+}
+
+.perm-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #1e3a8a;
+    cursor: pointer;
+}
+
+.modal-footer {
+    padding: 20px 24px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 10px;
+}
+
+.modal-footer button {
+    flex: 1;
+    padding: 12px;
+    font-size: 14px;
+}

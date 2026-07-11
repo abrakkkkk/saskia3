@@ -14,7 +14,7 @@ export async function GET() {
     const query = `'${folderId}' in parents and trashed=false`;
     
     // A query string deve ser codificada para URL
-    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size,webViewLink)&key=${apiKey}`;
+    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size,webViewLink,webContentLink)&key=${apiKey}`;
 
     const res = await fetch(url, {
       method: 'GET',

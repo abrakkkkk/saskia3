@@ -1,0 +1,189 @@
+/* ==================== CARD PRINCIPAL ==================== */
+.card-conta {
+    background: white;
+    padding: 36px;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 24px;
+}
+
+/* ==================== PERFIL HEADER ==================== */
+.perfil-header {
+    display: flex;
+    gap: 36px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.foto-perfil {
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.foto-perfil img {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #1e3a8a;
+    box-shadow: 0 8px 20px rgba(30,58,138,0.2);
+}
+
+.foto-perfil .placeholder-foto {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 56px;
+    color: white;
+    box-shadow: 0 8px 20px rgba(30,58,138,0.2);
+}
+
+.info-perfil h2 {
+    margin: 0 0 12px 0;
+    color: #0a1f44;
+    font-size: 24px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.info-perfil p {
+    margin: 8px 0;
+    color: #475569;
+    font-size: 15px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-perfil i {
+    color: #1e3a8a;
+    font-size: 18px;
+    width: 22px;
+    text-align: center;
+}
+
+/* ==================== FORMULÁRIO ==================== */
+.form-grupo {
+    margin-bottom: 20px;
+}
+
+.form-grupo label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 700;
+    color: #334155;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.form-grupo label i {
+    color: #1e3a8a;
+    font-size: 16px;
+}
+
+.form-grupo input,
+.form-grupo select {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #0f172a;
+    background: #f8fafc;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+}
+
+.form-grupo input:focus,
+.form-grupo select:focus {
+    outline: none;
+    border-color: #1e3a8a;
+    box-shadow: 0 0 0 3px rgba(30,58,138,0.08);
+    background: white;
+}
+
+.form-linha {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* ==================== BOTÃO SALVAR ==================== */
+.btn-salvar-conta {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: white;
+    border: none;
+    padding: 13px 28px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(22,163,74,0.2);
+}
+
+.btn-salvar-conta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(22,163,74,0.3);
+}
+
+/* ==================== ALERTAS ==================== */
+.alert-sucesso {
+    background: #dcfce7;
+    border-left: 4px solid #16a34a;
+    color: #15803d;
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.alert-erro {
+    background: #fee2e2;
+    border-left: 4px solid #dc2626;
+    color: #b91c1c;
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* ==================== HINT CONSELHO ==================== */
+.info-conselho {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #1e40af;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ==================== RESPONSIVO ==================== */
+@media (max-width: 640px) {
+    .form-linha { grid-template-columns: 1fr; }
+    .perfil-header { flex-direction: column; align-items: center; text-align: center; }
+    .info-perfil p { justify-content: center; }
+}

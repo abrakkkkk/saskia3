@@ -1,159 +1,162 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { 
+  ChartLine, 
+  Baby, 
+  FileText, 
+  Eye, 
+  Download 
+} from 'lucide-react';
+
+interface Curva {
+  id: string;
+  nome: string;
+  titulo: string;
+  driveId?: string; // Para integração com API do Google Drive
+}
+
+const curvasMeninas: Curva[] = [
+  { id: '1', nome: 'altura_meninas_0-5_percentil.pdf', titulo: 'Altura por Idade (0 a 5 anos) - Percentil', driveId: '' },
+  { id: '2', nome: 'altura_meninas_0-5_zscore.pdf', titulo: 'Altura por Idade (0 a 5 anos) - Escore Z', driveId: '' },
+  { id: '3', nome: 'altura_meninas_5-19_percentil.pdf', titulo: 'Altura por Idade (5 a 19 anos) - Percentil', driveId: '' },
+  { id: '4', nome: 'altura_meninas_5-19_zscore.pdf', titulo: 'Altura por Idade (5 a 19 anos) - Escore Z', driveId: '' },
+  { id: '5', nome: 'imc_meninas_0-5_escore_z.pdf', titulo: 'IMC por Idade (0 a 5 anos) - Escore Z', driveId: '' },
+  { id: '6', nome: 'imc_meninas_5-19_percentil.pdf', titulo: 'IMC por Idade (5 a 19 anos) - Percentil', driveId: '' },
+  { id: '7', nome: 'imc_meninas_5-19_zscore.pdf', titulo: 'IMC por Idade (5 a 19 anos) - Escore Z', driveId: '' },
+  { id: '8', nome: 'perimetro_cefalico_meninas_0-5_percentil.pdf', titulo: 'Perímetro Cefálico (0 a 5 anos) - Percentil', driveId: '' },
+  { id: '9', nome: 'perimetro_cefalico_meninas_0-5_zscore.pdf', titulo: 'Perímetro Cefálico (0 a 5 anos) - Escore Z', driveId: '' },
+  { id: '10', nome: 'peso_meninas_0-5_percentil.pdf', titulo: 'Peso por Idade (0 a 5 anos) - Percentil', driveId: '' },
+  { id: '11', nome: 'peso_meninas_5-10_percentil.pdf', titulo: 'Peso por Idade (5 a 10 anos) - Percentil', driveId: '' },
+  { id: '12', nome: 'peso_meninas_5-10_zscore.pdf', titulo: 'Peso por Idade (5 a 10 anos) - Escore Z', driveId: '' },
+];
+
+const curvasMeninos: Curva[] = [
+  { id: '13', nome: 'altura_meninos_0-5_percentil.pdf', titulo: 'Altura por Idade (0 a 5 anos) - Percentil', driveId: '' },
+  { id: '14', nome: 'altura_meninos_0-5_zscore.pdf', titulo: 'Altura por Idade (0 a 5 anos) - Escore Z', driveId: '' },
+  { id: '15', nome: 'altura_meninos_5-19_percentil.pdf', titulo: 'Altura por Idade (5 a 19 anos) - Percentil', driveId: '' },
+  { id: '16', nome: 'altura_meninos_5-19_zscore.pdf', titulo: 'Altura por Idade (5 a 19 anos) - Escore Z', driveId: '' },
+  { id: '17', nome: 'OMS._IMC_Meninos__de_0_a_5_anos._Escore_Z.pdf', titulo: 'IMC por Idade (0 a 5 anos) - Escore Z', driveId: '' },
+  { id: '18', nome: 'imc_meninos_5-19_percentil.pdf', titulo: 'IMC por Idade (5 a 19 anos) - Percentil', driveId: '' },
+  { id: '19', nome: 'imc_meninos_5-19_zscore.pdf', titulo: 'IMC por Idade (5 a 19 anos) - Escore Z', driveId: '' },
+  { id: '20', nome: 'perimetro_cefalico_meninos_0-5_percentil.pdf', titulo: 'Perímetro Cefálico (0 a 5 anos) - Percentil', driveId: '' },
+  { id: '21', nome: 'perimetro_cefalico_meninos_0-5_zscore.pdf', titulo: 'Perímetro Cefálico (0 a 5 anos) - Escore Z', driveId: '' },
+  { id: '22', nome: 'peso_meninos_0-5_percentil.pdf', titulo: 'Peso por Idade (0 a 5 anos) - Percentil', driveId: '' },
+  { id: '23', nome: 'peso_meninos_0-5_zscore.pdf', titulo: 'Peso por Idade (0 a 5 anos) - Escore Z', driveId: '' },
+  { id: '24', nome: 'peso_meninos_5-10_percentil.pdf', titulo: 'Peso por Idade (5 a 10 anos) - Percentil', driveId: '' },
+  { id: '25', nome: 'peso_meninos_5-10_zscore.pdf', titulo: 'Peso por Idade (5 a 10 anos) - Escore Z', driveId: '' },
+];
 
 export default function CurvasCrescimentoPage() {
-  const [idade, setIdade] = useState('2'); // Anos
-  const [peso, setPeso] = useState('12.5'); // Kg
-  const [altura, setAltura] = useState('85'); // cm
+  const [abaAtiva, setAbaAtiva] = useState<'meninas' | 'meninos'>('meninas');
+  const [driveFiles, setDriveFiles] = useState<any[]>([]);
 
-  const imc = (parseFloat(peso) / Math.pow(parseFloat(altura) / 100, 2)).toFixed(1);
+  useEffect(() => {
+    const fetchDriveFiles = async () => {
+      try {
+        const res = await fetch('/api/drive');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.files) {
+            setDriveFiles(data.files);
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao buscar arquivos do Drive", err);
+      }
+    };
+    fetchDriveFiles();
+  }, []);
 
-  // Dados mockados para a curva baseados na idade 2 anos
-  const mediaPeso = 12.2;
-  const mediaAltura = 86.4;
-  
-  const difPeso = parseFloat(peso) - mediaPeso;
-  const difAltura = parseFloat(altura) - mediaAltura;
+  const handleDriveAction = (curva: Curva, action: 'view' | 'download') => {
+    const driveFile = driveFiles.find(f => f.name === curva.nome);
+    
+    if (!driveFile) {
+      alert(`Arquivo "${curva.nome}" não encontrado no Google Drive.`);
+      return;
+    }
+    
+    if (action === 'download' && driveFile.webContentLink) {
+      window.open(driveFile.webContentLink, '_blank');
+    } else {
+      window.open(driveFile.webViewLink, '_blank');
+    }
+  };
+
+  const listaAtual = abaAtiva === 'meninas' ? curvasMeninas : curvasMeninos;
 
   return (
-    <div>
-      <div className="page-header">
-        <div className="header-left">
-          <h2><i className="las la-baby"></i> Curvas de Crescimento Pediátrico</h2>
-          <p>Acompanhamento de Percentil (Peso, Altura e IMC) da OMS</p>
+    <div className="p-8 max-w-7xl mx-auto space-y-10 animate-fade-in">
+      <div className="flex items-center gap-4 bg-gradient-to-r from-blue-900 to-blue-700 p-8 rounded-3xl shadow-lg text-white">
+        <div className="bg-white/20 p-4 rounded-2xl">
+          <ChartLine className="w-10 h-10 text-blue-50" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Curvas de Peso e Crescimento</h1>
+          <p className="text-blue-100 mt-1 font-medium">Tabelas OMS de crescimento infantil</p>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
-        {/* Formulário de Input */}
-        <div className="card">
-          <h3 style={{ marginBottom: '20px', fontSize: '18px', color: '#1e293b' }}>Dados da Criança</h3>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>Paciente</label>
-              <input type="text" className="input-field" defaultValue="Enzo Gabriel (Registro #4421)" disabled style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#f1f5f9' }} />
+      <div className="flex bg-slate-100 p-1 rounded-2xl max-w-sm mx-auto">
+        <button
+          onClick={() => setAbaAtiva('meninas')}
+          className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${
+            abaAtiva === 'meninas' 
+              ? 'bg-white text-pink-600 shadow-sm' 
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Baby className="w-5 h-5" /> Meninas
+        </button>
+        <button
+          onClick={() => setAbaAtiva('meninos')}
+          className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${
+            abaAtiva === 'meninos' 
+              ? 'bg-white text-blue-600 shadow-sm' 
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Baby className="w-5 h-5" /> Meninos
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {listaAtual.map((curva) => (
+          <div key={curva.id} className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.04)] border border-slate-100 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 flex flex-col">
+            <div className={`p-8 flex items-center justify-center border-b border-slate-100 ${
+              abaAtiva === 'meninas' ? 'bg-pink-50' : 'bg-blue-50'
+            }`}>
+              <FileText className={`w-16 h-16 ${
+                abaAtiva === 'meninas' ? 'text-pink-300' : 'text-blue-300'
+              }`} strokeWidth={1.5} />
             </div>
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>Idade (Anos)</label>
-                <input type="number" className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} value={idade} onChange={(e) => setIdade(e.target.value)} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>Peso Atual (Kg)</label>
-                <input type="number" step="0.1" className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} value={peso} onChange={(e) => setPeso(e.target.value)} />
-              </div>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>Estatura Atual (cm)</label>
-              <input type="number" className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} value={altura} onChange={(e) => setAltura(e.target.value)} />
-            </div>
-
-            <button className="btn btn-primary" style={{ marginTop: '10px', justifyContent: 'center' }}>
-              <i className="las la-calculator"></i> Atualizar Curva
-            </button>
-          </div>
-
-          <div style={{ marginTop: '30px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>IMC CALCULADO</div>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: '#3b82f6' }}>{imc}</div>
-            <div style={{ fontSize: '12px', color: '#10b981', marginTop: '5px', fontWeight: 600 }}>Padrão Eutrófico (Normal)</div>
-          </div>
-        </div>
-
-        {/* Gráficos de Percentil em CSS */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* Gráfico de Peso */}
-          <div className="card">
-            <h3 style={{ marginBottom: '20px', fontSize: '16px', color: '#1e293b' }}>Peso x Idade (z-score)</h3>
-            
-            <div style={{ position: 'relative', height: '120px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '20px', display: 'flex', alignItems: 'center' }}>
-              <div style={{ position: 'absolute', width: '100%', left: 0, height: '1px', background: '#cbd5e1', top: '50%' }}></div>
-              <div style={{ position: 'absolute', width: '100%', left: 0, height: '1px', background: '#e2e8f0', top: '25%', borderTop: '1px dashed #cbd5e1' }}></div>
-              <div style={{ position: 'absolute', width: '100%', left: 0, height: '1px', background: '#e2e8f0', top: '75%', borderTop: '1px dashed #cbd5e1' }}></div>
-              
-              <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                {/* Linha da Média */}
-                <div style={{ position: 'absolute', left: '50%', top: '50%', width: '12px', height: '12px', background: '#94a3b8', borderRadius: '50%', transform: 'translate(-50%, -50%)', zIndex: 1 }}></div>
-                <div style={{ position: 'absolute', left: '50%', top: '35%', fontSize: '11px', color: '#94a3b8', transform: 'translateX(-50%)' }}>Média ({mediaPeso}kg)</div>
-                
-                {/* Ponto do Paciente */}
-                <div style={{ 
-                  position: 'absolute', 
-                  left: '50%', 
-                  top: `calc(50% - ${difPeso * 10}px)`, 
-                  width: '16px', 
-                  height: '16px', 
-                  background: '#3b82f6', 
-                  border: '3px solid white',
-                  borderRadius: '50%', 
-                  transform: 'translate(-50%, -50%)', 
-                  zIndex: 2,
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                }}></div>
-                <div style={{ 
-                  position: 'absolute', 
-                  left: '55%', 
-                  top: `calc(50% - ${difPeso * 10}px - 20px)`, 
-                  fontSize: '13px', 
-                  fontWeight: 700,
-                  color: '#3b82f6', 
-                }}>Enzo ({peso}kg)</div>
+            <div className="p-5 flex flex-col flex-1">
+              <h4 className="font-bold text-slate-800 text-[14px] leading-snug mb-2 line-clamp-3">
+                {curva.titulo}
+              </h4>
+              <div className="mt-auto pt-4 flex gap-2">
+                <button 
+                  onClick={() => handleDriveAction(curva, 'view')}
+                  className={`flex-1 flex items-center justify-center gap-2 font-semibold py-2.5 rounded-xl transition-colors text-sm ${
+                    abaAtiva === 'meninas'
+                      ? 'bg-pink-50 text-pink-700 hover:bg-pink-600 hover:text-white'
+                      : 'bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white'
+                  }`}
+                >
+                  <Eye className="w-4 h-4" />
+                  Ver
+                </button>
+                <button 
+                  onClick={() => handleDriveAction(curva, 'download')}
+                  className="flex-1 flex items-center justify-center gap-2 bg-slate-50 text-slate-700 font-semibold py-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition-colors text-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  Baixar
+                </button>
               </div>
             </div>
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '10px' }}>
-              O peso atual está {difPeso > 0 ? 'acima' : 'abaixo'} da média para a idade em {Math.abs(difPeso).toFixed(1)}kg.
-            </div>
           </div>
-
-          {/* Gráfico de Altura */}
-          <div className="card">
-            <h3 style={{ marginBottom: '20px', fontSize: '16px', color: '#1e293b' }}>Estatura x Idade (z-score)</h3>
-            
-            <div style={{ position: 'relative', height: '120px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '20px', display: 'flex', alignItems: 'center' }}>
-              <div style={{ position: 'absolute', width: '100%', left: 0, height: '1px', background: '#cbd5e1', top: '50%' }}></div>
-              <div style={{ position: 'absolute', width: '100%', left: 0, height: '1px', background: '#e2e8f0', top: '25%', borderTop: '1px dashed #cbd5e1' }}></div>
-              <div style={{ position: 'absolute', width: '100%', left: 0, height: '1px', background: '#e2e8f0', top: '75%', borderTop: '1px dashed #cbd5e1' }}></div>
-              
-              <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                {/* Linha da Média */}
-                <div style={{ position: 'absolute', left: '50%', top: '50%', width: '12px', height: '12px', background: '#94a3b8', borderRadius: '50%', transform: 'translate(-50%, -50%)', zIndex: 1 }}></div>
-                <div style={{ position: 'absolute', left: '50%', top: '35%', fontSize: '11px', color: '#94a3b8', transform: 'translateX(-50%)' }}>Média ({mediaAltura}cm)</div>
-                
-                {/* Ponto do Paciente */}
-                <div style={{ 
-                  position: 'absolute', 
-                  left: '50%', 
-                  top: `calc(50% - ${difAltura * 3}px)`, 
-                  width: '16px', 
-                  height: '16px', 
-                  background: '#10b981', 
-                  border: '3px solid white',
-                  borderRadius: '50%', 
-                  transform: 'translate(-50%, -50%)', 
-                  zIndex: 2,
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                }}></div>
-                <div style={{ 
-                  position: 'absolute', 
-                  left: '55%', 
-                  top: `calc(50% - ${difAltura * 3}px - 20px)`, 
-                  fontSize: '13px', 
-                  fontWeight: 700,
-                  color: '#10b981', 
-                }}>Enzo ({altura}cm)</div>
-              </div>
-            </div>
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '10px' }}>
-              A estatura atual está {difAltura > 0 ? 'acima' : 'abaixo'} da média para a idade em {Math.abs(difAltura).toFixed(1)}cm.
-            </div>
-          </div>
-
-        </div>
+        ))}
       </div>
     </div>
   );

@@ -1,0 +1,283 @@
+/* ==================== CONTAINER ==================== */
+.sobre-nos-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px 40px;
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ==================== BANNER ==================== */
+.banner-sobre {
+    background: linear-gradient(135deg, #0a1f44 0%, #1e3a8a 55%, #0ea5e9 100%);
+    border-radius: 20px;
+    padding: 48px 44px;
+    color: white;
+    margin-bottom: 30px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 16px 36px rgba(10,31,68,0.18);
+}
+.banner-sobre::before {
+    content: '';
+    position: absolute; top: -50%; right: -10%;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(255,255,255,0.09) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.banner-conteudo { position: relative; z-index: 1; }
+.banner-sobre h1 { font-size: 32px; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.4px; }
+.banner-sobre .subtitulo-banner { font-size: 16px; opacity: 0.92; max-width: 600px; line-height: 1.65; font-weight: 500; }
+.banner-sobre .icone-coracao { position: absolute; right: 44px; top: 50%; transform: translateY(-50%); font-size: 140px; opacity: 0.08; }
+
+/* ==================== MISSÃO VISÃO VALORES ==================== */
+.secao-mvv {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 36px;
+}
+.card-mvv {
+    background: white;
+    border-radius: 16px;
+    padding: 28px 24px;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+    border: 1px solid #f1f5f9;
+    transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+    position: relative;
+    overflow: hidden;
+}
+.card-mvv::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; }
+.card-mvv.missao::before { background: #1e3a8a; }
+.card-mvv.visao::before  { background: #0ea5e9; }
+.card-mvv.valores::before { background: #10b981; }
+.card-mvv:hover { transform: translateY(-6px); box-shadow: 0 16px 32px rgba(0,0,0,0.08); }
+.card-mvv .icone-mvv { width: 60px; height: 60px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 28px; }
+.card-mvv.missao .icone-mvv { background: #eff6ff; color: #1e3a8a; }
+.card-mvv.visao  .icone-mvv  { background: #f0f9ff; color: #0ea5e9; }
+.card-mvv.valores .icone-mvv { background: #ecfdf5; color: #10b981; }
+.card-mvv h3 { font-size: 18px; color: #0f172a; margin-bottom: 10px; font-weight: 800; }
+.card-mvv p  { color: #475569; line-height: 1.6; font-size: 14px; font-weight: 500; }
+
+/* ==================== EQUIPE ==================== */
+.secao-equipe { margin-bottom: 36px; }
+.secao-equipe h2 {
+    color: #ffffff;
+    font-size: 26px; font-weight: 800;
+    margin-bottom: 24px;
+    display: flex; align-items: center; gap: 10px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.equipe-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.card-pessoa {
+    background: white;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+.card-pessoa:hover { transform: translateY(-4px); box-shadow: 0 14px 32px rgba(0,0,0,0.09); }
+
+/* Borda lateral colorida */
+.card-pessoa.idealizador { border-left: 5px solid #f59e0b; background: linear-gradient(135deg,#fff 70%,#fffbeb); }
+.card-pessoa.designer    { border-left: 5px solid #8b5cf6; background: linear-gradient(135deg,#fff 70%,#faf5ff); }
+.card-pessoa.orientadora { border-left: 5px solid #0891b2; background: linear-gradient(135deg,#fff 70%,#ecfeff); }
+.card-pessoa.diretora    { border-left: 5px solid #dc2626; background: linear-gradient(135deg,#fff 70%,#fef2f2); }
+.card-pessoa.estrategica { border-left: 5px solid #059669; background: linear-gradient(135deg,#fff 70%,#ecfdf5); }
+.card-pessoa.analista    { border-left: 5px solid #6366f1; background: linear-gradient(135deg,#fff 70%,#eef2ff); }
+
+/* Faixa diagonal — particularidade mantida */
+.card-pessoa.idealizador::after { content:'IDEALIZADOR'; position:absolute; top:20px; right:-32px; background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; padding:6px 40px; font-size:10px; font-weight:800; letter-spacing:2px; transform:rotate(45deg); }
+.card-pessoa.designer::after    { content:'DESIGNER';    position:absolute; top:20px; right:-32px; background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; padding:6px 40px; font-size:10px; font-weight:800; letter-spacing:2px; transform:rotate(45deg); }
+.card-pessoa.orientadora::after { content:'ORIENTADORA'; position:absolute; top:20px; right:-32px; background:linear-gradient(135deg,#0891b2,#0e7490); color:#fff; padding:6px 40px; font-size:10px; font-weight:800; letter-spacing:2px; transform:rotate(45deg); }
+.card-pessoa.diretora::after    { content:'DIRETORA';    position:absolute; top:20px; right:-32px; background:linear-gradient(135deg,#dc2626,#b91c1c); color:#fff; padding:6px 40px; font-size:10px; font-weight:800; letter-spacing:2px; transform:rotate(45deg); }
+.card-pessoa.estrategica::after { content:'ESTRATÉGICA'; position:absolute; top:20px; right:-32px; background:linear-gradient(135deg,#059669,#047857); color:#fff; padding:6px 40px; font-size:10px; font-weight:800; letter-spacing:2px; transform:rotate(45deg); }
+.card-pessoa.analista::after    { content:'ANALISTA';    position:absolute; top:20px; right:-32px; background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; padding:6px 40px; font-size:10px; font-weight:800; letter-spacing:2px; transform:rotate(45deg); }
+
+/* Header do card: foto + nome + cargo + links */
+.card-header {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+.foto-pessoa {
+    width: 72px; height: 72px;
+    border-radius: 50%; overflow: hidden; flex-shrink: 0;
+    border: 3px solid white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    transition: transform 0.3s;
+}
+.card-pessoa:hover .foto-pessoa { transform: scale(1.06); }
+.foto-pessoa img { width: 100%; height: 100%; object-fit: cover; }
+
+.pessoa-header-info { flex: 1; min-width: 0; }
+.pessoa-header-info h3 { font-size: 16px; color: #0f172a; font-weight: 800; margin-bottom: 4px; line-height: 1.3; }
+
+.cargo-pessoa {
+    display: inline-block; padding: 3px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 700; margin-bottom: 10px; line-height: 1.4;
+}
+.cargo-idealizador { background: #fef3c7; color: #b45309; }
+.cargo-design      { background: #fdf4ff; color: #7c3aed; }
+.cargo-professora  { background: #ecfeff; color: #0e7490; }
+.cargo-diretora    { background: #fef2f2; color: #dc2626; }
+.cargo-estrategica { background: #ecfdf5; color: #059669; }
+.cargo-analista    { background: #eef2ff; color: #4f46e5; }
+
+.card-links { display: flex; gap: 8px; flex-wrap: wrap; }
+.contato-link {
+    background: #1e3a8a; color: white; padding: 6px 12px; border-radius: 8px;
+    text-decoration: none; font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; gap: 5px;
+    transition: all 0.25s;
+}
+.contato-link:hover { background: #0a1f44; transform: translateY(-1px); }
+.contato-link.outline   { background: white; color: #1e3a8a; border: 1.5px solid #1e3a8a; }
+.contato-link.outline:hover { background: #1e3a8a; color: white; }
+.contato-link.prof-link          { background: #0e7490; }
+.contato-link.prof-link:hover    { background: #155e75; }
+.contato-link.diretora-link      { background: #dc2626; }
+.contato-link.diretora-link:hover { background: #b91c1c; }
+.contato-link.estrategica-link   { background: #059669; }
+.contato-link.estrategica-link:hover { background: #047857; }
+.contato-link.analista-link      { background: #4f46e5; }
+.contato-link.analista-link:hover { background: #3730a3; }
+.contato-link.analista-outline   { background: white; color: #4f46e5; border: 1.5px solid #4f46e5; }
+.contato-link.analista-outline:hover { background: #4f46e5; color: white; }
+.contato-link.design-link        { background: #7c3aed; }
+.contato-link.design-link:hover  { background: #6d28d9; }
+.contato-link.design-outline     { background: white; color: #7c3aed; border: 1.5px solid #7c3aed; }
+.contato-link.design-outline:hover { background: #7c3aed; color: white; }
+
+/* Bio */
+.bio-pessoa { color: #334155; font-size: 13px; line-height: 1.7; font-weight: 500; margin-bottom: 14px; }
+
+/* Frase de impacto */
+.frases-impacto {
+    background: white;
+    border-left: 4px solid #1e3a8a;
+    padding: 12px 16px;
+    border-radius: 0 10px 10px 0;
+    margin-bottom: 14px;
+    font-style: italic;
+    color: #0f172a; font-size: 13px; line-height: 1.6; font-weight: 600;
+    border-top: 1px solid #f1f5f9;
+    border-right: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+}
+.frases-impacto i { color: #f59e0b; margin-right: 6px; }
+.frases-impacto.prof      { border-left-color: #0e7490; }
+.frases-impacto.diretora  { border-left-color: #dc2626; }
+.frases-impacto.estrategica { border-left-color: #059669; }
+.frases-impacto.analista  { border-left-color: #4f46e5; }
+
+/* Tags */
+.tags-formacao { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-formacao {
+    background: white; color: #475569;
+    padding: 5px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; gap: 5px;
+    border: 1px solid #cbd5e1;
+}
+.tag-formacao i { font-size: 14px; color: #1e3a8a; }
+.tag-design     i { color: #7c3aed; }
+.tag-prof       i { color: #0e7490; }
+.tag-diretora   i { color: #dc2626; }
+.tag-estrategica i { color: #059669; }
+.tag-analista   i { color: #4f46e5; }
+
+/* ==================== HISTÓRIA + PROJETO ==================== */
+.secao-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 36px;
+}
+
+.secao-historia {
+    background: white;
+    border-radius: 18px;
+    padding: 32px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+}
+.secao-historia h2 { color: #0f172a; font-size: 22px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; font-weight: 800; }
+.linha-tempo { position: relative; padding-left: 28px; border-left: 2px solid #cbd5e1; }
+.evento-timeline { position: relative; margin-bottom: 22px; }
+.evento-timeline:last-child { margin-bottom: 0; }
+.evento-timeline::before { content: ''; position: absolute; left: -36px; top: 4px; width: 12px; height: 12px; background: #1e3a8a; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 3px white; }
+.evento-timeline h4 { color: #0f172a; font-size: 15px; margin-bottom: 6px; font-weight: 800; }
+.evento-timeline p  { color: #475569; line-height: 1.7; font-size: 14px; font-weight: 500; }
+
+.secao-projeto {
+    background: white;
+    border-radius: 18px;
+    padding: 32px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+}
+.secao-projeto h2 { color: #0f172a; font-size: 22px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; font-weight: 800; }
+.grid-projeto { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.card-projeto {
+    background: #f8fafc; border-radius: 14px; padding: 18px;
+    border: 1px solid #e2e8f0; transition: all 0.25s;
+}
+.card-projeto:hover { border-color: #1e3a8a; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+.card-projeto .icone-projeto {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 12px; background: #eff6ff; color: #1e3a8a;
+}
+.card-projeto h4 { color: #0f172a; margin-bottom: 6px; font-size: 15px; font-weight: 800; }
+.card-projeto p  { color: #475569; font-size: 13px; line-height: 1.6; font-weight: 500; }
+
+/* ==================== IMPACTO ==================== */
+.secao-impacto {
+    background: linear-gradient(135deg, #0a1f44, #1e3a8a);
+    border-radius: 20px; padding: 44px;
+    color: white;
+    box-shadow: 0 16px 36px rgba(10,31,68,0.25);
+}
+.secao-impacto h2 { font-size: 26px; margin-bottom: 30px; text-align: center; font-weight: 800; }
+.impacto-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; text-align: center; }
+.impacto-item .numero-impacto { font-size: 40px; color: #fbbf24; margin-bottom: 8px; }
+.impacto-item p { opacity: 0.95; font-size: 15px; font-weight: 600; }
+
+/* ==================== RESPONSIVO ==================== */
+@media (max-width: 900px) {
+    .equipe-grid         { grid-template-columns: 1fr; }
+    .secao-bottom-grid   { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+    .secao-mvv           { grid-template-columns: 1fr; }
+    .impacto-grid        { grid-template-columns: repeat(2, 1fr); }
+    .grid-projeto        { grid-template-columns: 1fr; }
+    .banner-sobre h1     { font-size: 24px; }
+    .card-pessoa.idealizador::after,
+    .card-pessoa.designer::after,
+    .card-pessoa.orientadora::after,
+    .card-pessoa.diretora::after,
+    .card-pessoa.estrategica::after,
+    .card-pessoa.analista::after { font-size: 9px; padding: 5px 32px; right: -35px; top: 18px; }
+}
+@media (max-width: 480px) {
+    .impacto-grid        { grid-template-columns: 1fr; }
+    .banner-sobre        { padding: 32px 20px; }
+    .foto-pessoa         { width: 60px; height: 60px; }
+}

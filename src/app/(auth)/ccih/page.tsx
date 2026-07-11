@@ -1,208 +1,646 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
+import './ccih.css';
 
-interface PacienteInfectado {
-  id: string;
-  nome: string;
-  setor: string;
-  leito: string;
-  bacteria: string;
-  isolamento: boolean;
-  antibiotico: string;
-  diasAntibiotico: number;
+// ── tipos ──────────────────────────────────────────────
+type StatusIRAS = 'Ativa' | 'Tratada';
+type Gravidade  = 'Leve' | 'Moderada' | 'Grave' | 'Sepse' | 'Choque Séptico';
+type Tab = 'notificacao' | 'iras' | 'culturas' | 'higienemaos' | 'antimicrobianos' | 'relatorio';
+
+interface IRAS {
+  id: number; paciente: string; tipo: string; data: string;
+  local: string; gravidade: Gravidade; material: string;
+  microorganismo: string; antibiotico: string; obs: string;
+  status: StatusIRAS; dataNotificacao: string; notificadoPor: string;
+  dataTratamento?: string;
+}
+interface Cultura {
+  id: number; paciente: string; material: string; microorganismo: string;
+  antibiotico: string; sensibilidade: string; status: string; data: string;
+}
+interface HMObs {
+  id: number; data: string; setor: string; categoria: string;
+  momento: string; realizou: 'Sim' | 'Não';
+}
+interface ATM {
+  id: number; paciente: string; nome: string; dose: string;
+  via: string; frequencia: string; inicio: string;
+  duracao: string; indicacao: string; status: string;
 }
 
+// ── storage helpers (multi-tenancy) ────────────────────
+function loadStore<T>(prefix: string, k: string): T[] {
+  try { return JSON.parse(localStorage.getItem(`${prefix}_ccih_${k}`) || '[]'); } catch { return []; }
+}
+function saveStore<T>(prefix: string, k: string, data: T[]) {
+  localStorage.setItem(`${prefix}_ccih_${k}`, JSON.stringify(data));
+}
+
+const HOJE = () => new Date().toISOString().split('T')[0];
+const fmtData = (d: string) => { try { return new Date(d).toLocaleDateString('pt-BR'); } catch { return d; } };
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+// ── componente principal ───────────────────────────────
 export default function CcihPage() {
-  const [pacientes, setPacientes] = useState<PacienteInfectado[]>([
-    { id: '1', nome: 'João da Silva', setor: 'UTI Adulto', leito: 'Leito 03', bacteria: 'KPC (Klebsiella pneumoniae)', isolamento: true, antibiotico: 'Polimixina B', diasAntibiotico: 7 },
-    { id: '2', nome: 'Maria Oliveira', setor: 'Clínica Médica', leito: 'Quarto 201', bacteria: 'MRSA', isolamento: true, antibiotico: 'Vancomicina', diasAntibiotico: 12 },
-    { id: '3', nome: 'Carlos Souza', setor: 'UTI Pediátrica', leito: 'Leito 01', bacteria: 'Acinetobacter baumannii', isolamento: true, antibiotico: 'Meropenem', diasAntibiotico: 3 },
-  ]);
+  const { data: session } = useSession();
+  const nomeUsuario = (session?.user as any)?.name || session?.user?.name || 'Sistema';
+  const hospitalId = (session?.user as any)?.hospitalId || (session?.user as any)?.id || 'hospital_001';
 
-  const [loading, setLoading] = useState(false);
-  const [showNovo, setShowNovo] = useState(false);
+  // bound storage helpers (isola dados por hospital)
+  const load = <T,>(k: string) => loadStore<T>(hospitalId, k);
+  const save = <T,>(k: string, data: T[]) => saveStore<T>(hospitalId, k, data);
 
-  // Form
-  const [nome, setNome] = useState('');
-  const [setor, setSetor] = useState('UTI Adulto');
-  const [leito, setLeito] = useState('');
-  const [bacteria, setBacteria] = useState('');
-  const [isolamento, setIsolamento] = useState(true);
-  const [antibiotico, setAntibiotico] = useState('');
+  const [tab, setTab] = useState<Tab>('notificacao');
 
-  const registrarCaso = () => {
-    if (!nome || !bacteria) return;
-    const novo: PacienteInfectado = {
-      id: Math.random().toString(),
-      nome,
-      setor,
-      leito,
-      bacteria,
-      isolamento,
-      antibiotico,
-      diasAntibiotico: 1
+  // dados
+  const [iras,           setIras]           = useState<IRAS[]>([]);
+  const [culturas,       setCulturas]       = useState<Cultura[]>([]);
+  const [hmObs,          setHmObs]          = useState<HMObs[]>([]);
+  const [antimicrobianos,setAntimicrobianos] = useState<ATM[]>([]);
+
+  // form notificação
+  const [fPaciente, setFPaciente] = useState('');
+  const [fTipo,     setFTipo]     = useState('');
+  const [fData,     setFData]     = useState(HOJE());
+  const [fLocal,    setFLocal]    = useState('Hospitalar - UTI');
+  const [fGrav,     setFGrav]     = useState<Gravidade>('Moderada');
+  const [fMaterial, setFMaterial] = useState('Não coletado');
+  const [fMicro,    setFMicro]    = useState('');
+  const [fAtb,      setFAtb]      = useState('');
+  const [fObs,      setFObs]      = useState('');
+
+  // form higiene mãos
+  const [hmSetor,     setHmSetor]     = useState('UTI');
+  const [hmCategoria, setHmCategoria] = useState('Médico');
+  const [hmMomento,   setHmMomento]   = useState('Antes do contato com paciente');
+  const [hmRealizou,  setHmRealizou]  = useState<'Sim'|'Não'>('Sim');
+
+  // form ATM
+  const [atmPaciente,   setAtmPaciente]   = useState('');
+  const [atmNome,       setAtmNome]       = useState('');
+  const [atmDose,       setAtmDose]       = useState('');
+  const [atmVia,        setAtmVia]        = useState('IV');
+  const [atmFreq,       setAtmFreq]       = useState('');
+  const [atmInicio,     setAtmInicio]     = useState(HOJE());
+  const [atmDuracao,    setAtmDuracao]    = useState('7');
+  const [atmIndicacao,  setAtmIndicacao]  = useState('Empírica');
+
+  // filtros IRAS
+  const [buscarIRAS,     setBuscarIRAS]     = useState('');
+  const [filtroGravidade,setFiltroGravidade] = useState('todos');
+
+  // relatório
+  const [relMes, setRelMes] = useState(new Date().getMonth() + 1);
+  const [relAno, setRelAno] = useState(new Date().getFullYear());
+
+  // feedback
+  const [aviso, setAviso] = useState('');
+  const [irasDetalhe, setIrasDetalhe] = useState<IRAS | null>(null);
+
+  // pacientes para selects (via API)
+  const [pacientes, setPacientes] = useState<{id:string; nome:string}[]>([]);
+
+  useEffect(() => {
+    setIras(loadStore<IRAS>(hospitalId, 'iras'));
+    setCulturas(loadStore<Cultura>(hospitalId, 'culturas'));
+    setHmObs(loadStore<HMObs>(hospitalId, 'hm'));
+    setAntimicrobianos(loadStore<ATM>(hospitalId, 'atm'));
+    // buscar pacientes
+    fetch('/api/pacientes?limit=200')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.pacientes) setPacientes(d.pacientes.map((p:any) => ({ id: p.id, nome: p.nome }))); })
+      .catch(() => {});
+  }, [hospitalId]);
+
+  const msg = (texto: string) => { setAviso(texto); setTimeout(() => setAviso(''), 3000); };
+
+  // ── indicadores ─────────────────────────────────────
+  const irasAtivas   = iras.filter(i => i.status === 'Ativa').length;
+  const irasTratadas = iras.filter(i => i.status === 'Tratada').length;
+  const totalHM      = hmObs.length;
+  const simHM        = hmObs.filter(o => o.realizou === 'Sim').length;
+  const taxaHM       = totalHM > 0 ? Math.round((simHM / totalHM) * 100) : 0;
+  const atmEmUso     = antimicrobianos.filter(a => a.status === 'Em uso').length;
+  const taxaInfec    = pacientes.length > 0 ? Math.round((irasAtivas / pacientes.length) * 100) : 0;
+
+  // ── notificar IRAS ───────────────────────────────────
+  const notificarIRAS = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fPaciente || !fTipo) { msg('Preencha paciente e tipo!'); return; }
+    const nova: IRAS = {
+      id: Date.now(), paciente: fPaciente, tipo: fTipo, data: fData,
+      local: fLocal, gravidade: fGrav, material: fMaterial,
+      microorganismo: fMicro, antibiotico: fAtb, obs: fObs,
+      status: 'Ativa', dataNotificacao: new Date().toISOString(), notificadoPor: nomeUsuario,
     };
-    setPacientes([...pacientes, novo]);
-    setNome(''); setBacteria(''); setAntibiotico(''); setLeito('');
-    setShowNovo(false);
+    const novasIras = [...iras, nova];
+    save('iras', novasIras); setIras(novasIras);
+
+    if (fMaterial !== 'Não coletado') {
+      const novaCultura: Cultura = {
+        id: Date.now() + 1, paciente: fPaciente, material: fMaterial,
+        microorganismo: fMicro, antibiotico: fAtb,
+        sensibilidade: 'Aguardando', status: 'Pendente', data: fData,
+      };
+      const novasCulturas = [...culturas, novaCultura];
+      save('culturas', novasCulturas); setCulturas(novasCulturas);
+    }
+    setFPaciente(''); setFTipo(''); setFMicro(''); setFAtb(''); setFObs(''); setFData(HOJE());
+    msg('IRAS notificada com sucesso!');
+    setTab('iras');
   };
 
-  const metricas = {
-    totalCasos: pacientes.length,
-    emIsolamento: pacientes.filter(p => p.isolamento).length,
-    usoProlongado: pacientes.filter(p => p.diasAntibiotico > 10).length
+  // ── tratar IRAS ──────────────────────────────────────
+  const tratarIRAS = (id: number) => {
+    const lista = iras.map(i => i.id === id ? { ...i, status: 'Tratada' as StatusIRAS, dataTratamento: new Date().toISOString() } : i);
+    save('iras', lista); setIras(lista); msg('IRAS marcada como tratada!');
   };
+
+  // ── higiene mãos ─────────────────────────────────────
+  const registrarHM = (e: React.FormEvent) => {
+    e.preventDefault();
+    const nova: HMObs = { id: Date.now(), data: new Date().toISOString(), setor: hmSetor, categoria: hmCategoria, momento: hmMomento, realizou: hmRealizou };
+    const lista = [...hmObs, nova];
+    save('hm', lista); setHmObs(lista); msg('Observação registrada!');
+  };
+
+  // ── ATM ──────────────────────────────────────────────
+  const prescreverATM = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!atmPaciente || !atmNome) { msg('Preencha paciente e antimicrobiano!'); return; }
+    const novo: ATM = { id: Date.now(), paciente: atmPaciente, nome: atmNome, dose: atmDose, via: atmVia, frequencia: atmFreq, inicio: atmInicio, duracao: atmDuracao, indicacao: atmIndicacao, status: 'Em uso' };
+    const lista = [...antimicrobianos, novo];
+    save('atm', lista); setAntimicrobianos(lista);
+    setAtmNome(''); setAtmDose(''); setAtmFreq('');
+    msg('Antimicrobiano prescrito!');
+  };
+
+  // ── IRAS filtradas ───────────────────────────────────
+  const irasFiltradas = useMemo(() => {
+    let l = [...iras].reverse();
+    if (filtroGravidade !== 'todos') l = l.filter(i => i.gravidade === filtroGravidade);
+    if (buscarIRAS) { const q = buscarIRAS.toLowerCase(); l = l.filter(i => i.paciente.toLowerCase().includes(q) || i.tipo.toLowerCase().includes(q) || i.microorganismo.toLowerCase().includes(q)); }
+    return l;
+  }, [iras, filtroGravidade, buscarIRAS]);
+
+  // ── relatório ────────────────────────────────────────
+  const irasMes     = iras.filter(i => { const d = new Date(i.data); return d.getMonth() + 1 === relMes && d.getFullYear() === relAno; });
+  const culturasMes = culturas.filter(c => { const d = new Date(c.data); return d.getMonth() + 1 === relMes && d.getFullYear() === relAno; });
+  const atmMes      = antimicrobianos.filter(a => { const d = new Date(a.inicio); return d.getMonth() + 1 === relMes && d.getFullYear() === relAno; });
+  const tiposIRAS   = [...new Set(irasMes.map(i => i.tipo))];
+
+  const badgeGrav = (g: string) => g === 'Choque Séptico' || g === 'Sepse' ? 'badge-danger' : g === 'Grave' ? 'badge-warning' : 'badge-info';
+  const badgeAtm  = (ind: string) => ind === 'Empírica' ? 'badge-warning' : ind === 'Profilática' ? 'badge-info' : 'badge-success';
+  const badgeSens = (s: string) => s === 'Sensível' ? 'badge-success' : s === 'Resistente' ? 'badge-danger' : 'badge-warning';
+
+  const TABS: { key: Tab; label: string; icon: string }[] = [
+    { key: 'notificacao',    label: 'Notificação',      icon: 'la-plus-circle' },
+    { key: 'iras',           label: 'IRAS Ativas',      icon: 'la-biohazard' },
+    { key: 'culturas',       label: 'Culturas',         icon: 'la-flask' },
+    { key: 'higienemaos',    label: 'Higiene de Mãos',  icon: 'la-hand-sparkles' },
+    { key: 'antimicrobianos',label: 'Antimicrobianos',  icon: 'la-capsules' },
+    { key: 'relatorio',      label: 'Relatório',        icon: 'la-chart-bar' },
+  ];
 
   return (
-    <div>
-      <div className="page-header">
-        <div className="header-left">
-          <h2><i className="las la-microscope"></i> CCIH</h2>
-          <p>Comissão de Controle de Infecção Hospitalar e Vigilância</p>
+    <div className="ccih-container">
+
+      {/* BANNER */}
+      <div className="banner-ccih">
+        <div>
+          <h1><i className="las la-shield-virus"></i> CCIH — Controle de Infecção Hospitalar</h1>
+          <p>Monitoramento, notificação e prevenção de Infecções Relacionadas à Assistência à Saúde (IRAS)</p>
         </div>
-        <div className="header-actions">
-          <button className="btn btn-primary"  onClick={() => setShowNovo(!showNovo)}>
-            <i className="las la-exclamation-triangle"></i> Reportar Infecção
-          </button>
-        </div>
+        <button className="btn btn-success" onClick={() => setTab('notificacao')}>
+          <i className="las la-plus-circle"></i> Notificar IRAS
+        </button>
       </div>
 
-      {showNovo && (
-        <div className="card" style={{ marginBottom: '20px', padding: '20px', background: '#fef2f2', border: '1px solid #fecaca' }}>
-          <h3 style={{ marginBottom: '15px', fontSize: '16px', color: '#991b1b' }}>Novo Caso Epidemiológico</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
-            <div style={{ gridColumn: 'span 2' }}>
-              <label style={{ display: 'block', fontSize: '13px', color: '#7f1d1d', marginBottom: '5px' }}>Nome do Paciente</label>
-              <input type="text" className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #fca5a5' }} value={nome} onChange={(e) => setNome(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', color: '#7f1d1d', marginBottom: '5px' }}>Bactéria / Patógeno</label>
-              <input type="text" className="input-field" placeholder="Ex: KPC, VRE, MRSA" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #fca5a5' }} value={bacteria} onChange={(e) => setBacteria(e.target.value)} />
-            </div>
-            
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', color: '#7f1d1d', marginBottom: '5px' }}>Setor</label>
-              <select className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #fca5a5' }} value={setor} onChange={(e) => setSetor(e.target.value)}>
-                <option value="UTI Adulto">UTI Adulto</option>
-                <option value="UTI Pediátrica">UTI Pediátrica</option>
-                <option value="Clínica Médica">Clínica Médica</option>
-                <option value="Centro Cirúrgico">Centro Cirúrgico</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', color: '#7f1d1d', marginBottom: '5px' }}>Leito</label>
-              <input type="text" className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #fca5a5' }} value={leito} onChange={(e) => setLeito(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', color: '#7f1d1d', marginBottom: '5px' }}>Antibiótico Iniciado</label>
-              <input type="text" className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #fca5a5' }} value={antibiotico} onChange={(e) => setAntibiotico(e.target.value)} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#991b1b', fontWeight: 600 }}>
-              <input type="checkbox" checked={isolamento} onChange={(e) => setIsolamento(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-              Paciente em Isolamento de Contato
-            </label>
-            <button className="btn btn-primary" style={{ background: '#b91c1c', padding: '10px 20px' }} onClick={registrarCaso}>
-              Registrar no CCIH
-            </button>
-          </div>
+      {/* AVISO */}
+      {aviso && (
+        <div style={{ background:'#dcfce7', border:'1px solid #86efac', borderRadius:12, padding:'12px 18px', marginBottom:20, color:'#15803d', fontWeight:700, display:'flex', alignItems:'center', gap:8 }}>
+          <i className="las la-check-circle"></i> {aviso}
         </div>
       )}
 
-      {/* Métricas de Alerta */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
-        <div className="card-contador" style={{ borderLeft: '4px solid #ef4444' }}>
-          <div className="contador-info">
-            <span className="titulo">CASOS ATIVOS</span>
-            <div className="valor" style={{ color: '#ef4444' }}>{metricas.totalCasos}</div>
-          </div>
-          <div className="contador-icone" style={{ background: '#fee2e2', color: '#ef4444' }}>
-            <i className="las la-bug"></i>
-          </div>
+      {/* INDICADORES */}
+      <div className="indicadores-grid">
+        <div className="ind-card alerta">
+          <div className="ind-icon"><i className="las la-biohazard"></i></div>
+          <div className="ind-valor">{irasAtivas}</div>
+          <div className="ind-label">IRAS Ativas</div>
         </div>
-        <div className="card-contador" style={{ borderLeft: '4px solid #f59e0b' }}>
-          <div className="contador-info">
-            <span className="titulo">EM ISOLAMENTO</span>
-            <div className="valor" style={{ color: '#f59e0b' }}>{metricas.emIsolamento}</div>
-          </div>
-          <div className="contador-icone" style={{ background: '#fef3c7', color: '#f59e0b' }}>
-            <i className="las la-user-lock"></i>
-          </div>
+        <div className="ind-card">
+          <div className="ind-icon"><i className="las la-flask"></i></div>
+          <div className="ind-valor">{culturas.length}</div>
+          <div className="ind-label">Culturas Solic.</div>
         </div>
-        <div className="card-contador" style={{ borderLeft: '4px solid #8b5cf6' }}>
-          <div className="contador-info">
-            <span className="titulo">ATB PROLONGADO (&gt;10d)</span>
-            <div className="valor" style={{ color: '#8b5cf6' }}>{metricas.usoProlongado}</div>
-          </div>
-          <div className="contador-icone" style={{ background: '#ede9fe', color: '#8b5cf6' }}>
-            <i className="las la-prescription-bottle-alt"></i>
-          </div>
+        <div className="ind-card">
+          <div className="ind-icon"><i className="las la-percent"></i></div>
+          <div className="ind-valor">{taxaInfec}%</div>
+          <div className="ind-label">Taxa de Infecção</div>
+        </div>
+        <div className="ind-card">
+          <div className="ind-icon"><i className="las la-hand-sparkles"></i></div>
+          <div className="ind-valor">{totalHM > 0 ? `${taxaHM}%` : 'N/A'}</div>
+          <div className="ind-label">Adesão Hig. Mãos</div>
+        </div>
+        <div className="ind-card">
+          <div className="ind-icon"><i className="las la-syringe"></i></div>
+          <div className="ind-valor">{atmEmUso}</div>
+          <div className="ind-label">Antimicrobianos</div>
+        </div>
+        <div className="ind-card bom">
+          <div className="ind-icon"><i className="las la-check-circle"></i></div>
+          <div className="ind-valor">{irasTratadas}</div>
+          <div className="ind-label">IRAS Tratadas</div>
         </div>
       </div>
 
-      <div className="card">
-        <h3 style={{ marginBottom: '20px', fontSize: '18px', color: '#1e293b' }}>Monitoramento de Pacientes</h3>
-        
-        {loading ? (
-          <p>Carregando mapa epidemiológico...</p>
-        ) : pacientes.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-            <i className="las la-shield-virus" style={{ fontSize: '48px', marginBottom: '10px', color: '#10b981' }}></i>
-            <p>Nenhum caso de infecção hospitalar ativo.</p>
+      {/* TABS */}
+      <div className="tabs-ccih">
+        {TABS.map(t => (
+          <button key={t.key} className={`tab-btn ${tab === t.key ? 'ativo' : ''}`} onClick={() => setTab(t.key)}>
+            <i className={`las ${t.icon}`}></i> {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── ABA: NOTIFICAÇÃO ── */}
+      {tab === 'notificacao' && (
+        <div className="form-panel">
+          <h3><i className="las la-biohazard"></i> Notificar Nova IRAS</h3>
+          <form onSubmit={notificarIRAS}>
+            <div className="form-grid">
+              <div className="form-grupo">
+                <label>Paciente *</label>
+                <select value={fPaciente} onChange={e => setFPaciente(e.target.value)} required>
+                  <option value="">Selecione...</option>
+                  {pacientes.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Tipo de IRAS *</label>
+                <select value={fTipo} onChange={e => setFTipo(e.target.value)} required>
+                  <option value="">Selecione...</option>
+                  <option>Pneumonia Associada à Ventilação Mecânica (PAV)</option>
+                  <option>Infecção do Trato Urinário (ITU)</option>
+                  <option>Infecção de Corrente Sanguínea (ICS)</option>
+                  <option>Infecção de Sítio Cirúrgico (ISC)</option>
+                  <option>Infecção por Clostridium difficile</option>
+                  <option>Infecção por MRSA</option>
+                  <option>Infecção por VRE</option>
+                  <option>Infecção por KPC</option>
+                  <option>Infecção por Acinetobacter</option>
+                  <option>Infecção por Pseudomonas</option>
+                  <option>Sepse</option>
+                  <option>Outra IRAS</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Data do Diagnóstico *</label>
+                <input type="date" value={fData} onChange={e => setFData(e.target.value)} required />
+              </div>
+              <div className="form-grupo">
+                <label>Local de Aquisição</label>
+                <select value={fLocal} onChange={e => setFLocal(e.target.value)}>
+                  <option>Hospitalar - UTI</option>
+                  <option>Hospitalar - Enfermaria</option>
+                  <option>Hospitalar - Centro Cirúrgico</option>
+                  <option>Comunitária</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Gravidade</label>
+                <select value={fGrav} onChange={e => setFGrav(e.target.value as Gravidade)}>
+                  <option>Leve</option><option>Moderada</option><option>Grave</option><option>Sepse</option><option>Choque Séptico</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Material Biológico Coletado</label>
+                <select value={fMaterial} onChange={e => setFMaterial(e.target.value)}>
+                  <option>Não coletado</option>
+                  <option>Sangue (Hemocultura)</option>
+                  <option>Urina (Urocultura)</option>
+                  <option>Secreção Traqueal</option>
+                  <option>Ponta de Cateter</option>
+                  <option>Líquor</option>
+                  <option>Outro</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Microrganismo Identificado</label>
+                <input type="text" value={fMicro} onChange={e => setFMicro(e.target.value)} placeholder="Ex: Staphylococcus aureus MRSA" />
+              </div>
+              <div className="form-grupo">
+                <label>Antibiótico Iniciado</label>
+                <input type="text" value={fAtb} onChange={e => setFAtb(e.target.value)} placeholder="Ex: Vancomicina 1g IV 12/12h" />
+              </div>
+              <div className="form-grupo full">
+                <label>Observações</label>
+                <textarea rows={2} value={fObs} onChange={e => setFObs(e.target.value)} />
+              </div>
+            </div>
+            <button type="submit" className="btn btn-success" style={{ width:'100%', marginTop:15, justifyContent:'center', padding:14 }}>
+              <i className="las la-save"></i> Notificar IRAS
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* ── ABA: IRAS ATIVAS ── */}
+      {tab === 'iras' && (
+        <>
+          <div className="search-box">
+            <input type="text" value={buscarIRAS} onChange={e => setBuscarIRAS(e.target.value)} placeholder="Buscar por paciente, tipo ou microrganismo..." />
+            <select value={filtroGravidade} onChange={e => setFiltroGravidade(e.target.value)}>
+              <option value="todos">Todas Gravidades</option>
+              <option>Leve</option><option>Moderada</option><option>Grave</option><option>Sepse</option><option>Choque Séptico</option>
+            </select>
           </div>
-        ) : (
-          <div className="tabela-wrapper">
-            <table className="tabela">
-              <thead>
-                <tr>
-                  <th>Paciente / Local</th>
-                  <th>Patógeno (Bactéria)</th>
-                  <th>Antibioticoterapia</th>
-                  <th>Isolamento</th>
-                  <th>Ações</th>
+          <div className="iras-grid">
+            {irasFiltradas.length === 0 ? (
+              <p style={{ textAlign:'center', color:'#94a3b8', padding:30, gridColumn:'1/-1' }}>Nenhuma IRAS encontrada</p>
+            ) : irasFiltradas.map(i => (
+              <div key={i.id} className={`ira-card ${i.status === 'Ativa' ? 'ativo' : 'tratado'}`}>
+                <div className="ira-header">
+                  <span className="ira-paciente">{i.paciente}</span>
+                  <span className={`badge ${badgeGrav(i.gravidade)}`}>{i.gravidade}</span>
+                </div>
+                <p className="ira-info"><i className="las la-biohazard"></i> <strong>{i.tipo}</strong></p>
+                <p className="ira-info"><i className="las la-map-marker"></i> {i.local} &nbsp;|&nbsp; <i className="las la-calendar"></i> {fmtData(i.data)}</p>
+                {i.microorganismo && <p className="ira-info"><i className="las la-microscope"></i> {i.microorganismo}</p>}
+                {i.antibiotico    && <p className="ira-info"><i className="las la-capsules"></i> {i.antibiotico}</p>}
+                <div className="ira-acoes">
+                  <span className={`badge ${i.status === 'Ativa' ? 'badge-danger' : 'badge-success'}`}>{i.status}</span>
+                  {i.status === 'Ativa' && (
+                    <button className="btn btn-sm btn-success" onClick={() => tratarIRAS(i.id)}>
+                      <i className="las la-check"></i> Tratar
+                    </button>
+                  )}
+                  <button className="btn btn-sm btn-info" onClick={() => setIrasDetalhe(i)}>
+                    <i className="las la-eye"></i>
+                  </button>
+                  <span style={{ fontSize:12, color:'#94a3b8', marginLeft:'auto' }}>Por: {i.notificadoPor}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ── ABA: CULTURAS ── */}
+      {tab === 'culturas' && (
+        <div style={{ background:'white', borderRadius:20, overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)' }}>
+          <table className="tabela-ccih">
+            <thead>
+              <tr><th>Data</th><th>Paciente</th><th>Material</th><th>Microrganismo</th><th>Antibiótico</th><th>Sensibilidade</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {culturas.length === 0 ? (
+                <tr><td colSpan={7} style={{ textAlign:'center', padding:30, color:'#94a3b8' }}>Nenhuma cultura registrada</td></tr>
+              ) : [...culturas].reverse().map(c => (
+                <tr key={c.id}>
+                  <td>{fmtData(c.data)}</td>
+                  <td>{c.paciente}</td>
+                  <td>{c.material}</td>
+                  <td>{c.microorganismo || '-'}</td>
+                  <td>{c.antibiotico || '-'}</td>
+                  <td><span className={`badge ${badgeSens(c.sensibilidade)}`}>{c.sensibilidade}</span></td>
+                  <td><span className={`badge ${c.status === 'Concluído' ? 'badge-success' : 'badge-purple'}`}>{c.status}</span></td>
                 </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── ABA: HIGIENE DE MÃOS ── */}
+      {tab === 'higienemaos' && (
+        <>
+          <div className="form-panel">
+            <h3><i className="las la-hand-sparkles"></i> Auditoria de Higiene de Mãos</h3>
+            <form onSubmit={registrarHM}>
+              <div className="form-grid">
+                <div className="form-grupo">
+                  <label>Setor *</label>
+                  <select value={hmSetor} onChange={e => setHmSetor(e.target.value)}>
+                    <option>UTI</option><option>Enfermaria</option><option>Emergência</option><option>Centro Cirúrgico</option><option>Ambulatório</option>
+                  </select>
+                </div>
+                <div className="form-grupo">
+                  <label>Categoria Profissional</label>
+                  <select value={hmCategoria} onChange={e => setHmCategoria(e.target.value)}>
+                    <option>Médico</option><option>Enfermeiro</option><option>Técnico de Enfermagem</option><option>Fisioterapeuta</option><option>Outro</option>
+                  </select>
+                </div>
+                <div className="form-grupo">
+                  <label>Momento da Observação</label>
+                  <select value={hmMomento} onChange={e => setHmMomento(e.target.value)}>
+                    <option>Antes do contato com paciente</option>
+                    <option>Antes de procedimento asséptico</option>
+                    <option>Após risco de exposição a fluidos</option>
+                    <option>Após contato com paciente</option>
+                    <option>Após contato com superfícies próximas</option>
+                  </select>
+                </div>
+                <div className="form-grupo">
+                  <label>Realizou Higiene?</label>
+                  <select value={hmRealizou} onChange={e => setHmRealizou(e.target.value as 'Sim'|'Não')}>
+                    <option value="Sim">Sim</option>
+                    <option value="Não">Não</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ width:'100%', marginTop:15, justifyContent:'center', padding:14 }}>
+                <i className="las la-save"></i> Registrar Observação
+              </button>
+            </form>
+          </div>
+          {/* Resumo de adesão */}
+          <div style={{ background:'white', borderRadius:16, padding:28, textAlign:'center', boxShadow:'0 2px 10px rgba(0,0,0,0.06)' }}>
+            <h4 style={{ color:'#0a1f44', marginBottom:12 }}>Resumo de Adesão — OMS 5 Momentos</h4>
+            <div style={{ fontSize:56, fontWeight:800, color: taxaHM >= 70 ? '#16a34a' : '#dc2626' }}>{totalHM > 0 ? `${taxaHM}%` : 'N/A'}</div>
+            <p style={{ color:'#64748b', marginTop:8 }}>{simHM} de {totalHM} observações com higiene adequada</p>
+            <small style={{ color:'#94a3b8' }}>Meta: ≥ 70% | OMS</small>
+          </div>
+        </>
+      )}
+
+      {/* ── ABA: ANTIMICROBIANOS ── */}
+      {tab === 'antimicrobianos' && (
+        <>
+          <div className="form-panel">
+            <h3><i className="las la-capsules"></i> Controle de Antimicrobianos</h3>
+            <form onSubmit={prescreverATM}>
+              <div className="form-grid">
+                <div className="form-grupo">
+                  <label>Paciente *</label>
+                  <select value={atmPaciente} onChange={e => setAtmPaciente(e.target.value)} required>
+                    <option value="">Selecione...</option>
+                    {pacientes.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+                  </select>
+                </div>
+                <div className="form-grupo">
+                  <label>Antimicrobiano *</label>
+                  <input type="text" value={atmNome} onChange={e => setAtmNome(e.target.value)} placeholder="Nome do antimicrobiano" required />
+                </div>
+                <div className="form-grupo">
+                  <label>Dose</label>
+                  <input type="text" value={atmDose} onChange={e => setAtmDose(e.target.value)} placeholder="Ex: 1g" />
+                </div>
+                <div className="form-grupo">
+                  <label>Via</label>
+                  <select value={atmVia} onChange={e => setAtmVia(e.target.value)}>
+                    <option>IV</option><option>IM</option><option>Oral</option>
+                  </select>
+                </div>
+                <div className="form-grupo">
+                  <label>Frequência</label>
+                  <input type="text" value={atmFreq} onChange={e => setAtmFreq(e.target.value)} placeholder="Ex: 12/12h" />
+                </div>
+                <div className="form-grupo">
+                  <label>Data Início</label>
+                  <input type="date" value={atmInicio} onChange={e => setAtmInicio(e.target.value)} />
+                </div>
+                <div className="form-grupo">
+                  <label>Duração Prevista (dias)</label>
+                  <input type="number" value={atmDuracao} onChange={e => setAtmDuracao(e.target.value)} min="1" />
+                </div>
+                <div className="form-grupo">
+                  <label>Indicação</label>
+                  <select value={atmIndicacao} onChange={e => setAtmIndicacao(e.target.value)}>
+                    <option>Empírica</option><option>Profilática</option><option>Terapêutica (com cultura)</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" className="btn btn-warning" style={{ width:'100%', marginTop:15, justifyContent:'center', padding:14 }}>
+                <i className="las la-save"></i> Prescrever Antimicrobiano
+              </button>
+            </form>
+          </div>
+          <div style={{ background:'white', borderRadius:20, overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)' }}>
+            <table className="tabela-ccih">
+              <thead>
+                <tr><th>Paciente</th><th>Antimicrobiano</th><th>Dose/Via</th><th>Início</th><th>Duração</th><th>Indicação</th><th>Status</th></tr>
               </thead>
               <tbody>
-                {pacientes.map(p => (
-                  <tr key={p.id} style={{ background: p.isolamento ? '#fef2f2' : 'white' }}>
-                    <td>
-                      <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '15px' }}>{p.nome}</div>
-                      <div style={{ fontSize: '12px', color: '#64748b' }}><i className="las la-map-marker"></i> {p.setor} - {p.leito}</div>
-                    </td>
-                    <td>
-                      <span style={{ fontWeight: 700, color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <i className="las la-bug"></i> {p.bacteria}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{p.antibiotico}</div>
-                      <div style={{ fontSize: '12px', color: p.diasAntibiotico > 10 ? '#ef4444' : '#64748b', fontWeight: p.diasAntibiotico > 10 ? 700 : 400 }}>
-                        {p.diasAntibiotico} dias de uso
-                      </div>
-                    </td>
-                    <td>
-                      {p.isolamento ? (
-                        <span className="status-badge bg-orange-100 text-orange-800 border border-orange-200">
-                          <i className="las la-exclamation-circle"></i> Isolamento
-                        </span>
-                      ) : (
-                        <span className="status-badge bg-gray-100 text-gray-600">Sem Isolamento</span>
-                      )}
-                    </td>
-                    <td>
-                      <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '12px', background: 'transparent', color: '#10b981', border: '1px solid #10b981' }} onClick={() => setPacientes(pacientes.filter(x => x.id !== p.id))}>
-                        <i className="las la-check-circle"></i> Alta/Cura
-                      </button>
-                    </td>
+                {antimicrobianos.length === 0 ? (
+                  <tr><td colSpan={7} style={{ textAlign:'center', padding:30, color:'#94a3b8' }}>Nenhum antimicrobiano prescrito</td></tr>
+                ) : [...antimicrobianos].reverse().map(a => (
+                  <tr key={a.id}>
+                    <td>{a.paciente}</td>
+                    <td><strong>{a.nome}</strong><br /><small style={{ color:'#94a3b8' }}>{a.frequencia}</small></td>
+                    <td>{a.dose} {a.via}</td>
+                    <td>{fmtData(a.inicio)}</td>
+                    <td>{a.duracao} dias</td>
+                    <td><span className={`badge ${badgeAtm(a.indicacao)}`}>{a.indicacao}</span></td>
+                    <td><span className="badge badge-info">{a.status}</span></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </>
+      )}
+
+      {/* ── ABA: RELATÓRIO ── */}
+      {tab === 'relatorio' && (
+        <>
+          <div className="form-panel">
+            <h3><i className="las la-chart-bar"></i> Relatório Mensal CCIH</h3>
+            <div className="form-grid">
+              <div className="form-grupo">
+                <label>Mês</label>
+                <select value={relMes} onChange={e => setRelMes(Number(e.target.value))}>
+                  {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Ano</label>
+                <input type="number" value={relAno} onChange={e => setRelAno(Number(e.target.value))} min={2020} max={2030} />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background:'white', borderRadius:20, padding:30, boxShadow:'0 4px 15px rgba(0,0,0,0.06)' }}>
+            <h3 style={{ color:'#0a1f44', marginBottom:20 }}>
+              <i className="las la-chart-bar"></i> Relatório CCIH — {MESES[relMes - 1]} de {relAno}
+            </h3>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:15, marginBottom:24 }}>
+              {[
+                { label:'IRAS Notificadas', val: irasMes.length,                                                         cor:'#dc2626' },
+                { label:'IRAS Ativas',      val: irasMes.filter(i=>i.status==='Ativa').length,                           cor:'#f59e0b' },
+                { label:'IRAS Tratadas',    val: irasMes.filter(i=>i.status==='Tratada').length,                         cor:'#16a34a' },
+                { label:'Sepse/Choque',     val: irasMes.filter(i=>i.gravidade==='Sepse'||i.gravidade==='Choque Séptico').length, cor:'#b91c1c' },
+                { label:'Culturas',         val: culturasMes.length,                                                     cor:'#0a1f44' },
+                { label:'Antimicrobianos',  val: atmMes.length,                                                          cor:'#7c3aed' },
+              ].map(c => (
+                <div key={c.label} style={{ textAlign:'center', padding:16, background:'#f8fafc', borderRadius:12 }}>
+                  <div style={{ fontSize:28, fontWeight:800, color:c.cor }}>{c.val}</div>
+                  <div style={{ fontSize:12, color:'#64748b', marginTop:4 }}>{c.label}</div>
+                </div>
+              ))}
+            </div>
+            {tiposIRAS.length > 0 && (
+              <div>
+                <h4 style={{ color:'#0a1f44', marginBottom:12 }}>IRAS por Tipo:</h4>
+                {tiposIRAS.map(tipo => (
+                  <p key={tipo} style={{ padding:'6px 0', borderBottom:'1px solid #f1f5f9', fontSize:14, color:'#334155' }}>
+                    • <strong>{tipo}:</strong> {irasMes.filter(i => i.tipo === tipo).length} caso(s)
+                  </p>
+                ))}
+              </div>
+            )}
+            <button className="btn btn-warning" onClick={() => window.print()} style={{ marginTop:20 }}>
+              <i className="las la-print"></i> Imprimir
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ── MODAL: DETALHES IRAS ── */}
+      {irasDetalhe && (
+        <div
+          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={() => setIrasDetalhe(null)}
+        >
+          <div
+            style={{ background:'white', borderRadius:20, padding:30, maxWidth:520, width:'100%', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', position:'relative', maxHeight:'90vh', overflowY:'auto' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button onClick={() => setIrasDetalhe(null)} style={{ position:'absolute', top:14, right:14, background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#94a3b8' }}>
+              <i className="las la-times"></i>
+            </button>
+            <h3 style={{ color:'#0a1f44', marginBottom:18, display:'flex', alignItems:'center', gap:10 }}>
+              <i className="las la-biohazard"></i> Detalhes da IRAS
+            </h3>
+            <div style={{ display:'grid', gap:12 }}>
+              {[
+                { label: 'Paciente',       valor: irasDetalhe.paciente },
+                { label: 'Tipo',            valor: irasDetalhe.tipo },
+                { label: 'Data',            valor: fmtData(irasDetalhe.data) },
+                { label: 'Local',           valor: irasDetalhe.local },
+                { label: 'Gravidade',       valor: irasDetalhe.gravidade },
+                { label: 'Material',        valor: irasDetalhe.material },
+                { label: 'Microrganismo',   valor: irasDetalhe.microorganismo || 'N/I' },
+                { label: 'Antibiótico',     valor: irasDetalhe.antibiotico || 'N/I' },
+                { label: 'Status',          valor: irasDetalhe.status },
+                { label: 'Notificado por',  valor: irasDetalhe.notificadoPor },
+                { label: 'Observações',     valor: irasDetalhe.obs || '—' },
+              ].map(r => (
+                <div key={r.label} style={{ display:'flex', gap:10, borderBottom:'1px solid #f1f5f9', paddingBottom:8 }}>
+                  <span style={{ fontWeight:700, fontSize:13, color:'#475569', minWidth:120 }}>{r.label}:</span>
+                  <span style={{ fontSize:13, color:'#334155' }}>{r.valor}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

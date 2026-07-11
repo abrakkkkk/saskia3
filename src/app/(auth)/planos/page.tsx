@@ -1,161 +1,270 @@
 'use client';
-
-import { useState, useEffect } from 'react';
-
-interface Operadora {
-  id: string;
-  nome: string;
-  codigoAns: string;
-  vigencia: string;
-  status: string;
-  teto: string;
-}
+import './planos.css';
 
 export default function PlanosPage() {
-  const [operadoras, setOperadoras] = useState<Operadora[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalAberto, setModalAberto] = useState(false);
-  const [form, setForm] = useState({ nome: '', codigoAns: '', vigencia: '', status: 'ATIVO', teto: '' });
-
-  const fetchOperadoras = () => {
-    fetch('/api/planos')
-      .then(res => res.json())
-      .then(data => { setOperadoras(data); setLoading(false); })
-      .catch(console.error);
-  };
-
-  useEffect(() => {
-    fetchOperadoras();
-  }, []);
-
-  const registrarOperadora = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch('/api/planos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      });
-      if (res.ok) {
-        setModalAberto(false);
-        setForm({ nome: '', codigoAns: '', vigencia: '', status: 'ATIVO', teto: '' });
-        fetchOperadoras();
-        alert('Operadora cadastrada com sucesso!');
-      }
-    } catch (e) {
-      alert('Erro ao cadastrar.');
-    }
-  };
-
   return (
-    <div>
-      <div className="page-header">
-        <div className="header-left">
-          <h2><i className="las la-hand-holding-medical"></i> Planos e Operadoras</h2>
-          <p>Gestão de convênios, credenciamento e faturamento ANS</p>
-        </div>
-        <div className="header-actions">
-          <button className="btn btn-primary"  onClick={() => setModalAberto(true)}>
-            <i className="las la-plus"></i> Nova Operadora
-          </button>
-        </div>
-      </div>
+    <div className="conteudo">
+      <div className="container-planos">
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
-        <div className="card" style={{ borderLeft: '4px solid #3b82f6' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>OPERADORAS ATIVAS</div>
-          <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b' }}>{operadoras.filter(o => o.status === 'ATIVO').length}</div>
+        <div className="banner-planos">
+          <div className="icone-banner">💰</div>
+          <h1>Planos e Valores</h1>
+          <p>Soluções sob medida para cada porte de instituição. Da prefeitura de uma pequena cidade à grande rede hospitalar privada.</p>
         </div>
-        <div className="card" style={{ borderLeft: '4px solid #f59e0b' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>EM RENOVAÇÃO</div>
-          <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b' }}>{operadoras.filter(o => o.status === 'EM RENOVAÇÃO').length}</div>
-        </div>
-      </div>
 
-      <div className="card">
-        <h3 style={{ marginBottom: '20px' }}>Operadoras Credenciadas</h3>
-        <div className="tabela-wrapper">
-          <table className="tabela">
-            <thead>
-              <tr>
-                <th>Operadora</th>
-                <th>Registro ANS</th>
-                <th>Vigência do Contrato</th>
-                <th>Teto Mensal</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={6} style={{textAlign:'center', padding:20}}>Carregando...</td></tr>
-              ) : operadoras.length === 0 ? (
-                <tr><td colSpan={6} style={{textAlign:'center', padding:20}}>Nenhuma operadora cadastrada.</td></tr>
-              ) : (
-                operadoras.map(o => (
-                  <tr key={o.id}>
-                    <td style={{ fontWeight: 600, color: '#1e293b' }}>{o.nome}</td>
-                    <td style={{ color: '#475569' }}>{o.codigoAns}</td>
-                    <td>{o.vigencia}</td>
-                    <td style={{ fontWeight: 600, color: '#10b981' }}>{o.teto}</td>
-                    <td>
-                      <span className="status-badge" style={{ 
-                        background: o.status === 'ATIVO' ? '#ecfdf5' : o.status === 'SUSPENSO' ? '#fef2f2' : '#fff7ed', 
-                        color: o.status === 'ATIVO' ? '#10b981' : o.status === 'SUSPENSO' ? '#ef4444' : '#f59e0b' 
-                      }}>
-                        {o.status}
-                      </span>
-                    </td>
-                    <td>
-                      <button className="btn btn-primary" style={{ background: 'transparent', color: '#3b82f6', border: '1px solid #bfdbfe', padding: '6px 12px' }}>
-                        Tabela de Preços
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {modalAberto && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
-            <h3 style={{ marginBottom: '20px' }}>Cadastrar Operadora</h3>
-            <form onSubmit={registrarOperadora} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div>
-                <label style={{ fontSize: '13px', color: '#64748b' }}>Nome da Operadora</label>
-                <input required className="input-field" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} style={{ width: '100%', padding: '10px' }} placeholder="Ex: Bradesco Saúde, Unimed..." />
-              </div>
-              <div>
-                <label style={{ fontSize: '13px', color: '#64748b' }}>Registro ANS</label>
-                <input required className="input-field" value={form.codigoAns} onChange={e => setForm({...form, codigoAns: e.target.value})} style={{ width: '100%', padding: '10px' }} placeholder="Ex: 005711" />
-              </div>
-              <div>
-                <label style={{ fontSize: '13px', color: '#64748b' }}>Data de Vigência</label>
-                <input required type="date" className="input-field" value={form.vigencia} onChange={e => setForm({...form, vigencia: e.target.value})} style={{ width: '100%', padding: '10px' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '13px', color: '#64748b' }}>Teto Financeiro Mensal (R$)</label>
-                <input required className="input-field" value={form.teto} onChange={e => setForm({...form, teto: e.target.value})} style={{ width: '100%', padding: '10px' }} placeholder="Ex: 50.000,00" />
-              </div>
-              <div>
-                <label style={{ fontSize: '13px', color: '#64748b' }}>Status</label>
-                <select className="input-field" value={form.status} onChange={e => setForm({...form, status: e.target.value})} style={{ width: '100%', padding: '10px' }}>
-                  <option>ATIVO</option>
-                  <option>EM RENOVAÇÃO</option>
-                  <option>SUSPENSO</option>
-                </select>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white' }}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" >Salvar</button>
-              </div>
-            </form>
+        <div className="cards-destaque">
+          <div className="card-destaque anual">
+            <div className="icone-destaque">💎</div>
+            <h4>Plano Anual com Desconto</h4>
+            <p>Economize o equivalente a <strong>2 meses</strong> de mensalidade contratando o plano anual. Mesmo suporte, menor custo.</p>
+          </div>
+          <div className="card-destaque suporte">
+            <div className="icone-destaque">🆘</div>
+            <h4>Suporte 24/7</h4>
+            <p>Adicione <strong>20% a 30%</strong> sobre a mensalidade para suporte VIP com atendimento prioritário por telefone e WhatsApp.</p>
+          </div>
+          <div className="card-destaque implementacao">
+            <div className="icone-destaque">🔧</div>
+            <h4>Taxa de Implementação</h4>
+            <p>Cobrada uma única vez. Inclui parametrização do sistema, treinamento da equipe e migração de dados.</p>
           </div>
         </div>
-      )}
+
+        <div className="secao-planos">
+          <h2><i className="las la-landmark"></i> Prefeituras e Órgãos Públicos</h2>
+          
+          <div className="tabela-wrapper">
+            <table className="tabela-planos">
+              <thead>
+                <tr>
+                  <th>Porte</th>
+                  <th>Exemplos</th>
+                  <th>Mensalidade</th>
+                  <th>Anual (c/ desconto)</th>
+                  <th>Implementação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span className="tag-categoria tag-publico">Grandes Capitais</span></td>
+                  <td>Fortaleza, São Paulo, Rio de Janeiro</td>
+                  <td>R$ 5.000,00/mês</td>
+                  <td>R$ 50.000,00</td>
+                  <td>A partir de R$ 20.000,00</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-publico">Cidades Metropolitanas</span></td>
+                  <td>Caucaia, Maracanaú, Guarulhos</td>
+                  <td>R$ 3.500,00/mês</td>
+                  <td>R$ 35.000,00</td>
+                  <td>A partir de R$ 15.000,00</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-publico">Cidades de Médio Porte</span></td>
+                  <td>Maranguape, Quixadá, Sobral</td>
+                  <td>R$ 2.500,00/mês</td>
+                  <td>R$ 25.000,00</td>
+                  <td>A partir de R$ 12.000,00</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-publico">Cidades Pequenas</span></td>
+                  <td>Paraipaba, São Gonçalo do Amarante</td>
+                  <td>R$ 1.200,00/mês</td>
+                  <td>R$ 12.000,00</td>
+                  <td>A partir de R$ 6.000,00</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="secao-planos">
+          <h2><i className="las la-clinic-medical"></i> Clínicas e Consultórios</h2>
+          
+          <div className="tabela-wrapper">
+            <table className="tabela-planos">
+              <thead>
+                <tr>
+                  <th>Porte</th>
+                  <th>Exemplos</th>
+                  <th>Mensalidade</th>
+                  <th>Anual (c/ desconto)</th>
+                  <th>Implementação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span className="tag-categoria tag-privado">Consultório Individual</span></td>
+                  <td>Médico, Dentista, Psicólogo, Nutricionista</td>
+                  <td>R$ 149,00/mês</td>
+                  <td>R$ 1.490,00</td>
+                  <td>R$ 500,00</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-privado">Clínica Pequena</span></td>
+                  <td>Até 5 profissionais</td>
+                  <td>R$ 399,00/mês</td>
+                  <td>R$ 3.990,00</td>
+                  <td>R$ 1.500,00</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-privado">Clínica Média</span></td>
+                  <td>De 6 a 20 profissionais</td>
+                  <td>R$ 799,00/mês</td>
+                  <td>R$ 7.990,00</td>
+                  <td>R$ 3.000,00</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-privado">Policlínica / Centro</span></td>
+                  <td>Mais de 20 profissionais</td>
+                  <td>R$ 1.499,00/mês</td>
+                  <td>R$ 14.990,00</td>
+                  <td>R$ 5.000,00</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="secao-planos">
+          <h2><i className="las la-hospital"></i> Hospitais e Unidades Hospitalares</h2>
+          
+          <div className="tabela-wrapper">
+            <table className="tabela-planos">
+              <thead>
+                <tr>
+                  <th>Porte</th>
+                  <th>Exemplos</th>
+                  <th>Mensalidade</th>
+                  <th>Anual (c/ desconto)</th>
+                  <th>Implementação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span className="tag-categoria tag-privado">Pequeno Porte</span></td>
+                  <td>Até 50 leitos</td>
+                  <td>R$ 2.499,00/mês</td>
+                  <td>R$ 24.990,00</td>
+                  <td>A partir de R$ 8.000,00</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-privado">Médio Porte</span></td>
+                  <td>De 51 a 150 leitos</td>
+                  <td>R$ 3.999,00/mês</td>
+                  <td>R$ 39.990,00</td>
+                  <td>A partir de R$ 15.000,00</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-privado">Grande Porte</span></td>
+                  <td>Acima de 150 leitos</td>
+                  <td>R$ 5.999,00/mês</td>
+                  <td>R$ 59.990,00</td>
+                  <td>A partir de R$ 25.000,00</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-privado">Rede Hospitalar</span></td>
+                  <td>Múltiplas unidades</td>
+                  <td>Sob consulta</td>
+                  <td>Sob consulta</td>
+                  <td>Sob consulta</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="secao-planos">
+          <h2><i className="las la-hand-holding-heart"></i> Instituições Filantrópicas</h2>
+          
+          <div className="tabela-wrapper">
+            <table className="tabela-planos">
+              <thead>
+                <tr>
+                  <th>Porte</th>
+                  <th>Exemplos</th>
+                  <th>Mensalidade</th>
+                  <th>Anual (c/ desconto)</th>
+                  <th>Implementação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span className="tag-categoria tag-filantropico">Pequeno Porte</span></td>
+                  <td>Até 30 leitos</td>
+                  <td>R$ 799,00/mês</td>
+                  <td>R$ 7.990,00</td>
+                  <td>R$ 2.000,00</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-filantropico">Médio Porte</span></td>
+                  <td>De 31 a 100 leitos</td>
+                  <td>R$ 1.499,00/mês</td>
+                  <td>R$ 14.990,00</td>
+                  <td>R$ 5.000,00</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-filantropico">Grande Porte</span></td>
+                  <td>Acima de 100 leitos</td>
+                  <td>R$ 2.499,00/mês</td>
+                  <td>R$ 24.990,00</td>
+                  <td>A partir de R$ 8.000,00</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="secao-planos">
+          <h2><i className="las la-headset"></i> Adicionais de Suporte</h2>
+          
+          <div className="tabela-wrapper">
+            <table className="tabela-planos">
+              <thead>
+                <tr>
+                  <th>Tipo de Suporte</th>
+                  <th>Descrição</th>
+                  <th>Canais</th>
+                  <th>Valor (sobre a mensalidade)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span className="tag-categoria tag-publico">Suporte Básico</span></td>
+                  <td>Horário comercial (8h às 18h)</td>
+                  <td>E-mail e Chat</td>
+                  <td>Incluso</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-privado">Suporte VIP 24x7</span></td>
+                  <td>Atendimento prioritário 24 horas</td>
+                  <td>Telefone e WhatsApp</td>
+                  <td>+20% sobre a mensalidade</td>
+                </tr>
+                <tr>
+                  <td><span className="tag-categoria tag-privado">Suporte Premium</span></td>
+                  <td>Gestor dedicado + visitas trimestrais</td>
+                  <td>Telefone, WhatsApp e Presencial</td>
+                  <td>+30% sobre a mensalidade</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="observacoes">
+          <h4><i className="las la-info-circle"></i> Observações Importantes</h4>
+          <ul>
+            <li><i className="las la-check-circle"></i> Valores baseados no mercado de licitações e contratos públicos.</li>
+            <li><i className="las la-check-circle"></i> O preço final pode variar conforme número de módulos contratados, unidades de saúde e usuários.</li>
+            <li><i className="las la-check-circle"></i> Para prefeituras, recomenda-se cadastro no portal de fornecedores e participação em pregões eletrônicos.</li>
+            <li><i className="las la-check-circle"></i> Contratos abaixo de R$ 50 mil podem ser feitos por dispensa de licitação (Lei 14.133/2021).</li>
+            <li><i className="las la-check-circle"></i> Instituições filantrópicas têm desconto especial de até 40% mediante comprovação.</li>
+            <li><i className="las la-check-circle"></i> Todos os planos incluem hospedagem, manutenção e atualizações do sistema.</li>
+          </ul>
+        </div>
+
+      </div>
     </div>
   );
 }

@@ -1,123 +1,224 @@
 'use client';
 
-export default function RelatoriosPage() {
-  const ocupacaoUTI = 82; // %
-  const metaCirurgias = 90; // %
-  const satisfacao = 95; // %
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import './relatorios.css';
 
-  // Dados para o gráfico de barras
-  const receitasMes = [
-    { mes: 'Jan', valor: 45 },
-    { mes: 'Fev', valor: 52 },
-    { mes: 'Mar', valor: 48 },
-    { mes: 'Abr', valor: 70 },
-    { mes: 'Mai', valor: 65 },
-    { mes: 'Jun', valor: 85 }
-  ];
-  const maxValor = Math.max(...receitasMes.map(r => r.valor));
+interface RelatorioData {
+  totalPacientes: number;
+  atendimentos: number;
+  internacoes: number;
+  altas: number;
+  obitos: number;
+  taxaUTI: string;
+  tmp: string;
+  dispensacoes: number;
+  itensAlmox: number;
+  cirurgias: number;
+  exames: number;
+  transfusoes: number;
+  iras: number;
+  taxaIRAS: string;
+  hm: string;
+  cssd: number;
+  ouvidoria: number;
+}
+
+export default function RelatoriosPage() {
+  const { data: session } = useSession();
+  
+  const [inicio, setInicio] = useState('');
+  const [fim, setFim] = useState('');
+  
+  const [data, setData] = useState<RelatorioData>({
+    totalPacientes: 0, atendimentos: 0, internacoes: 0, altas: 0, obitos: 0,
+    taxaUTI: '0%', tmp: '-', dispensacoes: 0, itensAlmox: 0, cirurgias: 0,
+    exames: 0, transfusoes: 0, iras: 0, taxaIRAS: '0%', hm: '0%', cssd: 0, ouvidoria: 0
+  });
+
+  useEffect(() => {
+    const hoje = new Date();
+    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    
+    setInicio(primeiroDia.toISOString().split('T')[0]);
+    setFim(hoje.toISOString().split('T')[0]);
+  }, []);
+
+  useEffect(() => {
+    if (inicio && fim) {
+      gerarRelatorios();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inicio, fim]);
+
+  const gerarRelatorios = () => {
+    try {
+      const u = localStorage.getItem('usuarioLogado');
+      const usuario = session?.user || (u ? JSON.parse(u) : null);
+      const hid = usuario?.hospitalId || 'hospital_001';
+
+      const getDB = (chave: string) => JSON.parse(localStorage.getItem(`${hid}_${chave}`) || '[]');
+
+      const pacientes = getDB("pacientes");
+      const farmaciaSaidas = getDB("farmaciaSaidas");
+      const almoxItens = getDB("almoxItens");
+      const cirurgias = getDB("ccCirurgias");
+      const exames = getDB("saskiaExames");
+      const transfusoes = getDB("bsTransfusoes");
+      const iras = getDB("ccihIRAS");
+      const hmObs = getDB("ccihHM");
+      const cssdLotes = getDB("cssdLotes");
+      const ouvidoria = getDB("ouvManifestacoes");
+      const utiLeitos = getDB("utiLeitos");
+
+      const filtrarPeriodo = (arr: any[], campo: string) => {
+        if (!inicio || !fim) return arr;
+        return arr.filter(item => {
+          const d = new Date(item[campo]);
+          return d >= new Date(inicio) && d <= new Date(fim + 'T23:59:59');
+        });
+      };
+
+      const utiOcupados = utiLeitos.filter((l: any) => l.status === "ocupado").length;
+      
+      setData({
+        totalPacientes: pacientes.length,
+        atendimentos: pacientes.filter((p: any) => p.status === "Finalizado" || p.status === "Alta Médica").length,
+        internacoes: pacientes.filter((p: any) => p.status === "Internado").length,
+        altas: pacientes.filter((p: any) => p.status === "Alta Médica").length,
+        obitos: pacientes.filter((p: any) => p.status === "Óbito").length,
+        taxaUTI: utiLeitos.length > 0 ? Math.round((utiOcupados / utiLeitos.length) * 100) + "%" : "0%",
+        tmp: "-", // Média de permanência (placeholder from legacy)
+        dispensacoes: filtrarPeriodo(farmaciaSaidas, 'data').length,
+        itensAlmox: almoxItens.length, // Total inventory is not time-filtered usually
+        cirurgias: filtrarPeriodo(cirurgias, 'data').length,
+        exames: filtrarPeriodo(exames, 'dataSolicitacao').length,
+        transfusoes: filtrarPeriodo(transfusoes, 'data').length,
+        iras: filtrarPeriodo(iras, 'data').length,
+        taxaIRAS: pacientes.length > 0 ? Math.round((iras.length / pacientes.length) * 100) + "%" : "0%",
+        hm: hmObs.length > 0 ? Math.round((hmObs.filter((o: any) => o.realizou === "Sim").length / hmObs.length) * 100) + "%" : "N/A",
+        cssd: filtrarPeriodo(cssdLotes, 'data').length,
+        ouvidoria: filtrarPeriodo(ouvidoria, 'data').length
+      });
+
+    } catch(e) {}
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
-    <div>
-      <div className="page-header">
-        <div className="header-left">
-          <h2><i className="las la-chart-bar"></i> Relatórios & Analytics</h2>
-          <p>Visão estratégica e Business Intelligence (BI)</p>
+    <div className="conteudo">
+      <div className="rel-container">
+        
+        <div className="banner-rel">
+          <h1><i className="las la-chart-bar"></i> Relatórios Gerenciais Avançados</h1>
+          <p>Indicadores hospitalares, taxas e estatísticas em tempo real</p>
         </div>
-        <div className="header-actions">
-          <button className="btn btn-primary" >
-            <i className="las la-file-export"></i> Exportar PDF
+
+        <div className="form-row">
+          <div className="form-grupo">
+            <label>Data Início</label>
+            <input type="date" value={inicio} onChange={e => setInicio(e.target.value)} />
+          </div>
+          <div className="form-grupo">
+            <label>Data Fim</label>
+            <input type="date" value={fim} onChange={e => setFim(e.target.value)} />
+          </div>
+          
+          <button className="btn-atualizar" onClick={gerarRelatorios}>
+            <i className="las la-sync-alt"></i> Atualizar Dados
+          </button>
+          <button className="btn-imprimir" onClick={handlePrint}>
+            <i className="las la-print"></i> Imprimir Relatório
           </button>
         </div>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
-        {/* KPI 1 */}
-        <div className="card" style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ color: '#64748b', fontSize: '14px', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-            TAXA DE OCUPAÇÃO UTI <i className="las la-bed text-blue-500" style={{ fontSize: '20px' }}></i>
-          </div>
-          <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b' }}>
-            {ocupacaoUTI}%
-          </div>
-          <div style={{ width: '100%', background: '#e2e8f0', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
-            <div style={{ width: `${ocupacaoUTI}%`, background: ocupacaoUTI > 80 ? '#ef4444' : '#3b82f6', height: '100%' }}></div>
-          </div>
-        </div>
-
-        {/* KPI 2 */}
-        <div className="card" style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ color: '#64748b', fontSize: '14px', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-            META DE CIRURGIAS <i className="las la-procedures text-green-500" style={{ fontSize: '20px' }}></i>
-          </div>
-          <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b' }}>
-            {metaCirurgias}%
-          </div>
-          <div style={{ width: '100%', background: '#e2e8f0', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
-            <div style={{ width: `${metaCirurgias}%`, background: '#10b981', height: '100%' }}></div>
-          </div>
-        </div>
-
-        {/* KPI 3 */}
-        <div className="card" style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ color: '#64748b', fontSize: '14px', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-            NPS PACIENTES <i className="las la-smile text-purple-500" style={{ fontSize: '20px' }}></i>
-          </div>
-          <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b' }}>
-            {satisfacao}
-          </div>
-          <div style={{ width: '100%', background: '#e2e8f0', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
-            <div style={{ width: `${satisfacao}%`, background: '#8b5cf6', height: '100%' }}></div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-        {/* Gráfico de Barras em CSS */}
-        <div className="card">
-          <h3 style={{ marginBottom: '30px', fontSize: '18px', color: '#1e293b' }}>Faturamento Bruto (Últimos 6 meses)</h3>
+        <div className="rel-grid">
           
-          <div style={{ display: 'flex', alignItems: 'flex-end', height: '250px', gap: '15px', padding: '0 20px', borderBottom: '1px solid #e2e8f0' }}>
-            {receitasMes.map(r => {
-              const altura = (r.valor / maxValor) * 100;
-              return (
-                <div key={r.mes} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ opacity: 0, transition: 'opacity 0.3s' }} className="bar-tooltip">R$ {r.valor}k</div>
-                  <div 
-                    style={{ 
-                      width: '100%', 
-                      height: `${altura}%`, 
-                      background: 'linear-gradient(to top, #3b82f6, #60a5fa)', 
-                      borderRadius: '6px 6px 0 0',
-                      transition: 'height 1s ease-out'
-                    }}
-                  ></div>
-                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, marginTop: '10px' }}>{r.mes}</div>
-                </div>
-              );
-            })}
+          <div className="rel-card">
+            <h3><i className="las la-users"></i> Indicadores de Pacientes</h3>
+            <div className="rel-item">
+              <span className="rel-label">Total de Pacientes (Cadastros)</span>
+              <span className="rel-valor">{data.totalPacientes}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Atendimentos no Período</span>
+              <span className="rel-valor">{data.atendimentos}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Internações Ativas</span>
+              <span className="rel-valor" style={{ color: '#ea580c' }}>{data.internacoes}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Altas Médicas</span>
+              <span className="rel-valor" style={{ color: '#16a34a' }}>{data.altas}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Óbitos</span>
+              <span className="rel-valor" style={{ color: '#dc2626' }}>{data.obitos}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Taxa de Ocupação (UTI)</span>
+              <span className="rel-valor">{data.taxaUTI}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Média de Permanência (dias)</span>
+              <span className="rel-valor">{data.tmp}</span>
+            </div>
           </div>
+
+          <div className="rel-card">
+            <h3><i className="las la-capsules"></i> Farmácia & Apoio Clínico</h3>
+            <div className="rel-item">
+              <span className="rel-label">Medicamentos Dispensados</span>
+              <span className="rel-valor">{data.dispensacoes}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Tipos de Itens (Almoxarifado)</span>
+              <span className="rel-valor">{data.itensAlmox}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Cirurgias Realizadas</span>
+              <span className="rel-valor">{data.cirurgias}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Exames Solicitados</span>
+              <span className="rel-valor">{data.exames}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Transfusões de Sangue</span>
+              <span className="rel-valor" style={{ color: '#dc2626' }}>{data.transfusoes}</span>
+            </div>
+          </div>
+
+          <div className="rel-card">
+            <h3><i className="las la-shield-virus"></i> CCIH & Qualidade</h3>
+            <div className="rel-item">
+              <span className="rel-label">IRAS Notificadas</span>
+              <span className="rel-valor" style={{ color: '#dc2626' }}>{data.iras}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Taxa de Infecção Hospitalar</span>
+              <span className="rel-valor">{data.taxaIRAS}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Adesão à Higiene de Mãos</span>
+              <span className="rel-valor" style={{ color: '#16a34a' }}>{data.hm}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Lotes Esterilizados (CSSD)</span>
+              <span className="rel-valor">{data.cssd}</span>
+            </div>
+            <div className="rel-item">
+              <span className="rel-label">Manifestações na Ouvidoria</span>
+              <span className="rel-valor" style={{ color: '#f59e0b' }}>{data.ouvidoria}</span>
+            </div>
+          </div>
+
         </div>
 
-        {/* Tabela Resumo */}
-        <div className="card">
-          <h3 style={{ marginBottom: '20px', fontSize: '18px', color: '#1e293b' }}>Convênios Top Faturamento</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            {[
-              { nome: 'Unimed Saúde', valor: 'R$ 1.2M', cor: '#10b981' },
-              { nome: 'Bradesco Saúde', valor: 'R$ 800k', cor: '#ef4444' },
-              { nome: 'Amil', valor: 'R$ 450k', cor: '#f59e0b' },
-              { nome: 'SUS', valor: 'R$ 200k', cor: '#3b82f6' }
-            ].map(c => (
-              <div key={c.nome} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: '#f8fafc', borderRadius: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: c.cor }}></div>
-                  <span style={{ fontWeight: 600, color: '#334155', fontSize: '14px' }}>{c.nome}</span>
-                </div>
-                <span style={{ fontWeight: 800, color: '#1e293b' }}>{c.valor}</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

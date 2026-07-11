@@ -1,0 +1,110 @@
+
+.pacientes-container { max-width: 1400px; margin: 0 auto; padding: 10px; }
+.header-pacientes { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+.header-pacientes h2 { font-size: 26px; color: #0a1f44; display: flex; align-items: center; gap: 10px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
+.stat-card { background: white; border-radius: 16px; padding: 18px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border-left: 4px solid #1e3a8a; display: flex; align-items: center; gap: 15px; transition: all 0.3s; }
+.stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+.stat-card .stat-icon { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.stat-card .stat-icon.blue { background: #eff6ff; color: #1e3a8a; }
+.stat-card .stat-icon.green { background: #dcfce7; color: #16a34a; }
+.stat-card .stat-icon.orange { background: #fffbeb; color: #d97706; }
+.stat-card .stat-icon.purple { background: #f5f3ff; color: #7c3aed; }
+.stat-card .stat-icon.red { background: #fef2f2; color: #dc2626; }
+.stat-card .stat-info .stat-numero { font-size: 24px; font-weight: 800; color: #0a1f44; }
+.stat-card .stat-info .stat-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+.toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.busca-wrapper { flex: 1; min-width: 280px; position: relative; }
+.busca-wrapper input { width: 100%; padding: 13px 16px 13px 44px; border: 2px solid #e2e8f0; border-radius: 14px; font-size: 14px; background: white; transition: all 0.2s; }
+.busca-wrapper input:focus { border-color: #1e3a8a; outline: none; box-shadow: 0 0 0 4px rgba(30,58,138,0.06); }
+.busca-wrapper i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 18px; color: #94a3b8; }
+.btn { padding: 12px 22px; border: none; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; white-space: nowrap; }
+.btn-primary { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; box-shadow: 0 4px 12px rgba(30,58,138,0.2); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(30,58,138,0.3); }
+.btn-success { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; box-shadow: 0 4px 12px rgba(22,163,74,0.2); }
+.btn-success:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(22,163,74,0.3); }
+.btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 8px; }
+.btn-xs { padding: 4px 10px; font-size: 11px; border-radius: 6px; }
+.btn-danger { background: #dc2626; color: white; }
+.btn-warning { background: #f59e0b; color: #0f172a; }
+.btn-info { background: #0891b2; color: white; }
+.btn-purple { background: #7c3aed; color: white; }
+.filtros { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.filtro-badge { padding: 9px 18px; border: 2px solid #e2e8f0; border-radius: 25px; cursor: pointer; background: white; font-size: 12px; font-weight: 600; color: #64748b; display: flex; align-items: center; gap: 6px; transition: all 0.2s; white-space: nowrap; }
+.filtro-badge:hover { border-color: #1e3a8a; color: #1e3a8a; }
+.filtro-badge.ativo { background: #1e3a8a; color: white; border-color: #1e3a8a; }
+.filtro-badge .count { background: rgba(0,0,0,0.08); padding: 2px 10px; border-radius: 12px; font-size: 11px; margin-left: 4px; }
+.filtro-badge.ativo .count { background: rgba(255,255,255,0.2); }
+.tabela-wrapper { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+.tabela { width: 100%; border-collapse: collapse; }
+.tabela thead { background: #0f172a; }
+.tabela th { padding: 15px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+.tabela td { padding: 14px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
+.tabela tbody tr { transition: all 0.2s; }
+.tabela tbody tr:hover { background: #f8fafc; }
+.tabela .nome-paciente { font-weight: 700; color: #0a1f44; display: flex; align-items: center; gap: 8px; }
+.tabela .nome-paciente .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #eff6ff, #dbeafe); display: flex; align-items: center; justify-content: center; color: #1e3a8a; font-weight: 700; font-size: 14px; }
+.tabela .chamado { animation: piscar 1.5s infinite; background: #fefce8; }
+@keyframes piscar { 0%, 100% { background: #fefce8; } 50% { background: #fef2f2; } }
+.status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.status-recepcao { background: #f1f5f9; color: #475569; }
+.status-aguardando { background: #fffbeb; color: #b45309; }
+.status-triagem { background: #eff6ff; color: #2563eb; }
+.status-medico { background: #f5f3ff; color: #7c3aed; }
+.status-atendimento { background: #fef2f2; color: #dc2626; }
+.status-internado { background: #fce7f3; color: #be185d; }
+.status-alta { background: #dcfce7; color: #16a34a; }
+.status-transferido { background: #fff7ed; color: #ea580c; }
+.status-evasao { background: #fef2f2; color: #b91c1c; }
+.manchester-badge { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 15px; font-size: 11px; font-weight: 700; }
+.manch-vermelho { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.manch-laranja { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+.manch-amarelo { background: #fefce8; color: #ca8a04; border: 1px solid #fde68a; }
+.manch-verde { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.manch-azul { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.leito-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; }
+.leito-vermelha { background: #fef2f2; color: #dc2626; }
+.leito-amarela { background: #fefce8; color: #b45309; }
+.acoes-cell { display: flex; gap: 6px; flex-wrap: wrap; }
+.paginacao { display: flex; justify-content: center; gap: 8px; padding: 20px; border-top: 1px solid #f1f5f9; }
+.pag-btn { width: 36px; height: 36px; border: 2px solid #e2e8f0; border-radius: 10px; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; color: #64748b; transition: all 0.2s; }
+.pag-btn:hover { border-color: #1e3a8a; color: #1e3a8a; }
+.pag-btn.ativo { background: #1e3a8a; color: white; border-color: #1e3a8a; }
+
+.painel-chamada { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0a1f44; color: white; padding: 40px 60px; border-radius: 24px; z-index: 10000; display: none; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: aparecer 0.5s ease; }
+.painel-chamada.show { display: block; }
+.painel-chamada h2 { font-size: 42px; margin-bottom: 10px; }
+.painel-chamada p { font-size: 20px; opacity: 0.9; margin-bottom: 20px; }
+.painel-chamada .btn-fechar-chamada { background: #dc2626; color: white; border: none; padding: 15px 30px; border-radius: 12px; font-size: 16px; cursor: pointer; font-weight: 700; }
+.painel-chamada .info-painel { margin: 15px 0; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 12px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+@keyframes aparecer { from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10001; justify-content: center; align-items: center; }
+.modal-overlay.show { display: flex; }
+.modal-consultorio { background: white; border-radius: 20px; padding: 30px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.modal-consultorio h3 { color: #0a1f44; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: 20px; }
+.modal-consultorio .paciente-info { background: #f1f5f9; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
+.modal-consultorio .paciente-info strong { color: #0a1f44; font-size: 18px; }
+.modal-consultorio .sala-lista { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; max-height: 300px; overflow-y: auto; }
+.modal-consultorio .sala-opcao { 
+    padding: 15px; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer;
+    display: flex; align-items: center; gap: 12px; transition: all 0.2s;
+    font-size: 14px; color: #334155;
+}
+.modal-consultorio .sala-opcao:hover { border-color: #1e3a8a; background: #f8fafc; }
+.modal-consultorio .sala-opcao.selecionada { border-color: #1e3a8a; background: #eff6ff; }
+.modal-consultorio .sala-opcao .sala-icone { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.modal-consultorio .sala-opcao .sala-icone.livre { background: #dcfce7; color: #16a34a; }
+.modal-consultorio .sala-opcao .sala-icone.ocupado { background: #fef2f2; color: #dc2626; }
+.modal-consultorio .sala-opcao .sala-info { flex: 1; }
+.modal-consultorio .sala-opcao .sala-nome { font-weight: 700; color: #0a1f44; }
+.modal-consultorio .sala-opcao .sala-detalhe { font-size: 11px; color: #94a3b8; }
+.modal-consultorio .btn-confirmar { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
+.modal-consultorio .input-sala-manual { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; margin-bottom: 15px; }
+.modal-consultorio .input-sala-manual:focus { border-color: #1e3a8a; outline: none; }
+
+@media (max-width: 768px) { .tabela { font-size: 11px; } .tabela th, .tabela td { padding: 10px 8px; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+
+footer a:hover{color:white!important;}footer i{margin-right:5px;}
+

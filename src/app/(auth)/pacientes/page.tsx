@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { calcularIdade, getIniciais, STATUS_CORES, MANCHESTER_CORES } from '@/lib/utils';
+import { useCallSystem } from '@/contexts/CallContext';
 
 interface Paciente {
   id: string;
@@ -24,6 +25,9 @@ export default function PacientesPage() {
   const [pagina, setPagina] = useState(1);
   const [loading, setLoading] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
+  const { chamarPaciente } = useCallSystem();
+  const [modalChamada, setModalChamada] = useState<{ aberto: boolean, paciente: Paciente | null, consultorio: string }>({ aberto: false, paciente: null, consultorio: 'Consultório 1' });
+  const [salasCadastradas, setSalasCadastradas] = useState<any[]>([]);
   const [formPaciente, setFormPaciente] = useState<{
     nome: string; cpf: string; rg?: string; nascimento: string; sexo?: string;
     telefone?: string; email?: string; endereco?: string;
@@ -42,6 +46,17 @@ export default function PacientesPage() {
 
   useEffect(() => {
     fetchPacientes();
+    
+    // Load salas
+    const sessaoRaw = localStorage.getItem("saskiaSessao");
+    if (sessaoRaw) {
+      try {
+        const sessao = JSON.parse(sessaoRaw);
+        const hid = sessao.hospitalId || "hosp_matriz";
+        const salasRaw = localStorage.getItem(hid + "_gestaoSalas");
+        if (salasRaw) setSalasCadastradas(JSON.parse(salasRaw));
+      } catch (e) {}
+    }
   }, []);
 
   const criarPaciente = async (e: React.FormEvent) => {
@@ -75,6 +90,17 @@ export default function PacientesPage() {
     return matchStatus && matchBusca;
   });
 
+  const exportarCSV = () => {
+    const cabecalho = "Nome,CPF,Status,Classificacao,Idade\n";
+    const linhas = filtrados.map(p => `${p.nome},${p.cpf || ''},${p.status},${p.classificacao || ''},${calcularIdade(p.nascimento)}`).join('\n');
+    const blob = new Blob([cabecalho + linhas], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pacientes.csv';
+    a.click();
+  };
+
   const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
   const paginados = filtrados.slice((pagina - 1) * ITENS_POR_PAGINA, pagina * ITENS_POR_PAGINA);
 
@@ -100,6 +126,9 @@ export default function PacientesPage() {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={() => setModalAberto(true)}>
             <i className="las la-plus"></i> Novo Paciente
+          </button>
+          <button className="btn" onClick={exportarCSV} style={{ background: '#16a34a', color: 'white', border: 'none' }}>
+            <i className="las la-file-csv"></i> Exportar CSV
           </button>
           <Link href="/gestao-salas" className="btn btn-purple"><i className="las la-door-open"></i> Gerenciar Salas</Link>
         </div>
@@ -211,6 +240,9 @@ export default function PacientesPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <button className="btn btn-xs" style={{ background: '#10b981', color: 'white' }} title="Chamar no Painel" onClick={() => setModalChamada({ aberto: true, paciente: p, consultorio: 'Consultório 1' })}>
+                          <i className="las la-bullhorn"></i>
+                        </button>
                         <Link href={`/pacientes/${p.id}`} className="btn btn-primary btn-xs">
                           <i className="las la-eye"></i>
                         </Link>
@@ -382,6 +414,85 @@ export default function PacientesPage() {
                 <button type="submit" className="btn btn-primary" >Salvar Ficha Completa</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Chamar Paciente */}
+      {modalChamada.aberto && modalChamada.paciente && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', margin: '20px', padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
+            <h3 style={{ fontSize: '18px', color: '#1e293b', marginBottom: '15px' }}>Chamar Paciente na TV</h3>
+            <p style={{ marginBottom: '15px' }}>Para onde <strong>{modalChamada.paciente.nome}</strong> deve se dirigir?</p>
+            
+            <div style={{ marginBottom: '15px' }}>
+              <input 
+                type="text"
+                className="input-field" 
+                placeholder="Digite o consultório ou selecione abaixo"
+                value={modalChamada.consultorio}
+                onChange={(e) => setModalChamada({ ...modalChamada, consultorio: e.target.value })}
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #e2e8f0', fontSize: '15px' }}
+              />
+            </div>
+            
+            <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px', paddingRight: '5px' }}>
+              {salasCadastradas.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '15px', color: '#94a3b8', fontSize: '13px' }}>
+                  Nenhuma sala cadastrada. Use o campo acima para digitar o consultório.
+                </div>
+              ) : (
+                salasCadastradas.map((s, idx) => {
+                  const isLivre = s.status === 'livre';
+                  const isSelected = modalChamada.consultorio === s.nome;
+                  return (
+                    <div 
+                      key={idx}
+                      onClick={() => setModalChamada({ ...modalChamada, consultorio: s.nome })}
+                      style={{ 
+                        display: 'flex', alignItems: 'center', padding: '12px', borderRadius: '12px', 
+                        border: isSelected ? '2px solid #1e3a8a' : '1px solid #e2e8f0', 
+                        background: isSelected ? '#eff6ff' : 'white', cursor: 'pointer', transition: 'all 0.2s'
+                      }}
+                    >
+                      <div style={{ 
+                        width: '40px', height: '40px', borderRadius: '10px', 
+                        background: isLivre ? '#dcfce7' : '#fee2e2', 
+                        color: isLivre ? '#16a34a' : '#ef4444', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', marginRight: '15px'
+                      }}>
+                        <i className="las la-door-open"></i>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>{s.nome}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                          {s.setor || ''}{s.andar ? ` - ${s.andar}` : ''} | {isLivre ? '✅ Livre' : '🔴 Em uso'}
+                        </div>
+                      </div>
+                      <i className="las la-chevron-right" style={{ color: isSelected ? '#1e3a8a' : '#94a3b8' }}></i>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setModalChamada({ aberto: false, paciente: null, consultorio: '' })} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#64748b', cursor: 'pointer' }}>Cancelar</button>
+              <button 
+                className="btn btn-primary"
+                onClick={() => {
+                  chamarPaciente({
+                    nome: modalChamada.paciente!.nome,
+                    cpf: modalChamada.paciente!.cpf || '',
+                    consultorio: modalChamada.consultorio,
+                    status: modalChamada.paciente!.status
+                  });
+                  setModalChamada({ aberto: false, paciente: null, consultorio: '' });
+                }}
+              >
+                <i className="las la-bullhorn"></i> Chamar
+              </button>
+            </div>
           </div>
         </div>
       )}

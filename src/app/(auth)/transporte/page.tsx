@@ -1,165 +1,227 @@
 'use client';
-
 import { useState, useEffect } from 'react';
+import './transporte.css';
 
-interface Veiculo {
-  id: string;
+interface Transporte {
+  id: number;
+  paciente: string;
+  origem: string;
+  destino: string;
   tipo: string;
-  identificador: string;
-  local: string;
+  solicitante: string;
+  data: string;
   status: string;
 }
 
 export default function TransportePage() {
-  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalAberto, setModalAberto] = useState(false);
-  const [form, setForm] = useState({ tipo: 'Ambulância UTI', identificador: '', local: 'Base Central', status: 'DISPONÍVEL' });
+  const [hospitalId, setHospitalId] = useState('hospital_001');
+  const [activeTab, setActiveTab] = useState<'solicitar'|'lista'>('solicitar');
+  
+  const [transportes, setTransportes] = useState<Transporte[]>([]);
+  const [pacientes, setPacientes] = useState<any[]>([]);
 
-  const fetchVeiculos = () => {
-    fetch('/api/transporte')
-      .then(res => res.json())
-      .then(data => { setVeiculos(data); setLoading(false); })
-      .catch(console.error);
-  };
+  // Form State
+  const [transpPaciente, setTranspPaciente] = useState('');
+  const [transpOrigem, setTranspOrigem] = useState('Enfermaria');
+  const [transpDestino, setTranspDestino] = useState('Centro de Imagem');
+  const [transpTipo, setTranspTipo] = useState('Interno (Cadeira de Rodas)');
+  const [transpSolicitante, setTranspSolicitante] = useState('');
+  const [transpData, setTranspData] = useState('');
 
   useEffect(() => {
-    fetchVeiculos();
+    try {
+      const u = localStorage.getItem('usuarioLogado');
+      const usuario = u ? JSON.parse(u) : null;
+      const hid = usuario?.hospitalId || usuario?.id || 'hospital_001';
+      setHospitalId(hid);
+
+      const storedTransp = JSON.parse(localStorage.getItem(`${hid}_transpSolicitacoes`) || '[]');
+      setTransportes(storedTransp);
+
+      const storedPac = JSON.parse(localStorage.getItem(`${hid}_pacientes`) || '[]');
+      setPacientes(storedPac);
+
+      setTranspData(new Date().toISOString().slice(0, 16));
+    } catch(e) {}
   }, []);
 
-  const registrarVeiculo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch('/api/transporte', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+  const saveTransportes = (data: Transporte[]) => {
+    setTransportes(data);
+    localStorage.setItem(`${hospitalId}_transpSolicitacoes`, JSON.stringify(data));
+  };
+
+  const solicitarTransporte = () => {
+    if (!transpPaciente) {
+      alert("⚠️ Selecione o paciente!");
+      return;
+    }
+
+    const novoTransp: Transporte = {
+      id: Date.now(),
+      paciente: transpPaciente,
+      origem: transpOrigem,
+      destino: transpDestino,
+      tipo: transpTipo,
+      solicitante: transpSolicitante.trim(),
+      data: transpData || new Date().toISOString().slice(0, 16),
+      status: "Pendente"
+    };
+
+    saveTransportes([...transportes, novoTransp]);
+    setTranspSolicitante('');
+    alert("✅ Transporte solicitado!");
+    setActiveTab('lista');
+  };
+
+  const concluirTransporte = (id: number) => {
+    if(confirm("Deseja marcar este transporte como Concluído?")) {
+      const novos = transportes.map(t => {
+        if (t.id === id) return { ...t, status: "Concluído" };
+        return t;
       });
-      if (res.ok) {
-        setModalAberto(false);
-        setForm({ tipo: 'Ambulância UTI', identificador: '', local: 'Base Central', status: 'DISPONÍVEL' });
-        fetchVeiculos();
-        alert('Veículo registrado com sucesso!');
-      }
-    } catch (e) {
-      alert('Erro ao registrar.');
+      saveTransportes(novos);
     }
   };
 
-  const emUso = veiculos.filter(v => v.status === 'EM ROTA').length;
-  const disponiveis = veiculos.filter(v => v.status === 'DISPONÍVEL').length;
+  const hojeStr = new Date().toISOString().split('T')[0];
+  const statTotal = transportes.filter(t => t.data.startsWith(hojeStr)).length;
+  const statPendentes = transportes.filter(t => t.status === "Pendente").length;
 
   return (
-    <div>
-      <div className="page-header">
-        <div className="header-left">
-          <h2><i className="las la-ambulance"></i> Frota e Transporte</h2>
-          <p>Controle de ambulâncias e veículos logísticos</p>
-        </div>
-        <div className="header-actions">
-          <button className="btn btn-primary"  onClick={() => setModalAberto(true)}>
-            <i className="las la-plus"></i> Novo Veículo
+    <div className="conteudo">
+      <div className="transp-container">
+
+        <div className="banner-transp">
+          <div>
+            <h1><i className="las la-ambulance"></i> Transporte de Pacientes</h1>
+            <p>Controle de remoções internas e externas</p>
+          </div>
+          <button className="btn btn-success" onClick={() => setActiveTab('solicitar')}>
+            <i className="las la-plus-circle"></i> Nova Solicitação
           </button>
         </div>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
-        <div className="card" style={{ borderLeft: '4px solid #f97316' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>VEÍCULOS EM ROTA</div>
-          <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b' }}>{emUso}</div>
-        </div>
-        <div className="card" style={{ borderLeft: '4px solid #10b981' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>VEÍCULOS DISPONÍVEIS</div>
-          <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b' }}>{disponiveis}</div>
-        </div>
-        <div className="card" style={{ borderLeft: '4px solid #ef4444' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>EM MANUTENÇÃO</div>
-          <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b' }}>{veiculos.filter(v => v.status === 'MANUTENÇÃO').length}</div>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="tabela-wrapper">
-          <table className="tabela">
-            <thead>
-              <tr>
-                <th>Placa / ID</th>
-                <th>Tipo</th>
-                <th>Localização Atual</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={5} style={{textAlign:'center', padding:20}}>Carregando...</td></tr>
-              ) : veiculos.length === 0 ? (
-                <tr><td colSpan={5} style={{textAlign:'center', padding:20}}>Nenhum veículo registrado.</td></tr>
-              ) : (
-                veiculos.map(v => (
-                  <tr key={v.id}>
-                    <td style={{ fontWeight: 600, color: '#1e293b' }}>{v.identificador}</td>
-                    <td>{v.tipo}</td>
-                    <td style={{ color: '#475569' }}>{v.local}</td>
-                    <td>
-                      <span className="status-badge" style={{ 
-                        background: v.status === 'DISPONÍVEL' ? '#ecfdf5' : v.status === 'EM ROTA' ? '#fff7ed' : '#fef2f2', 
-                        color: v.status === 'DISPONÍVEL' ? '#10b981' : v.status === 'EM ROTA' ? '#f97316' : '#ef4444' 
-                      }}>
-                        {v.status}
-                      </span>
-                    </td>
-                    <td>
-                      <button className="btn btn-primary" style={{ background: 'transparent', color: '#3b82f6', border: '1px solid #bfdbfe', padding: '6px 12px' }}>
-                        Atualizar Local
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {modalAberto && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
-            <h3 style={{ marginBottom: '20px' }}>Adicionar Veículo</h3>
-            <form onSubmit={registrarVeiculo} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div>
-                <label style={{ fontSize: '13px', color: '#64748b' }}>Placa/ID do Veículo</label>
-                <input required className="input-field" value={form.identificador} onChange={e => setForm({...form, identificador: e.target.value})} style={{ width: '100%', padding: '10px' }} placeholder="Ex: ABC-1234" />
-              </div>
-              <div>
-                <label style={{ fontSize: '13px', color: '#64748b' }}>Tipo de Veículo</label>
-                <select className="input-field" value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})} style={{ width: '100%', padding: '10px' }}>
-                  <option>Ambulância Básica</option>
-                  <option>Ambulância UTI</option>
-                  <option>Veículo Administrativo</option>
-                  <option>Moto Expresso</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ fontSize: '13px', color: '#64748b' }}>Local Base</label>
-                <input required className="input-field" value={form.local} onChange={e => setForm({...form, local: e.target.value})} style={{ width: '100%', padding: '10px' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '13px', color: '#64748b' }}>Status Inicial</label>
-                <select className="input-field" value={form.status} onChange={e => setForm({...form, status: e.target.value})} style={{ width: '100%', padding: '10px' }}>
-                  <option>DISPONÍVEL</option>
-                  <option>EM ROTA</option>
-                  <option>MANUTENÇÃO</option>
-                </select>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white' }}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" >Salvar</button>
-              </div>
-            </form>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-numero">{statTotal}</div>
+            <div className="stat-label">Solicitações Hoje</div>
+          </div>
+          <div className="stat-card" style={{borderLeftColor: '#d97706'}}>
+            <div className="stat-numero" style={{color: '#d97706'}}>{statPendentes}</div>
+            <div className="stat-label">Pendentes</div>
           </div>
         </div>
-      )}
+
+        <div className="tabs-transp">
+          <button className={`tab-btn ${activeTab === 'solicitar' ? 'ativo' : ''}`} onClick={() => setActiveTab('solicitar')}>
+            <i className="las la-plus-circle"></i> Solicitar
+          </button>
+          <button className={`tab-btn ${activeTab === 'lista' ? 'ativo' : ''}`} onClick={() => setActiveTab('lista')}>
+            <i className="las la-list"></i> Lista
+          </button>
+        </div>
+
+        {activeTab === 'solicitar' && (
+          <div className="form-panel">
+            <h3><i className="las la-ambulance"></i> Solicitar Transporte</h3>
+            <div className="form-grid">
+              <div className="form-grupo">
+                <label>Paciente *</label>
+                <select value={transpPaciente} onChange={e => setTranspPaciente(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  {pacientes.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Origem *</label>
+                <select value={transpOrigem} onChange={e => setTranspOrigem(e.target.value)}>
+                  <option>Enfermaria</option>
+                  <option>UTI</option>
+                  <option>Emergência</option>
+                  <option>Centro Cirúrgico</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Destino *</label>
+                <select value={transpDestino} onChange={e => setTranspDestino(e.target.value)}>
+                  <option>Centro de Imagem</option>
+                  <option>Laboratório</option>
+                  <option>UTI</option>
+                  <option>Enfermaria</option>
+                  <option>Alta/Hospitalar</option>
+                  <option>Transferência Externa</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Tipo *</label>
+                <select value={transpTipo} onChange={e => setTranspTipo(e.target.value)}>
+                  <option>Interno (Cadeira de Rodas)</option>
+                  <option>Interno (Maca)</option>
+                  <option>Externo (Ambulância)</option>
+                  <option>UTI Móvel</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Solicitante</label>
+                <input type="text" value={transpSolicitante} onChange={e => setTranspSolicitante(e.target.value)} />
+              </div>
+              <div className="form-grupo">
+                <label>Data/Hora</label>
+                <input type="datetime-local" value={transpData} onChange={e => setTranspData(e.target.value)} />
+              </div>
+            </div>
+            <button className="btn btn-success" onClick={solicitarTransporte} style={{width:'100%', marginTop:'15px', padding:'14px', justifyContent:'center'}}>
+              <i className="las la-save"></i> Solicitar Transporte
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'lista' && (
+          <div style={{background:'white', borderRadius:'20px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)', overflowX:'auto'}}>
+            <table className="tabela-transp">
+              <thead>
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Paciente</th>
+                  <th>Origem</th>
+                  <th>Destino</th>
+                  <th>Tipo</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transportes.length === 0 ? (
+                  <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhuma solicitação</td></tr>
+                ) : (
+                  transportes.slice().reverse().map(t => (
+                    <tr key={t.id}>
+                      <td>{new Date(t.data).toLocaleString('pt-BR')}</td>
+                      <td><strong>{t.paciente}</strong></td>
+                      <td>{t.origem}</td>
+                      <td>{t.destino}</td>
+                      <td>{t.tipo}</td>
+                      <td>
+                        <span className={`badge ${t.status === 'Concluído' ? 'badge-success' : 'badge-warning'}`}>
+                          {t.status}
+                        </span>
+                      </td>
+                      <td>
+                        {t.status === 'Pendente' && (
+                          <button className="btn btn-xs btn-success" onClick={() => concluirTransporte(t.id)}>
+                            <i className="las la-check"></i> Concluir
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

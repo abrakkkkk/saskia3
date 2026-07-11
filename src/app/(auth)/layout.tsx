@@ -4,6 +4,8 @@ import Footer from '@/components/layout/Footer';
 import ChatbotButton from '@/components/chatbot/ChatbotButton';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
+import { CallProvider } from '@/contexts/CallContext';
+import CallSystem from '@/components/CallSystem';
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -13,16 +15,19 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <div className="app-layout">
-      <Header />
-      <div className="app-container">
-        <Sidebar />
-        <main className="app-content">
-          {children}
-        </main>
+    <CallProvider>
+      <div className="app-layout">
+        <Header />
+        <div className="app-container">
+          <Sidebar />
+          <main className="app-content">
+            {children}
+          </main>
+        </div>
+        <Footer />
+        <ChatbotButton />
+        <CallSystem />
       </div>
-      <Footer />
-      <ChatbotButton />
-    </div>
+    </CallProvider>
   );
 }

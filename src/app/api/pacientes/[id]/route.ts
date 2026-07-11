@@ -10,9 +10,12 @@ export async function GET (_: NextRequest, { params }: { params: Promise <{ id: 
     const { id } = await params
     const paciente = await prisma.paciente.findUnique ({
       where: { id },
-      include: { triagens: { orderBy: { createdAt: 'desc' } }, 
-      evolucoes: { orderBy: { createdAt: 'desc' } }, 
-      prescricoes: true }
+      include: { 
+        triagens: { orderBy: { createdAt: 'desc' } }, 
+        evolucoes: { orderBy: { createdAt: 'desc' } }, 
+        prescricoes: { orderBy: { createdAt: 'desc' } },
+        exames: { orderBy: { createdAt: 'desc' } }
+      }
     })
 
     if (!paciente) return NextResponse.json ({ error: 'Paciente não encontrado' }, { status: 404 })

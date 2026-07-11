@@ -1,0 +1,48 @@
+
+.fin-container { max-width: 1400px; margin: 0 auto; padding: 15px; }
+.banner-fin { background: linear-gradient(135deg, #0a1f44, #1e3a8a); border-radius: 20px; padding: 30px 40px; color: white; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+.banner-fin h1 { font-size: 28px; margin: 0; }
+.banner-fin p { opacity: 0.9; margin: 5px 0 0 0; font-size: 14px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+.stat-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border-left: 5px solid #1e3a8a; text-align: center; transition: all 0.3s; }
+.stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+.stat-card .stat-icon { font-size: 28px; margin-bottom: 6px; }
+.stat-card .stat-valor { font-size: 28px; font-weight: 800; color: #0a1f44; }
+.stat-card .stat-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+.stat-card.verde { border-left-color: #16a34a; }
+.stat-card.vermelho { border-left-color: #dc2626; }
+.stat-card.amarelo { border-left-color: #f59e0b; }
+.stat-card.azul { border-left-color: #2563eb; }
+.tabs-fin { display: flex; gap: 6px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; flex-wrap: wrap; }
+.tab-btn { padding: 13px 26px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #64748b; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+.tab-btn:hover { color: #1e3a8a; }
+.tab-btn.ativo { color: #1e3a8a; border-bottom-color: #1e3a8a; }
+.tab-conteudo { display: none; }
+.tab-conteudo.ativo { display: block; }
+.tabela-fin { width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+.tabela-fin thead { background: #0f172a; }
+.tabela-fin th { padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+.tabela-fin td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
+.tabela-fin tbody tr:hover { background: #f8fafc; }
+.tabela-fin tbody tr.vencido { background: #fef2f2; }
+.tabela-fin tbody tr.vencendo { background: #fffbeb; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge-pago { background: #dcfce7; color: #16a34a; }
+.badge-pendente { background: #fffbeb; color: #d97706; }
+.badge-vencido { background: #fef2f2; color: #dc2626; }
+.badge-cortesia { background: #e0f2fe; color: #0284c7; }
+.badge-info { background: #dbeafe; color: #2563eb; }
+.badge-purple { background: #f5f3ff; color: #7c3aed; }
+.search-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.search-box input, .search-box select { padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 14px; background: white; }
+.search-box input { flex: 1; min-width: 250px; }
+.btn { padding: 11px 22px; border: none; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; white-space: nowrap; }
+.btn-info { background: #0891b2; color: white; }
+.btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 8px; }
+.historico-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 15px; border-left: 4px solid #1e3a8a; }
+.historico-card.pago { border-left-color: #16a34a; }
+.historico-card.vencido { border-left-color: #dc2626; }
+.historico-card.cortesia { border-left-color: #0891b2; }
+@media (max-width: 768px) { .tabela-fin { font-size: 11px; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+footer a:hover{color:white!important;}footer i{margin-right:5px;}

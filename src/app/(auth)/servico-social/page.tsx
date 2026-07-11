@@ -1,149 +1,277 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-interface Caso {
-  id: string;
-  pacienteNome: string;
-  situacao: string;
-  detalhe: string;
-  status: string;
-  createdAt: string;
-}
+import { useSession } from 'next-auth/react';
+import './servico-social.css';
 
 export default function ServicoSocialPage() {
-  const [casos, setCasos] = useState<Caso[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalAberto, setModalAberto] = useState(false);
-  const [form, setForm] = useState({ pacienteNome: '', situacao: 'Vulnerabilidade Social', detalhe: '' });
+  const { data: session } = useSession();
+  const [tabAtiva, setTabAtiva] = useState('atendimento');
+  
+  // Dados
+  const [pacientes, setPacientes] = useState<any[]>([]);
+  const [atendimentos, setAtendimentos] = useState<any[]>([]);
 
-  const fetchCasos = () => {
-    fetch('/api/servico-social')
-      .then(res => res.json())
-      .then(data => { setCasos(data); setLoading(false); })
-      .catch(console.error);
+  // Form State
+  const [form, setForm] = useState({
+    paciente: '',
+    tipo: 'Orientação Social',
+    demanda: 'Vulnerabilidade Social',
+    profissional: '',
+    data: '',
+    status: 'Em Andamento',
+    relato: '',
+    encaminhamentos: ''
+  });
+
+  // Filtros
+  const [buscaLista, setBuscaLista] = useState('');
+
+  const getHospitalId = () => {
+    const u = localStorage.getItem('usuarioLogado');
+    const usuario = session?.user || (u ? JSON.parse(u) : null);
+    return usuario?.hospitalId || 'hospital_001';
   };
 
   useEffect(() => {
-    fetchCasos();
-  }, []);
-
-  const abrirCaso = async (e: React.FormEvent) => {
-    e.preventDefault();
+    const hid = getHospitalId();
     try {
-      const res = await fetch('/api/servico-social', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      });
-      if (res.ok) {
-        setModalAberto(false);
-        setForm({ pacienteNome: '', situacao: 'Vulnerabilidade Social', detalhe: '' });
-        fetchCasos();
-        alert('Caso aberto com sucesso!');
+      const p = JSON.parse(localStorage.getItem(`${hid}_pacientes`) || '[]');
+      const a = JSON.parse(localStorage.getItem(`${hid}_ssAtendimentos`) || '[]');
+      setPacientes(p);
+      setAtendimentos(a);
+      
+      const hoje = new Date().toISOString().split('T')[0];
+      setForm(prev => ({ ...prev, data: hoje }));
+
+      // Se houver session.user, preenche profissional
+      const u = localStorage.getItem('usuarioLogado');
+      const usuario = session?.user || (u ? JSON.parse(u) : null);
+      if (usuario?.name || usuario?.nome) {
+        setForm(prev => ({ ...prev, profissional: usuario.name || usuario.nome }));
       }
-    } catch (e) {
-      alert('Erro ao registrar caso.');
+    } catch(e) {}
+  }, [session]);
+
+  const registrarAtendimento = () => {
+    if (!form.paciente || !form.profissional) {
+      alert("⚠️ Preencha paciente e assistente social!");
+      return;
     }
+
+    const novo = {
+      id: Date.now(),
+      ...form,
+      dataCriacao: new Date().toISOString()
+    };
+
+    const hid = getHospitalId();
+    const atualizados = [...atendimentos, novo];
+    setAtendimentos(atualizados);
+    localStorage.setItem(`${hid}_ssAtendimentos`, JSON.stringify(atualizados));
+    
+    setForm(prev => ({ ...prev, relato: '', encaminhamentos: '', paciente: '' }));
+    alert("✅ Atendimento registrado com sucesso!");
   };
 
-  const ativos = casos.filter(c => c.status === 'EM ACOMPANHAMENTO').length;
+  // Filtros de Tabela
+  let listaFiltrada = atendimentos.slice().reverse();
+  if (buscaLista) {
+    const t = buscaLista.toLowerCase();
+    listaFiltrada = listaFiltrada.filter(a => 
+      a.paciente.toLowerCase().includes(t) || 
+      a.demanda.toLowerCase().includes(t)
+    );
+  }
+
+  // Estatísticas
+  const mesAtual = new Date().getMonth() + 1;
+  const anoAtual = new Date().getFullYear();
+  const atendimentosMes = atendimentos.filter(a => {
+    const d = new Date(a.data);
+    return (d.getMonth() + 1) === mesAtual && d.getFullYear() === anoAtual;
+  }).length;
+  
+  const pendentes = atendimentos.filter(a => a.status !== "Concluído").length;
+  const concluidos = atendimentos.filter(a => a.status === "Concluído").length;
+  const comEncaminhamentos = atendimentos.filter(a => a.encaminhamentos && a.encaminhamentos.trim() !== "").length;
 
   return (
-    <div>
-      <div className="page-header">
-        <div className="header-left">
-          <h2><i className="las la-hands-helping"></i> Serviço Social</h2>
-          <p>Acompanhamento de pacientes em vulnerabilidade e apoio familiar</p>
-        </div>
-        <div className="header-actions">
-          <button className="btn btn-primary"  onClick={() => setModalAberto(true)}>
-            <i className="las la-plus"></i> Novo Caso
+    <div className="conteudo">
+      <div className="ss-container">
+
+        <div className="banner-ss">
+          <div>
+            <h1><i className="las la-hands-helping"></i> Serviço Social</h1>
+            <p>Atendimento social, acolhimento e controle de demandas do paciente.</p>
+          </div>
+          <button className="btn btn-success" onClick={() => setTabAtiva('atendimento')}>
+            <i className="las la-plus-circle"></i> Novo Atendimento
           </button>
         </div>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '20px' }}>
-        <div className="card" style={{ borderLeft: '4px solid #d946ef' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>CASOS ATIVOS</div>
-          <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b' }}>{ativos}</div>
-        </div>
-        <div className="card" style={{ borderLeft: '4px solid #f59e0b' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>TRANSFERÊNCIAS PENDENTES</div>
-          <div style={{ fontSize: '32px', fontWeight: 800, color: '#1e293b' }}>0</div>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="tabela-wrapper">
-          <table className="tabela">
-            <thead>
-              <tr>
-                <th>Paciente</th>
-                <th>Situação Principal</th>
-                <th>Detalhes</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={5} style={{textAlign:'center', padding:20}}>Carregando...</td></tr>
-              ) : casos.length === 0 ? (
-                <tr><td colSpan={5} style={{textAlign:'center', padding:20}}>Nenhum caso social registrado.</td></tr>
-              ) : (
-                casos.map(c => (
-                  <tr key={c.id}>
-                    <td style={{ fontWeight: 600, color: '#1e293b' }}>{c.pacienteNome}</td>
-                    <td>
-                      <span className="status-badge" style={{ background: '#fdf4ff', color: '#d946ef' }}>{c.situacao}</span>
-                    </td>
-                    <td style={{ maxWidth: '300px', fontSize: '13px', color: '#475569' }}>{c.detalhe}</td>
-                    <td><div style={{ fontWeight: 700, color: '#f59e0b' }}>{c.status}</div></td>
-                    <td>
-                      <button className="btn btn-primary" style={{ background: 'transparent', color: '#d946ef', border: '1px solid #fbcfe8', padding: '6px 12px' }}>
-                        Atualizar Evolução
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {modalAberto && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '500px' }}>
-            <h3 style={{ marginBottom: '20px' }}>Abrir Caso Social</h3>
-            <form onSubmit={abrirCaso} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div>
-                <label style={{ fontSize: '13px', color: '#64748b' }}>Nome do Paciente</label>
-                <input required className="input-field" value={form.pacienteNome} onChange={e => setForm({...form, pacienteNome: e.target.value})} style={{ width: '100%', padding: '10px' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '13px', color: '#64748b' }}>Situação Principal</label>
-                <select className="input-field" value={form.situacao} onChange={e => setForm({...form, situacao: e.target.value})} style={{ width: '100%', padding: '10px' }}>
-                  <option>Vulnerabilidade Social</option>
-                  <option>Abandono Familiar</option>
-                  <option>Alta Problemática</option>
-                  <option>Violência Doméstica</option>
-                  <option>Dificuldade de Acesso a Medicação</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ fontSize: '13px', color: '#64748b' }}>Detalhes do Caso</label>
-                <textarea required className="input-field" value={form.detalhe} onChange={e => setForm({...form, detalhe: e.target.value})} style={{ width: '100%', padding: '10px', height: '100px' }} placeholder="Descreva brevemente a situação atual..."></textarea>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white' }}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" >Abrir Caso</button>
-              </div>
-            </form>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon"><i className="las la-users"></i></div>
+            <div className="stat-numero">{atendimentosMes}</div>
+            <div className="stat-label">Atendimentos (Mês)</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ color: '#f59e0b' }}><i className="las la-clock"></i></div>
+            <div className="stat-numero">{pendentes}</div>
+            <div className="stat-label">Pendentes</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ color: '#16a34a' }}><i className="las la-check-circle"></i></div>
+            <div className="stat-numero">{concluidos}</div>
+            <div className="stat-label">Concluídos</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ color: '#7c3aed' }}><i className="las la-share"></i></div>
+            <div className="stat-numero">{comEncaminhamentos}</div>
+            <div className="stat-label">Encaminhamentos</div>
           </div>
         </div>
-      )}
+
+        <div className="tabs-ss">
+          <button className={`tab-btn ${tabAtiva === 'atendimento' ? 'ativo' : ''}`} onClick={() => setTabAtiva('atendimento')}>
+            <i className="las la-plus-circle"></i> Atendimento
+          </button>
+          <button className={`tab-btn ${tabAtiva === 'lista' ? 'ativo' : ''}`} onClick={() => setTabAtiva('lista')}>
+            <i className="las la-list"></i> Lista Completa
+          </button>
+          <button className={`tab-btn ${tabAtiva === 'encaminhamentos' ? 'ativo' : ''}`} onClick={() => setTabAtiva('encaminhamentos')}>
+            <i className="las la-share"></i> Encaminhamentos
+          </button>
+        </div>
+
+        {tabAtiva === 'atendimento' && (
+          <div className="form-panel">
+            <h3><i className="las la-hands-helping"></i> Registrar Atendimento Social</h3>
+            <div className="form-grid">
+              <div className="form-grupo">
+                <label>Paciente *</label>
+                <select value={form.paciente} onChange={e => setForm({...form, paciente: e.target.value})}>
+                  <option value="">Selecione um paciente...</option>
+                  {pacientes.map((p, i) => <option key={i} value={p.nome}>{p.nome}</option>)}
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Tipo de Atendimento *</label>
+                <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
+                  <option>Orientação Social</option>
+                  <option>Acolhimento</option>
+                  <option>Visita Domiciliar</option>
+                  <option>Entrevista Social</option>
+                  <option>Grupo de Apoio</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Demanda Principal *</label>
+                <select value={form.demanda} onChange={e => setForm({...form, demanda: e.target.value})}>
+                  <option>Vulnerabilidade Social</option>
+                  <option>Violência Doméstica</option>
+                  <option>Abandono Familiar</option>
+                  <option>Dependência Química</option>
+                  <option>Moradia/Habitação</option>
+                  <option>Benefícios/Previdência</option>
+                  <option>Documentação</option>
+                  <option>Óbito/Trâmites</option>
+                  <option>Alta Hospitalar Complexa</option>
+                  <option>Outra</option>
+                </select>
+              </div>
+              <div className="form-grupo">
+                <label>Assistente Social *</label>
+                <input type="text" value={form.profissional} onChange={e => setForm({...form, profissional: e.target.value})} placeholder="Nome do profissional" />
+              </div>
+              <div className="form-grupo">
+                <label>Data</label>
+                <input type="date" value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
+              </div>
+              <div className="form-grupo">
+                <label>Status</label>
+                <select value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
+                  <option>Em Andamento</option>
+                  <option>Aguardando Retorno</option>
+                  <option>Concluído</option>
+                </select>
+              </div>
+              <div className="form-grupo full">
+                <label>Relato / Evolução</label>
+                <textarea rows={3} value={form.relato} onChange={e => setForm({...form, relato: e.target.value})} placeholder="Descreva o atendimento ou evolução do caso..."></textarea>
+              </div>
+              <div className="form-grupo full">
+                <label>Encaminhamentos Realizados</label>
+                <textarea rows={2} value={form.encaminhamentos} onChange={e => setForm({...form, encaminhamentos: e.target.value})} placeholder="Ex: Encaminhado ao CRAS para benefício eventual."></textarea>
+              </div>
+            </div>
+            <button className="btn btn-success" onClick={registrarAtendimento} style={{ width: '100%', marginTop: '15px' }}>
+              <i className="las la-save"></i> Salvar Atendimento
+            </button>
+          </div>
+        )}
+
+        {tabAtiva === 'lista' && (
+          <div>
+            <div className="search-box">
+              <input type="text" placeholder="Buscar por paciente ou demanda..." value={buscaLista} onChange={e => setBuscaLista(e.target.value)} />
+            </div>
+            <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
+              <table className="tabela-ss">
+                <thead>
+                  <tr><th>Data</th><th>Paciente</th><th>Tipo</th><th>Demanda</th><th>Profissional</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                  {listaFiltrada.length === 0 ? (
+                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhum atendimento registrado.</td></tr>
+                  ) : (
+                    listaFiltrada.map((a, i) => {
+                      let badge = "badge-info";
+                      if (a.status === 'Concluído') badge = "badge-success";
+                      if (a.status === 'Aguardando Retorno') badge = "badge-warning";
+                      
+                      return (
+                        <tr key={i}>
+                          <td>{new Date(a.data).toLocaleDateString('pt-BR')}</td>
+                          <td><strong>{a.paciente}</strong></td>
+                          <td>{a.tipo}</td>
+                          <td>{a.demanda}</td>
+                          <td>{a.profissional}</td>
+                          <td><span className={`badge ${badge}`}>{a.status}</span></td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {tabAtiva === 'encaminhamentos' && (
+          <div style={{ background: 'white', borderRadius: '20px', padding: '25px', border: '1px solid #e2e8f0' }}>
+            <h3 style={{ margin: '0 0 20px 0', color: '#0a1f44', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <i className="las la-share"></i> Encaminhamentos Registrados
+            </h3>
+            {atendimentos.filter(a => a.encaminhamentos && a.encaminhamentos.trim() !== '').length === 0 ? (
+              <p style={{ color: '#94a3b8', textAlign: 'center' }}>Nenhum encaminhamento registrado.</p>
+            ) : (
+              atendimentos.filter(a => a.encaminhamentos && a.encaminhamentos.trim() !== '').reverse().map((a, i) => (
+                <div key={i} className="encaminhamento-card">
+                  <p style={{ margin: '0 0 5px 0', fontSize: '15px' }}>
+                    <strong>{a.paciente}</strong> - {new Date(a.data).toLocaleDateString('pt-BR')}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#475569' }}>
+                    <i className="las la-arrow-right"></i> {a.encaminhamentos}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

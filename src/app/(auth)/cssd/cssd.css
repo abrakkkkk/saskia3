@@ -1,0 +1,314 @@
+/* cssd.css */
+
+.cssd-container {
+    animation: fadeIn 0.4s ease-out;
+}
+
+.banner-cssd {
+    background: linear-gradient(135deg, #0a1f44, #1e3a8a);
+    border-radius: 20px;
+    padding: 30px 40px;
+    color: white;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    box-shadow: 0 10px 30px rgba(30, 58, 138, 0.2);
+}
+
+.banner-cssd h1 {
+    font-size: 28px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.banner-cssd p {
+    opacity: 0.9;
+    margin: 5px 0 0 0;
+    font-size: 14px;
+}
+
+.indicadores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.ind-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border-left: 5px solid #1e3a8a;
+    transition: all 0.3s;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.5);
+    border-right: 1px solid rgba(255,255,255,0.5);
+    border-bottom: 1px solid rgba(255,255,255,0.5);
+}
+
+.ind-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    background: white;
+}
+
+.ind-card .ind-icon {
+    font-size: 28px;
+    margin-bottom: 6px;
+}
+
+.ind-card .ind-valor {
+    font-size: 30px;
+    font-weight: 800;
+    color: #0a1f44;
+}
+
+.ind-card .ind-label {
+    font-size: 11px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 3px;
+}
+
+.tabs-cssd {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #e2e8f0;
+    flex-wrap: wrap;
+}
+
+.tab-btn {
+    padding: 13px 26px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab-btn:hover {
+    color: #1e3a8a;
+}
+
+.tab-btn.ativo {
+    color: #1e3a8a;
+    border-bottom-color: #1e3a8a;
+}
+
+.form-panel {
+    background: white;
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    margin-bottom: 25px;
+}
+
+.form-panel h3 {
+    color: #0a1f44;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 12px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.form-grupo.full {
+    grid-column: 1 / -1;
+}
+
+.fluxo-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.fluxo-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 20px 15px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border-top: 4px solid #e2e8f0;
+    transition: all 0.3s;
+    border-left: 1px solid rgba(255,255,255,0.5);
+    border-right: 1px solid rgba(255,255,255,0.5);
+    border-bottom: 1px solid rgba(255,255,255,0.5);
+}
+
+.fluxo-card:hover {
+    transform: translateY(-3px);
+    background: white;
+}
+
+.fluxo-card.ativo {
+    border-top-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.fluxo-card.concluido {
+    border-top-color: #16a34a;
+    background: #f0fdf4;
+}
+
+.fluxo-card .fluxo-numero {
+    font-size: 28px;
+    font-weight: 800;
+    color: #0a1f44;
+    margin-bottom: 5px;
+}
+
+.fluxo-card .fluxo-nome {
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.fluxo-card .fluxo-qtd {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 3px;
+}
+
+.lotes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+}
+
+.lote-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border-left: 5px solid #1e3a8a;
+    transition: all 0.3s;
+    border-top: 1px solid rgba(255,255,255,0.5);
+    border-right: 1px solid rgba(255,255,255,0.5);
+    border-bottom: 1px solid rgba(255,255,255,0.5);
+}
+
+.lote-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    background: white;
+}
+
+.lote-card.esteril { border-left-color: #16a34a; }
+.lote-card.processando { border-left-color: #f59e0b; }
+.lote-card.sujo { border-left-color: #dc2626; }
+
+.lote-card .lote-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.lote-card .lote-numero {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0a1f44;
+}
+
+.lote-card .lote-info {
+    font-size: 12px;
+    color: #64748b;
+    margin: 4px 0;
+}
+
+.lote-card .lote-acoes {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.badge-esteril { background: #dcfce7; color: #16a34a; }
+.badge-sujo { background: #fef2f2; color: #dc2626; }
+.badge-processo { background: #fffbeb; color: #d97706; }
+.badge-gray { background: #f3f4f6; color: #6b7280; }
+
+.search-box {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.search-box input, .search-box select {
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 14px;
+    background: white;
+}
+
+.search-box input {
+    flex: 1;
+    min-width: 250px;
+}
+
+.tabela-cssd {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+
+.tabela-cssd thead {
+    background: #0f172a;
+}
+
+.tabela-cssd th {
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.tabela-cssd td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13px;
+    color: #334155;
+}
+
+.tabela-cssd tbody tr:hover { background: #f8fafc; }
+.tabela-cssd tbody tr:last-child td { border-bottom: none; }
+
+@media (max-width: 768px) {
+    .fluxo-grid { grid-template-columns: repeat(3, 1fr); }
+    .form-grid { grid-template-columns: 1fr; }
+    .lotes-grid { grid-template-columns: 1fr; }
+}
