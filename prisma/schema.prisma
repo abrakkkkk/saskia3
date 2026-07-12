@@ -133,6 +133,7 @@ model Hospital {
   categorias           Categoria[]
   procedimentos        Procedimento[]
   modelosProntuarios   ModeloProntuario[]
+  visitantes           Visitante[]
 }
 
 model Usuario {
@@ -198,6 +199,7 @@ model Paciente {
   sinaisVitais         SinalVital[]
   escoresClinicos      EscoreClinico[]
   avaliacoesNutri      AvaliacaoNutricional[]
+  visitantes           Visitante[]
   avaliacoesMedicas    AvaliacaoMedica[]
   anotacoesEnf         AnotacaoEnfermagem[]
   timelineEvents       TimelineEvent[]
@@ -892,4 +894,22 @@ model Procedimento {
   createdAt  DateTime @default(now())
 
   @@index([hospitalId])
+}
+
+
+model Visitante {
+  id         String    @id @default(uuid())
+  hospitalId String
+  hospital   Hospital  @relation(fields: [hospitalId], references: [id])
+  nome       String
+  documento  String?   // RG ou CPF
+  destino    String?   // Ex: Leito 104, UTI, Diretoria
+  pacienteId String?
+  paciente   Paciente? @relation(fields: [pacienteId], references: [id])
+  entrada    DateTime  @default(now())
+  saida      DateTime?
+  status     String    @default("DENTRO") // "DENTRO" ou "SAIU"
+
+  @@index([hospitalId])
+  @@index([pacienteId])
 }
