@@ -17,11 +17,11 @@ export async function GET(request: NextRequest) {
 
     // Consultas paralelas para os relatórios
     const [
-      pacientes, 
-      utiLeitos, 
-      movimentacoes, 
-      almoxItens, 
-      cirurgias, 
+      pacientes,
+      utiLeitos,
+      movimentacoes,
+      almoxItens,
+      cirurgias,
       exames,
       obitos,
       iras,
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       prisma.paciente.findMany({ where: { hospitalId } }),
       prisma.utiLeito.findMany({ where: { hospitalId } }),
-      prisma.movimentacaoEstoque.count({ 
+      prisma.movimentacaoEstoque.count({
         where: { hospitalId, tipo: 'SAIDA', createdAt: { gte: startDate, lte: endDate } }
       }),
       prisma.estoqueItem.count({ where: { hospitalId, categoria: 'ALMOXARIFADO' } }),
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     const utiOcupados = utiLeitos.filter(l => l.status === "OCUPADO").length;
-    
+
     // Aggregations that require JS array filtering due to string dates or status logic
     const atendimentos = pacientes.filter(p => p.status === "Finalizado" || p.status === "Alta Médica" || p.status === "Alta").length;
     const internacoes = pacientes.filter(p => p.status === "Internado").length;
