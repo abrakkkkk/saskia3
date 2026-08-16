@@ -120,65 +120,81 @@ export default function PacientesPage() {
 
   return (
     <div>
-      <div className="page-header">
-        <h2><i className="las la-user-injured"></i> Pacientes</h2>
+      {/* Header and Actions in one row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+        <h2 style={{ margin: 0, fontSize: '24px', color: '#f1f5f9' }}><i className="las la-user-injured"></i> Pacientes</h2>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={() => setModalAberto(true)}>
+          <button className="btn btn-primary" onClick={() => setModalAberto(true)} style={{ borderRadius: '8px', padding: '8px 16px', fontSize: '14px' }}>
             <i className="las la-plus"></i> Novo Paciente
           </button>
-          <button className="btn" onClick={exportarCSV} style={{ background: '#16a34a', color: 'white', border: 'none' }}>
+          <button className="btn" onClick={exportarCSV} style={{ background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '14px' }}>
             <i className="las la-file-csv"></i> Exportar CSV
           </button>
-          <Link href="/gestao-salas" className="btn btn-purple"><i className="las la-door-open"></i> Gerenciar Salas</Link>
+          <Link href="/gestao-salas" className="btn btn-purple" style={{ borderRadius: '8px', padding: '8px 16px', fontSize: '14px' }}><i className="las la-door-open"></i> Gerenciar Salas</Link>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon blue"><i className="las la-users"></i></div>
-          <div><div className="stat-numero">{stats.total}</div><div className="stat-label">Total</div></div>
+      {/* Stats - Compact Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+        <div style={{ background: '#ffffff', borderRadius: '8px', padding: '20px 16px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 15px -3px rgba(0,0,0,0.1)' }}>
+          <div style={{ background: '#eff6ff', color: '#3b82f6', width: '40px', height: '40px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}><i className="las la-users"></i></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{stats.total}</div><div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Total</div></div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon orange"><i className="las la-hourglass-half"></i></div>
-          <div><div className="stat-numero">{stats.aguardando}</div><div className="stat-label">Aguardando</div></div>
+        <div style={{ background: '#ffffff', borderRadius: '8px', padding: '20px 16px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 15px -3px rgba(0,0,0,0.1)' }}>
+          <div style={{ background: '#fff7ed', color: '#f97316', width: '40px', height: '40px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}><i className="las la-hourglass-half"></i></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{stats.aguardando}</div><div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Aguardando</div></div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon purple"><i className="las la-procedures"></i></div>
-          <div><div className="stat-numero">{stats.atendimento}</div><div className="stat-label">Em Atendimento</div></div>
+        <div style={{ background: '#ffffff', borderRadius: '8px', padding: '20px 16px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 15px -3px rgba(0,0,0,0.1)' }}>
+          <div style={{ background: '#f3e8ff', color: '#a855f7', width: '40px', height: '40px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}><i className="las la-procedures"></i></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{stats.atendimento}</div><div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Atendimento</div></div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon red"><i className="las la-bed"></i></div>
-          <div><div className="stat-numero">{stats.internados}</div><div className="stat-label">Internados</div></div>
-        </div>
-      </div>
-
-      {/* Busca */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        <div className="busca-wrapper">
-          <i className="las la-search"></i>
-          <input value={busca} onChange={(e) => { setBusca(e.target.value); setPagina(1); }} placeholder="Buscar por nome ou CPF..." />
+        <div style={{ background: '#ffffff', borderRadius: '8px', padding: '20px 16px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 15px -3px rgba(0,0,0,0.1)' }}>
+          <div style={{ background: '#fef2f2', color: '#ef4444', width: '40px', height: '40px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}><i className="las la-bed"></i></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{stats.internados}</div><div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Internados</div></div>
         </div>
       </div>
 
-      {/* Filtros */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        {statusList.map(s => (
-          <button
-            key={s}
-            className={`filtro-badge ${filtroStatus === s ? 'ativo' : ''}`}
-            onClick={() => { setFiltroStatus(s); setPagina(1); }}
-          >
-            {statusLabels[s]}
-            <span className="count">
-              {s === 'todos' ? pacientes.length : pacientes.filter(p => p.status === s).length}
-            </span>
-          </button>
-        ))}
+      {/* Busca and Filtros in one row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ position: 'relative', flex: '1 1 250px', maxWidth: '350px' }}>
+          <i className="las la-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '18px' }}></i>
+          <input 
+            value={busca} 
+            onChange={(e) => { setBusca(e.target.value); setPagina(1); }} 
+            placeholder="Buscar por nome ou CPF..." 
+            style={{ width: '100%', padding: '10px 10px 10px 38px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', outline: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', backgroundColor: '#ffffff', color: '#0f172a' }} 
+          />
+        </div>
+        
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', flex: '3 1 auto' }}>
+          {statusList.map(s => (
+            <button
+              key={s}
+              onClick={() => { setFiltroStatus(s); setPagina(1); }}
+              style={{ 
+                padding: '6px 12px', borderRadius: '20px', border: filtroStatus === s ? '1px solid #1e3a8a' : '1px solid #cbd5e1', 
+                background: filtroStatus === s ? '#1e3a8a' : '#ffffff', 
+                color: filtroStatus === s ? '#ffffff' : '#475569', 
+                fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                boxShadow: filtroStatus === s ? '0 4px 6px -1px rgba(30, 58, 138, 0.4)' : '0 1px 2px rgba(0,0,0,0.05)',
+                transition: 'all 0.2s'
+              }}
+            >
+              {statusLabels[s]}
+              <span style={{ 
+                background: filtroStatus === s ? 'rgba(255,255,255,0.2)' : '#f1f5f9', 
+                color: filtroStatus === s ? '#ffffff' : '#64748b',
+                padding: '2px 6px', borderRadius: '10px', fontSize: '10px' 
+              }}>
+                {s === 'todos' ? pacientes.length : pacientes.filter(p => p.status === s).length}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tabela */}
-      <div className="tabela-wrapper">
+      <div className="tabela-wrapper" style={{ border: '1px solid #334155', borderRadius: '12px', overflow: 'hidden' }}>
         <table className="tabela">
           <thead>
             <tr>
@@ -283,7 +299,7 @@ export default function PacientesPage() {
       {/* Modal Novo Paciente */}
       {modalAberto && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', margin: '20px', animation: 'fadeIn 0.2s ease-out' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', margin: '20px', animation: 'fadeIn 0.2s ease-out', border: '1px solid #334155', borderRadius: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
               <h3 style={{ fontSize: '20px', color: '#1e293b', margin: 0 }}><i className="las la-user-plus text-blue-600"></i> Ficha Completa de Cadastro</h3>
               <button onClick={() => setModalAberto(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', color: '#64748b', cursor: 'pointer' }}><i className="las la-times"></i></button>
@@ -420,7 +436,7 @@ export default function PacientesPage() {
       {/* Modal Chamar Paciente */}
       {modalChamada.aberto && modalChamada.paciente && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '400px', margin: '20px', padding: '20px', animation: 'fadeIn 0.2s ease-out' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', margin: '20px', padding: '20px', animation: 'fadeIn 0.2s ease-out', border: '1px solid #334155', borderRadius: '12px' }}>
             <h3 style={{ fontSize: '18px', color: '#1e293b', marginBottom: '15px' }}>Chamar Paciente na TV</h3>
             <p style={{ marginBottom: '15px' }}>Para onde <strong>{modalChamada.paciente.nome}</strong> deve se dirigir?</p>
             
@@ -431,7 +447,7 @@ export default function PacientesPage() {
                 placeholder="Digite o consultório ou selecione abaixo"
                 value={modalChamada.consultorio}
                 onChange={(e) => setModalChamada({ ...modalChamada, consultorio: e.target.value })}
-                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '2px solid #e2e8f0', fontSize: '15px' }}
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', fontSize: '15px' }}
               />
             </div>
             

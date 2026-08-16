@@ -168,13 +168,13 @@ export default function PainelChamadasTV() {
   const ultimasChamadasHistorico = chamadaAtual ? chamadas.slice(1, 6) : [];
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans overflow-hidden">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col overflow-hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
       
       {/* HEADER: ESTILO SGA (Simples, direto e institucional) */}
       <header className="h-24 bg-slate-950 border-b-4 border-blue-600 px-10 flex items-center justify-between shrink-0 shadow-lg">
         <div className="flex items-center gap-4">
           <ActivitySquare className="w-10 h-10 text-blue-500" />
-          <h1 className="text-4xl font-black text-white tracking-tight uppercase">Saskia <span className="text-blue-500 font-light">Painel</span></h1>
+          <h1 className="text-4xl font-black text-white tracking-tight uppercase" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>Saskia <span className="text-blue-500 font-light">Painel</span></h1>
         </div>
         
         <div className="flex items-center gap-8">
@@ -200,8 +200,8 @@ export default function PainelChamadasTV() {
         {/* ESQUERDA: CHAMADA ATUAL (MUITO DESTAQUE) */}
         <div className="flex-[3] bg-slate-900 p-12 flex flex-col text-center border-r border-slate-700 shadow-[20px_0_30px_rgba(0,0,0,0.3)] relative z-10">
           {chamadaAtual ? (
-            <div className="w-full h-full flex flex-col items-center justify-between py-10 animate-in fade-in zoom-in duration-500">
-              <div className="flex flex-col items-center justify-center flex-1 w-full">
+            <div className="w-full h-full flex flex-col items-center justify-center gap-24 animate-in fade-in zoom-in duration-500">
+              <div className="flex flex-col items-center justify-center w-full">
                 <Bell className="w-20 h-20 text-blue-500 mb-6" />
                 <p className="text-2xl font-bold text-slate-400 uppercase tracking-[0.3em] mb-4">Paciente</p>
                 <h2 className="text-5xl xl:text-6xl leading-tight font-black text-white tracking-tight drop-shadow-lg break-words w-full px-8">
@@ -209,11 +209,11 @@ export default function PainelChamadasTV() {
                 </h2>
               </div>
               
-              <div className="bg-blue-600 rounded-[2rem] w-full max-w-2xl p-8 shadow-2xl border-b-8 border-blue-800 flex flex-col items-center shrink-0">
-                <p className="text-xl font-bold text-blue-200 uppercase tracking-[0.3em] mb-3">Dirija-se Para</p>
-                <div className="flex items-center gap-4">
-                  <DoorOpen className="w-16 h-16 text-white" />
-                  <span className="text-5xl leading-none font-black text-white uppercase drop-shadow-md">
+              <div className="bg-blue-600 rounded-[2rem] w-full max-w-2xl p-6 shadow-2xl border-b-8 border-blue-800 flex flex-col items-center shrink-0 text-center">
+                <p className="text-lg font-bold text-blue-200 uppercase tracking-[0.3em] mb-2">Dirija-se Para</p>
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
+                  <DoorOpen className="w-12 h-12 text-white shrink-0" />
+                  <span className="text-4xl leading-tight font-black text-white uppercase drop-shadow-md break-words max-w-full">
                     {chamadaAtual.consultorio}
                   </span>
                 </div>
@@ -238,17 +238,17 @@ export default function PainelChamadasTV() {
               <div className="text-slate-500 text-center py-20 text-xl font-bold">Nenhum histórico recente.</div>
             ) : (
               ultimasChamadasHistorico.map((c, i) => (
-                <div key={i} className="bg-slate-800/80 rounded-2xl p-6 flex items-center justify-between border-l-[6px] border-slate-600 shadow-md">
-                  <div className="flex-1 min-w-0 pr-6">
-                    <h4 className="text-2xl font-bold text-white truncate leading-tight">{c.pacienteNome}</h4>
-                    <span className="text-base text-slate-400 font-semibold mt-2 flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-blue-400" />
+                <div key={i} className="bg-slate-800/80 rounded-2xl p-4 flex items-center justify-between border-l-[6px] border-slate-600 shadow-md">
+                  <div className="flex-1 min-w-0 pr-4">
+                    <h4 className="text-xl font-bold text-white truncate leading-tight">{c.pacienteNome}</h4>
+                    <span className="text-sm text-slate-400 font-semibold mt-1 flex items-center gap-2">
+                      <Clock className="w-3 h-3 text-blue-400" />
                       Chamado às {new Date(c.createdAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
                     </span>
                   </div>
-                  <div className="shrink-0 flex flex-col items-end pl-8 border-l border-slate-700">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Local</span>
-                    <span className="text-3xl font-black text-blue-400 uppercase tracking-tight">
+                  <div className="shrink-0 flex flex-col items-end pl-4 border-l border-slate-700 max-w-[45%]">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Local</span>
+                    <span className="text-xl font-black text-blue-400 uppercase tracking-tight text-right break-words line-clamp-2">
                       {c.consultorio}
                     </span>
                   </div>
