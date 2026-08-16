@@ -108,13 +108,13 @@ export default function BuscarPacientesPage() {
     <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
       
       {/* Banner */}
-      <div style={{ background: 'linear-gradient(135deg, #0a1f44, #1e3a8a)', borderRadius: '20px', padding: '30px 40px', color: 'white', marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+      <div style={{ background: 'linear-gradient(135deg, #0a1f44, #1e3a8a)', borderRadius: '8px', padding: '30px 40px', color: 'white', marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
         <div>
           <h1 style={{ fontSize: '28px', margin: 0 }}><i className="las la-search"></i> Busca Avançada de Pacientes</h1>
           <p style={{ opacity: 0.9, margin: '5px 0 0 0', fontSize: '14px' }}>Pesquise pacientes cadastrados por qualquer critério - histórico completo sempre disponível</p>
         </div>
         <div>
-          <button onClick={exportarCSV} style={{ padding: '12px 24px', background: '#0891b2', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button onClick={exportarCSV} style={{ padding: '12px 24px', background: '#0891b2', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <i className="las la-download"></i> Exportar
           </button>
         </div>
@@ -129,27 +129,27 @@ export default function BuscarPacientesPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '5px', textTransform: 'uppercase' }}><i className="las la-user"></i> Nome</label>
-            <input type="text" className="input-field" value={filtros.nome} onChange={e => setFiltros({...filtros, nome: e.target.value})} placeholder="Nome completo ou parte" style={{ width: '100%', padding: '12px 15px', borderRadius: '10px', border: '2px solid #e2e8f0' }} />
+            <input type="text" className="input-field" value={filtros.nome} onChange={e => setFiltros({...filtros, nome: e.target.value})} placeholder="Nome completo ou parte" style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #e2e8f0' }} />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '5px', textTransform: 'uppercase' }}><i className="las la-id-card"></i> CPF</label>
-            <input type="text" className="input-field" value={filtros.cpf} onChange={e => setFiltros({...filtros, cpf: e.target.value})} placeholder="000.000.000-00" style={{ width: '100%', padding: '12px 15px', borderRadius: '10px', border: '2px solid #e2e8f0' }} />
+            <input type="text" className="input-field" value={filtros.cpf} onChange={e => setFiltros({...filtros, cpf: e.target.value})} placeholder="000.000.000-00" style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #e2e8f0' }} />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '5px', textTransform: 'uppercase' }}><i className="las la-female"></i> Nome da Mãe</label>
-            <input type="text" className="input-field" value={filtros.mae} onChange={e => setFiltros({...filtros, mae: e.target.value})} placeholder="Nome da mãe" style={{ width: '100%', padding: '12px 15px', borderRadius: '10px', border: '2px solid #e2e8f0' }} />
+            <input type="text" className="input-field" value={filtros.mae} onChange={e => setFiltros({...filtros, mae: e.target.value})} placeholder="Nome da mãe" style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #e2e8f0' }} />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '5px', textTransform: 'uppercase' }}><i className="las la-calendar"></i> Nascimento</label>
-            <input type="date" className="input-field" value={filtros.nascimento} onChange={e => setFiltros({...filtros, nascimento: e.target.value})} style={{ width: '100%', padding: '12px 15px', borderRadius: '10px', border: '2px solid #e2e8f0' }} />
+            <input type="date" className="input-field" value={filtros.nascimento} onChange={e => setFiltros({...filtros, nascimento: e.target.value})} style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #e2e8f0' }} />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '5px', textTransform: 'uppercase' }}><i className="las la-phone"></i> Telefone</label>
-            <input type="text" className="input-field" value={filtros.telefone} onChange={e => setFiltros({...filtros, telefone: e.target.value})} placeholder="(00) 00000-0000" style={{ width: '100%', padding: '12px 15px', borderRadius: '10px', border: '2px solid #e2e8f0' }} />
+            <input type="text" className="input-field" value={filtros.telefone} onChange={e => setFiltros({...filtros, telefone: e.target.value})} placeholder="(00) 00000-0000" style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #e2e8f0' }} />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '5px', textTransform: 'uppercase' }}><i className="las la-venus-mars"></i> Sexo</label>
-            <select className="input-field" value={filtros.sexo} onChange={e => setFiltros({...filtros, sexo: e.target.value})} style={{ width: '100%', padding: '12px 15px', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
+            <select className="input-field" value={filtros.sexo} onChange={e => setFiltros({...filtros, sexo: e.target.value})} style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #e2e8f0' }}>
               <option value="">Todos</option>
               <option value="Masculino">Masculino</option>
               <option value="Feminino">Feminino</option>
@@ -157,11 +157,11 @@ export default function BuscarPacientesPage() {
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '5px', textTransform: 'uppercase' }}><i className="las la-map-marker"></i> Cidade/Endereço</label>
-            <input type="text" className="input-field" value={filtros.endereco} onChange={e => setFiltros({...filtros, endereco: e.target.value})} placeholder="Cidade ou rua" style={{ width: '100%', padding: '12px 15px', borderRadius: '10px', border: '2px solid #e2e8f0' }} />
+            <input type="text" className="input-field" value={filtros.endereco} onChange={e => setFiltros({...filtros, endereco: e.target.value})} placeholder="Cidade ou rua" style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #e2e8f0' }} />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '5px', textTransform: 'uppercase' }}><i className="las la-flag"></i> Status</label>
-            <select className="input-field" value={filtros.status} onChange={e => setFiltros({...filtros, status: e.target.value})} style={{ width: '100%', padding: '12px 15px', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
+            <select className="input-field" value={filtros.status} onChange={e => setFiltros({...filtros, status: e.target.value})} style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #e2e8f0' }}>
               <option value="">Todos os Status</option>
               <option value="Recepção">Recepção</option>
               <option value="Aguardando Triagem">Aguardando Triagem</option>
@@ -176,11 +176,11 @@ export default function BuscarPacientesPage() {
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '15px' }}>
           <span style={{ fontSize: '11px', color: '#64748b', marginRight: '8px', fontWeight: 600, display: 'flex', alignItems: 'center' }}>Buscas rápidas:</span>
-          <button onClick={() => setFiltros({...filtros, status: 'Internado'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '20px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}>🏥 Internados</button>
-          <button onClick={() => setFiltros({...filtros, status: 'Alta Médica'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '20px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}>✅ Altas</button>
-          <button onClick={() => setFiltros({...filtros, status: 'Óbito'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '20px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}>🕊️ Óbitos</button>
-          <button onClick={() => setFiltros({...filtros, status: 'Evasão'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '20px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}>🚫 Evasões</button>
-          <button onClick={limparFiltros} style={{ background: '#f8fafc', color: '#64748b', padding: '6px 14px', borderRadius: '20px', fontSize: '11px', border: '1px solid #e2e8f0', fontWeight: 600, cursor: 'pointer' }}>🔄 Limpar Filtros</button>
+          <button onClick={() => setFiltros({...filtros, status: 'Internado'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}>🏥 Internados</button>
+          <button onClick={() => setFiltros({...filtros, status: 'Alta Médica'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}>✅ Altas</button>
+          <button onClick={() => setFiltros({...filtros, status: 'Óbito'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}>🕊️ Óbitos</button>
+          <button onClick={() => setFiltros({...filtros, status: 'Evasão'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}>🚫 Evasões</button>
+          <button onClick={limparFiltros} style={{ background: '#f8fafc', color: '#64748b', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid #e2e8f0', fontWeight: 600, cursor: 'pointer' }}>🔄 Limpar Filtros</button>
         </div>
       </div>
 
@@ -223,7 +223,7 @@ export default function BuscarPacientesPage() {
                     <td style={{ padding: '14px', fontSize: '13px', color: '#334155' }}>{p.sexo || 'N/I'}</td>
                     <td style={{ padding: '14px', fontSize: '13px', color: '#334155' }}>{p.nascimento ? new Date(p.nascimento).toLocaleDateString() : 'N/I'}</td>
                     <td style={{ padding: '14px' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }} className={STATUS_CORES[p.status] || STATUS_CORES['Recepção']}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: 700 }} className={STATUS_CORES[p.status] || STATUS_CORES['Recepção']}>
                         {p.status}
                       </span>
                     </td>

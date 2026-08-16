@@ -387,7 +387,7 @@ export default function CSSDPage() {
                 <i className="las la-search"></i>
                 <input type="text" placeholder="Buscar lote, setor ou operador..." value={buscarLote} onChange={e=>setBuscarLote(e.target.value)} />
               </div>
-              <select value={filtroStatusLote} onChange={e=>setFiltroStatusLote(e.target.value)} style={{padding:'10px', borderRadius:'10px', border:'1px solid #cbd5e1'}}>
+              <select value={filtroStatusLote} onChange={e=>setFiltroStatusLote(e.target.value)} style={{padding:'10px', borderRadius: '8px', border:'1px solid #cbd5e1'}}>
                 <option value="todos">Todos os Status</option>
                 <option value="Recepção">Recepção</option>
                 <option value="Limpeza">Limpeza</option>
@@ -423,7 +423,7 @@ export default function CSSDPage() {
                 </div>
               ))}
               {lotesFiltrados.filter(l => l.status !== "Pronto" && l.status !== "Rejeitado").length === 0 && (
-                <div style={{gridColumn:'1 / -1', textAlign:'center', padding:'40px', color:'#64748b', background:'white', borderRadius:'15px'}}>
+                <div style={{gridColumn:'1 / -1', textAlign:'center', padding:'40px', color:'#64748b', background:'white', borderRadius: '8px'}}>
                   Nenhum lote ativo encontrado nos filtros selecionados.
                 </div>
               )}
@@ -432,7 +432,7 @@ export default function CSSDPage() {
         )}
 
         {activeTab === 'historico' && (
-          <div style={{background:'white', borderRadius:'20px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)', overflowX:'auto'}}>
+          <div style={{background:'white', borderRadius: '8px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)', overflowX:'auto'}}>
             <table className="tabela-cssd">
               <thead>
                 <tr>

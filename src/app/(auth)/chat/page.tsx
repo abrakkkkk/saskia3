@@ -128,7 +128,7 @@ export default function ChatPage() {
       height: 'calc(100vh - 80px - 60px)',
       maxHeight: '820px',
       background: 'white',
-      borderRadius: '16px',
+      borderRadius: '8px',
       overflow: 'hidden',
       boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
       border: '1px solid #e2e8f0',
@@ -158,7 +158,7 @@ export default function ChatPage() {
 
         {/* Search */}
         <div style={{ padding: '10px 12px', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
-          <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '20px', padding: '8px 14px', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '8px', padding: '8px 14px', gap: '8px' }}>
             <span style={{ color: '#94a3b8', fontSize: '16px' }}>🔍</span>
             <input
               type="text"
@@ -215,7 +215,7 @@ export default function ChatPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
                   {ultima && <span style={{ fontSize: '10px', color: '#94a3b8' }}>{formatHora(ultima.data)}</span>}
                   {nL > 0 && (
-                    <span style={{ background: '#16a34a', color: 'white', borderRadius: '10px', padding: '2px 7px', fontSize: '10px', fontWeight: 700 }}>{nL}</span>
+                    <span style={{ background: '#16a34a', color: 'white', borderRadius: '8px', padding: '2px 7px', fontSize: '10px', fontWeight: 700 }}>{nL}</span>
                   )}
                 </div>
               </div>
@@ -313,7 +313,7 @@ export default function ChatPage() {
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >{icon}</button>
               ))}
-              <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '24px', display: 'flex', alignItems: 'center', padding: '8px 16px' }}>
+              <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', padding: '8px 16px' }}>
                 <input
                   type="text"
                   placeholder="Digite sua mensagem..."

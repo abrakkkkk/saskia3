@@ -319,7 +319,7 @@ export default function CentroCirurgicoPage() {
                   <p style={{ color: '#94a3b8', textAlign: 'center', padding: '30px' }}>Nenhuma cirurgia agendada para hoje.</p>
                 ) : (
                   cirurgiasHoje.map(c => (
-                    <div key={c.id} style={{ background: '#f8fafc', borderRadius: '12px', padding: '15px', marginBottom: '10px', borderLeft: `4px solid ${c.status==='EM_ANDAMENTO'?'#f59e0b':c.status==='CONCLUIDA'?'#22c55e':'#1e3a8a'}` }}>
+                    <div key={c.id} style={{ background: '#f8fafc', borderRadius: '8px', padding: '15px', marginBottom: '10px', borderLeft: `4px solid ${c.status==='EM_ANDAMENTO'?'#f59e0b':c.status==='CONCLUIDA'?'#22c55e':'#1e3a8a'}` }}>
                       <strong>{c.dataHora ? new Date(c.dataHora).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : ''}</strong> - {c.paciente.nome}<br />
                       <small>{c.procedimento} | Sala {c.sala} | {c.equipe}</small><br />
                       <span className={`badge ${getStatusBadge(c.status)}`}>{getStatusName(c.status)}</span>
@@ -362,7 +362,7 @@ export default function CentroCirurgicoPage() {
           <div>
             <div className="search-box">
               <input type="text" placeholder="Buscar por paciente, procedimento ou equipe..." value={buscaCirurgia} onChange={e => setBuscaCirurgia(e.target.value)} />
-              <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)} style={{ width: 'auto', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '12px' }}>
+              <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)} style={{ width: 'auto', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '8px' }}>
                 <option value="todos">Todos os Status</option>
                 <option value="AGENDADA">Agendada</option>
                 <option value="EM_ANDAMENTO">Em Andamento</option>
@@ -370,7 +370,7 @@ export default function CentroCirurgicoPage() {
                 <option value="CANCELADA">Cancelada</option>
               </select>
             </div>
-            <div style={{ background: 'white', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
               <table className="tabela-cc">
                 <thead>
                   <tr><th>Data/Hora</th><th>Paciente</th><th>Procedimento</th><th>Sala</th><th>Equipe/Detalhes</th><th>Status</th><th>Ações</th></tr>

@@ -233,13 +233,13 @@ export default function AdminProntuariosPage() {
               <div className="campos-builder">
                 <div className="campos-builder-header">
                   <h4><i className="las la-layer-group"></i> Estrutura de Campos</h4>
-                  <button className="btn btn-primary" onClick={adicionarCampo} style={{ padding: '8px 16px', borderRadius: '20px', fontSize: '12px' }}>
+                  <button className="btn btn-primary" onClick={adicionarCampo} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '12px' }}>
                     <i className="las la-plus"></i> Adicionar Campo
                   </button>
                 </div>
 
                 {formCampos.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '30px', background: '#f8fafc', borderRadius: '12px', border: '2px dashed #cbd5e1', color: '#94a3b8' }}>
+                  <div style={{ textAlign: 'center', padding: '30px', background: '#f8fafc', borderRadius: '8px', border: '2px dashed #cbd5e1', color: '#94a3b8' }}>
                     <i className="las la-mouse-pointer" style={{ fontSize: '32px', marginBottom: '10px' }}></i>
                     <p style={{ margin: 0 }}>Nenhum campo adicionado.<br/>Clique no botão acima para começar a construir o prontuário.</p>
                   </div>

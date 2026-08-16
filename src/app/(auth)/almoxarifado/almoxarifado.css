@@ -6,7 +6,7 @@
 
 .banner-almox {
     background: linear-gradient(135deg, #0a1f44, #1e3a8a);
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 30px 40px;
     color: white;
     margin-bottom: 30px;
@@ -68,7 +68,7 @@
 .btn-almox {
     padding: 12px 24px;
     border: none;
-    border-radius: 12px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
     font-weight: 600;
@@ -89,7 +89,7 @@
 .categoria-card {
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(10px);
-    border-radius: 14px;
+    border-radius: 8px;
     padding: 20px;
     text-align: center;
     cursor: pointer;
@@ -153,7 +153,7 @@
 
 .modal-almox-conteudo {
     background: white;
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 30px;
     max-width: 600px;
     width: 90%;
@@ -165,7 +165,7 @@
     width: 100%;
     border-collapse: collapse;
     background: white;
-    border-radius: 16px;
+    border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     margin-bottom: 20px;

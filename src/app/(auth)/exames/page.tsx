@@ -265,7 +265,7 @@ export default function ExamesPage() {
               <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}><option value="todos">Todos os Tipos</option><option value="laboratorio">🔬 Laboratório</option><option value="imagem">🩻 Imagem</option></select>
               <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}><option value="todos">Todos os Status</option><option value="SOLICITADO">Solicitado</option><option value="COLETADO">Coletado</option><option value="EM_ANALISE">Em Análise</option><option value="CONCLUIDO">Concluído</option><option value="ALTERADO_CRITICO">Alterado/Crítico</option></select>
             </div>
-            <div style={{background:'white', borderRadius:'20px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)'}}>
+            <div style={{background:'white', borderRadius: '8px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)'}}>
               <table className="tabela-exames">
                 <thead><tr><th>Data</th><th>Tipo</th><th>Paciente</th><th>Exame</th><th>Solicitante</th><th>Status</th><th>Ações</th></tr></thead>
                 <tbody>
@@ -356,7 +356,7 @@ export default function ExamesPage() {
                   <p><strong>Solicitante:</strong> {modalLaudoData.exame.profissional || '-'}</p>
                   <p><strong>Data Solicitação:</strong> {new Date(modalLaudoData.exame.createdAt).toLocaleString('pt-BR')}</p>
                 </div>
-                <div style={{background:'#f8fafc', borderRadius:'12px', padding:'20px', marginBottom:'15px'}}>
+                <div style={{background:'#f8fafc', borderRadius: '8px', padding:'20px', marginBottom:'15px'}}>
                   <h4 style={{marginBottom:'10px'}}>Resultado</h4>
                   <p style={{fontSize:'18px', fontWeight:700, color: modalLaudoData.exame.status === 'ALTERADO_CRITICO' ? '#dc2626' : '#16a34a'}}>{modalLaudoData.exame.resultado || 'Aguardando'}</p>
                 </div>

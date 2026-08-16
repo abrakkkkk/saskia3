@@ -94,7 +94,7 @@ export default function ConfiguracoesPage() {
     <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', gap: '10px' }}>
       <div style={{ position: 'relative' }}>
         <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
-        <div style={{ width: '48px', height: '24px', backgroundColor: checked ? '#10b981' : '#cbd5e1', borderRadius: '9999px', transition: 'all 0.3s' }}>
+        <div style={{ width: '48px', height: '24px', backgroundColor: checked ? '#10b981' : '#cbd5e1', borderRadius: '8px', transition: 'all 0.3s' }}>
           <div style={{ width: '20px', height: '20px', backgroundColor: 'white', borderRadius: '50%', position: 'absolute', top: '2px', left: checked ? '26px' : '2px', transition: 'all 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
         </div>
       </div>
@@ -215,7 +215,7 @@ export default function ConfiguracoesPage() {
               
               <div style={{ display: 'flex', gap: '20px', flexDirection: 'column' }}>
                 {/* WhatsApp */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '25px', border: config.integracoes.whatsappAtivo ? '1px solid #10b981' : '1px solid #e2e8f0', borderRadius: '12px', background: config.integracoes.whatsappAtivo ? '#ecfdf5' : 'white', transition: 'all 0.3s' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '25px', border: config.integracoes.whatsappAtivo ? '1px solid #10b981' : '1px solid #e2e8f0', borderRadius: '8px', background: config.integracoes.whatsappAtivo ? '#ecfdf5' : 'white', transition: 'all 0.3s' }}>
                   <div style={{ fontSize: '48px', color: config.integracoes.whatsappAtivo ? '#10b981' : '#cbd5e1' }}><i className="lab la-whatsapp"></i></div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '16px' }}>WhatsApp Business API</div>
@@ -227,7 +227,7 @@ export default function ConfiguracoesPage() {
                 </div>
 
                 {/* TISS */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '25px', border: config.integracoes.tissAtivo ? '1px solid #6366f1' : '1px solid #e2e8f0', borderRadius: '12px', background: config.integracoes.tissAtivo ? '#eef2ff' : 'white', transition: 'all 0.3s' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '25px', border: config.integracoes.tissAtivo ? '1px solid #6366f1' : '1px solid #e2e8f0', borderRadius: '8px', background: config.integracoes.tissAtivo ? '#eef2ff' : 'white', transition: 'all 0.3s' }}>
                   <div style={{ fontSize: '48px', color: config.integracoes.tissAtivo ? '#6366f1' : '#cbd5e1' }}><i className="las la-file-medical-alt"></i></div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '16px' }}>TISS / ANS Integrador</div>
@@ -246,7 +246,7 @@ export default function ConfiguracoesPage() {
               <h3 style={{ marginBottom: '20px', fontSize: '18px', color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>Regras de Faturamento Avançado</h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '25px' }}>
-                <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                   <h4 style={{ fontSize: '15px', color: '#0f172a', marginBottom: '15px', fontWeight: 600 }}><i className="las la-calculator text-blue-500"></i> Parâmetros Financeiros</h4>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -270,7 +270,7 @@ export default function ConfiguracoesPage() {
                   </div>
                 </div>
 
-                <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                   <h4 style={{ fontSize: '15px', color: '#0f172a', marginBottom: '15px', fontWeight: 600 }}><i className="las la-robot text-blue-500"></i> Automação de Faturamento</h4>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

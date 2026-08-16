@@ -197,7 +197,7 @@ export default function TransportePage() {
         )}
 
         {activeTab === 'lista' && (
-          <div style={{background:'white', borderRadius:'20px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)', overflowX:'auto'}}>
+          <div style={{background:'white', borderRadius: '8px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)', overflowX:'auto'}}>
             <table className="tabela-transp">
               <thead>
                 <tr>

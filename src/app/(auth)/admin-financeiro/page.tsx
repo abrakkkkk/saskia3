@@ -177,7 +177,7 @@ export default function AdminFinanceiroPage() {
         {/* --- ABA TISS --- */}
         {activeTab === 'tiss' && (
           <div className="tab-conteudo ativo animate-in fade-in duration-300">
-            <div className="form-panel" style={{ background: 'white', padding: '25px', borderRadius: '16px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+            <div className="form-panel" style={{ background: 'white', padding: '25px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
               <h3 style={{ marginBottom: '15px', color: '#1e293b' }}><i className="las la-hospital-alt"></i> Faturamento por Convênio (TISS)</h3>
               <form onSubmit={(e) => formAction(e, 'tiss')} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
                 <div><label className="form-label">Convênio</label><input name="convenio" required className="input-field" /></div>
@@ -209,7 +209,7 @@ export default function AdminFinanceiroPage() {
         {/* --- ABA CONTAS --- */}
         {activeTab === 'contas' && (
           <div className="tab-conteudo ativo animate-in fade-in duration-300">
-            <div className="form-panel" style={{ background: 'white', padding: '25px', borderRadius: '16px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+            <div className="form-panel" style={{ background: 'white', padding: '25px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
               <h3 style={{ marginBottom: '15px', color: '#1e293b' }}><i className="las la-calculator"></i> Nova Conta</h3>
               <form onSubmit={(e) => formAction(e, 'conta')} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                 <div><label className="form-label">Tipo</label><select name="tipo" className="input-field"><option value="receber">A Receber</option><option value="pagar">A Pagar</option></select></div>
@@ -272,7 +272,7 @@ export default function AdminFinanceiroPage() {
         {/* --- ABA GLOSAS --- */}
         {activeTab === 'glosas' && (
           <div className="tab-conteudo ativo animate-in fade-in duration-300">
-            <div className="form-panel" style={{ background: 'white', padding: '25px', borderRadius: '16px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+            <div className="form-panel" style={{ background: 'white', padding: '25px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
               <h3 style={{ marginBottom: '15px', color: '#1e293b' }}><i className="las la-ban"></i> Registrar Nova Glosa</h3>
               <form onSubmit={(e) => formAction(e, 'glosa')} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                 <div><label className="form-label">Fatura/Guia</label><input name="fatura" required className="input-field" /></div>
@@ -303,7 +303,7 @@ export default function AdminFinanceiroPage() {
         {/* --- ABA SUS --- */}
         {activeTab === 'sus' && (
           <div className="tab-conteudo ativo animate-in fade-in duration-300">
-             <div className="form-panel" style={{ background: 'white', padding: '25px', borderRadius: '16px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+             <div className="form-panel" style={{ background: 'white', padding: '25px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
               <h3 style={{ marginBottom: '15px', color: '#1e293b' }}><i className="las la-flag-usa"></i> Faturamento SUS (APAC/AIH)</h3>
               <form onSubmit={(e) => formAction(e, 'sus')} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
                 <div><label className="form-label">Tipo</label><select name="tipo" className="input-field"><option>APAC</option><option>AIH</option></select></div>
@@ -336,7 +336,7 @@ export default function AdminFinanceiroPage() {
         {/* --- ABA NF-e --- */}
         {activeTab === 'nfe' && (
           <div className="tab-conteudo ativo animate-in fade-in duration-300">
-             <div className="form-panel" style={{ background: 'white', padding: '25px', borderRadius: '16px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+             <div className="form-panel" style={{ background: 'white', padding: '25px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
               <h3 style={{ marginBottom: '15px', color: '#1e293b' }}><i className="las la-file-invoice"></i> Emissão de NF-e</h3>
               <form onSubmit={(e) => formAction(e, 'nfe')} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                 <div><label className="form-label">Emitente (Hospital)</label><input name="emitente" required className="input-field" /></div>
@@ -367,13 +367,13 @@ export default function AdminFinanceiroPage() {
         {activeTab === 'historico' && (
           <div className="tab-conteudo ativo animate-in fade-in duration-300">
              {faturas.filter(f => f.status === 'Pago').length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8', background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+              <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <i className="las la-history" style={{ fontSize: '48px', marginBottom: '10px' }}></i>
                 <p style={{ margin: 0 }}>Nenhum pagamento registrado no histórico</p>
               </div>
             ) : (
               faturas.filter(f => f.status === 'Pago').map(f => (
-                <div key={f.id} className="historico-card pago" style={{ background: 'white', padding: '20px', borderRadius: '12px', borderLeft: '4px solid #16a34a', marginBottom: '15px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+                <div key={f.id} className="historico-card pago" style={{ background: 'white', padding: '20px', borderRadius: '8px', borderLeft: '4px solid #16a34a', marginBottom: '15px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
                   <h4 style={{ margin: '0 0 10px 0', color: '#1e293b' }}><i className="las la-check-circle" style={{ color: '#16a34a' }}></i> {f.hospitalNome} - {f.plano}</h4>
                   <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#475569' }}><strong>Fatura:</strong> {f.id} | <strong>Valor:</strong> R$ {f.valor.toFixed(2)} | <strong>Vencimento:</strong> {new Date(f.vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
                   <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>

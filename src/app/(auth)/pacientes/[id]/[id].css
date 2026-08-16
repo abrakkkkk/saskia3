@@ -5,7 +5,7 @@ body {
 .card {
     background: white;
     padding: 25px;
-    border-radius: 20px;
+    border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
     margin-bottom: 25px;
 }
@@ -23,7 +23,7 @@ body {
     background: linear-gradient(135deg, #dc2626, #991b1b);
     color: white;
     padding: 15px 25px;
-    border-radius: 16px;
+    border-radius: 8px;
     margin-bottom: 20px;
     display: flex;
     align-items: center;
@@ -64,7 +64,7 @@ body {
     border: none;
     background: transparent;
     color: #64748b;
-    border-radius: 10px 10px 0 0;
+    border-radius: 8px 8px 0 0;
     cursor: pointer;
     font-size: 12px;
     font-weight: 600;
@@ -99,7 +99,7 @@ textarea {
     width: 100%;
     padding: 11px 14px;
     border: 2px solid #e2e8f0;
-    border-radius: 10px;
+    border-radius: 8px;
     box-sizing: border-box;
     font-size: 14px;
     color: #334155;
@@ -146,7 +146,7 @@ textarea:focus {
 .badge-status {
     display: inline-block;
     padding: 6px 16px;
-    border-radius: 20px;
+    border-radius: 8px;
     font-size: 12px;
     font-weight: 700;
     margin-left: 12px;
@@ -164,7 +164,7 @@ textarea:focus {
 
 .escore-card {
     background: white;
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 20px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
     border: 2px solid #e2e8f0;
@@ -185,7 +185,7 @@ textarea:focus {
     text-align: center;
     margin-top: 12px;
     padding: 10px;
-    border-radius: 12px;
+    border-radius: 8px;
     font-size: 16px;
     font-weight: 700;
 }
@@ -219,7 +219,7 @@ textarea:focus {
 
 .glasgow-item {
     background: #f8fafc;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 10px;
     border: 2px solid #e2e8f0;
 }
@@ -251,7 +251,7 @@ textarea:focus {
 
 .braden-item {
     background: #f8fafc;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 8px 12px;
     display: flex;
     justify-content: space-between;
@@ -268,7 +268,7 @@ textarea:focus {
 .braden-item select {
     width: auto;
     padding: 4px 8px;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid #e2e8f0;
     font-size: 11px;
 }
@@ -285,7 +285,7 @@ textarea:focus {
     text-align: center;
     cursor: pointer;
     padding: 10px 6px;
-    border-radius: 12px;
+    border-radius: 8px;
     border: 3px solid transparent;
     transition: all 0.3s;
     flex: 1;
@@ -321,7 +321,7 @@ textarea:focus {
 }
 
 .manchester-card {
-    border-radius: 16px;
+    border-radius: 8px;
     padding: 18px 12px;
     cursor: pointer;
     transition: all 0.3s;
@@ -422,7 +422,7 @@ textarea:focus {
 .sinal-triagem-card {
     background: white;
     border: 2px solid #e2e8f0;
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 14px 10px;
     text-align: center;
 }
@@ -450,7 +450,7 @@ textarea:focus {
 
 .mews-container {
     background: white;
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 20px;
     margin-top: 20px;
     border: 2px solid #e2e8f0;
@@ -459,7 +459,7 @@ textarea:focus {
 .mews-score {
     text-align: center;
     padding: 20px;
-    border-radius: 16px;
+    border-radius: 8px;
     margin-bottom: 15px;
 }
 
@@ -519,7 +519,7 @@ textarea:focus {
     border-left: 5px solid #1e3a8a;
     padding: 15px;
     margin-bottom: 12px;
-    border-radius: 10px;
+    border-radius: 8px;
 }
 
 .post-cabecalho {
@@ -591,7 +591,7 @@ textarea:focus {
     color: white;
     border: none;
     padding: 14px 28px;
-    border-radius: 12px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 700;
@@ -605,7 +605,7 @@ textarea:focus {
     color: white;
     border: none;
     padding: 14px 28px;
-    border-radius: 12px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
@@ -619,7 +619,7 @@ textarea:focus {
     color: white;
     border: none;
     padding: 11px 22px;
-    border-radius: 10px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
     font-weight: 600;
@@ -633,7 +633,7 @@ textarea:focus {
     color: white;
     border: none;
     padding: 14px 28px;
-    border-radius: 12px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 16px;
     font-weight: 700;

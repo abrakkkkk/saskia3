@@ -2,7 +2,7 @@
 .card-conta {
     background: white;
     padding: 36px;
-    border-radius: 20px;
+    border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.06);
     border: 1px solid #e2e8f0;
     margin-bottom: 24px;
@@ -99,7 +99,7 @@
     width: 100%;
     padding: 11px 14px;
     border: 1.5px solid #e2e8f0;
-    border-radius: 10px;
+    border-radius: 8px;
     font-size: 14px;
     color: #0f172a;
     background: #f8fafc;
@@ -127,7 +127,7 @@
     color: white;
     border: none;
     padding: 13px 28px;
-    border-radius: 12px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 15px;
     font-weight: 700;
@@ -149,7 +149,7 @@
     border-left: 4px solid #16a34a;
     color: #15803d;
     padding: 14px 18px;
-    border-radius: 10px;
+    border-radius: 8px;
     margin-bottom: 20px;
     font-weight: 600;
     font-size: 14px;
@@ -160,7 +160,7 @@
     border-left: 4px solid #dc2626;
     color: #b91c1c;
     padding: 14px 18px;
-    border-radius: 10px;
+    border-radius: 8px;
     margin-bottom: 20px;
     font-weight: 600;
     font-size: 14px;

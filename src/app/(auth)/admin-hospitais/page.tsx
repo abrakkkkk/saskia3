@@ -601,7 +601,7 @@ export default function AdminHospitaisPage() {
               <h3 style={{ margin: '10px 0 0 0', color: '#0a1f44' }}>Registrar Pagamento</h3>
             </div>
             
-            <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
+            <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
               <p><strong>Fatura:</strong> {pgFatura.id}</p>
               <p><strong>Hospital:</strong> {pgFatura.hospitalNome}</p>
               <p><strong>Valor:</strong> R$ {pgFatura.valor.toFixed(2)}</p>

@@ -80,7 +80,7 @@ export default function AdminConfiguracaoPage() {
             <p>Gerencie os dados da sua instituição, endereço e identidade visual</p>
           </div>
           <div>
-            <Link href="/admin" className="btn btn-secondary" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', textDecoration: 'none', padding: '10px 20px', borderRadius: '10px' }}>
+            <Link href="/admin" className="btn btn-secondary" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px' }}>
               <i className="las la-arrow-left"></i> Voltar
             </Link>
           </div>

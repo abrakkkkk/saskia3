@@ -90,7 +90,7 @@ export default function LoginPage() {
                   onChange={(e) => setHospitalId(e.target.value)}
                   required
                   className="w-full bg-white border-2 border-transparent focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-lg appearance-none"
-                  style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '4px', fontSize: '14px', color: '#0f172a' }}
+                  style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', color: '#0f172a' }}
                 >
                   <option value="" style={{ color: '#64748b' }}>Selecione a unidade operacional...</option>
                   {hospitais.map((hospital) => (
@@ -115,7 +115,7 @@ export default function LoginPage() {
                 required
                 autoComplete="username"
                 className="w-full bg-white border-2 border-transparent focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-lg placeholder:text-slate-400"
-                style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '4px', fontSize: '14px', color: '#0f172a' }}
+                style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', color: '#0f172a' }}
               />
             </div>
 
@@ -131,7 +131,7 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 className="w-full bg-white border-2 border-transparent focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-lg placeholder:text-slate-400 tracking-widest"
-                style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '4px', fontSize: '14px', color: '#0f172a' }}
+                style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', color: '#0f172a' }}
               />
             </div>
 
@@ -147,7 +147,7 @@ export default function LoginPage() {
                 type="submit" 
                 disabled={loading}
                 className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold transition-colors flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ minHeight: '50px', padding: '12px 16px', borderRadius: '4px', fontSize: '16px', border: '1px solid rgba(255, 255, 255, 0.15)' }}
+                style={{ minHeight: '50px', padding: '12px 16px', borderRadius: '8px', fontSize: '16px', border: '1px solid rgba(255, 255, 255, 0.15)' }}
               >
                 {loading ? (
                   <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Autenticando...</>

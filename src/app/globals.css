@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+@theme {
+  --radius-xs: 8px;
+  --radius-sm: 8px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-2xl: 8px;
+  --radius-3xl: 8px;
+  --radius-4xl: 8px;
+  --radius: 8px;
+}
+
 /* Reset & Base */
 *,
 *::before,
@@ -105,7 +117,7 @@ img {
   border: none;
   color: white;
   padding: 8px 14px;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -128,7 +140,7 @@ img {
   top: calc(100% + 8px);
   right: 0;
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   min-width: 220px;
   overflow: hidden;
@@ -211,7 +223,7 @@ img {
 }
 .sidebar::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.15);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 .sidebar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.3);
@@ -254,7 +266,7 @@ img {
   gap: 12px;
   padding: 12px 16px;
   color: #e2e8f0;
-  border-radius: 12px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   transition: all 0.25s;
@@ -291,7 +303,7 @@ img {
   border: none;
   width: 28px;
   height: 55px;
-  border-radius: 0 14px 14px 0;
+  border-radius: 0 8px 8px 0;
   cursor: pointer;
   font-size: 18px;
   display: flex;
@@ -424,7 +436,7 @@ img {
 /* ===== CARDS ===== */
 .card {
   background: #f1f5f9;
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 24px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
   transition: all 0.3s;
@@ -435,7 +447,7 @@ img {
 .card-nav {
   background: #f1f5f9;
   padding: 16px 20px;
-  border-radius: 12px;
+  border-radius: 8px;
   text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -490,7 +502,7 @@ img {
 /* Stat Cards */
 .stat-card {
   background: #f1f5f9;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 18px 20px;
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.05),
@@ -553,7 +565,7 @@ img {
 .card-contador {
   background: #f1f5f9;
   padding: 20px;
-  border-radius: 12px;
+  border-radius: 8px;
   text-align: left;
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.05),
@@ -610,7 +622,7 @@ img {
 .card-categoria {
   background: #f1f5f9;
   padding: 18px;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow:
@@ -763,7 +775,7 @@ img {
 .perfil-badge {
   background: rgba(255, 255, 255, 0.1);
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 11px;
   font-weight: 600;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -782,7 +794,7 @@ img {
 .btn-emergencia {
   padding: 8px 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
@@ -817,7 +829,7 @@ img {
 .btn {
   padding: 12px 22px;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 15px;
   font-weight: 600;
@@ -872,7 +884,7 @@ img {
 .btn-xs {
   padding: 4px 10px;
   font-size: 11px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 /* ===== FORMS ===== */
@@ -894,7 +906,7 @@ img {
   width: 100%;
   padding: 14px 16px;
   border: 1px solid #cbd5e1;
-  border-radius: 12px;
+  border-radius: 8px;
   font-size: 15px;
   color: #334155;
   transition: all 0.2s;
@@ -913,7 +925,7 @@ img {
 /* ===== TABLES ===== */
 .tabela-wrapper {
   background: #f1f5f9;
-  border-radius: 20px;
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
@@ -952,7 +964,7 @@ img {
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  border-radius: 20px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 700;
 }
@@ -961,7 +973,7 @@ img {
   align-items: center;
   gap: 4px;
   padding: 5px 12px;
-  border-radius: 15px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 700;
 }
@@ -997,7 +1009,7 @@ img {
 .filtro-badge {
   padding: 8px 16px;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   background: white;
   font-size: 14px;
@@ -1022,7 +1034,7 @@ img {
 .filtro-badge .count {
   background: rgba(0, 0, 0, 0.08);
   padding: 2px 10px;
-  border-radius: 12px;
+  border-radius: 8px;
   font-size: 12px;
   margin-left: 4px;
 }
@@ -1104,7 +1116,7 @@ img {
 .card-grafico {
   background: #f1f5f9;
   padding: 22px;
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.05),
     0 1px 2px rgba(0, 0, 0, 0.03);
@@ -1145,12 +1157,12 @@ img {
 .barra {
   height: 12px;
   background: #f1f5f9;
-  border-radius: 99px;
+  border-radius: 8px;
   overflow: hidden;
 }
 .barra-preenchida {
   height: 100%;
-  border-radius: 99px;
+  border-radius: 8px;
   transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1199,7 +1211,7 @@ img {
   font-size: 11px;
   font-weight: 700;
   padding: 4px 8px;
-  border-radius: 20px;
+  border-radius: 8px;
   margin-bottom: 12px;
 }
 
@@ -1221,7 +1233,7 @@ img {
 }
 .modal-content {
   background: white;
-  border-radius: 20px;
+  border-radius: 8px;
   padding: 30px;
   max-width: 500px;
   width: 90%;
@@ -1307,7 +1319,7 @@ img {
   height: 520px;
   max-height: 70vh;
   background: white;
-  border-radius: 16px;
+  border-radius: 8px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
@@ -1378,7 +1390,7 @@ img {
 .chatbot-msg-bubble {
   max-width: 80%;
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: 8px;
   font-size: 13px;
   line-height: 1.5;
   color: #334155;
@@ -1436,7 +1448,7 @@ img {
   padding: 6px 12px;
   background: #eff6ff;
   border: 1px solid #bfdbfe;
-  border-radius: 15px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 11px;
   color: #1e3a8a;
@@ -1457,7 +1469,7 @@ img {
 .chatbot-input {
   flex: 1;
   border: 2px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 10px 14px;
   font-size: 13px;
   resize: none;
@@ -1585,7 +1597,7 @@ img {
 }
 .login-container {
   background: white;
-  border-radius: 24px;
+  border-radius: 8px;
   padding: 45px 40px;
   max-width: 480px;
   width: 100%;
@@ -1619,7 +1631,7 @@ img {
   width: 100%;
   padding: 16px;
   border: none;
-  border-radius: 14px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #1e3a8a, #2563eb);
   color: white;
   font-size: 16px;
@@ -1641,7 +1653,7 @@ img {
   background: #fef2f2;
   color: #dc2626;
   padding: 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   text-align: center;
   font-size: 14px;
   margin-top: 15px;
@@ -1650,7 +1662,7 @@ img {
   background: #eff6ff;
   color: #1e3a8a;
   padding: 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   text-align: center;
   font-size: 13px;
   margin-top: 15px;
@@ -1668,7 +1680,7 @@ img {
   width: 36px;
   height: 36px;
   border: 2px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
   background: white;
   cursor: pointer;
   display: flex;
@@ -1699,7 +1711,7 @@ img {
 .card-admin {
   background: white;
   padding: 25px;
-  border-radius: 12px;
+  border-radius: 8px;
   text-align: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   cursor: pointer;
@@ -1785,7 +1797,7 @@ img {
   background: #dc2626;
   color: white;
   padding: 15px 30px;
-  border-radius: 12px;
+  border-radius: 8px;
   font-weight: bold;
   font-size: 16px;
   text-align: center;

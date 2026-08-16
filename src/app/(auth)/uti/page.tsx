@@ -293,7 +293,7 @@ export default function UtiPage() {
             <div className="search-box">
               <input type="text" placeholder="Buscar por nome ou leito..." value={buscaPaciente} onChange={e => setBuscaPaciente(e.target.value)} />
             </div>
-            <div style={{ background: 'white', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
               <table className="tabela-uti">
                 <thead>
                   <tr>

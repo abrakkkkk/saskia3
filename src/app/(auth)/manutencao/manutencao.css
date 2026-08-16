@@ -8,7 +8,7 @@
 
 .banner-mnt {
     background: linear-gradient(135deg, #0a1f44, #1e3a8a);
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 30px 40px;
     color: white;
     margin-bottom: 25px;
@@ -39,7 +39,7 @@
 
 .stat-card {
     background: white;
-    border-radius: 16px;
+    border-radius: 8px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     border: 1px solid #e2e8f0;
@@ -102,7 +102,7 @@
 
 .form-panel {
     background: white;
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 30px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.03);
     border: 1px solid #e2e8f0;
@@ -148,7 +148,7 @@
     width: 100%;
     padding: 11px 14px;
     border: 1px solid #e2e8f0;
-    border-radius: 10px;
+    border-radius: 8px;
     font-size: 14px;
     color: #334155;
     background: white;
@@ -165,7 +165,7 @@
 
 .tabela-wrapper {
     background: white;
-    border-radius: 16px;
+    border-radius: 8px;
     overflow-x: auto;
     box-shadow: 0 2px 10px rgba(0,0,0,0.03);
     border: 1px solid #e2e8f0;
@@ -205,7 +205,7 @@
     align-items: center;
     gap: 6px;
     padding: 5px 14px;
-    border-radius: 20px;
+    border-radius: 8px;
     font-size: 11px;
     font-weight: 700;
 }
@@ -218,7 +218,7 @@
 .btn {
     padding: 11px 22px;
     border: none;
-    border-radius: 12px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
     font-weight: 600;

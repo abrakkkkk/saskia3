@@ -187,40 +187,40 @@ export default function RelatoriosPage() {
       <div className="rel-container">
         
         {/* HEADER */}
-        <div className="banner-rel" style={{ background: 'linear-gradient(135deg, #0a1f44, #1e3a8a)', borderRadius: '20px', padding: '30px 40px', color: 'white', marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+        <div className="banner-rel" style={{ background: 'linear-gradient(135deg, #0a1f44, #1e3a8a)', borderRadius: '8px', padding: '30px 40px', color: 'white', marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
           <div>
             <h1 style={{ fontSize: '28px', margin: 0 }}><i className="las la-chart-bar"></i> Relatórios Gerenciais Avançados</h1>
             <p style={{ opacity: 0.9, marginTop: '5px' }}>Indicadores hospitalares, ANS, CFM, gráficos e exportação</p>
           </div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button className="btn btn-success" onClick={handleExportCSV} style={{ padding: '11px 22px', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 600, cursor: 'pointer' }}><i className="las la-file-excel"></i> Exportar Excel</button>
-            <button className="btn btn-warning" onClick={handlePrint} style={{ padding: '11px 22px', background: '#f59e0b', color: '#0f172a', border: 'none', borderRadius: '12px', fontWeight: 600, cursor: 'pointer' }}><i className="las la-print"></i> Imprimir PDF</button>
+            <button className="btn btn-success" onClick={handleExportCSV} style={{ padding: '11px 22px', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}><i className="las la-file-excel"></i> Exportar Excel</button>
+            <button className="btn btn-warning" onClick={handlePrint} style={{ padding: '11px 22px', background: '#f59e0b', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}><i className="las la-print"></i> Imprimir PDF</button>
           </div>
         </div>
 
         {/* FILTROS */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
           {['hoje', 'semana', 'mes', 'ano', 'todos'].map(f => (
-            <button key={f} onClick={() => aplicarFiltroRapido(f)} style={{ padding: '8px 16px', border: '2px solid #e2e8f0', borderRadius: '25px', cursor: 'pointer', background: filtroRapido === f ? '#1e3a8a' : 'white', color: filtroRapido === f ? 'white' : '#64748b', fontSize: '12px', fontWeight: 600, transition: 'all 0.2s' }}>
+            <button key={f} onClick={() => aplicarFiltroRapido(f)} style={{ padding: '8px 16px', border: '2px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', background: filtroRapido === f ? '#1e3a8a' : 'white', color: filtroRapido === f ? 'white' : '#64748b', fontSize: '12px', fontWeight: 600, transition: 'all 0.2s' }}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
 
         <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div><label style={{display:'block', fontSize:'12px', fontWeight:600, color:'#64748b', marginBottom:'4px'}}>Data Inicial</label><input type="date" value={inicio} onChange={e => setInicio(e.target.value)} style={{ padding: '10px 14px', border: '2px solid #e2e8f0', borderRadius: '10px' }} /></div>
-          <div><label style={{display:'block', fontSize:'12px', fontWeight:600, color:'#64748b', marginBottom:'4px'}}>Data Final</label><input type="date" value={fim} onChange={e => setFim(e.target.value)} style={{ padding: '10px 14px', border: '2px solid #e2e8f0', borderRadius: '10px' }} /></div>
-          <button onClick={gerarRelatorios} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 600, cursor: 'pointer', height: '42px' }}><i className="las la-sync-alt"></i> Atualizar</button>
+          <div><label style={{display:'block', fontSize:'12px', fontWeight:600, color:'#64748b', marginBottom:'4px'}}>Data Inicial</label><input type="date" value={inicio} onChange={e => setInicio(e.target.value)} style={{ padding: '10px 14px', border: '2px solid #e2e8f0', borderRadius: '8px' }} /></div>
+          <div><label style={{display:'block', fontSize:'12px', fontWeight:600, color:'#64748b', marginBottom:'4px'}}>Data Final</label><input type="date" value={fim} onChange={e => setFim(e.target.value)} style={{ padding: '10px 14px', border: '2px solid #e2e8f0', borderRadius: '8px' }} /></div>
+          <button onClick={gerarRelatorios} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', height: '42px' }}><i className="las la-sync-alt"></i> Atualizar</button>
         </div>
 
         {/* MINI CARDS (STATS GRID) */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '15px', marginBottom: '25px' }}>
-          <div style={{ background: 'white', borderRadius: '16px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #1e3a8a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px'}}><i className="las la-users"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.totalPacientes}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Total Pacientes</div></div>
-          <div style={{ background: 'white', borderRadius: '16px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #16a34a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#16a34a'}}><i className="las la-check-circle"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.altas}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Altas</div></div>
-          <div style={{ background: 'white', borderRadius: '16px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #f59e0b', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#f59e0b'}}><i className="las la-clock"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.internacoes}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Internados</div></div>
-          <div style={{ background: 'white', borderRadius: '16px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #dc2626', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#dc2626'}}><i className="las la-cross"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.obitos}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Óbitos</div></div>
-          <div style={{ background: 'white', borderRadius: '16px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #1e3a8a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px'}}><i className="las la-bed"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.taxaUTI}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Taxa Ocup. UTI</div></div>
-          <div style={{ background: 'white', borderRadius: '16px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #16a34a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#16a34a'}}><i className="las la-chart-line"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.tmp}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Média Perm. (dias)</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #1e3a8a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px'}}><i className="las la-users"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.totalPacientes}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Total Pacientes</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #16a34a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#16a34a'}}><i className="las la-check-circle"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.altas}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Altas</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #f59e0b', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#f59e0b'}}><i className="las la-clock"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.internacoes}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Internados</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #dc2626', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#dc2626'}}><i className="las la-cross"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.obitos}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Óbitos</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #1e3a8a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px'}}><i className="las la-bed"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.taxaUTI}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Taxa Ocup. UTI</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #16a34a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#16a34a'}}><i className="las la-chart-line"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.tmp}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Média Perm. (dias)</div></div>
         </div>
 
         {/* TAB MENU */}
@@ -242,7 +242,7 @@ export default function RelatoriosPage() {
           <div className="animate-in fade-in duration-300">
             {/* GRÁFICOS */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '25px', marginBottom: '25px' }}>
-              <div style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
                 <h3 style={{ color: '#0a1f44', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-chart-bar"></i> Atendimentos por Mês</h3>
                 <div style={{ height: '300px' }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -250,14 +250,14 @@ export default function RelatoriosPage() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                       <XAxis dataKey="mes" axisLine={false} tickLine={false} />
                       <YAxis axisLine={false} tickLine={false} />
-                      <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '10px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}} />
+                      <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}} />
                       <Bar dataKey="atendimentos" fill="#3b82f6" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              <div style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
                 <h3 style={{ color: '#0a1f44', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-chart-pie"></i> Distribuição por Status</h3>
                 <div style={{ height: '300px' }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -267,14 +267,14 @@ export default function RelatoriosPage() {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <RechartsTooltip contentStyle={{borderRadius: '10px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}} />
+                      <RechartsTooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}} />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              <div style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
                 <h3 style={{ color: '#0a1f44', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-bed"></i> Ocupação de Leitos</h3>
                 <div style={{ height: '300px' }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -282,7 +282,7 @@ export default function RelatoriosPage() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                       <XAxis dataKey="tipo" axisLine={false} tickLine={false} />
                       <YAxis axisLine={false} tickLine={false} />
-                      <RechartsTooltip contentStyle={{borderRadius: '10px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}} />
+                      <RechartsTooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}} />
                       <Legend />
                       <Line type="monotone" dataKey="ocupados" stroke="#dc2626" strokeWidth={3} dot={{r: 6, fill: '#dc2626', strokeWidth: 0}} />
                       <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={3} dot={{r: 6, fill: '#3b82f6', strokeWidth: 0}} />
@@ -291,7 +291,7 @@ export default function RelatoriosPage() {
                 </div>
               </div>
 
-              <div style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
                 <h3 style={{ color: '#0a1f44', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-user-md"></i> Produção Médica Rápida</h3>
                 <div style={{ height: '300px' }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -299,7 +299,7 @@ export default function RelatoriosPage() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} />
                       <YAxis axisLine={false} tickLine={false} />
-                      <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '10px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}} />
+                      <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}} />
                       <Bar dataKey="valor" fill="#10b981" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -309,7 +309,7 @@ export default function RelatoriosPage() {
 
             {/* TABELAS DETALHADAS */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '25px' }}>
-              <div style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', borderLeft: '5px solid #1e3a8a' }}>
+              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', borderLeft: '5px solid #1e3a8a' }}>
                 <h3 style={{ color: '#0a1f44', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-shield-virus"></i> CCIH & Qualidade</h3>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>IRAS Notificadas</span><span style={{fontWeight:700, color:'#dc2626'}}>{data.iras}</span></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Densidade Incidência IRAS</span><span style={{fontWeight:700, color:'#1e3a8a'}}>{data.taxaIRAS}</span></div>
@@ -323,7 +323,7 @@ export default function RelatoriosPage() {
         {/* TAB PRODUCAO MEDICA */}
         {activeTab === 'producao' && (
           <div className="animate-in fade-in duration-300">
-            <div style={{ background: 'white', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ background: '#0f172a' }}>
                   <tr>
@@ -352,7 +352,7 @@ export default function RelatoriosPage() {
         {/* TAB LEITOS */}
         {activeTab === 'leitos' && (
           <div className="animate-in fade-in duration-300">
-            <div style={{ background: 'white', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ background: '#0f172a' }}>
                   <tr>
@@ -369,7 +369,7 @@ export default function RelatoriosPage() {
                         <td style={{ padding: '14px 16px', fontSize: '13px', color: '#334155', fontWeight: 'bold' }}>{t}</td>
                         <td style={{ padding: '14px 16px', fontSize: '13px', color: '#334155' }}>{ocupados} / {leitosTipo.length}</td>
                         <td style={{ padding: '14px 16px', fontSize: '13px', color: '#334155' }}>
-                          <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden', marginTop: '5px' }}>
+                          <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '8px', overflow: 'hidden', marginTop: '5px' }}>
                             <div style={{ height: '100%', width: `${taxa}%`, background: taxa > 80 ? '#dc2626' : (taxa > 50 ? '#f59e0b' : '#16a34a') }}></div>
                           </div>
                           {taxa}%
@@ -389,14 +389,14 @@ export default function RelatoriosPage() {
         {activeTab === 'ans' && (
           <div className="animate-in fade-in duration-300">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '25px' }}>
-              <div style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', borderLeft: '5px solid #1e3a8a' }}>
+              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', borderLeft: '5px solid #1e3a8a' }}>
                 <h3 style={{ color: '#0a1f44', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-file-medical"></i> Indicadores ANS</h3>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Taxa de Ocupação Operacional</span><span style={{fontWeight:700, color:'#1e3a8a'}}>{data.taxaUTI}</span></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Média de Permanência Geral</span><span style={{fontWeight:700, color:'#1e3a8a'}}>{data.tmp} dias</span></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Índice de Rotatividade</span><span style={{fontWeight:700, color:'#1e3a8a'}}>-</span></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Taxa de Cesáreas</span><span style={{fontWeight:700, color:'#1e3a8a'}}>-</span></div>
               </div>
-              <div style={{ background: 'white', borderRadius: '20px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', borderLeft: '5px solid #f59e0b' }}>
+              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', borderLeft: '5px solid #f59e0b' }}>
                 <h3 style={{ color: '#0a1f44', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-user-md"></i> Indicadores CFM</h3>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Consultas/Hora (Recomendado: 4)</span><span style={{fontWeight:700, color:'#f59e0b'}}>-</span></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Pacientes-dia</span><span style={{fontWeight:700, color:'#f59e0b'}}>{data.internacoes}</span></div>

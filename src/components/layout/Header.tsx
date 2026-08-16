@@ -33,7 +33,7 @@ export default function Header() {
         <Link href="/recepcao"><i className="las la-user-nurse"></i> <span>Recepção</span></Link>
         <Link href="/chat"><i className="las la-comments"></i> <span>Chat</span></Link>
         <Link href="/admin"><i className="las la-hospital"></i> <span>Admin</span></Link>
-        <Link href="/painel-chamadas" target="_blank" style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', borderRadius: '10px', padding: '0 15px', fontWeight: 600, border: 'none' }}>
+        <Link href="/painel-chamadas" target="_blank" style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', borderRadius: '8px', padding: '0 15px', fontWeight: 600, border: 'none' }}>
           <i className="las la-tv"></i> <span>Painel TV</span>
         </Link>
         <div className="user-menu" ref={dropdownRef}>

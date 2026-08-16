@@ -1,5 +1,5 @@
 
-.chat-container { display: flex; height: calc(100vh - 130px); max-width: 1500px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+.chat-container { display: flex; height: calc(100vh - 130px); max-width: 1500px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
 
 /* PAINEL LATERAL ESQUERDO */
 .chat-sidebar { width: 380px; min-width: 380px; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; background: #f8fafc; }
@@ -13,7 +13,7 @@
 .chat-sidebar-header .header-actions button:hover { background: rgba(255,255,255,0.25); }
 
 .chat-search { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; background: white; }
-.chat-search .search-input-wrapper { display: flex; align-items: center; background: #f1f5f9; border-radius: 24px; padding: 8px 16px; gap: 10px; }
+.chat-search .search-input-wrapper { display: flex; align-items: center; background: #f1f5f9; border-radius: 8px; padding: 8px 16px; gap: 10px; }
 .chat-search .search-input-wrapper i { color: #94a3b8; font-size: 18px; }
 .chat-search .search-input-wrapper input { flex: 1; border: none; background: transparent; font-size: 14px; outline: none; color: #334155; }
 .chat-search .search-input-wrapper input::placeholder { color: #94a3b8; }
@@ -29,7 +29,7 @@
 .contact-item .contact-role { font-size: 11px; color: #64748b; }
 .contact-item .contact-sector { font-size: 10px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
 .contact-item .contact-time { font-size: 11px; color: #94a3b8; white-space: nowrap; }
-.contact-item .contact-badge { background: #16a34a; color: white; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 600; min-width: 20px; text-align: center; }
+.contact-item .contact-badge { background: #16a34a; color: white; font-size: 10px; padding: 2px 8px; border-radius: 8px; font-weight: 600; min-width: 20px; text-align: center; }
 
 /* ÁREA PRINCIPAL DO CHAT */
 .chat-main { flex: 1; display: flex; flex-direction: column; background: #f8fafc; }
@@ -60,18 +60,18 @@
 .chat-input-area { padding: 12px 20px; background: white; border-top: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px; position: relative; }
 .chat-input-area button { background: none; border: none; color: #64748b; font-size: 22px; cursor: pointer; padding: 6px; border-radius: 50%; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
 .chat-input-area button:hover { color: #1e3a8a; background: #e2e8f0; }
-.chat-input-area .input-wrapper { flex: 1; display: flex; align-items: center; background: #f1f5f9; border-radius: 24px; padding: 8px 16px; gap: 8px; }
+.chat-input-area .input-wrapper { flex: 1; display: flex; align-items: center; background: #f1f5f9; border-radius: 8px; padding: 8px 16px; gap: 8px; }
 .chat-input-area .input-wrapper input { flex: 1; border: none; background: transparent; font-size: 14px; outline: none; color: #334155; }
 .chat-input-area .input-wrapper input::placeholder { color: #94a3b8; }
 .chat-input-area .send-btn { background: #1e3a8a; color: white; border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .chat-input-area .send-btn:hover { background: #2563eb; transform: scale(1.05); }
 
 /* EMOJI PICKER */
-.emoji-picker { display: none; position: absolute; bottom: 70px; left: 20px; background: white; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); padding: 12px; z-index: 1000; width: 320px; max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; }
+.emoji-picker { display: none; position: absolute; bottom: 70px; left: 20px; background: white; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); padding: 12px; z-index: 1000; width: 320px; max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; }
 .emoji-picker.show { display: block; }
 .emoji-picker .emoji-category { font-size: 10px; color: #94a3b8; padding: 8px 4px 4px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
 .emoji-picker .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
-.emoji-picker .emoji-item { font-size: 24px; padding: 6px 2px; cursor: pointer; text-align: center; border-radius: 6px; transition: all 0.15s; }
+.emoji-picker .emoji-item { font-size: 24px; padding: 6px 2px; cursor: pointer; text-align: center; border-radius: 8px; transition: all 0.15s; }
 .emoji-picker .emoji-item:hover { background: #e2e8f0; transform: scale(1.2); }
 
 /* SEM CONVERSA */
@@ -83,13 +83,13 @@
 /* MODAL ADICIONAR CONTATO */
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center; }
 .modal-overlay.show { display: flex; }
-.modal-box { background: white; border-radius: 20px; padding: 30px; width: 450px; max-width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+.modal-box { background: white; border-radius: 8px; padding: 30px; width: 450px; max-width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
 .modal-box h3 { color: #0a1f44; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
 .modal-box .form-grupo { margin-bottom: 15px; }
 .modal-box .form-grupo label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-.modal-box .form-grupo input, .modal-box .form-grupo select { width: 100%; padding: 11px 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; background: #f8fafc; }
+.modal-box .form-grupo input, .modal-box .form-grupo select { width: 100%; padding: 11px 14px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background: #f8fafc; }
 .modal-box .form-grupo input:focus, .modal-box .form-grupo select:focus { border-color: #1e3a8a; outline: none; }
-.modal-box .btn { width: 100%; padding: 12px; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+.modal-box .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
 .modal-box .btn-primary { background: #1e3a8a; color: white; }
 .modal-box .btn-secondary { background: #e2e8f0; color: #334155; }
 

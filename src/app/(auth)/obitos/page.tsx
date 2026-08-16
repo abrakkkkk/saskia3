@@ -316,7 +316,7 @@ export default function ObitosPage() {
             
             <div>
               {listaFiltrada.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '50px', color: '#94a3b8', background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                <div style={{ textAlign: 'center', padding: '50px', color: '#94a3b8', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                   <i className="las la-cross" style={{ fontSize: '48px' }}></i>
                   <p>Nenhum registro encontrado</p>
                 </div>
@@ -357,7 +357,7 @@ export default function ObitosPage() {
         {tabAtiva === 'certidoes' && (
           <div>
             {certidoesEmitidas.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '50px', color: '#94a3b8', background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+              <div style={{ textAlign: 'center', padding: '50px', color: '#94a3b8', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <i className="las la-file-alt" style={{ fontSize: '48px' }}></i>
                 <p>Nenhuma certidão emitida</p>
               </div>
@@ -405,7 +405,7 @@ export default function ObitosPage() {
               <p style={{ gridColumn: '1/-1' }}><strong>Observações:</strong> {modalVisualizar.observacoes || 'Nenhuma'}</p>
             </div>
 
-            <div style={{ marginTop: '20px', padding: '15px', background: '#f8fafc', borderRadius: '10px', fontSize: '12px' }}>
+            <div style={{ marginTop: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', fontSize: '12px' }}>
               <p><strong>Registrado por:</strong> {modalVisualizar.registradoPor} em {modalVisualizar.dataRegistro}</p>
             </div>
 

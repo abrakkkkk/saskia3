@@ -297,7 +297,7 @@ export default function AdminConfigDashboardPage() {
               <div className="config-section" key={secaoNome}>
                 <h3>
                   <i className="las la-folder"></i> {secaoNome}
-                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: 'auto', background: '#f8fafc', padding: '4px 8px', borderRadius: '12px' }}>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: 'auto', background: '#f8fafc', padding: '4px 8px', borderRadius: '8px' }}>
                     {ativosNaSecao}/{modulos.length} ativos
                   </span>
                 </h3>

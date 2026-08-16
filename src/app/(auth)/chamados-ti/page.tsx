@@ -187,12 +187,12 @@ export default function ChamadosTiPage() {
                       <div style={{ fontSize: '11px', color: '#94a3b8' }}>{new Date(ticket.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</div>
                     </td>
                     <td>
-                      <span className={`status-badge ${getPrioridadeBadge(ticket.prioridade)}`} style={{ padding: '4px 8px', borderRadius: '4px' }}>
+                      <span className={`status-badge ${getPrioridadeBadge(ticket.prioridade)}`} style={{ padding: '4px 8px', borderRadius: '8px' }}>
                          {ticket.prioridade}
                       </span>
                     </td>
                     <td>
-                      <span className={`status-badge ${getStatusBadge(ticket.status)}`} style={{ padding: '4px 8px', borderRadius: '4px' }}>
+                      <span className={`status-badge ${getStatusBadge(ticket.status)}`} style={{ padding: '4px 8px', borderRadius: '8px' }}>
                          {ticket.status}
                       </span>
                     </td>

@@ -178,7 +178,7 @@ export default function FaturamentoPage() {
                     {formatarMoeda(f.valor)}
                   </td>
                   <td>
-                    <span className={`status-badge ${getStatusBadge(f.status)}`} style={{ padding: '4px 8px', borderRadius: '4px' }}>
+                    <span className={`status-badge ${getStatusBadge(f.status)}`} style={{ padding: '4px 8px', borderRadius: '8px' }}>
                       {f.status}
                     </span>
                   </td>

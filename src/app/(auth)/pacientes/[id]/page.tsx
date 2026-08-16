@@ -326,7 +326,7 @@ export default function FichaPacientePage() {
     <div>
       {/* ALERTA ALERGIA */}
       {paciente.alergias && paciente.alergias.trim() !== '' && (
-        <div style={{ background: 'linear-gradient(135deg, #dc2626, #991b1b)', color: 'white', padding: '15px 25px', borderRadius: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600, fontSize: '16px', animation: 'pulsarAlergia 2s infinite', boxShadow: '0 4px 20px rgba(220,38,38,0.4)' }}>
+        <div style={{ background: 'linear-gradient(135deg, #dc2626, #991b1b)', color: 'white', padding: '15px 25px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600, fontSize: '16px', animation: 'pulsarAlergia 2s infinite', boxShadow: '0 4px 20px rgba(220,38,38,0.4)' }}>
           <i className="las la-exclamation-triangle" style={{ fontSize: 28 }}></i>
           <span>⚠️ Paciente alérgico a: <strong>{paciente.alergias}</strong></span>
         </div>
@@ -350,11 +350,11 @@ export default function FichaPacientePage() {
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           {manch && (
-            <span className="manchester-badge" style={{ background: manch.bg, color: manch.text, border: `1px solid ${manch.border}`, padding: '8px 12px', borderRadius: '12px', fontWeight: 700 }}>
+            <span className="manchester-badge" style={{ background: manch.bg, color: manch.text, border: `1px solid ${manch.border}`, padding: '8px 12px', borderRadius: '8px', fontWeight: 700 }}>
               <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: manch.text, display: 'inline-block' }}></span> {paciente.classificacao}
             </span>
           )}
-          <select value={paciente.status} onChange={e => mudarStatus(e.target.value)} style={{ background: statusCor.bg, color: statusCor.text, fontSize: 13, padding: '8px 12px', borderRadius: '12px', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none' }}>
+          <select value={paciente.status} onChange={e => mudarStatus(e.target.value)} style={{ background: statusCor.bg, color: statusCor.text, fontSize: 13, padding: '8px 12px', borderRadius: '8px', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none' }}>
             <option value="Recepção">📋 Recepção</option>
             <option value="Aguardando Triagem">⏳ Aguardando Triagem</option>
             <option value="Em Triagem">🩺 Em Triagem</option>
@@ -383,7 +383,7 @@ export default function FichaPacientePage() {
           { id: 'timeline', label: 'Timeline', icon: 'las la-stream' }
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding: '10px 16px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
+            padding: '10px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
             background: tab === t.id ? '#1e3a8a' : 'transparent', color: tab === t.id ? 'white' : '#64748b', transition: 'all 0.2s'
           }}><i className={t.icon} style={{ fontSize: '16px', marginRight: '6px' }}></i> {t.label}</button>
         ))}
@@ -505,16 +505,16 @@ export default function FichaPacientePage() {
             <h3 style={{ marginBottom: 20, color: '#0a1f44' }}>Escores Clínicos</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
               {/* Glasgow */}
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px' }}>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px' }}>
                 <h4 style={{ color: '#1e3a8a', marginBottom: '15px' }}>Escala de Glasgow</h4>
                 <div style={{ marginBottom: 10 }}><label className="form-label">Ocular</label><select value={glasgow.ocular} onChange={e => setGlasgow({ ...glasgow, ocular: parseInt(e.target.value) })} className="input-field"><option value={4}>4 - Espontânea</option><option value={3}>3 - À voz</option><option value={2}>2 - À dor</option><option value={1}>1 - Nenhuma</option></select></div>
                 <div style={{ marginBottom: 10 }}><label className="form-label">Verbal</label><select value={glasgow.verbal} onChange={e => setGlasgow({ ...glasgow, verbal: parseInt(e.target.value) })} className="input-field"><option value={5}>5 - Orientada</option><option value={4}>4 - Confusa</option><option value={3}>3 - Palavras Inapropriadas</option><option value={2}>2 - Sons</option><option value={1}>1 - Nenhuma</option></select></div>
                 <div style={{ marginBottom: 10 }}><label className="form-label">Motora</label><select value={glasgow.motor} onChange={e => setGlasgow({ ...glasgow, motor: parseInt(e.target.value) })} className="input-field"><option value={6}>6 - Obedece comandos</option><option value={5}>5 - Localiza dor</option><option value={4}>4 - Flexão normal</option><option value={3}>3 - Flexão anormal</option><option value={2}>2 - Extensão anormal</option><option value={1}>1 - Nenhuma</option></select></div>
-                <div style={{ marginTop: 15, background: '#eff6ff', padding: '15px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontWeight: 700, color: '#1e3a8a' }}>Total:</span><span style={{ fontSize: '24px', fontWeight: 800, color: '#1e3a8a' }}>{totalGlasgow}</span></div>
+                <div style={{ marginTop: 15, background: '#eff6ff', padding: '15px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontWeight: 700, color: '#1e3a8a' }}>Total:</span><span style={{ fontSize: '24px', fontWeight: 800, color: '#1e3a8a' }}>{totalGlasgow}</span></div>
               </div>
 
               {/* Braden */}
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px' }}>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px' }}>
                 <h4 style={{ color: '#059669', marginBottom: '15px' }}>Escala de Braden</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <div><label className="form-label" style={{ fontSize: 11 }}>Sensorial</label><select value={braden.sensorial} onChange={e => setBraden({ ...braden, sensorial: parseInt(e.target.value) })} className="input-field"><option value={4}>4</option><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
@@ -524,15 +524,15 @@ export default function FichaPacientePage() {
                   <div><label className="form-label" style={{ fontSize: 11 }}>Nutrição</label><select value={braden.nutricao} onChange={e => setBraden({ ...braden, nutricao: parseInt(e.target.value) })} className="input-field"><option value={4}>4</option><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
                   <div><label className="form-label" style={{ fontSize: 11 }}>Fricção</label><select value={braden.friccao} onChange={e => setBraden({ ...braden, friccao: parseInt(e.target.value) })} className="input-field"><option value={3}>3</option><option value={2}>2</option><option value={1}>1</option></select></div>
                 </div>
-                <div style={{ marginTop: 15, background: '#ecfdf5', padding: '15px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontWeight: 700, color: '#059669' }}>Total:</span><span style={{ fontSize: '24px', fontWeight: 800, color: '#059669' }}>{totalBraden}</span></div>
+                <div style={{ marginTop: 15, background: '#ecfdf5', padding: '15px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontWeight: 700, color: '#059669' }}>Total:</span><span style={{ fontSize: '24px', fontWeight: 800, color: '#059669' }}>{totalBraden}</span></div>
               </div>
 
               {/* Dor */}
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', gridColumn: '1 / -1' }}>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px', gridColumn: '1 / -1' }}>
                 <h4 style={{ color: '#d97706', marginBottom: '15px' }}>Escala Visual Analógica (Dor)</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', flexWrap: 'wrap', gap: 10 }}>
                   {[{ val: 0, emoji: '😊', label: 'Sem dor' }, { val: 2, emoji: '😐', label: 'Leve' }, { val: 5, emoji: '😣', label: 'Moderada' }, { val: 8, emoji: '😫', label: 'Intensa' }, { val: 10, emoji: '😭', label: 'Máxima' }].map(d => (
-                    <div key={d.val} onClick={() => setDor(d.val)} style={{ flex: 1, minWidth: 60, textAlign: 'center', cursor: 'pointer', padding: '10px', borderRadius: '12px', background: dor === d.val ? '#fefce8' : 'transparent', border: dor === d.val ? '2px solid #eab308' : '2px solid transparent', transform: dor === d.val ? 'scale(1.05)' : 'scale(1)', transition: 'all 0.2s' }}>
+                    <div key={d.val} onClick={() => setDor(d.val)} style={{ flex: 1, minWidth: 60, textAlign: 'center', cursor: 'pointer', padding: '10px', borderRadius: '8px', background: dor === d.val ? '#fefce8' : 'transparent', border: dor === d.val ? '2px solid #eab308' : '2px solid transparent', transform: dor === d.val ? 'scale(1.05)' : 'scale(1)', transition: 'all 0.2s' }}>
                       <div style={{ fontSize: '32px' }}>{d.emoji}</div><div style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', marginTop: '5px' }}>{d.label}</div><div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>{d.val}</div>
                     </div>
                   ))}
@@ -642,7 +642,7 @@ export default function FichaPacientePage() {
               <div><label className="form-label">Altura (m)</label><input type="number" step="0.01" className="input-field" value={nutricao.altura} onChange={e => setNutricao({ ...nutricao, altura: e.target.value })} /></div>
             </div>
             {imc > 0 && (
-              <div style={{ background: '#eff6ff', padding: '20px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ background: '#eff6ff', padding: '20px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <div><div style={{ fontSize: 12, color: '#1e3a8a', fontWeight: 700, textTransform: 'uppercase' }}>Índice de Massa Corporal (IMC)</div><div style={{ fontSize: 16, color: '#0f172a', fontWeight: 600, marginTop: 5 }}>Classificação: {imcClass}</div></div>
                 <div style={{ fontSize: 32, fontWeight: 800, color: '#1e3a8a' }}>{imc.toFixed(1)}</div>
               </div>

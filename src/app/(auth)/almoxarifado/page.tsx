@@ -336,7 +336,7 @@ export default function AlmoxarifadoPage() {
                 <i className="las la-search"></i>
                 <input type="text" placeholder="Buscar por item..." value={buscarMov} onChange={e => setBuscarMov(e.target.value)} />
               </div>
-              <select value={filtroTipoMov} onChange={e => setFiltroTipoMov(e.target.value)} style={{padding:'13px', borderRadius:'8px', border:'1px solid #cbd5e1', outline:'none'}}>
+              <select value={filtroTipoMov} onChange={e => setFiltroTipoMov(e.target.value)} style={{padding:'13px', borderRadius: '8px', border:'1px solid #cbd5e1', outline:'none'}}>
                 <option value="todos">Todos</option><option value="ENTRADA">Entradas</option><option value="SAIDA">Saídas</option>
               </select>
             </div>

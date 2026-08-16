@@ -14,7 +14,7 @@
 /* ==================== BANNER ==================== */
 .banner-sobre {
     background: linear-gradient(135deg, #0a1f44 0%, #1e3a8a 55%, #0ea5e9 100%);
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 48px 44px;
     color: white;
     margin-bottom: 30px;
@@ -43,7 +43,7 @@
 }
 .card-mvv {
     background: white;
-    border-radius: 16px;
+    border-radius: 8px;
     padding: 28px 24px;
     text-align: center;
     box-shadow: 0 6px 20px rgba(0,0,0,0.05);
@@ -57,7 +57,7 @@
 .card-mvv.visao::before  { background: #0ea5e9; }
 .card-mvv.valores::before { background: #10b981; }
 .card-mvv:hover { transform: translateY(-6px); box-shadow: 0 16px 32px rgba(0,0,0,0.08); }
-.card-mvv .icone-mvv { width: 60px; height: 60px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 28px; }
+.card-mvv .icone-mvv { width: 60px; height: 60px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 28px; }
 .card-mvv.missao .icone-mvv { background: #eff6ff; color: #1e3a8a; }
 .card-mvv.visao  .icone-mvv  { background: #f0f9ff; color: #0ea5e9; }
 .card-mvv.valores .icone-mvv { background: #ecfdf5; color: #10b981; }
@@ -82,7 +82,7 @@
 
 .card-pessoa {
     background: white;
-    border-radius: 18px;
+    border-radius: 8px;
     padding: 24px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.05);
     border: 1px solid #e2e8f0;
@@ -129,7 +129,7 @@
 .pessoa-header-info h3 { font-size: 16px; color: #0f172a; font-weight: 800; margin-bottom: 4px; line-height: 1.3; }
 
 .cargo-pessoa {
-    display: inline-block; padding: 3px 10px; border-radius: 6px;
+    display: inline-block; padding: 3px 10px; border-radius: 8px;
     font-size: 11px; font-weight: 700; margin-bottom: 10px; line-height: 1.4;
 }
 .cargo-idealizador { background: #fef3c7; color: #b45309; }
@@ -172,7 +172,7 @@
     background: white;
     border-left: 4px solid #1e3a8a;
     padding: 12px 16px;
-    border-radius: 0 10px 10px 0;
+    border-radius: 0 8px 8px 0;
     margin-bottom: 14px;
     font-style: italic;
     color: #0f172a; font-size: 13px; line-height: 1.6; font-weight: 600;
@@ -190,7 +190,7 @@
 .tags-formacao { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag-formacao {
     background: white; color: #475569;
-    padding: 5px 12px; border-radius: 20px;
+    padding: 5px 12px; border-radius: 8px;
     font-size: 12px; font-weight: 600;
     display: flex; align-items: center; gap: 5px;
     border: 1px solid #cbd5e1;
@@ -212,7 +212,7 @@
 
 .secao-historia {
     background: white;
-    border-radius: 18px;
+    border-radius: 8px;
     padding: 32px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.05);
     border: 1px solid #e2e8f0;
@@ -227,7 +227,7 @@
 
 .secao-projeto {
     background: white;
-    border-radius: 18px;
+    border-radius: 8px;
     padding: 32px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.05);
     border: 1px solid #e2e8f0;
@@ -235,12 +235,12 @@
 .secao-projeto h2 { color: #0f172a; font-size: 22px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; font-weight: 800; }
 .grid-projeto { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .card-projeto {
-    background: #f8fafc; border-radius: 14px; padding: 18px;
+    background: #f8fafc; border-radius: 8px; padding: 18px;
     border: 1px solid #e2e8f0; transition: all 0.25s;
 }
 .card-projeto:hover { border-color: #1e3a8a; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
 .card-projeto .icone-projeto {
-    width: 44px; height: 44px; border-radius: 10px;
+    width: 44px; height: 44px; border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
     font-size: 22px; margin-bottom: 12px; background: #eff6ff; color: #1e3a8a;
 }
@@ -250,7 +250,7 @@
 /* ==================== IMPACTO ==================== */
 .secao-impacto {
     background: linear-gradient(135deg, #0a1f44, #1e3a8a);
-    border-radius: 20px; padding: 44px;
+    border-radius: 8px; padding: 44px;
     color: white;
     box-shadow: 0 16px 36px rgba(10,31,68,0.25);
 }

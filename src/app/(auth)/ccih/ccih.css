@@ -1,10 +1,10 @@
 
 .ccih-container { max-width: 1500px; margin: 0 auto; padding: 15px; }
-.banner-ccih { background: linear-gradient(135deg, #0a1f44, #1e3a8a); border-radius: 20px; padding: 30px 40px; color: white; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+.banner-ccih { background: linear-gradient(135deg, #0a1f44, #1e3a8a); border-radius: 8px; padding: 30px 40px; color: white; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
 .banner-ccih h1 { font-size: 28px; margin: 0; }
 .banner-ccih p { opacity: 0.9; margin: 5px 0 0 0; font-size: 14px; }
 .indicadores-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
-.ind-card { background: white; border-radius: 16px; padding: 18px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border-left: 5px solid #1e3a8a; transition: all 0.3s; text-align: center; }
+.ind-card { background: white; border-radius: 8px; padding: 18px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border-left: 5px solid #1e3a8a; transition: all 0.3s; text-align: center; }
 .ind-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
 .ind-card.critico { border-left-color: #dc2626; }
 .ind-card.alerta { border-left-color: #f59e0b; }
@@ -21,30 +21,30 @@
 .tab-btn.ativo { color: #1e3a8a; border-bottom-color: #1e3a8a; }
 .tab-conteudo { display: none; }
 .tab-conteudo.ativo { display: block; }
-.form-panel { background: white; border-radius: 20px; padding: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); margin-bottom: 25px; }
+.form-panel { background: white; border-radius: 8px; padding: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); margin-bottom: 25px; }
 .form-panel h3 { color: #0a1f44; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
 .form-grupo { margin-bottom: 14px; }
 .form-grupo.full { grid-column: 1 / -1; }
 .form-grupo label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-.form-grupo input, .form-grupo select, .form-grupo textarea { width: 100%; padding: 11px 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; color: #334155; background: #f8fafc; transition: all 0.2s; }
+.form-grupo input, .form-grupo select, .form-grupo textarea { width: 100%; padding: 11px 14px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #334155; background: #f8fafc; transition: all 0.2s; }
 .form-grupo input:focus, .form-grupo select:focus, .form-grupo textarea:focus { border-color: #1e3a8a; outline: none; box-shadow: 0 0 0 4px rgba(30,58,138,0.06); background: white; }
 .form-grupo textarea { resize: vertical; min-height: 70px; }
-.tabela-ccih { width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+.tabela-ccih { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
 .tabela-ccih thead { background: #0f172a; }
 .tabela-ccih th { padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
 .tabela-ccih td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
 .tabela-ccih tbody tr:hover { background: #f8fafc; }
 .tabela-ccih tbody tr:last-child td { border-bottom: none; }
-.badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; }
 .badge-success { background: #dcfce7; color: #16a34a; }
 .badge-danger { background: #fef2f2; color: #dc2626; }
 .badge-warning { background: #fefce8; color: #d97706; }
 .badge-info { background: #dbeafe; color: #2563eb; }
 .badge-purple { background: #f5f3ff; color: #7c3aed; }
 .badge-gray { background: #f3f4f6; color: #6b7280; }
-.btn { padding: 11px 22px; border: none; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; white-space: nowrap; }
+.btn { padding: 11px 22px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; white-space: nowrap; }
 .btn-primary { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; }
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(30,58,138,0.3); }
 .btn-success { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; }
@@ -52,13 +52,13 @@
 .btn-danger { background: #dc2626; color: white; }
 .btn-info { background: #0891b2; color: white; }
 .btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 8px; }
-.btn-xs { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
+.btn-xs { padding: 5px 10px; font-size: 11px; border-radius: 8px; }
 .search-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-.search-box input, .search-box select { padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 14px; background: white; }
+.search-box input, .search-box select { padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background: white; }
 .search-box input { flex: 1; min-width: 250px; }
 .search-box input:focus, .search-box select:focus { border-color: #1e3a8a; outline: none; }
 .iras-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
-.ira-card { background: white; border-radius: 18px; padding: 22px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 2px solid #e2e8f0; transition: all 0.3s; border-left: 5px solid #1e3a8a; }
+.ira-card { background: white; border-radius: 8px; padding: 22px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 2px solid #e2e8f0; transition: all 0.3s; border-left: 5px solid #1e3a8a; }
 .ira-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
 .ira-card.ativo { border-left-color: #dc2626; background: #fef2f2; }
 .ira-card.tratado { border-left-color: #16a34a; background: #f0fdf4; }
@@ -68,12 +68,12 @@
 .ira-card .ira-info i { color: #1e3a8a; width: 18px; }
 .ira-card .ira-acoes { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .checklist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-.checklist-item { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s; }
+.checklist-item { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s; }
 .checklist-item:hover { border-color: #1e3a8a; background: #eff6ff; }
 .checklist-item.check { border-color: #22c55e; background: #dcfce7; }
 .checklist-item.check .check-icon { background: #22c55e; color: white; }
 .checklist-item.nao-check .check-icon { background: #fef2f2; color: #dc2626; }
-.checklist-item .check-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: #e2e8f0; color: #94a3b8; transition: all 0.2s; flex-shrink: 0; }
+.checklist-item .check-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: #e2e8f0; color: #94a3b8; transition: all 0.2s; flex-shrink: 0; }
 .checklist-item .check-label { font-size: 13px; font-weight: 600; color: #334155; }
 @media (max-width: 768px) { .form-grid, .form-grid-3 { grid-template-columns: 1fr; } .checklist-grid { grid-template-columns: 1fr; } .iras-grid { grid-template-columns: 1fr; } .tabela-ccih { font-size: 11px; } .tabela-ccih th, .tabela-ccih td { padding: 8px 10px; } }
 

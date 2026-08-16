@@ -155,7 +155,7 @@ export default function PacientesPage() {
       </div>
 
       {/* Busca and Filtros in one row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ position: 'relative', flex: '1 1 250px', maxWidth: '350px' }}>
           <i className="las la-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '18px' }}></i>
           <input 
@@ -172,7 +172,7 @@ export default function PacientesPage() {
               key={s}
               onClick={() => { setFiltroStatus(s); setPagina(1); }}
               style={{ 
-                padding: '6px 12px', borderRadius: '20px', border: filtroStatus === s ? '1px solid #1e3a8a' : '1px solid #cbd5e1', 
+                padding: '6px 12px', borderRadius: '8px', border: filtroStatus === s ? '1px solid #1e3a8a' : '1px solid #cbd5e1', 
                 background: filtroStatus === s ? '#1e3a8a' : '#ffffff', 
                 color: filtroStatus === s ? '#ffffff' : '#475569', 
                 fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
@@ -184,7 +184,7 @@ export default function PacientesPage() {
               <span style={{ 
                 background: filtroStatus === s ? 'rgba(255,255,255,0.2)' : '#f1f5f9', 
                 color: filtroStatus === s ? '#ffffff' : '#64748b',
-                padding: '2px 6px', borderRadius: '10px', fontSize: '10px' 
+                padding: '2px 6px', borderRadius: '8px', fontSize: '10px' 
               }}>
                 {s === 'todos' ? pacientes.length : pacientes.filter(p => p.status === s).length}
               </span>
@@ -194,7 +194,7 @@ export default function PacientesPage() {
       </div>
 
       {/* Tabela */}
-      <div className="tabela-wrapper" style={{ border: '1px solid #334155', borderRadius: '12px', overflow: 'hidden' }}>
+      <div className="tabela-wrapper" style={{ border: '1px solid #334155', borderRadius: '8px', overflow: 'hidden' }}>
         <table className="tabela">
           <thead>
             <tr>
@@ -299,7 +299,7 @@ export default function PacientesPage() {
       {/* Modal Novo Paciente */}
       {modalAberto && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', margin: '20px', animation: 'fadeIn 0.2s ease-out', border: '1px solid #334155', borderRadius: '12px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', margin: '20px', animation: 'fadeIn 0.2s ease-out', border: '1px solid #334155', borderRadius: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
               <h3 style={{ fontSize: '20px', color: '#1e293b', margin: 0 }}><i className="las la-user-plus text-blue-600"></i> Ficha Completa de Cadastro</h3>
               <button onClick={() => setModalAberto(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', color: '#64748b', cursor: 'pointer' }}><i className="las la-times"></i></button>
@@ -396,7 +396,7 @@ export default function PacientesPage() {
               </div>
 
               {/* Seção: Atendimento Atual */}
-              <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <h4 style={{ fontSize: '14px', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <i className="las la-hospital"></i> Atendimento Atual
                 </h4>
@@ -436,7 +436,7 @@ export default function PacientesPage() {
       {/* Modal Chamar Paciente */}
       {modalChamada.aberto && modalChamada.paciente && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '400px', margin: '20px', padding: '20px', animation: 'fadeIn 0.2s ease-out', border: '1px solid #334155', borderRadius: '12px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', margin: '20px', padding: '20px', animation: 'fadeIn 0.2s ease-out', border: '1px solid #334155', borderRadius: '8px' }}>
             <h3 style={{ fontSize: '18px', color: '#1e293b', marginBottom: '15px' }}>Chamar Paciente na TV</h3>
             <p style={{ marginBottom: '15px' }}>Para onde <strong>{modalChamada.paciente.nome}</strong> deve se dirigir?</p>
             
@@ -465,13 +465,13 @@ export default function PacientesPage() {
                       key={idx}
                       onClick={() => setModalChamada({ ...modalChamada, consultorio: s.nome })}
                       style={{ 
-                        display: 'flex', alignItems: 'center', padding: '12px', borderRadius: '12px', 
+                        display: 'flex', alignItems: 'center', padding: '12px', borderRadius: '8px', 
                         border: isSelected ? '2px solid #1e3a8a' : '1px solid #e2e8f0', 
                         background: isSelected ? '#eff6ff' : 'white', cursor: 'pointer', transition: 'all 0.2s'
                       }}
                     >
                       <div style={{ 
-                        width: '40px', height: '40px', borderRadius: '10px', 
+                        width: '40px', height: '40px', borderRadius: '8px', 
                         background: isLivre ? '#dcfce7' : '#fee2e2', 
                         color: isLivre ? '#16a34a' : '#ef4444', 
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', marginRight: '15px'

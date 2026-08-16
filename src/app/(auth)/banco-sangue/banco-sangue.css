@@ -6,7 +6,7 @@
 
 .banner-bs {
     background: linear-gradient(135deg, #7c0101, #dc2626);
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 30px 40px;
     color: white;
     margin-bottom: 25px;
@@ -43,7 +43,7 @@
 .ind-card {
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(10px);
-    border-radius: 18px;
+    border-radius: 8px;
     padding: 22px 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     display: flex;
@@ -63,7 +63,7 @@
 .ind-card .card-icon-wrap {
     width: 58px;
     height: 58px;
-    border-radius: 16px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -134,7 +134,7 @@
 /* Formulário Panel */
 .form-panel {
     background: white;
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 30px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     margin-bottom: 25px;
@@ -175,7 +175,7 @@
 .estoque-card {
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(10px);
-    border-radius: 18px;
+    border-radius: 8px;
     padding: 25px;
     text-align: center;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
@@ -251,7 +251,7 @@
     display: inline-block;
     background: #f1f5f9;
     padding: 4px 10px;
-    border-radius: 12px;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -265,7 +265,7 @@
 /* Log de Entradas */
 .entrada-log {
     background: white;
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 25px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     margin-top: 25px;
@@ -308,7 +308,7 @@
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(10px);
     border: 2px solid #e2e8f0;
-    border-radius: 14px;
+    border-radius: 8px;
     padding: 18px;
     text-align: center;
     transition: all 0.3s;
@@ -352,7 +352,7 @@
 
 .bs-modal-conteudo {
     background: white;
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 30px;
     max-width: 500px;
     width: 90%;

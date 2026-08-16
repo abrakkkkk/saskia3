@@ -571,7 +571,7 @@ export default function ReceituarioPage() {
               <button className={`modal-tab ${filtroAdesivo === 'viauso' ? 'ativo' : ''}`} onClick={() => setFiltroAdesivo('viauso')}><i className="las la-syringe"></i> Vias ADM</button>
             </div>
             
-            <div className="adesivos-grid" style={{maxHeight: '300px', marginBottom: '30px', border: '1px solid #e2e8f0', padding: '15px', borderRadius: '12px', background: '#f8fafc'}}>
+            <div className="adesivos-grid" style={{maxHeight: '300px', marginBottom: '30px', border: '1px solid #e2e8f0', padding: '15px', borderRadius: '8px', background: '#f8fafc'}}>
               {listaAdesivosFiltrados.map((a, i) => (
                 <div className="adesivo-item" key={i} onClick={() => addAdesivoBandeja(a.pasta, a.arquivo, a.nome)}>
                   <img src={`/adesivos/${a.pasta}/${a.arquivo}`} alt={a.nome} onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.setAttribute('style', 'display:block;font-size:48px;color:#1e3a8a;margin-bottom:8px;'); }} />
@@ -594,7 +594,7 @@ export default function ReceituarioPage() {
                         <span style={{fontWeight: 'bold', fontSize: '14px'}}>{b.nome}</span>
                       </div>
                       <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
-                        <div style={{display: 'flex', alignItems: 'center', border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden'}}>
+                        <div style={{display: 'flex', alignItems: 'center', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden'}}>
                           <button onClick={() => alterarQtdAdesivo(idx, -1)} style={{padding: '5px 12px', background: '#f1f5f9', border: 'none', cursor: 'pointer', borderRight: '1px solid #cbd5e1'}}>-</button>
                           <span style={{padding: '5px 15px', minWidth: '40px', textAlign: 'center', fontWeight: 'bold'}}>{b.qtd}</span>
                           <button onClick={() => alterarQtdAdesivo(idx, 1)} style={{padding: '5px 12px', background: '#f1f5f9', border: 'none', cursor: 'pointer', borderLeft: '1px solid #cbd5e1'}}>+</button>

@@ -20,7 +20,7 @@
 .stat-card-feedback {
     background: white;
     padding: 20px;
-    border-radius: 12px;
+    border-radius: 8px;
     text-align: center;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     border-left: 4px solid;
@@ -49,7 +49,7 @@
 /* FORMULÁRIO DE FEEDBACK */
 .form-feedback {
     background: white;
-    border-radius: 16px;
+    border-radius: 8px;
     padding: 25px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     margin-bottom: 30px;
@@ -71,7 +71,7 @@
 .tipo-btn {
     padding: 8px 20px;
     border: 2px solid #e2e8f0;
-    border-radius: 30px;
+    border-radius: 8px;
     cursor: pointer;
     background: white;
     font-size: 14px;
@@ -151,7 +151,7 @@
 /* LISTA DE FEEDBACKS */
 .feedbacks-lista {
     background: white;
-    border-radius: 16px;
+    border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
 }
@@ -179,7 +179,7 @@
 .filtro-feedback-btn {
     padding: 4px 12px;
     border: none;
-    border-radius: 20px;
+    border-radius: 8px;
     cursor: pointer;
     background: rgba(255,255,255,0.2);
     color: white;
@@ -213,7 +213,7 @@
 .feedback-tipo {
     display: inline-block;
     padding: 4px 12px;
-    border-radius: 20px;
+    border-radius: 8px;
     font-size: 11px;
     font-weight: bold;
 }
@@ -281,7 +281,7 @@
     background: white;
     width: 500px;
     max-width: 90%;
-    border-radius: 16px;
+    border-radius: 8px;
     overflow: hidden;
 }
 

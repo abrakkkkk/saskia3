@@ -6,7 +6,7 @@
 
 .banner-cssd {
     background: linear-gradient(135deg, #0a1f44, #1e3a8a);
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 30px 40px;
     color: white;
     margin-bottom: 25px;
@@ -42,7 +42,7 @@
 .ind-card {
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(10px);
-    border-radius: 16px;
+    border-radius: 8px;
     padding: 18px 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     border-left: 5px solid #1e3a8a;
@@ -113,7 +113,7 @@
 
 .form-panel {
     background: white;
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 28px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     margin-bottom: 25px;
@@ -149,7 +149,7 @@
 .fluxo-card {
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(10px);
-    border-radius: 16px;
+    border-radius: 8px;
     padding: 20px 15px;
     text-align: center;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
@@ -203,7 +203,7 @@
 .lote-card {
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(10px);
-    border-radius: 16px;
+    border-radius: 8px;
     padding: 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     border-left: 5px solid #1e3a8a;
@@ -264,7 +264,7 @@
 .search-box input, .search-box select {
     padding: 12px 16px;
     border: 2px solid #e2e8f0;
-    border-radius: 12px;
+    border-radius: 8px;
     font-size: 14px;
     background: white;
 }
@@ -278,7 +278,7 @@
     width: 100%;
     border-collapse: collapse;
     background: white;
-    border-radius: 16px;
+    border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06);
 }

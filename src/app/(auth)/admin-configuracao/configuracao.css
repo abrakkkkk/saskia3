@@ -8,7 +8,7 @@
 
 .banner-config {
     background: linear-gradient(135deg, #0a1f44, #1e3a8a);
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 30px 40px;
     color: white;
     margin-bottom: 25px;
@@ -37,7 +37,7 @@
 .form-panel {
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(10px);
-    border-radius: 20px;
+    border-radius: 8px;
     padding: 30px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.05);
     border: 1px solid rgba(255,255,255,0.8);
@@ -82,7 +82,7 @@
     width: 100%;
     padding: 14px;
     border: 2px solid #e2e8f0;
-    border-radius: 12px;
+    border-radius: 8px;
     font-size: 15px;
     background: #f8fafc;
     color: #1e293b;
@@ -99,7 +99,7 @@
 .logo-preview-box {
     background: #f1f5f9;
     border: 2px dashed #cbd5e1;
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 20px;
     text-align: center;
     margin-top: 10px;

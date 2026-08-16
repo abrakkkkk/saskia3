@@ -19,7 +19,7 @@
 .filtro-btn {
     padding: 8px 16px;
     border: none;
-    border-radius: 20px;
+    border-radius: 8px;
     cursor: pointer;
     background: #e2e8f0;
     font-size: 12px;
@@ -62,7 +62,7 @@
 .stat-card-user {
     background: white;
     padding: 15px;
-    border-radius: 12px;
+    border-radius: 8px;
     text-align: center;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
@@ -82,7 +82,7 @@
 /* TABELA DE USUÁRIOS */
 .tabela-usuarios {
     background: white;
-    border-radius: 12px;
+    border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
@@ -113,7 +113,7 @@
 .badge-nivel {
     display: inline-block;
     padding: 3px 10px;
-    border-radius: 20px;
+    border-radius: 8px;
     font-size: 10px;
     font-weight: bold;
 }
@@ -127,7 +127,7 @@
     color: white;
     border: none;
     padding: 5px 10px;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     margin-right: 5px;
 }
@@ -137,7 +137,7 @@
     color: white;
     border: none;
     padding: 5px 10px;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
 }
 
@@ -159,7 +159,7 @@
     background: white;
     width: 500px;
     max-width: 90%;
-    border-radius: 16px;
+    border-radius: 8px;
     overflow: hidden;
 }
 
