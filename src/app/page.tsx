@@ -5,26 +5,30 @@ import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { Hospital, Mail, Lock, LogIn, AlertTriangle, Settings } from 'lucide-react'
+import { Inter } from 'next/font/google'
 
-interface Hospital {
+const inter = Inter({ subsets: ['latin'] })
+
+interface HospitalData {
   id: string;
   nome: string;
 }
 
 export default function LoginPage() {
   const router = useRouter()
-  const [hospitais, setHospitais] = useState <Hospital[]> ([])
+  const [hospitais, setHospitais] = useState<HospitalData[]>([])
   const [hospitalId, setHospitalId] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')
-  const [loading, setLoading] = useState (false)
+  const [loading, setLoading] = useState(false)
 
-  useEffect (() => {
-    fetch ('/api/hospitais')
-      .then (response => response.json())
-      .then (data => setHospitais (data))
-      .catch (() => setHospitais([]))
+  useEffect(() => {
+    fetch('/api/hospitais')
+      .then(response => response.json())
+      .then(data => setHospitais(data))
+      .catch(() => setHospitais([]))
   }, [])
 
   const handleLogin = async (event: React.FormEvent) => {
@@ -32,12 +36,12 @@ export default function LoginPage() {
     setErro('')
 
     if (!hospitalId || !email || !senha) {
-      setErro ('Preencha todos os campos para continuar.')
+      setErro('Preencha todos os campos para continuar.')
       return
     }
 
     setLoading(true)
-    const resultado = await signIn ('credentials', {
+    const resultado = await signIn('credentials', {
       email,
       senha,
       hospitalId,
@@ -45,119 +49,157 @@ export default function LoginPage() {
     })
 
     if (resultado?.error) {
-      setErro (resultado.error)
-      setLoading (false)
+      setErro(resultado.error)
+      setLoading(false)
     } else {
       router.push('/dashboard')
     }
   }
 
   return (
-    <div className="login-page">
-      <div className="particles">
-        <span></span><span></span><span></span><span></span>
-        <span></span><span></span><span></span><span></span>
-      </div>
+    <div className={`min-h-screen w-full flex flex-col lg:flex-row-reverse selection:bg-blue-500/30 ${inter.className}`}>
+      
+      {/* Lado Direito (Agora) - Formulário de Login */}
+      <div className="w-full lg:w-[45%] bg-[#0a1f44] flex flex-col items-center justify-center p-6 lg:p-12 relative z-10 shadow-[-20px_0_50px_rgba(0,0,0,0.5)]">
+        
+        {/* Container / Delimitador Visual (Mantido o mesmo design) */}
+        <div 
+          className="w-full max-w-sm relative z-10" 
+          style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.04)', 
+            border: '1px solid rgba(255, 255, 255, 0.1)', 
+            padding: '36px 32px', 
+            borderRadius: '8px', 
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          
+          {/* Logo Area (Removida temporariamente para visualização) */}
 
-      <div className="login-container">
-        <div className="login-logo">
-          <Image
-            src="/images/logo.png"
-            alt="Saskia Saúde"
-            width={350}
-            height={120}
-            style={{ width: 'auto', height: '120px', objectFit: 'contain' }}
-            priority
-            onError={
-              (event) => { (event.target as HTMLImageElement).style.display = 'none'; }
-            }
-          />
-          <p style={{ 
-            color: '#1e3a8a', 
-            fontSize: '11px', 
-            marginTop: '0', 
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '1.5px'
-          }}>
-            Sistema Integrado de Gestão Hospitalar
-          </p>
+          {/* Form Area */}
+          <form onSubmit={handleLogin}>
+            
+            <div className="flex flex-col" style={{ marginBottom: '20px' }}>
+              <label className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
+                <Hospital className="w-3.5 h-3.5 text-blue-400" /> Unidade Hospitalar
+              </label>
+              <div className="relative">
+                <select
+                  value={hospitalId}
+                  onChange={(e) => setHospitalId(e.target.value)}
+                  required
+                  className="w-full bg-white border-2 border-transparent focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-lg appearance-none"
+                  style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '4px', fontSize: '14px', color: '#0f172a' }}
+                >
+                  <option value="" style={{ color: '#64748b' }}>Selecione a unidade operacional...</option>
+                  {hospitais.map((hospital) => (
+                    <option key={hospital.id} value={hospital.id}>{hospital.nome}</option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+                  <div className="w-2.5 h-2.5 border-b-2 border-r-2 transform rotate-45 translate-y-[-2px]" style={{ borderColor: '#94a3b8' }}></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col" style={{ marginBottom: '20px' }}>
+              <label className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
+                <Mail className="w-3.5 h-3.5 text-blue-400" /> E-mail Institucional
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="usuario@hospital.com"
+                required
+                autoComplete="username"
+                className="w-full bg-white border-2 border-transparent focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-lg placeholder:text-slate-400"
+                style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '4px', fontSize: '14px', color: '#0f172a' }}
+              />
+            </div>
+
+            <div className="flex flex-col" style={{ marginBottom: '24px' }}>
+              <label className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
+                <Lock className="w-3.5 h-3.5 text-blue-400" /> Senha de Acesso
+              </label>
+              <input
+                type="password"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                placeholder="••••••••"
+                required
+                autoComplete="current-password"
+                className="w-full bg-white border-2 border-transparent focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-lg placeholder:text-slate-400 tracking-widest"
+                style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '4px', fontSize: '14px', color: '#0f172a' }}
+              />
+            </div>
+
+            {erro && (
+              <div className="flex items-center gap-3 text-red-200 bg-red-500/20 border border-red-500/50 p-3.5 rounded-md text-sm font-medium" style={{ marginBottom: '20px' }}>
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <p>{erro}</p>
+              </div>
+            )}
+
+            <div>
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold transition-colors flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ minHeight: '50px', padding: '12px 16px', borderRadius: '4px', fontSize: '16px', border: '1px solid rgba(255, 255, 255, 0.15)' }}
+              >
+                {loading ? (
+                  <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Autenticando...</>
+                ) : (
+                  <><LogIn className="w-5 h-5" /> Acessar Sistema</>
+                )}
+              </button>
+            </div>
+          </form>
+
         </div>
 
-        <form onSubmit={handleLogin}>
-          <div className="form-group">
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'none' }}>
-              <i className="las la-hospital" style={{ fontSize: '16px', color: '#1e3a8a' }}></i>
-              Unidade Hospitalar
-            </label>
-            <select
-              value={hospitalId}
-              onChange={(event) => setHospitalId (event.target.value)}
-              required
-            >
-              <option value="">Selecione a unidade...</option>
-              {hospitais.map ((hospital) => (
-                <option key={hospital.id} value={hospital.id}>{hospital.nome}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'none' }}>
-              <i className="las la-envelope" style={{ fontSize: '16px', color: '#1e3a8a' }}></i>
-              E-mail de Acesso
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail (event.target.value)}
-              placeholder="exemplo@hospital.com"
-              required
-              autoComplete="username"
-            />
-          </div>
-
-          <div className="form-group">
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'none' }}>
-              <i className="las la-lock" style={{ fontSize: '16px', color: '#1e3a8a' }}></i>
-              Senha
-            </label>
-            <input
-              type="password"
-              value={senha}
-              onChange={(event) => setSenha (event.target.value)}
-              placeholder="Sua senha segura"
-              required
-              autoComplete="current-password"
-            />
-          </div>
-
-          <button type="submit" className="btn-login" disabled={loading}>
-            {loading ? (
-              <><i className="las la-spinner la-spin"></i> Entrando...</>
-            ) : (
-              <><i className="las la-sign-in-alt"></i> Entrar no Sistema</>
-            )}
-          </button>
-        </form>
-
-        {erro && (
-          <div className="erro-msg" style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-            <i className="las la-exclamation-triangle" style={{ fontSize: '18px' }}></i>
-            {erro}
-          </div>
-        )}
-
-        <div style={{ marginTop: '30px', borderTop: '1px solid #f1f5f9', paddingTop: '20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '10px' }}>
-            <i className="las la-info-circle"></i> Primeiro acesso? Configure via Prisma.
-          </div>
-          
-          <Link href="/admin/hospitais" style={{ color: '#1e3a8a', fontWeight: 600, fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '5px', transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'} onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}>
-            <i className="las la-tools" style={{ fontSize: '16px' }}></i> Gerenciar Hospitais (Admin)
+        {/* Footer Link com posição absoluta para não empurrar o card para cima */}
+        <div className="absolute bottom-8 w-full text-center">
+          <Link 
+            href="/admin/hospitais" 
+            className="inline-flex items-center gap-2 text-blue-200/50 hover:text-blue-200 transition-colors text-xs font-semibold uppercase tracking-widest"
+          >
+            <Settings className="w-4 h-4" />
+            Configuração Inicial (Admin)
           </Link>
         </div>
+
       </div>
+
+      {/* Lado Direito - Painel Decorativo (Abstract Branding) */}
+      <div className="hidden lg:flex lg:w-[55%] relative bg-[#020817] overflow-hidden items-center justify-center">
+        
+        {/* Grade de fundo (Grid) */}
+        <div 
+          className="absolute inset-0 z-0 opacity-[0.03]" 
+          style={{ backgroundImage: 'linear-gradient(#ffffff 1px, transparent 1px), linear-gradient(90deg, #ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}
+        ></div>
+        
+        {/* Brilhos (Gradients) decorativos */}
+        <div className="absolute top-1/4 left-1/4 w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] bg-blue-600 rounded-full mix-blend-screen filter blur-[150px] opacity-10"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-[50vw] h-[50vw] max-w-[500px] max-h-[500px] bg-blue-400 rounded-full mix-blend-screen filter blur-[120px] opacity-10"></div>
+
+        {/* Logo d'água no centro */}
+        <div className="relative z-10 flex flex-col items-center opacity-60 select-none pointer-events-none">
+          <Image
+            src="/images/logo.png"
+            alt="Saskia Saúde Marca D'água"
+            width={500}
+            height={200}
+            className="brightness-0 invert object-contain"
+            priority
+          />
+        </div>
+        
+      </div>
+
     </div>
   )
 }
