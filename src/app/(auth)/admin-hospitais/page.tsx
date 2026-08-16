@@ -148,8 +148,8 @@ export default function AdminHospitaisPage() {
     alert("✅ Hospital cadastrado com sucesso!");
   };
 
-  const toggleHospital = (id: string) => {
-    if (!confirm("Tem certeza que deseja alterar o status deste hospital?")) return;
+  const toggleHospital = async (id: string) => {
+    if (!await confirm("Tem certeza que deseja alterar o status deste hospital?")) return;
     const novosHospitais = hospitais.map(h => h.id === id ? { ...h, ativo: !h.ativo } : h);
     setHospitais(novosHospitais);
   };
@@ -179,8 +179,8 @@ export default function AdminHospitaisPage() {
     alert("✅ Usuário cadastrado com sucesso!");
   };
 
-  const toggleUsuario = (id: string) => {
-    if (!confirm("Tem certeza que deseja alterar o status deste usuário?")) return;
+  const toggleUsuario = async (id: string) => {
+    if (!await confirm("Tem certeza que deseja alterar o status deste usuário?")) return;
     const novosUsuarios = usuarios.map(u => u.id === id ? { ...u, ativo: !u.ativo } : u);
     setUsuarios(novosUsuarios);
   };
@@ -284,9 +284,9 @@ export default function AdminHospitaisPage() {
     alert("✅ Pagamento registrado com sucesso!");
   };
 
-  const excluirFatura = (id: string) => {
-    if (!confirm("⚠️ Tem certeza que deseja EXCLUIR esta fatura?\n\nEsta ação não pode ser desfeita!")) return;
-    if (!confirm("🔴 CONFIRMAÇÃO FINAL: Deseja realmente excluir esta fatura permanentemente?")) return;
+  const excluirFatura = async (id: string) => {
+    if (!await confirm("⚠️ Tem certeza que deseja EXCLUIR esta fatura?\n\nEsta ação não pode ser desfeita!")) return;
+    if (!await confirm("🔴 CONFIRMAÇÃO FINAL: Deseja realmente excluir esta fatura permanentemente?")) return;
     const novasFaturas = faturas.filter(f => f.id !== id);
     setFaturas(novasFaturas);
     alert("🗑️ Fatura excluída com sucesso!");

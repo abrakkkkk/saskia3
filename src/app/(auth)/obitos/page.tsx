@@ -110,7 +110,7 @@ export default function ObitosPage() {
   };
 
   const emitirCertidao = async (id: string) => {
-    if(!confirm("Deseja emitir a certidão para este óbito?")) return;
+    if(!await confirm("Deseja emitir a certidão para este óbito?")) return;
     
     try {
       const res = await fetch(`/api/obitos/${id}`, {

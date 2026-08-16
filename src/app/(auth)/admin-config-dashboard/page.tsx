@@ -172,7 +172,7 @@ export default function AdminConfigDashboardPage() {
   };
 
   const resetConfig = async () => {
-    if(confirm("⚠️ Tem certeza que deseja restaurar TODOS os módulos para o padrão (ativados)?")) {
+    if(await confirm("⚠️ Tem certeza que deseja restaurar TODOS os módulos para o padrão (ativados)?")) {
       let newState = { ...configState };
       modulosConfigOriginal.forEach(m => newState[m.id] = true);
       setConfigState(newState);

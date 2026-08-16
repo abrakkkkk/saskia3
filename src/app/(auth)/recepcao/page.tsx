@@ -143,7 +143,7 @@ export default function RecepcaoPage() {
   };
 
   const darSaidaVisitante = async (id: string) => {
-    if (!confirm('Confirmar saída deste visitante?')) return;
+    if (!await confirm('Confirmar saída deste visitante?')) return;
     try {
       await fetch(`/api/visitantes/${id}`, {
         method: 'PUT',

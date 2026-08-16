@@ -74,7 +74,7 @@ export default function ManutencaoPage() {
   };
 
   const concluirOS = async (id: string) => {
-    if (!confirm("Confirmar a conclusão desta OS?")) return;
+    if (!await confirm("Confirmar a conclusão desta OS?")) return;
     
     try {
       const res = await fetch(`/api/manutencao/${id}`, {

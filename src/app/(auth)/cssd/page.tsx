@@ -119,7 +119,7 @@ export default function CSSDPage() {
   };
 
   const rejeitarLote = async (id: string, numero: string) => {
-    if(confirm(`Rejeitar lote ${numero}?`)){
+    if(await confirm(`Rejeitar lote ${numero}?`)){
       try {
         const res = await fetch(`/api/cssd/${id}`, {
           method: 'PUT',

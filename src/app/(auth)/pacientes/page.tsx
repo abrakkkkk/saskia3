@@ -217,7 +217,7 @@ export default function PacientesPage() {
                     <td>
                       {manch ? (
                         <span className="manchester-badge" style={{ background: manch.bg, color: manch.text, border: `1px solid ${manch.border}` }}>
-                          {manch.emoji} {p.classificacao}
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: manch.text, display: 'inline-block' }}></span> {p.classificacao}
                         </span>
                       ) : <span style={{ color: '#94a3b8' }}>—</span>}
                     </td>
@@ -245,8 +245,8 @@ export default function PacientesPage() {
                         <Link href={`/pacientes/${p.id}`} className="btn btn-primary btn-xs">
                           <i className="las la-eye"></i>
                         </Link>
-                        <button className="btn btn-danger btn-xs" onClick={() => {
-                          if (confirm('Excluir este paciente?')) {
+                        <button className="btn btn-danger btn-xs" onClick={async () => {
+                          if (await confirm('Excluir este paciente?')) {
                             fetch(`/api/pacientes/${p.id}`, { method: 'DELETE' })
                               .then(() => setPacientes(prev => prev.filter(x => x.id !== p.id)));
                           }

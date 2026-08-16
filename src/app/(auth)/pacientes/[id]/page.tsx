@@ -351,7 +351,7 @@ export default function FichaPacientePage() {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           {manch && (
             <span className="manchester-badge" style={{ background: manch.bg, color: manch.text, border: `1px solid ${manch.border}`, padding: '8px 12px', borderRadius: '12px', fontWeight: 700 }}>
-              {manch.emoji} {paciente.classificacao}
+              <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: manch.text, display: 'inline-block' }}></span> {paciente.classificacao}
             </span>
           )}
           <select value={paciente.status} onChange={e => mudarStatus(e.target.value)} style={{ background: statusCor.bg, color: statusCor.text, fontSize: 13, padding: '8px 12px', borderRadius: '12px', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none' }}>
