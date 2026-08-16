@@ -115,21 +115,15 @@ export default function AgendaPage() {
   const especialidades = ['Todas', ...Array.from(new Set(agendamentos.map(a => a.especialidade).filter(Boolean)))];
 
   return (
-    <div className="conteudo">
+    <div>
       {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap', gap: '15px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <div style={{ width: '48px', height: '48px', background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '24px', boxShadow: '0 4px 15px rgba(59,130,246,0.3)' }}>
-            <i className="las la-calendar"></i>
-          </div>
-          <div>
-            <h1 style={{ color: '#0a1f44', fontSize: '24px', fontWeight: 700, margin: 0 }}>Agenda Central</h1>
-            <p style={{ color: '#64748b', margin: '4px 0 0 0', fontSize: '14px' }}>Controle de agendamentos e retornos</p>
-          </div>
+      <div className="page-header">
+        <h2><i className="las la-calendar"></i> Agenda Central</h2>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn btn-primary" onClick={() => alert('Novo agendamento em desenvolvimento')}>
+            <i className="las la-plus-circle"></i> Novo Agendamento
+          </button>
         </div>
-        <button className="btn btn-primary" onClick={() => alert('Novo agendamento em desenvolvimento')}>
-          <i className="las la-plus-circle"></i> Novo Agendamento
-        </button>
       </div>
 
       {/* STATS */}
@@ -153,14 +147,14 @@ export default function AgendaPage() {
       </div>
 
       {/* FILTROS NO TOPO (EM LINHA) */}
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '25px', flexWrap: 'wrap', background: '#f8fafc', padding: '15px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '25px', flexWrap: 'wrap', background: 'white', padding: '15px', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
         <div style={{ flex: '1 1 250px' }}>
           <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '5px' }}>Data da Agenda</label>
           <input 
             type="date" 
             value={filtroData}
             onChange={(e) => setFiltroData(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none' }}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', background: '#f8fafc', color: '#0f172a' }}
           />
         </div>
         <div style={{ flex: '1 1 250px' }}>
@@ -168,7 +162,7 @@ export default function AgendaPage() {
           <select 
             value={filtroEspecialidade}
             onChange={(e) => setFiltroEspecialidade(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#fff' }}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', background: '#f8fafc', color: '#0f172a' }}
           >
             {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
           </select>
@@ -176,13 +170,13 @@ export default function AgendaPage() {
         <div style={{ flex: '2 1 300px' }}>
           <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '5px' }}>Buscar Paciente</label>
           <div className="busca-wrapper" style={{ margin: 0, width: '100%' }}>
-            <i className="las la-search"></i>
+            <i className="las la-search" style={{ color: '#64748b' }}></i>
             <input 
               type="text"
               value={termoBusca}
               onChange={(e) => setTermoBusca(e.target.value)}
               placeholder="Nome ou CPF..."
-              style={{ width: '100%', border: '1px solid #cbd5e1' }}
+              style={{ width: '100%', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#0f172a', paddingLeft: '40px' }}
             />
           </div>
         </div>
