@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 
+import { Inter } from 'next/font/google';
+
+const inter = Inter({ subsets: ['latin'] });
+
 interface PacienteData {
   nome: string;
   cpf: string | null;
@@ -115,189 +119,276 @@ export default function AgendaPage() {
   const especialidades = ['Todas', ...Array.from(new Set(agendamentos.map(a => a.especialidade).filter(Boolean)))];
 
   return (
-    <div>
+    <div className={inter.className} style={{ padding: '32px', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+      
       {/* HEADER */}
-      <div className="page-header">
-        <h2><i className="las la-calendar"></i> Agenda Central</h2>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={() => alert('Novo agendamento em desenvolvimento')}>
-            <i className="las la-plus-circle"></i> Novo Agendamento
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '32px' }}>
+        <div>
+          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <i className="las la-calendar" style={{ color: '#1d4ed8' }}></i> Agenda Central
+          </h2>
+          <p style={{ color: '#475569', fontSize: '14px', marginTop: '4px', marginBottom: 0 }}>Gerencie os atendimentos e consultas do dia</p>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button 
+            style={{ backgroundColor: '#0f172a', color: 'white', padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, border: '1px solid #0f172a', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}
+            onClick={() => alert('Novo agendamento em desenvolvimento')}
+          >
+            <i className="las la-plus-circle" style={{ fontSize: '18px', opacity: 0.9 }}></i> Novo Agendamento
           </button>
         </div>
       </div>
 
       {/* STATS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '25px' }}>
-        <div className="stat-card" style={{ borderLeft: '4px solid #3b82f6' }}>
-          <div className="stat-icon" style={{ background: '#eff6ff', color: '#3b82f6' }}><i className="las la-calendar-day"></i></div>
-          <div><div className="stat-numero" style={{ color: '#3b82f6' }}>{stats.agendados}</div><div className="stat-label">Agendados</div></div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+        
+        {/* Agendados */}
+        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#eff6ff', color: '#1d4ed8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
+            <i className="las la-calendar-day"></i>
+          </div>
+          <div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{stats.agendados}</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#475569', marginTop: '4px' }}>Agendados</div>
+          </div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid #10b981' }}>
-          <div className="stat-icon verde"><i className="las la-check-circle"></i></div>
-          <div><div className="stat-numero" style={{ color: '#10b981' }}>{stats.confirmados}</div><div className="stat-label">Confirmados</div></div>
+
+        {/* Confirmados */}
+        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#ecfdf5', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
+            <i className="las la-check-circle"></i>
+          </div>
+          <div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{stats.confirmados}</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#475569', marginTop: '4px' }}>Confirmados</div>
+          </div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid #64748b' }}>
-          <div className="stat-icon" style={{ background: '#f1f5f9', color: '#64748b' }}><i className="las la-stethoscope"></i></div>
-          <div><div className="stat-numero">{stats.atendidos}</div><div className="stat-label">Atendidos</div></div>
+
+        {/* Atendidos */}
+        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#f1f5f9', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
+            <i className="las la-stethoscope"></i>
+          </div>
+          <div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{stats.atendidos}</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#475569', marginTop: '4px' }}>Atendidos</div>
+          </div>
         </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid #ef4444' }}>
-          <div className="stat-icon vermelho"><i className="las la-times-circle"></i></div>
-          <div><div className="stat-numero" style={{ color: '#ef4444' }}>{stats.cancelados}</div><div className="stat-label">Cancelados</div></div>
+
+        {/* Cancelados */}
+        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#fef2f2', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
+            <i className="las la-times-circle"></i>
+          </div>
+          <div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{stats.cancelados}</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#475569', marginTop: '4px' }}>Cancelados</div>
+          </div>
         </div>
+
       </div>
 
-      {/* FILTROS NO TOPO (EM LINHA) */}
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '25px', flexWrap: 'wrap', background: 'white', padding: '15px', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-        <div style={{ flex: '1 1 250px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '5px' }}>Data da Agenda</label>
+      {/* COMMAND BAR / FILTROS */}
+      <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '12px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', position: 'relative', zIndex: 10 }}>
+        
+        <div style={{ flex: '1 1 200px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', marginLeft: '4px' }}>Data da Agenda</label>
           <input 
             type="date" 
             value={filtroData}
             onChange={(e) => setFiltroData(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', background: '#f8fafc', color: '#0f172a' }}
+            style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #94a3b8', borderRadius: '8px', fontSize: '14px', padding: '10px 16px', color: '#1e293b', fontWeight: 600, outline: 'none' }}
           />
         </div>
+        
         <div style={{ flex: '1 1 250px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '5px' }}>Especialidade</label>
-          <select 
-            value={filtroEspecialidade}
-            onChange={(e) => setFiltroEspecialidade(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', background: '#f8fafc', color: '#0f172a' }}
-          >
-            {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
-          </select>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', marginLeft: '4px' }}>Especialidade</label>
+          <div style={{ position: 'relative' }}>
+            <select 
+              value={filtroEspecialidade}
+              onChange={(e) => setFiltroEspecialidade(e.target.value)}
+              style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #94a3b8', borderRadius: '8px', fontSize: '14px', padding: '10px 40px 10px 16px', color: '#1e293b', fontWeight: 600, outline: 'none', appearance: 'none' }}
+            >
+              {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+            <i className="las la-angle-down" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }}></i>
+          </div>
         </div>
+        
         <div style={{ flex: '2 1 300px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '5px' }}>Buscar Paciente</label>
-          <div className="busca-wrapper" style={{ margin: 0, width: '100%' }}>
-            <i className="las la-search" style={{ color: '#64748b' }}></i>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', marginLeft: '4px' }}>Buscar Paciente</label>
+          <div style={{ position: 'relative' }}>
+            <i className="las la-search" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '18px' }}></i>
             <input 
               type="text"
               value={termoBusca}
               onChange={(e) => setTermoBusca(e.target.value)}
               placeholder="Nome ou CPF..."
-              style={{ width: '100%', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#0f172a', paddingLeft: '40px' }}
+              style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #94a3b8', borderRadius: '8px', fontSize: '14px', padding: '10px 16px 10px 44px', color: '#1e293b', fontWeight: 600, outline: 'none' }}
             />
           </div>
         </div>
+
       </div>
 
       {/* TABELA DE AGENDAMENTOS */}
-      <div className="tabela-wrapper">
-        <table className="tabela">
-          <thead>
-            <tr>
-              <th style={{ width: '100px' }}>Horário</th>
-              <th>Paciente</th>
-              <th>Detalhes</th>
-              <th>Status</th>
-              <th style={{ textAlign: 'center', width: '100px' }}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} style={{ textAlign: 'center', padding: '50px', color: '#94a3b8' }}><i className="las la-spinner la-spin" style={{ fontSize: '24px' }}></i><br/>Carregando...</td></tr>
-            ) : agendamentosFiltrados.length === 0 ? (
-              <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
-                  <i className="las la-calendar-times" style={{ fontSize: '48px', opacity: 0.3, marginBottom: '10px', display: 'block' }}></i>
-                  <span style={{ fontSize: '16px', fontWeight: 500 }}>Nenhum agendamento encontrado para esta data.</span>
-                </td>
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', overflow: 'hidden', position: 'relative', zIndex: 0 }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #94a3b8' }}>
+                <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', width: '120px' }}>Horário</th>
+                <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Paciente</th>
+                <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Detalhes</th>
+                <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', width: '160px' }}>Status</th>
+                <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center', width: '100px' }}>Ações</th>
               </tr>
-            ) : (
-              agendamentosFiltrados.map((agenda) => {
-                const isPast = new Date(agenda.dataHora) < new Date();
-                const cor = getStatusColor(agenda.status);
-                return (
-                  <tr key={agenda.id}>
-                    <td>
-                      <div style={{ fontWeight: 700, fontSize: '15px', color: isPast && agenda.status === 'AGENDADO' ? '#ef4444' : '#0a1f44', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <i className="las la-clock" style={{ opacity: 0.5 }}></i>
-                        {new Date(agenda.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 700, color: '#0a1f44' }}>{agenda.paciente.nome}</div>
-                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                        {agenda.paciente.cpf && <span style={{ marginRight: '10px' }}><i className="las la-id-card"></i> {agenda.paciente.cpf}</span>}
-                        {agenda.paciente.telefone && <span><i className="las la-phone"></i> {agenda.paciente.telefone}</span>}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span style={{ fontWeight: 600, color: '#1e3a8a' }}><i className="las la-stethoscope"></i> {agenda.especialidade}</span>
-                        {agenda.profissional && <span style={{ color: '#475569' }}><i className="las la-user-md"></i> {agenda.profissional}</span>}
-                        {agenda.sala && <span style={{ color: '#64748b' }}><i className="las la-map-marker"></i> {agenda.sala}</span>}
-                      </div>
-                    </td>
-                    <td>
-                      <span style={{ 
-                        background: cor.bg, color: cor.text, border: `1px solid ${cor.border}`,
-                        padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.5px'
-                      }}>
-                        {agenda.status}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button 
-                        className="btn btn-xs" 
-                        style={{ background: '#f1f5f9', color: '#475569' }}
-                        onClick={() => setAgendaSelecionada(agenda)}
-                        title="Opções"
-                      >
-                        <i className="las la-ellipsis-v"></i>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody style={{ borderTop: '1px solid #94a3b8' }}>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} style={{ padding: '64px 24px', textAlign: 'center' }}>
+                    <i className="las la-spinner la-spin" style={{ fontSize: '36px', color: '#2563eb', marginBottom: '12px' }}></i>
+                    <p style={{ color: '#475569', fontWeight: 600, fontSize: '14px', margin: 0 }}>Carregando agendamentos...</p>
+                  </td>
+                </tr>
+              ) : agendamentosFiltrados.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ padding: '80px 24px', textAlign: 'center' }}>
+                    <div style={{ width: '80px', height: '80px', backgroundColor: '#f1f5f9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', border: '1px solid #94a3b8' }}>
+                      <i className="las la-calendar-times" style={{ fontSize: '36px', color: '#64748b' }}></i>
+                    </div>
+                    <p style={{ color: '#0f172a', fontWeight: 600, fontSize: '18px', margin: 0 }}>Nenhum agendamento</p>
+                    <p style={{ color: '#475569', marginTop: '4px', fontSize: '14px' }}>Tente mudar os filtros ou a data selecionada acima.</p>
+                  </td>
+                </tr>
+              ) : (
+                agendamentosFiltrados.map((agenda) => {
+                  const isPast = new Date(agenda.dataHora) < new Date();
+                  const cor = getStatusColor(agenda.status);
+                  const iniciais = agenda.paciente.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+                  
+                  return (
+                    <tr key={agenda.id} style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: 'transparent', transition: 'background-color 0.2s' }}>
+                      <td style={{ padding: '16px 24px', verticalAlign: 'middle' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '14px', color: isPast && agenda.status === 'AGENDADO' ? '#dc2626' : '#1e293b' }}>
+                          <i className="las la-clock" style={{ fontSize: '18px', opacity: 0.8 }}></i>
+                          {new Date(agenda.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </td>
+                      <td style={{ padding: '16px 24px', verticalAlign: 'middle' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#e2e8f0', color: '#1e293b', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #94a3b8', fontSize: '14px' }}>
+                            {iniciais}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '14px' }}>{agenda.paciente.nome}</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', marginTop: '4px', fontSize: '12px', color: '#475569', fontWeight: 500 }}>
+                              {agenda.paciente.cpf && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><i className="las la-id-card"></i> {agenda.paciente.cpf}</span>}
+                              {agenda.paciente.telefone && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><i className="las la-phone"></i> {agenda.paciente.telefone}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '16px 24px', verticalAlign: 'middle' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 500 }}>
+                          <span style={{ fontWeight: 700, color: '#1e40af', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <i className="las la-stethoscope" style={{ fontSize: '16px', opacity: 0.8 }}></i> {agenda.especialidade}
+                          </span>
+                          {agenda.profissional && <span style={{ color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="las la-user-md" style={{ fontSize: '16px', opacity: 0.8 }}></i> {agenda.profissional}</span>}
+                          {agenda.sala && <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="las la-door-open" style={{ fontSize: '16px', opacity: 0.8 }}></i> {agenda.sala}</span>}
+                        </div>
+                      </td>
+                      <td style={{ padding: '16px 24px', verticalAlign: 'middle' }}>
+                        <span style={{ 
+                          display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.05em', textTransform: 'uppercase', border: '1px solid',
+                          backgroundColor: cor.bg, color: cor.text, borderColor: cor.border 
+                        }}>
+                          {agenda.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '16px 24px', verticalAlign: 'middle', textAlign: 'center' }}>
+                        <button 
+                          style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', backgroundColor: 'transparent', border: '1px solid transparent', cursor: 'pointer', margin: '0 auto', transition: 'all 0.2s' }}
+                          onClick={() => setAgendaSelecionada(agenda)}
+                          title="Opções"
+                        >
+                          <i className="las la-ellipsis-v" style={{ fontSize: '18px' }}></i>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Modal de Ações Rápida */}
+      {/* MODAL DE AÇÕES RÁPIDAS */}
       {agendaSelecionada && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: 'white', borderRadius: '12px', width: '100%', maxWidth: '350px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '384px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #334155', overflow: 'hidden' }}>
+            
+            {/* Modal Header */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #94a3b8', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', backgroundColor: '#f8fafc' }}>
               <div>
-                <h3 style={{ margin: 0, color: '#0a1f44', fontSize: '16px', fontWeight: 700 }}>{agendaSelecionada.paciente.nome}</h3>
-                <p style={{ margin: '2px 0 0 0', color: '#64748b', fontSize: '12px' }}>Atualizar Status</p>
+                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', lineHeight: 1.25, margin: 0 }}>{agendaSelecionada.paciente.nome}</h3>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '4px 0 0 0' }}>Opções de Atendimento</p>
               </div>
-              <button onClick={() => setAgendaSelecionada(null)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#94a3b8' }}>&times;</button>
+              <button 
+                onClick={() => setAgendaSelecionada(null)} 
+                style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', marginRight: '-8px' }}
+              >
+                <i className="las la-times" style={{ fontSize: '20px' }}></i>
+              </button>
             </div>
             
-            <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* Modal Body */}
+            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              
               <button 
                 onClick={() => alterarStatus(agendaSelecionada.id, 'CONFIRMADO')}
-                style={{ width: '100%', textAlign: 'left', padding: '12px 15px', borderRadius: '8px', border: 'none', background: '#f0fdf4', color: '#166534', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '12px', border: '1px solid #059669', backgroundColor: '#ecfdf5', color: '#065f46', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', cursor: 'pointer' }}
               >
-                <i className="las la-check-circle" style={{ fontSize: '18px' }}></i> Confirmar Presença
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', color: '#059669' }}>
+                  <i className="las la-check" style={{ fontSize: '18px' }}></i>
+                </div>
+                Confirmar Presença
               </button>
               
               <button 
                 onClick={() => alterarStatus(agendaSelecionada.id, 'EM ATENDIMENTO')}
-                style={{ width: '100%', textAlign: 'left', padding: '12px 15px', borderRadius: '8px', border: 'none', background: '#eff6ff', color: '#1e40af', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '12px', border: '1px solid #2563eb', backgroundColor: '#eff6ff', color: '#1e40af', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', cursor: 'pointer' }}
               >
-                <i className="las la-stethoscope" style={{ fontSize: '18px' }}></i> Iniciar Atendimento
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', color: '#2563eb' }}>
+                  <i className="las la-stethoscope" style={{ fontSize: '18px' }}></i>
+                </div>
+                Iniciar Atendimento
               </button>
 
               <button 
                 onClick={() => alterarStatus(agendaSelecionada.id, 'FINALIZADO')}
-                style={{ width: '100%', textAlign: 'left', padding: '12px 15px', borderRadius: '8px', border: 'none', background: '#f8fafc', color: '#475569', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '12px', border: '1px solid #334155', backgroundColor: '#ffffff', color: '#1e293b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', cursor: 'pointer' }}
               >
-                <i className="las la-flag-checkered" style={{ fontSize: '18px' }}></i> Finalizar Consulta
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', color: '#334155' }}>
+                  <i className="las la-flag-checkered" style={{ fontSize: '18px' }}></i>
+                </div>
+                Finalizar Consulta
               </button>
 
-              <div style={{ height: '1px', background: '#f1f5f9', margin: '5px 0' }}></div>
+              <div style={{ height: '1px', backgroundColor: '#94a3b8', margin: '4px 0' }}></div>
               
               <button 
                 onClick={() => alterarStatus(agendaSelecionada.id, 'CANCELADO')}
-                style={{ width: '100%', textAlign: 'left', padding: '12px 15px', borderRadius: '8px', border: 'none', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '12px', border: '1px solid transparent', backgroundColor: 'transparent', color: '#475569', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
               >
-                <i className="las la-times-circle" style={{ fontSize: '18px' }}></i> Cancelar Agendamento
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <i className="las la-trash-alt" style={{ fontSize: '18px' }}></i>
+                </div>
+                Cancelar Agendamento
               </button>
+
             </div>
           </div>
         </div>
