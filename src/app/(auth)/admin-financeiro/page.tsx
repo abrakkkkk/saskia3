@@ -124,7 +124,7 @@ export default function AdminFinanceiroPage() {
         {/* --- STATS GRID --- */}
         <div className="stats-grid">
           <div className="stat-card azul"><div className="stat-icon"><i className="las la-file-invoice"></i></div><div className="stat-valor">{totalFaturas}</div><div className="stat-label">Total de Faturas</div></div>
-          <div className="stat-card verde"><div class="stat-icon"><i className="las la-check-circle"></i></div><div className="stat-valor">{pagasMes}</div><div className="stat-label">Faturas Pagas (Mês)</div></div>
+          <div className="stat-card verde"><div className="stat-icon"><i className="las la-check-circle"></i></div><div className="stat-valor">{pagasMes}</div><div className="stat-label">Faturas Pagas (Mês)</div></div>
           <div className="stat-card vermelho"><div className="stat-icon"><i className="las la-exclamation-triangle"></i></div><div className="stat-valor">{vencidas}</div><div className="stat-label">Faturas Vencidas</div></div>
           <div className="stat-card verde"><div className="stat-icon"><i className="las la-money-bill"></i></div><div className="stat-valor">R$ {receitaFaturasMes.toFixed(2)}</div><div className="stat-label">Receita (Mês)</div></div>
           <div className="stat-card azul"><div className="stat-icon"><i className="las la-hand-holding-usd"></i></div><div className="stat-valor">R$ {totalContasReceber.toFixed(2)}</div><div className="stat-label">Contas a Receber</div></div>
