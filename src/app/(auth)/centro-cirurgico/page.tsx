@@ -149,7 +149,7 @@ export default function CentroCirurgicoPage() {
     else if (novoStatus === 'CONCLUIDA') msg = `Concluir cirurgia de ${cirurgia.paciente.nome} - ${cirurgia.procedimento}?`;
     else if (novoStatus === 'CANCELADA') msg = `Cancelar cirurgia de ${cirurgia.paciente.nome}?`;
 
-    if (confirm(msg)) {
+    if (await confirm(msg)) {
       try {
         const res = await fetch(`/api/cirurgias/${id}`, {
           method: 'PUT',

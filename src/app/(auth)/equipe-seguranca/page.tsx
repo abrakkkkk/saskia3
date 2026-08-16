@@ -109,7 +109,7 @@ export default function EquipeSegurancaPage() {
   };
 
   const resolverAlerta = async (id: string) => {
-    if (!confirm("Confirmar resolução deste alerta?")) return;
+    if (!await confirm("Confirmar resolução deste alerta?")) return;
     
     const usuario = session?.user?.name || "Equipe de Segurança";
     const payload = {

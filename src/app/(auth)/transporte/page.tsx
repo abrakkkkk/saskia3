@@ -86,7 +86,7 @@ export default function TransportePage() {
   };
 
   const concluirTransporte = async (id: string) => {
-    if(confirm("Deseja marcar este transporte como Concluído?")) {
+    if(await confirm("Deseja marcar este transporte como Concluído?")) {
       try {
         const res = await fetch(`/api/transporte/${id}`, {
           method: 'PUT',

@@ -110,6 +110,10 @@ export default function Sidebar() {
             <i className="las la-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '16px' }}></i>
             <input 
               type="text" 
+              name="sidebar-search-input"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
               placeholder="Pesquisar em todo o sistema..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

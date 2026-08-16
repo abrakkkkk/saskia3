@@ -100,7 +100,7 @@ export default function UtiPage() {
   };
 
   const altaPaciente = async (leitoId: string, nome: string | null) => {
-    if (confirm(`Dar alta da UTI para ${nome || 'este paciente'}?`)) {
+    if (await confirm(`Dar alta da UTI para ${nome || 'este paciente'}?`)) {
       try {
         const res = await fetch(`/api/uti/${leitoId}`, {
           method: 'PUT',

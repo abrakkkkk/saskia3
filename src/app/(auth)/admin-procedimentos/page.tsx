@@ -114,8 +114,8 @@ export default function AdminProcedimentosPage() {
     alert("✅ Procedimento salvo com sucesso!");
   };
 
-  const excluirProcedimento = (index: number) => {
-    if(confirm("Tem certeza que deseja excluir este procedimento?")) {
+  const excluirProcedimento = async (index: number) => {
+    if(await confirm("Tem certeza que deseja excluir este procedimento?")) {
       let novaLista = [...procedimentos];
       novaLista.splice(index, 1);
       saveProcedimentos(novaLista);

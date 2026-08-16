@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import AuthProvider from '@/components/providers/AuthProvider'
+import AlertProvider from '@/components/providers/AlertProvider'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           {children}
         </AuthProvider>
+        <AlertProvider />
       </body>
     </html>
   );

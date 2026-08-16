@@ -79,7 +79,7 @@ export default function OuvidoriaPage() {
   };
 
   const responderManifestacao = async (id: string) => {
-    if (!confirm("Confirmar que esta manifestação foi respondida/tratada?")) return;
+    if (!await confirm("Confirmar que esta manifestação foi respondida/tratada?")) return;
     
     try {
       const res = await fetch(`/api/ouvidoria/${id}`, {

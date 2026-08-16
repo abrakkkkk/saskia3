@@ -252,8 +252,8 @@ export default function AdminUsuariosPage() {
     alert("✅ Usuário salvo com sucesso!");
   };
 
-  const excluirUsuario = (id: string) => {
-    if(confirm("Tem certeza que deseja excluir este usuário?")) {
+  const excluirUsuario = async (id: string) => {
+    if(await confirm("Tem certeza que deseja excluir este usuário?")) {
       const filtrados = usuarios.filter(u => u.id !== id);
       setUsuarios(filtrados);
       // DELETE request would go here

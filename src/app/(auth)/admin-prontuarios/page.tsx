@@ -126,7 +126,7 @@ export default function AdminProntuariosPage() {
   };
 
   const excluirModelo = async (index: number) => {
-    if(confirm("Deseja realmente excluir este modelo?")) {
+    if(await confirm("Deseja realmente excluir este modelo?")) {
       const id = (modelos[index] as any).id;
       if (!id) return;
       try {

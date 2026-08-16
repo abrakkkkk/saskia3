@@ -50,7 +50,7 @@ export default function CategoriasPage() {
   };
 
   const handleRemoveCategoria = async (id: string) => {
-    if (confirm('Tem certeza que deseja remover esta categoria?')) {
+    if (await confirm('Tem certeza que deseja remover esta categoria?')) {
       try {
         const res = await fetch(`/api/categorias/${id}`, {
           method: 'DELETE'

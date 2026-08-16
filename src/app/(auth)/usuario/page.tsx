@@ -122,7 +122,7 @@ export default function UsuarioPage() {
   };
 
   const excluirUsuario = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este usuário?")) {
+    if (await confirm("Tem certeza que deseja excluir este usuário?")) {
       try {
         const res = await fetch(`/api/usuarios/${id}`, { method: 'DELETE' });
         if (res.ok) {
