@@ -5,7 +5,7 @@ export function calcularIdade(nascimento: string | Date | null): number | string
   let idade = hoje.getFullYear() - dataNasc.getFullYear();
   const m = hoje.getMonth() - dataNasc.getMonth();
   if (m < 0 || (m === 0 && hoje.getDate() < dataNasc.getDate())) idade--;
-  return idade;
+  return idade < 0 ? 0 : idade;
 }
 
 export function getIniciais(nome: string): string {
