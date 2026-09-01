@@ -37,6 +37,15 @@ export async function POST(request: NextRequest) {
     if (!body.pacienteId || !body.medicamentos || body.medicamentos.length === 0) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }
+    
+    // IDOR protection: Verify the patient belongs to this hospital
+    const paciente = await prisma.paciente.findFirst({
+      where: { id: body.pacienteId, hospitalId }
+    })
+    
+    if (!paciente) {
+      return NextResponse.json({ error: 'Paciente não encontrado ou não autorizado' }, { status: 403 })
+    }
 
     const receita = await prisma.receita.create({
       data: {
@@ -44,7 +53,8 @@ export async function POST(request: NextRequest) {
         pacienteId: body.pacienteId,
         medicamentos: body.medicamentos,
         observacoes: body.observacoes || null,
-        profissional: session.user.name || 'Médico'
+        profissional: session.user.name || 'Médico',
+        usuarioId: session.user.id || null
       },
       include: {
         paciente: true

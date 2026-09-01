@@ -31,7 +31,7 @@ export default function RecepcaoPage() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
-  const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', nascimento: '', telefone: '' });
+  const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', rg: '', nascimento: '', telefone: '', tipoSanguineo: '', alergias: '' });
   const [busca, setBusca] = useState('');
   const [resultadoBusca, setResultadoBusca] = useState<Paciente | null>(null);
   const [buscou, setBuscou] = useState(false);
@@ -95,14 +95,17 @@ export default function RecepcaoPage() {
         body: JSON.stringify({
           nome: formPaciente.nome,
           cpf: formPaciente.cpf,
+          rg: formPaciente.rg,
           nascimento: formPaciente.nascimento ? new Date(formPaciente.nascimento).toISOString() : null,
           telefone: formPaciente.telefone,
+          tipoSanguineo: formPaciente.tipoSanguineo,
+          alergias: formPaciente.alergias,
           status: 'Recepção'
         })
       });
       if (res.ok) {
         setModalAberto(false);
-        setFormPaciente({ nome: '', cpf: '', nascimento: '', telefone: '' });
+        setFormPaciente({ nome: '', cpf: '', rg: '', nascimento: '', telefone: '', tipoSanguineo: '', alergias: '' });
         fetchPacientes();
         alert('Paciente cadastrado com sucesso!');
       } else {
@@ -488,8 +491,23 @@ export default function RecepcaoPage() {
                 <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-user"></i> Nome completo *</label>
                 <input required type="text" placeholder="Nome completo" value={formPaciente.nome} onChange={e => setFormPaciente({...formPaciente, nome: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }} />
 
-                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-id-card"></i> CPF</label>
-                <input type="text" placeholder="CPF (opcional)" value={formPaciente.cpf} onChange={e => setFormPaciente({...formPaciente, cpf: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
+                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-id-card"></i> CPF *</label>
+                <input required type="text" placeholder="000.000.000-00" value={formPaciente.cpf} onChange={e => setFormPaciente({...formPaciente, cpf: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
+
+                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-id-card"></i> RG *</label>
+                <input required type="text" placeholder="00.000.000-0" value={formPaciente.rg} onChange={e => setFormPaciente({...formPaciente, rg: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
+
+                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-tint"></i> Tipo Sanguíneo *</label>
+                <select required value={formPaciente.tipoSanguineo} onChange={e => setFormPaciente({...formPaciente, tipoSanguineo: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none', background: 'white' }}>
+                  <option value="">Selecione...</option>
+                  <option value="A+">A+</option><option value="A-">A-</option>
+                  <option value="B+">B+</option><option value="B-">B-</option>
+                  <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                  <option value="O+">O+</option><option value="O-">O-</option>
+                </select>
+
+                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-allergies"></i> Alergias *</label>
+                <input required type="text" placeholder="Ex: Penicilina, Frutos do mar, ou 'Nenhuma'" value={formPaciente.alergias} onChange={e => setFormPaciente({...formPaciente, alergias: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
 
                 <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-calendar"></i> Data de Nascimento</label>
                 <input type="date" value={formPaciente.nascimento} onChange={e => setFormPaciente({...formPaciente, nascimento: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />

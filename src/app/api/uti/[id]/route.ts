@@ -23,10 +23,30 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.status !== undefined) data.status = body.status;
     if (body.pacienteNome !== undefined) data.pacienteNome = body.pacienteNome;
     if (body.pacienteCpf !== undefined) data.pacienteCpf = body.pacienteCpf;
+    if (body.pacienteId !== undefined) data.pacienteId = body.pacienteId;
+    
+    // Se o leito estiver sendo liberado, remove os vínculos
+    if (body.status === 'LIVRE') {
+       data.pacienteId = null;
+       data.pacienteNome = null;
+       data.pacienteCpf = null;
+    }
 
-    const atualizado = await prisma.utiLeito.update({
-      where: { id: id },
-      data
+    const atualizado = await prisma.$transaction(async (tx) => {
+       const updatedLeito = await tx.utiLeito.update({
+         where: { id: id },
+         data
+       });
+       
+       // Se vinculou a um paciente, atualiza o status do paciente para Internado - UTI
+       if (data.pacienteId && data.status === 'OCUPADO') {
+          await tx.paciente.update({
+            where: { id: data.pacienteId },
+            data: { status: 'Internado - UTI' }
+          });
+       }
+       
+       return updatedLeito;
     });
 
     return NextResponse.json(atualizado);

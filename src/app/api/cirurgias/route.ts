@@ -31,16 +31,27 @@ export async function POST(request: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const hospitalId = session.user.hospitalId
+    const usuarioId = session.user.id
     const body = await request.json()
 
     if (!body.pacienteId || !body.procedimento || !body.dataHora) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }
 
+    // Verify if Paciente belongs to the hospital
+    const paciente = await prisma.paciente.findUnique({
+      where: { id: body.pacienteId }
+    })
+    
+    if (!paciente || paciente.hospitalId !== hospitalId) {
+      return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
+    }
+
     const cirurgia = await prisma.cirurgia.create({
       data: {
         hospitalId,
         pacienteId: body.pacienteId,
+        usuarioId,
         procedimento: body.procedimento,
         sala: body.sala || 'A Definir',
         dataHora: new Date(body.dataHora),

@@ -137,19 +137,26 @@ model Hospital {
 }
 
 model Usuario {
-  id             String          @id @default(uuid())
-  hospitalId     String
-  hospital       Hospital        @relation(fields: [hospitalId], references: [id])
-  nome           String
-  email          String          @unique
-  senha          String
-  cargo          CargoUsuario    @default(ENFERMEIRO_ASSISTENCIAL)
-  avatar         String?
-  ativo          Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  pontoRegistros PontoRegistro[]
-  feedbacks      Feedback[]
+  id                   String                @id @default(uuid())
+  hospitalId           String
+  hospital             Hospital              @relation(fields: [hospitalId], references: [id])
+  nome                 String
+  email                String                @unique
+  senha                String
+  cargo                CargoUsuario          @default(ENFERMEIRO_ASSISTENCIAL)
+  avatar               String?
+  ativo                Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  pontoRegistros       PontoRegistro[]
+  feedbacks            Feedback[]
+  triagens             Triagem[]
+  evolucoes            Evolucao[]
+  prescricaos          Prescricao[]
+  receitas             Receita[]
+  agendamentos         Agendamento[]
+  cirurgias            Cirurgia[]
+  movimentacaoEstoques MovimentacaoEstoque[]
 
   @@index([hospitalId])
 }
@@ -204,6 +211,8 @@ model Paciente {
   anotacoesEnf         AnotacaoEnfermagem[]
   timelineEvents       TimelineEvent[]
   movimentacoesEstoque MovimentacaoEstoque[]
+  utiLeitos            UtiLeito[]
+  salas                Sala[]
 
   @@unique([cpf, hospitalId]) // Proteção contra CPFs duplicados no mesmo hospital
   @@index([hospitalId])
@@ -227,9 +236,12 @@ model Triagem {
   queixa        String?
   observacoes   String?
   profissional  String?
+  usuarioId     String?
+  usuario       Usuario? @relation(fields: [usuarioId], references: [id])
   createdAt     DateTime @default(now())
 
   @@index([pacienteId])
+  @@index([usuarioId])
 }
 
 model Evolucao {
@@ -239,9 +251,12 @@ model Evolucao {
   tipo         String
   descricao    String
   profissional String?
+  usuarioId    String?
+  usuario      Usuario? @relation(fields: [usuarioId], references: [id])
   createdAt    DateTime @default(now())
 
   @@index([pacienteId])
+  @@index([usuarioId])
 }
 
 model Prescricao {
@@ -254,9 +269,12 @@ model Prescricao {
   frequencia   String?
   observacoes  String?
   profissional String?
+  usuarioId    String?
+  usuario      Usuario? @relation(fields: [usuarioId], references: [id])
   createdAt    DateTime @default(now())
 
   @@index([pacienteId])
+  @@index([usuarioId])
 }
 
 model Receita {
@@ -268,10 +286,13 @@ model Receita {
   medicamentos Json
   observacoes  String?
   profissional String?
+  usuarioId    String?
+  usuario      Usuario? @relation(fields: [usuarioId], references: [id])
   createdAt    DateTime @default(now())
 
   @@index([pacienteId])
   @@index([hospitalId])
+  @@index([usuarioId])
 }
 
 model Agendamento {
@@ -287,12 +308,15 @@ model Agendamento {
   sala          String?
   status        StatusAgendamento @default(AGENDADO)
   observacoes   String?
+  usuarioId     String?
+  usuario       Usuario?          @relation(fields: [usuarioId], references: [id])
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
   @@index([pacienteId])
   @@index([hospitalId])
   @@index([dataHora])
+  @@index([usuarioId])
 }
 
 model Exame {
@@ -327,11 +351,14 @@ model Cirurgia {
   anestesia    String?
   status       StatusCirurgia @default(AGENDADA)
   observacoes  String?
+  usuarioId    String?
+  usuario      Usuario?       @relation(fields: [usuarioId], references: [id])
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
   @@index([pacienteId])
   @@index([hospitalId])
+  @@index([usuarioId])
 }
 
 model UtiLeito {
@@ -341,12 +368,15 @@ model UtiLeito {
   numero       Int
   tipo         TipoLeito      @default(ADULTO)
   status       StatusOcupacao @default(LIVRE)
+  pacienteId   String?
+  paciente     Paciente?      @relation(fields: [pacienteId], references: [id])
   pacienteNome String?
   pacienteCpf  String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
   @@index([hospitalId])
+  @@index([pacienteId])
 }
 
 model Sala {
@@ -358,12 +388,15 @@ model Sala {
   setor      String?
   andar      String?
   status     StatusOcupacao @default(LIVRE)
+  pacienteId String?
+  paciente   Paciente?      @relation(fields: [pacienteId], references: [id])
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 
   reservas ReservaSala[]
 
   @@index([hospitalId])
+  @@index([pacienteId])
 }
 
 model Ticket {
@@ -678,10 +711,14 @@ model MovimentacaoEstoque {
   fornecedor  String?
   responsavel String
   observacao  String?
+  usuarioId   String?
+  usuario     Usuario?    @relation(fields: [usuarioId], references: [id])
   createdAt   DateTime    @default(now())
 
   @@index([hospitalId])
   @@index([itemId])
+  @@index([pacienteId])
+  @@index([usuarioId])
 }
 
 model ReservaSala {
@@ -896,14 +933,13 @@ model Procedimento {
   @@index([hospitalId])
 }
 
-
 model Visitante {
   id         String    @id @default(uuid())
   hospitalId String
   hospital   Hospital  @relation(fields: [hospitalId], references: [id])
   nome       String
-  documento  String?   // RG ou CPF
-  destino    String?   // Ex: Leito 104, UTI, Diretoria
+  documento  String? // RG ou CPF
+  destino    String? // Ex: Leito 104, UTI, Diretoria
   pacienteId String?
   paciente   Paciente? @relation(fields: [pacienteId], references: [id])
   entrada    DateTime  @default(now())

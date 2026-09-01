@@ -31,12 +31,12 @@ export default function PacientesPage() {
   const [modalChamada, setModalChamada] = useState<{ aberto: boolean, paciente: Paciente | null, consultorio: string }>({ aberto: false, paciente: null, consultorio: 'Consultório 1' });
   const [salasCadastradas, setSalasCadastradas] = useState<any[]>([]);
   const [formPaciente, setFormPaciente] = useState<{
-    nome: string; cpf: string; rg?: string; nascimento: string; sexo?: string;
+    nome: string; cpf: string; rg: string; nascimento: string; sexo?: string;
     telefone?: string; email?: string; endereco?: string;
-    mae?: string; convenio?: string; tipoSanguineo?: string; alergias?: string;
+    mae?: string; convenio?: string; tipoSanguineo: string; alergias: string;
     status: string; classificacao: string; queixaPrincipal?: string;
   }>({ 
-    nome: '', cpf: '', nascimento: '', classificacao: 'Verde', status: 'Recepção' 
+    nome: '', cpf: '', rg: '', nascimento: '', tipoSanguineo: '', alergias: '', classificacao: 'Verde', status: 'Recepção' 
   });
 
   const fetchPacientes = () => {
@@ -320,11 +320,11 @@ export default function PacientesPage() {
                   
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>CPF</label>
-                    <input type="text" className="input-field" placeholder="000.000.000-00" value={formPaciente.cpf} onChange={e => setFormPaciente({...formPaciente, cpf: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    <input required type="text" className="input-field" placeholder="000.000.000-00" value={formPaciente.cpf} onChange={e => setFormPaciente({...formPaciente, cpf: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>RG</label>
-                    <input type="text" className="input-field" placeholder="00.000.000-0" value={formPaciente.rg || ''} onChange={e => setFormPaciente({...formPaciente, rg: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    <input required type="text" className="input-field" placeholder="00.000.000-0" value={formPaciente.rg} onChange={e => setFormPaciente({...formPaciente, rg: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
                   </div>
 
                   <div>
@@ -380,7 +380,7 @@ export default function PacientesPage() {
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Tipo Sanguíneo</label>
-                    <select className="input-field" value={formPaciente.tipoSanguineo || ''} onChange={e => setFormPaciente({...formPaciente, tipoSanguineo: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                    <select required className="input-field" value={formPaciente.tipoSanguineo} onChange={e => setFormPaciente({...formPaciente, tipoSanguineo: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
                       <option value="">Desconhecido</option>
                       <option value="A+">A+</option><option value="A-">A-</option>
                       <option value="B+">B+</option><option value="B-">B-</option>
@@ -390,7 +390,7 @@ export default function PacientesPage() {
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Alergias</label>
-                    <input type="text" className="input-field" placeholder="Ex: Penicilina, Frutos do mar" value={formPaciente.alergias || ''} onChange={e => setFormPaciente({...formPaciente, alergias: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                    <input required type="text" className="input-field" placeholder="Ex: Penicilina, Frutos do mar, ou 'Nenhuma'" value={formPaciente.alergias} onChange={e => setFormPaciente({...formPaciente, alergias: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
                   </div>
                 </div>
               </div>
