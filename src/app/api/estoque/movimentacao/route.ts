@@ -7,7 +7,9 @@ export async function GET(request: NextRequest) {
     const session = await auth()
     if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    const hospitalId = session.user.hospitalId || 'hospital_001'
+    const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
+
     const { searchParams } = new URL(request.url)
     const categoria = searchParams.get('categoria')
 
@@ -36,12 +38,25 @@ export async function POST(request: NextRequest) {
     const session = await auth()
     if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    const hospitalId = session.user.hospitalId || 'hospital_001'
+    const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
+    
+    const usuarioId = session.user.id
+
     const body = await request.json()
     const { tipo, itemId, quantidade, pacienteId, setor, fornecedor, responsavel, observacao } = body
 
     if (!tipo || !itemId || !quantidade || !responsavel) {
       return NextResponse.json({ error: 'Dados obrigatórios faltando' }, { status: 400 })
+    }
+
+    if (pacienteId) {
+      const paciente = await prisma.paciente.findUnique({
+        where: { id: pacienteId }
+      })
+      if (!paciente || paciente.hospitalId !== hospitalId) {
+        return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
+      }
     }
 
     // Execute in a transaction to guarantee data integrity
@@ -63,6 +78,7 @@ export async function POST(request: NextRequest) {
           itemId,
           quantidade: Number(quantidade),
           pacienteId: pacienteId || null,
+          usuarioId,
           setor: setor || null,
           fornecedor: fornecedor || null,
           responsavel,

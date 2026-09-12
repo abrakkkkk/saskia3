@@ -7,8 +7,18 @@ export async function POST (request: NextRequest, { params }: { params: Promise<
     const session = await auth()
     if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
+    const hospitalId = session.user.hospitalId
     const { id } = await params
     const body = await request.json()
+    
+    // Verifica se o paciente pertence ao hospital
+    const pacienteExistente = await prisma.paciente.findFirst({
+      where: { id, hospitalId }
+    })
+    
+    if (!pacienteExistente) {
+      return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
+    }
     
     const prescricao = await prisma.prescricao.create({
       data: {
@@ -17,7 +27,8 @@ export async function POST (request: NextRequest, { params }: { params: Promise<
         dose: body.dose,
         via: body.via,
         frequencia: body.frequencia,
-        profissional: session.user?.name || 'Sistema'
+        profissional: session.user?.name || 'Sistema',
+        usuarioId: session.user?.id || null
       }
     })
     

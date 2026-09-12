@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
         numero: Number(body.numero),
         tipo: body.tipo,
         status: body.status || 'LIVRE',
+        pacienteId: body.pacienteId || null,
         pacienteNome: body.pacienteNome || null,
         pacienteCpf: body.pacienteCpf || null
       }

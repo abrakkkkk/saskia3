@@ -31,6 +31,14 @@ export async function POST (request: NextRequest) {
     const hospitalId = session.user.hospitalId
     const body = await request.json()
 
+    const { nome, cpf, rg, tipoSanguineo, alergias } = body;
+    if (!nome || !cpf || !rg || !tipoSanguineo || !alergias) {
+      return NextResponse.json(
+        { error: 'Os campos Nome, CPF, RG, Tipo Sanguíneo e Alergias são obrigatórios.' },
+        { status: 400 }
+      );
+    }
+
     const paciente = await prisma.paciente.create ({
       data: { ...body, hospitalId }
     })
