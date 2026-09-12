@@ -56,7 +56,7 @@ export default function SobreNosPage() {
               </div>
             </div>
             <p className="bio-pessoa">Estudante dedicado de Enfermagem no 7º semestre da Universidade de Fortaleza (UNIFOR), comprometido em contribuir para o campo da saúde com compaixão, habilidades clínicas sólidas e um compromisso inabalável com o bem-estar dos pacientes.</p>
-            <div className="frases-impacto"><i className="las la-quote-left"></i> "A Saskia nasceu da vontade de unir tecnologia e saúde para criar um sistema mais humano, eficiente e acessível para todos que precisam."</div>
+            <div className="frases-impacto"><i className="las la-quote-left"></i> “A Saskia nasceu da vontade de unir tecnologia e saúde para criar um sistema mais humano, eficiente e acessível para todos que precisam.”</div>
             <div className="tags-formacao">
               <span className="tag-formacao"><i className="las la-graduation-cap"></i> Enfermagem UNIFOR — 7º Sem.</span>
               <span className="tag-formacao"><i className="las la-certificate"></i> APH 100h</span>
@@ -80,7 +80,7 @@ export default function SobreNosPage() {
               </div>
             </div>
             <p className="bio-pessoa">Doutora em Enfermagem Clínico Cirúrgica pela UFC. Professora Adjunto 5 da UNIFOR. Membro do GEPTIE e NEPIT. Vice-presidente do Colegiado de Enfermagem da UNIFOR. Grande apoiadora do projeto Saskia, sempre com supervisão criteriosa de tudo que está sendo desenvolvido.</p>
-            <div className="frases-impacto prof"><i className="las la-quote-left"></i> "A tecnologia na saúde não substitui o cuidado humano — ela o potencializa. Quando unimos inovação e conhecimento clínico, criamos ferramentas que transformam a assistência em experiências mais seguras, eficientes e centradas no paciente."</div>
+            <div className="frases-impacto prof"><i className="las la-quote-left"></i> “A tecnologia na saúde não substitui o cuidado humano — ela o potencializa. Quando unimos inovação e conhecimento clínico, criamos ferramentas que transformam a assistência em experiências mais seguras, eficientes e centradas no paciente.”</div>
             <div className="tags-formacao">
               <span className="tag-formacao tag-prof"><i className="las la-graduation-cap"></i> Doutorado UFC</span>
               <span className="tag-formacao tag-prof"><i className="las la-book-medical"></i> Mestrado UFC</span>
@@ -104,7 +104,7 @@ export default function SobreNosPage() {
               </div>
             </div>
             <p className="bio-pessoa">Acadêmica do 9º semestre de Enfermagem na UNIFOR, atualmente em internato de saúde coletiva. Plena consciência dos trabalhos diários em saúde coletiva e no tratamento individualizado para pacientes com cuidado, amor, responsabilidade e técnica.</p>
-            <div className="frases-impacto diretora"><i className="las la-quote-left"></i> "Aplicar conhecimentos em tecnologias no ambiente assistencial, integrando o domínio técnico à humanização do cuidado e à segurança do paciente — esse é o meu propósito."</div>
+            <div className="frases-impacto diretora"><i className="las la-quote-left"></i> “Aplicar conhecimentos em tecnologias no ambiente assistencial, integrando o domínio técnico à humanização do cuidado e à segurança do paciente — esse é o meu propósito.”</div>
             <div className="tags-formacao">
               <span className="tag-formacao tag-diretora"><i className="las la-graduation-cap"></i> Enfermagem UNIFOR — 9º Sem.</span>
               <span className="tag-formacao tag-diretora"><i className="las la-heart"></i> Saúde Coletiva</span>
@@ -127,7 +127,7 @@ export default function SobreNosPage() {
               </div>
             </div>
             <p className="bio-pessoa">Graduanda bolsista em Enfermagem pela UNIFOR, atualmente no 9º semestre e em internato de saúde coletiva. Fluente em inglês, com ampla experiência em Urgência e Emergência. Como Diretora Estratégica, lidera o planejamento, distribuição e correção do sistema BIA e da plataforma Saskia.</p>
-            <div className="frases-impacto estrategica"><i className="las la-quote-left"></i> "A tecnologia mostra detalhes; nós mostramos humanidade. E é na união dessas duas forças que transformamos a assistência em algo verdadeiramente humano, seguro e individualizado."</div>
+            <div className="frases-impacto estrategica"><i className="las la-quote-left"></i> “A tecnologia mostra detalhes; nós mostramos humanidade. E é na união dessas duas forças que transformamos a assistência em algo verdadeiramente humano, seguro e individualizado.”</div>
             <div className="tags-formacao">
               <span className="tag-formacao tag-estrategica"><i className="las la-graduation-cap"></i> Enfermagem UNIFOR — 9º Sem.</span>
               <span className="tag-formacao tag-estrategica"><i className="las la-ambulance"></i> Urgência e Emergência 120h</span>
@@ -151,7 +151,7 @@ export default function SobreNosPage() {
               </div>
             </div>
             <p className="bio-pessoa">Graduado em Análise e Desenvolvimento de Sistemas pela UNIFOR, com formação complementar em Data Analytics. Possui sólida experiência em Suporte de TI, administração de bancos de dados (PostgreSQL, Firebird e MySQL) e análise de dados. Desenvolve projetos com foco em transformar dados brutos em soluções eficientes, utilizando SQL avançado, Python (Pandas), processos ETL e criação de dashboards no Power BI (DAX) para suporte à tomada de decisão estratégica.</p>
-            <div className="frases-impacto analista"><i className="las la-quote-left"></i> "Dados salvam vidas. Na saúde, cada número representa uma pessoa, e transformar informações em decisões inteligentes é o que nos permite oferecer um cuidado mais preciso, eficiente e verdadeiramente humano."</div>
+            <div className="frases-impacto analista"><i className="las la-quote-left"></i> “Dados salvam vidas. Na saúde, cada número representa uma pessoa, e transformar informações em decisões inteligentes é o que nos permite oferecer um cuidado mais preciso, eficiente e verdadeiramente humano.”</div>
             <div className="tags-formacao">
               <span className="tag-formacao tag-analista"><i className="las la-graduation-cap"></i> ADS UNIFOR</span>
               <span className="tag-formacao tag-analista"><i className="las la-database"></i> SQL / PostgreSQL</span>
@@ -176,7 +176,7 @@ export default function SobreNosPage() {
               </div>
             </div>
             <p className="bio-pessoa">Designer multidisciplinar de Simão Dias/SE, com 1 ano de carreira unindo design digital e identidade de marca. Pensador criativo, solucionador de problemas e eterno aprendiz que acredita que o design é a ponte entre a tecnologia e as pessoas.</p>
-            <div className="frases-impacto"><i className="las la-quote-left"></i> "Criar algo que una beleza e funcionalidade é o que me move. Cada pixel importa quando estamos construindo experiências que podem transformar a relação das pessoas com a saúde."</div>
+            <div className="frases-impacto"><i className="las la-quote-left"></i> “Criar algo que una beleza e funcionalidade é o que me move. Cada pixel importa quando estamos construindo experiências que podem transformar a relação das pessoas com a saúde.”</div>
             <div className="tags-formacao">
               <span className="tag-formacao tag-design"><i className="las la-pencil-ruler"></i> UX Design</span>
               <span className="tag-formacao tag-design"><i className="las la-layer-group"></i> UI Design</span>

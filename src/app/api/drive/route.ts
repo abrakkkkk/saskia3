@@ -6,7 +6,11 @@ export async function GET() {
     const folderId = '1a0gzCh2yfoCIHQtQMRp-AJXuCPTAmoP6';
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'API Key do Google Drive não configurada.' }, { status: 500 });
+      return NextResponse.json({ 
+        files: [], 
+        configured: false, 
+        message: 'API Key do Google Drive não configurada no ambiente.' 
+      }, { status: 200 });
     }
 
     // A API do Drive v3 precisa que informemos a pasta mãe (parents)
@@ -21,21 +25,27 @@ export async function GET() {
       headers: {
         'Accept': 'application/json',
       },
-      // Desativar cache temporário para sempre mostrar os PDFs atualizados
       cache: 'no-store' 
     });
 
     if (!res.ok) {
-      const errorData = await res.json();
-      console.error("Erro na API do Google:", errorData);
-      return NextResponse.json({ error: 'Falha ao buscar arquivos no Google Drive' }, { status: res.status });
+      console.warn("Falha ao comunicar com Google Drive API, operando com documentos locais.");
+      return NextResponse.json({ 
+        files: [], 
+        configured: false, 
+        message: 'Falha ao buscar arquivos remotos do Google Drive.' 
+      }, { status: 200 });
     }
 
     const data = await res.json();
     return NextResponse.json(data);
 
   } catch (error: any) {
-    console.error("Erro interno:", error);
-    return NextResponse.json({ error: 'Erro interno no servidor.' }, { status: 500 });
+    console.error("Erro interno na rota do Drive:", error);
+    return NextResponse.json({ 
+      files: [], 
+      configured: false, 
+      error: 'Erro interno ao consultar arquivos remotos.' 
+    }, { status: 200 });
   }
 }

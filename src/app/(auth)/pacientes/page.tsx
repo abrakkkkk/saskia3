@@ -20,6 +20,10 @@ interface Paciente {
 
 const ITENS_POR_PAGINA = 15;
 
+const INITIAL_FORM_PACIENTE = { 
+  nome: '', cpf: '', rg: '', nascimento: '', tipoSanguineo: '', alergias: '', classificacao: 'Verde', status: 'Recepção' 
+};
+
 export default function PacientesPage() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [filtroStatus, setFiltroStatus] = useState('todos');
@@ -35,9 +39,7 @@ export default function PacientesPage() {
     telefone?: string; email?: string; endereco?: string;
     mae?: string; convenio?: string; tipoSanguineo: string; alergias: string;
     status: string; classificacao: string; queixaPrincipal?: string;
-  }>({ 
-    nome: '', cpf: '', rg: '', nascimento: '', tipoSanguineo: '', alergias: '', classificacao: 'Verde', status: 'Recepção' 
-  });
+  }>(INITIAL_FORM_PACIENTE);
 
   const fetchPacientes = () => {
     fetch('/api/pacientes')
@@ -71,7 +73,7 @@ export default function PacientesPage() {
       });
       if (res.ok) {
         setModalAberto(false);
-        setFormPaciente({ nome: '', cpf: '', nascimento: '', classificacao: 'Verde', status: 'Recepção' });
+        setFormPaciente(INITIAL_FORM_PACIENTE);
         fetchPacientes();
         alert('Paciente cadastrado com sucesso!');
       } else {
