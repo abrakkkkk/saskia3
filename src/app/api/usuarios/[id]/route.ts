@@ -28,7 +28,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
 
     const { id } = await params
-    const body = await request.json()
+    let body: unknown
+    try { body = await request.json() } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }) }
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
     }
@@ -41,11 +42,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const updateData: Prisma.UsuarioUpdateInput = {}
     if ('nome' in body) {
-      if (typeof body.nome !== 'string' || !body.nome.trim()) return NextResponse.json({ error: 'Nome inválido' }, { status: 400 })
+      if (typeof body.nome !== 'string' || !body.nome.trim() || body.nome.length > 160) return NextResponse.json({ error: 'Nome inválido' }, { status: 400 })
       updateData.nome = body.nome.trim()
     }
     if ('email' in body) {
-      if (typeof body.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
+      if (typeof body.email !== 'string' || body.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
         return NextResponse.json({ error: 'E-mail inválido' }, { status: 400 })
       }
       updateData.email = body.email.trim().toLowerCase()
@@ -61,8 +62,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updateData.ativo = body.ativo
     }
     if ('senha' in body && body.senha !== '') {
-      if (typeof body.senha !== 'string' || body.senha.length < 12) {
-        return NextResponse.json({ error: 'A senha deve ter pelo menos 12 caracteres' }, { status: 400 })
+      if (typeof body.senha !== 'string' || body.senha.length < 12 || new TextEncoder().encode(body.senha).length > 72) {
+        return NextResponse.json({ error: 'A senha deve ter pelo menos 12 caracteres e no máximo 72 bytes' }, { status: 400 })
       }
       updateData.senha = await bcrypt.hash(body.senha, 12)
     }
@@ -78,9 +79,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (activeAdmins <= 1) return NextResponse.json({ error: 'O hospital precisa manter ao menos um administrador ativo' }, { status: 409 })
     }
 
-    const usuario = await prisma.usuario.update({
-      where: { id },
-      data: updateData,
+    const atualizado = await prisma.usuario.updateMany({ where: { id, hospitalId }, data: updateData })
+    if (atualizado.count === 0) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+    const usuario = await prisma.usuario.findFirst({
+      where: { id, hospitalId },
       select: { id: true, nome: true, email: true, cargo: true, ativo: true, createdAt: true },
     })
     return NextResponse.json(usuario)
@@ -112,7 +114,8 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
       if (activeAdmins <= 1) return NextResponse.json({ error: 'O hospital precisa manter ao menos um administrador ativo' }, { status: 409 })
     }
 
-    await prisma.usuario.update({ where: { id }, data: { ativo: false } })
+    const desativado = await prisma.usuario.updateMany({ where: { id, hospitalId }, data: { ativo: false } })
+    if (desativado.count === 0) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
     return NextResponse.json({ success: true, ativo: false })
   } catch {
     return NextResponse.json({ error: 'Erro ao desativar usuário' }, { status: 500 })

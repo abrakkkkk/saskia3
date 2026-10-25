@@ -2,23 +2,22 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
+import { MessageSquare, Search, Send } from 'lucide-react';
 
 interface Contato {
   id: string;
   nome: string;
   email: string;
   cargo: string;
-  setor: string;
   cor: string;
 }
 
 interface Mensagem {
-  id: number;
+  id: string;
   de: string;
   para: string;
   texto: string;
   data: string;
-  lida: boolean;
 }
 
 const CORES = ['#3b82f6','#10b981','#8b5cf6','#f97316','#ec4899','#14b8a6'];
@@ -41,46 +40,60 @@ export default function ChatPage() {
   const [ativo, setAtivo] = useState<Contato | null>(null);
   const [busca, setBusca] = useState('');
   const [texto, setTexto] = useState('');
+  const [erroContatos, setErroContatos] = useState('');
+  const [erroMensagens, setErroMensagens] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [carregandoMensagens, setCarregandoMensagens] = useState(false);
   const msgContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!hospitalId || !usuario) return;
-    fetch('/api/usuarios')
-      .then(r => r.json())
+    fetch('/api/chat/contatos')
+      .then(async r => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Não foi possível carregar os profissionais.');
+        return data;
+      })
       .then(data => {
-        let lista: any[] = Array.isArray(data) ? data : [];
-        if (lista.length === 0) {
-          lista = [
-            { id: 'u1', nome: 'Dr. Carlos Silva', email: 'carlos@saskia.com', cargo: 'Médico', setor: 'Cardiologia', hospitalId },
-            { id: 'u2', nome: 'Enf. Joana', email: 'joana@saskia.com', cargo: 'Enfermeira', setor: 'UTI', hospitalId },
-            { id: 'u3', nome: 'Ana Recepção', email: 'ana@saskia.com', cargo: 'Recepcionista', setor: 'Recepção', hospitalId },
-          ];
-        }
-        const filtrados = lista.filter(u => u.hospitalId === hospitalId && u.email !== usuario.email);
+        const filtrados: any[] = Array.isArray(data) ? data.filter(u => u.email !== usuario.email) : [];
         setContatos(filtrados.map((u, i) => ({
-          id: u.id || `u${i}`,
-          nome: u.nome || u.name || u.email,
+          id: u.id,
+          nome: u.nome || u.email,
           email: u.email,
           cargo: u.cargo || 'Profissional',
-          setor: u.setor || 'Hospital',
           cor: CORES[i % CORES.length]
         })));
       })
-      .catch(console.error);
+      .catch(error => setErroContatos(error instanceof Error ? error.message : 'Erro ao carregar profissionais.'));
   }, [hospitalId, usuario]);
 
   useEffect(() => {
-    if (!hospitalId) return;
-    const load = () => {
-      fetch('/api/chat')
-        .then(r => r.json())
-        .then(data => { if (Array.isArray(data)) setMensagens(data); })
-        .catch(console.error);
+    if (!hospitalId || !ativo?.email) {
+      setMensagens([]);
+      return;
+    }
+    let active = true;
+    const load = async (showLoading = false) => {
+      if (showLoading) setCarregandoMensagens(true);
+      try {
+        const response = await fetch(`/api/chat?para=${encodeURIComponent(ativo.email)}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Não foi possível carregar a conversa.');
+        if (active) {
+          setMensagens(Array.isArray(data) ? data : []);
+          setErroMensagens('');
+        }
+      } catch (error) {
+        if (active) setErroMensagens(error instanceof Error ? error.message : 'Erro ao carregar a conversa.');
+      } finally {
+        if (active && showLoading) setCarregandoMensagens(false);
+      }
     };
-    load();
-    const iv = setInterval(load, 5000);
-    return () => clearInterval(iv);
-  }, [hospitalId]);
+    setMensagens([]);
+    load(true);
+    const iv = setInterval(() => load(), 10000);
+    return () => { active = false; clearInterval(iv); };
+  }, [hospitalId, ativo?.email]);
 
   useEffect(() => {
     // Scroll apenas dentro do container de mensagens — não a página toda
@@ -89,38 +102,34 @@ export default function ChatPage() {
     }
   }, [mensagens, ativo]);
 
-  const conversa = mensagens
-    .filter(m => ativo && ((m.de === usuario?.email && m.para === ativo.email) || (m.de === ativo.email && m.para === usuario?.email)))
-    .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+  const conversa = [...mensagens].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!texto.trim() || !ativo || !usuario || !hospitalId) return;
-    const nova: Mensagem = { id: Date.now(), de: usuario.email, para: ativo.email, texto, data: new Date().toISOString(), lida: false };
-    setMensagens(prev => [...prev, nova]);
-    setTexto('');
+    const conteudo = texto.trim();
+    if (!conteudo || !ativo || !usuario || !hospitalId || enviando) return;
+    setEnviando(true);
+    setErroMensagens('');
     try {
-      await fetch('/api/chat', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ de: usuario.email, para: ativo.email, texto, data: nova.data })
+        body: JSON.stringify({ para: ativo.email, texto: conteudo })
       });
-    } catch (err) {
-      console.error(err);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Não foi possível enviar a mensagem.');
+      setMensagens(prev => [...prev, data]);
+      setTexto('');
+    } catch (error) {
+      setErroMensagens(error instanceof Error ? error.message : 'Falha ao enviar mensagem.');
+    } finally {
+      setEnviando(false);
     }
   };
 
   const contatosFiltrados = contatos.filter(c =>
     c.nome.toLowerCase().includes(busca.toLowerCase())
   );
-
-  const naoLidas = (contato: Contato) =>
-    mensagens.filter(m => m.de === contato.email && m.para === usuario?.email && !m.lida).length;
-
-  const ultimaMsg = (contato: Contato) =>
-    mensagens
-      .filter(m => (m.de === usuario?.email && m.para === contato.email) || (m.de === contato.email && m.para === usuario?.email))
-      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())[0];
 
   return (
     <div style={{
@@ -159,7 +168,7 @@ export default function ChatPage() {
         {/* Search */}
         <div style={{ padding: '10px 12px', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
           <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '8px', padding: '8px 14px', gap: '8px' }}>
-            <span style={{ color: '#94a3b8', fontSize: '16px' }}>🔍</span>
+            <Search size={16} aria-hidden="true" style={{ color: '#94a3b8' }} />
             <input
               type="text"
               placeholder="Pesquisar contatos..."
@@ -177,12 +186,12 @@ export default function ChatPage() {
 
         {/* Contatos */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {contatosFiltrados.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Nenhum contato.</div>
+          {erroContatos ? (
+            <div role="alert" style={{ padding: '20px', color: '#b91c1c', fontSize: '13px' }}>{erroContatos}</div>
+          ) : contatosFiltrados.length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>Nenhum outro profissional ativo disponível.</div>
           ) : contatosFiltrados.map(c => {
             const isAtivo = ativo?.id === c.id;
-            const ultima = ultimaMsg(c);
-            const nL = naoLidas(c);
             return (
               <div
                 key={c.id}
@@ -208,15 +217,6 @@ export default function ChatPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '13px', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nome}</div>
                   <div style={{ fontSize: '11px', color: '#64748b' }}>{c.cargo}</div>
-                  <div style={{ fontSize: '10px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
-                    <span>📍</span> {c.setor}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-                  {ultima && <span style={{ fontSize: '10px', color: '#94a3b8' }}>{formatHora(ultima.data)}</span>}
-                  {nL > 0 && (
-                    <span style={{ background: '#16a34a', color: 'white', borderRadius: '8px', padding: '2px 7px', fontSize: '10px', fontWeight: 700 }}>{nL}</span>
-                  )}
                 </div>
               </div>
             );
@@ -228,7 +228,7 @@ export default function ChatPage() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f0f2f5', overflow: 'hidden' }}>
         {!ativo ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', gap: '12px' }}>
-            <span style={{ fontSize: '64px', opacity: 0.3 }}>💬</span>
+            <MessageSquare size={48} aria-hidden="true" style={{ opacity: 0.3 }} />
             <div style={{ fontSize: '18px', fontWeight: 600, color: '#64748b' }}>Chat Interno — Saskia Saúde</div>
             <div style={{ fontSize: '14px' }}>Selecione um profissional para iniciar</div>
           </div>
@@ -250,30 +250,18 @@ export default function ChatPage() {
               </div>
               <div>
                 <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '15px' }}>{ativo.nome}</div>
-                <div style={{ fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
-                  {ativo.setor}
-                </div>
-              </div>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
-                {['🔍','📞','📹','⋮'].map((icon, i) => (
-                  <button key={i} style={{
-                    width: '36px', height: '36px', borderRadius: '50%', border: 'none',
-                    background: 'transparent', cursor: 'pointer', fontSize: '16px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b'
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#f1f5f9')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >{icon}</button>
-                ))}
+                <div style={{ fontSize: '12px', color: '#64748b' }}>{ativo.cargo}</div>
               </div>
             </div>
 
             {/* Messages */}
             <div ref={msgContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {conversa.length === 0 ? (
+              {erroMensagens && <div role="alert" style={{ color: '#b91c1c', background: '#fef2f2', padding: '10px 12px', borderRadius: 8 }}>{erroMensagens}</div>}
+              {carregandoMensagens ? (
+                <div role="status" style={{ margin: 'auto', color: '#64748b' }}>Carregando conversa...</div>
+              ) : conversa.length === 0 ? (
                 <div style={{ margin: 'auto', textAlign: 'center', color: '#94a3b8' }}>
-                  <div style={{ fontSize: '32px', opacity: 0.4, marginBottom: '8px' }}>💬</div>
+                  <MessageSquare size={28} aria-hidden="true" style={{ opacity: 0.4, marginBottom: '8px' }} />
                   <div style={{ fontSize: '14px' }}>Nenhuma mensagem ainda. Envie a primeira!</div>
                 </div>
               ) : conversa.map(m => {
@@ -302,17 +290,6 @@ export default function ChatPage() {
               padding: '14px 16px', background: 'white', borderTop: '1px solid #e2e8f0',
               display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0
             }}>
-              {['😊','📎'].map((icon, i) => (
-                <button key={i} type="button" style={{
-                  width: '38px', height: '38px', borderRadius: '50%', border: 'none',
-                  background: 'transparent', cursor: 'pointer', fontSize: '18px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, color: '#64748b'
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#f1f5f9')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                >{icon}</button>
-              ))}
               <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', padding: '8px 16px' }}>
                 <input
                   type="text"
@@ -324,16 +301,16 @@ export default function ChatPage() {
               </div>
               <button
                 type="submit"
-                disabled={!texto.trim()}
+                disabled={!texto.trim() || enviando || carregandoMensagens}
                 style={{
                   width: '42px', height: '42px', borderRadius: '50%', border: 'none',
-                  background: texto.trim() ? '#1e3a8a' : '#cbd5e1',
-                  color: 'white', fontSize: '18px', cursor: texto.trim() ? 'pointer' : 'default',
+                  background: texto.trim() && !enviando ? '#1e3a8a' : '#cbd5e1',
+                  color: 'white', fontSize: '18px', cursor: texto.trim() && !enviando ? 'pointer' : 'default',
                   transition: 'background 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0
                 }}
-              >
-                ➤
+                >
+                <Send size={18} aria-hidden="true" />
               </button>
             </form>
           </>

@@ -86,7 +86,7 @@ export default function ExamesPage() {
 
   const solicitarExame = async () => {
     if (!solPacienteId || !solExame) {
-      alert("⚠️ Preencha todos os campos obrigatórios (*)");
+      alert(" Preencha todos os campos obrigatórios (*)");
       return;
     }
 
@@ -107,7 +107,7 @@ export default function ExamesPage() {
       setSolPacienteId('');
       setSolExame('');
       setSolObs('');
-      alert("✅ Exame solicitado com sucesso!");
+      alert(" Exame solicitado com sucesso!");
       carregarDados();
     } catch (e: any) {
       alert(e.message);
@@ -123,7 +123,7 @@ export default function ExamesPage() {
       });
       if (!res.ok) throw new Error("Erro ao atualizar status");
       
-      alert("✅ Status do exame atualizado!");
+      alert(" Status do exame atualizado!");
       carregarDados();
     } catch (e: any) {
       alert(e.message);
@@ -152,9 +152,9 @@ export default function ExamesPage() {
       setResExameId('');
       setResValor('');
       setResLaudo('');
-      alert(`✅ Resultado lançado com sucesso!`);
+      alert(` Resultado lançado com sucesso!`);
       if (resStatus === "ALTERADO_CRITICO") {
-        alert("⚠️ ATENÇÃO: Resultado CRÍTICO! Notificar médico imediatamente!");
+        alert("ATENÇÃO: resultado marcado como crítico. A notificação automática ao médico não está disponível; acione o protocolo institucional imediatamente.");
       }
       carregarDados();
       setActiveTab('listagem');
@@ -240,8 +240,8 @@ export default function ExamesPage() {
               <div className="form-grupo">
                 <label>Tipo de Exame *</label>
                 <select value={solTipo} onChange={e => { setSolTipo(e.target.value); setSolExame(''); }}>
-                  <option value="laboratorio">🔬 Laboratorial</option>
-                  <option value="imagem">🩻 Imagem / Radiologia</option>
+                  <option value="laboratorio"> Laboratorial</option>
+                  <option value="imagem"> Imagem / Radiologia</option>
                 </select>
               </div>
               <div className="form-grupo">
@@ -262,7 +262,7 @@ export default function ExamesPage() {
           <div>
             <div className="search-box">
               <input type="text" placeholder="Buscar por paciente ou exame..." value={buscarExame} onChange={e => setBuscarExame(e.target.value)} />
-              <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}><option value="todos">Todos os Tipos</option><option value="laboratorio">🔬 Laboratório</option><option value="imagem">🩻 Imagem</option></select>
+              <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}><option value="todos">Todos os Tipos</option><option value="laboratorio"> Laboratório</option><option value="imagem"> Imagem</option></select>
               <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}><option value="todos">Todos os Status</option><option value="SOLICITADO">Solicitado</option><option value="COLETADO">Coletado</option><option value="EM_ANALISE">Em Análise</option><option value="CONCLUIDO">Concluído</option><option value="ALTERADO_CRITICO">Alterado/Crítico</option></select>
             </div>
             <div style={{background:'white', borderRadius: '8px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)'}}>
@@ -277,7 +277,7 @@ export default function ExamesPage() {
                       return (
                         <tr key={e.id}>
                           <td>{new Date(e.createdAt).toLocaleDateString('pt-BR')}</td>
-                          <td><span className={`badge ${e.tipo === 'laboratorio' ? 'badge-laboratorio' : 'badge-imagem'}`}>{e.tipo === 'laboratorio' ? '🔬 Lab' : '🩻 Imagem'}</span></td>
+                          <td><span className={`badge ${e.tipo === 'laboratorio' ? 'badge-laboratorio' : 'badge-imagem'}`}>{e.tipo === 'laboratorio' ? ' Lab' : ' Imagem'}</span></td>
                           <td><strong>{e.paciente.nome}</strong></td>
                           <td>{e.nome}</td>
                           <td>{e.profissional || '-'}</td>
@@ -306,11 +306,11 @@ export default function ExamesPage() {
                   <label>Exame *</label>
                   <select value={resExameId} onChange={e => setResExameId(e.target.value)}>
                     <option value="">Selecione o exame solicitado...</option>
-                    {examesPendentes.map(e => <option key={e.id} value={e.id}>{e.tipo === 'imagem' ? '🩻' : '🔬'} {e.paciente.nome} - {e.nome} ({getStatusName(e.status)})</option>)}
+                    {examesPendentes.map(e => <option key={e.id} value={e.id}>{e.tipo === 'imagem' ? '' : ''} {e.paciente.nome} - {e.nome} ({getStatusName(e.status)})</option>)}
                   </select>
                 </div>
                 <div className="form-grupo"><label>Resultado *</label><input type="text" placeholder="Valor ou descrição do resultado" value={resValor} onChange={e => setResValor(e.target.value)} /></div>
-                <div className="form-grupo"><label>Status do Resultado</label><select value={resStatus} onChange={e => setResStatus(e.target.value)}><option value="CONCLUIDO">🟢 Normal / Concluído</option><option value="ALTERADO_CRITICO">🔴 Alterado / Crítico</option></select></div>
+                <div className="form-grupo"><label>Status do Resultado</label><select value={resStatus} onChange={e => setResStatus(e.target.value)}><option value="CONCLUIDO"> Normal / Concluído</option><option value="ALTERADO_CRITICO"> Alterado / Crítico</option></select></div>
                 <div className="form-grupo full"><label>Laudo / Observações</label><textarea rows={3} placeholder="Laudo completo do exame..." value={resLaudo} onChange={e => setResLaudo(e.target.value)}></textarea></div>
               </div>
               <button className="btn btn-primary" onClick={lancarResultado} style={{width:'100%', marginTop:'15px', justifyContent:'center', padding:'14px'}}><i className="las la-save"></i> Lançar Resultado</button>
@@ -326,7 +326,7 @@ export default function ExamesPage() {
                     <div key={e.id} className={`resultado-card ${e.status === 'ALTERADO_CRITICO' ? 'critico' : ''}`}>
                       <div className="resultado-header">
                         <strong>{e.paciente.nome} - {e.nome}</strong>
-                        <span className={`badge ${e.tipo === 'laboratorio' ? 'badge-laboratorio' : 'badge-imagem'}`}>{e.tipo === 'laboratorio' ? '🔬 Lab' : '🩻 Imagem'}</span>
+                        <span className={`badge ${e.tipo === 'laboratorio' ? 'badge-laboratorio' : 'badge-imagem'}`}>{e.tipo === 'laboratorio' ? ' Lab' : ' Imagem'}</span>
                       </div>
                       <div className="resultado-valor">{e.resultado}</div>
                       <small style={{color:'#94a3b8'}}>{new Date(e.updatedAt).toLocaleString('pt-BR')} | Liberado por: {e.profissional || '-'}</small>
@@ -352,7 +352,7 @@ export default function ExamesPage() {
                 <div style={{borderBottom:'2px solid #e2e8f0', paddingBottom:'15px', marginBottom:'15px'}}>
                   <p><strong>Paciente:</strong> {modalLaudoData.exame.paciente.nome}</p>
                   <p><strong>Exame:</strong> {modalLaudoData.exame.nome}</p>
-                  <p><strong>Tipo:</strong> {modalLaudoData.exame.tipo === 'laboratorio' ? '🔬 Laboratorial' : '🩻 Imagem'}</p>
+                  <p><strong>Tipo:</strong> {modalLaudoData.exame.tipo === 'laboratorio' ? ' Laboratorial' : ' Imagem'}</p>
                   <p><strong>Solicitante:</strong> {modalLaudoData.exame.profissional || '-'}</p>
                   <p><strong>Data Solicitação:</strong> {new Date(modalLaudoData.exame.createdAt).toLocaleString('pt-BR')}</p>
                 </div>

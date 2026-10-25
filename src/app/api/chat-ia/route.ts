@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { isRecord } from '@/lib/request-validation';
+import { isChatbotEnabled } from '@/lib/chatbot';
 
 const SYSTEM_PROMPT = 'Você é o EnfBia Bot, assistente de inteligência artificial do sistema hospitalar Saskia Saúde Integrada. Você auxilia profissionais de saúde com protocolos, documentação e orientações gerais sobre os módulos do sistema. Responda em português brasileiro, de forma clara, objetiva e profissional, em no máximo três parágrafos. Não use emojis. Não substitua protocolos institucionais nem a avaliação de profissionais habilitados.';
 const MAX_BODY_BYTES = 20 * 1024;
@@ -71,6 +72,9 @@ function parseMessages(value: unknown): ChatMessage[] | null {
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: { message: 'Não autorizado' } }, { status: 401 });
+  if (!isChatbotEnabled()) {
+    return NextResponse.json({ error: { message: 'Assistente indisponível no momento' } }, { status: 503 });
+  }
 
   const body = await readJson(request);
   if (!body) return NextResponse.json({ error: { message: 'Requisição inválida ou muito grande' } }, { status: 400 });

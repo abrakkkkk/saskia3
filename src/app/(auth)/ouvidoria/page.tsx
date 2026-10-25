@@ -5,8 +5,10 @@ import './ouvidoria.css';
 
 export default function OuvidoriaPage() {
   const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.cargo === 'ADMIN';
   const [tabAtiva, setTabAtiva] = useState('registrar');
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
   
   // Dados
   const [manifestacoes, setManifestacoes] = useState<any[]>([]);
@@ -15,7 +17,6 @@ export default function OuvidoriaPage() {
   const [form, setForm] = useState({
     tipo: 'Elogio',
     nome: '',
-    contato: '',
     setor: 'Geral',
     descricao: ''
   });
@@ -24,11 +25,12 @@ export default function OuvidoriaPage() {
     setLoading(true);
     try {
       const res = await fetch('/api/ouvidoria');
-      if (res.ok) {
-        setManifestacoes(await res.json());
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Não foi possível carregar as manifestações.');
+      setManifestacoes(Array.isArray(data) ? data : []);
+      setErroCarga('');
     } catch (e) {
-      console.error(e);
+      setErroCarga(e instanceof Error ? e.message : 'Não foi possível carregar as manifestações.');
     } finally {
       setLoading(false);
     }
@@ -40,7 +42,7 @@ export default function OuvidoriaPage() {
 
   const registrarManifestacao = async () => {
     if (!form.descricao.trim()) {
-      alert("⚠️ Descreva a manifestação!");
+      alert(" Descreva a manifestação!");
       return;
     }
 
@@ -48,9 +50,7 @@ export default function OuvidoriaPage() {
       tipo: form.tipo,
       setor: form.setor,
       paciente: form.nome.trim() || "Anônimo",
-      mensagem: form.descricao,
-      status: "Pendente",
-      prazo: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // prazo de 7 dias
+      mensagem: form.descricao.trim()
     };
 
     try {
@@ -66,11 +66,10 @@ export default function OuvidoriaPage() {
       setForm({
         tipo: 'Elogio',
         nome: '',
-        contato: '',
         setor: 'Geral',
         descricao: ''
       });
-      alert(`✅ Manifestação registrada com sucesso! Protocolo: ${nova.protocolo}`);
+      alert(` Manifestação registrada com sucesso! Protocolo: ${nova.protocolo}`);
       carregarDados();
       setTabAtiva('lista');
     } catch (error: any) {
@@ -96,8 +95,9 @@ export default function OuvidoriaPage() {
   };
 
   // Estatísticas
-  const pendentes = manifestacoes.filter(m => m.status === "Pendente").length;
-  const respondidas = manifestacoes.filter(m => m.status === "Respondida").length;
+  const estaRespondida = (status: string) => ['RESPONDIDA', 'RESPONDIDO', 'CONCLUIDA', 'CONCLUÍDA'].includes(status.toUpperCase());
+  const pendentes = manifestacoes.filter(m => !estaRespondida(m.status || '')).length;
+  const respondidas = manifestacoes.filter(m => estaRespondida(m.status || '')).length;
 
   if (loading && manifestacoes.length === 0) return <div>Carregando...</div>;
 
@@ -114,6 +114,8 @@ export default function OuvidoriaPage() {
             <i className="las la-plus-circle"></i> Nova Manifestação
           </button>
         </div>
+
+        {erroCarga && <div role="alert" className="alert-erro" style={{ margin: '0 0 16px' }}>{erroCarga}</div>}
 
         <div className="stats-grid">
           <div className="stat-card">
@@ -157,10 +159,6 @@ export default function OuvidoriaPage() {
                 <input type="text" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} placeholder="Anônimo se não preencher" />
               </div>
               <div className="form-grupo">
-                <label>Contato (opcional)</label>
-                <input type="text" value={form.contato} onChange={e => setForm({...form, contato: e.target.value})} placeholder="Telefone ou e-mail" />
-              </div>
-              <div className="form-grupo">
                 <label>Setor Relacionado</label>
                 <select value={form.setor} onChange={e => setForm({...form, setor: e.target.value})}>
                   <option>Geral</option>
@@ -186,11 +184,11 @@ export default function OuvidoriaPage() {
           <div className="tabela-wrapper">
             <table className="tabela-ouv">
               <thead>
-                <tr><th>Protocolo</th><th>Data</th><th>Tipo</th><th>Nome</th><th>Setor</th><th>Status</th><th>Ações</th></tr>
+                <tr><th>Protocolo</th><th>Data</th><th>Tipo</th><th>Nome</th><th>Setor</th><th>Status</th>{isAdmin && <th>Ações</th>}</tr>
               </thead>
               <tbody>
                 {manifestacoes.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhuma manifestação registrada.</td></tr>
+                  <tr><td colSpan={isAdmin ? 7 : 6} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhuma manifestação registrada.</td></tr>
                 ) : (
                   manifestacoes.slice().map((m) => {
                     let tipoBadge = "badge-info";
@@ -206,17 +204,17 @@ export default function OuvidoriaPage() {
                         <td>{m.paciente}</td>
                         <td>{m.setor}</td>
                         <td>
-                          <span className={`badge ${m.status === 'Respondida' ? 'badge-success' : 'badge-warning'}`}>
-                            {m.status}
+                          <span className={`badge ${estaRespondida(m.status || '') ? 'badge-success' : 'badge-warning'}`}>
+                            {estaRespondida(m.status || '') ? 'Respondida' : (m.status === 'ABERTO' ? 'Pendente' : m.status)}
                           </span>
                         </td>
-                        <td>
-                          {m.status === 'Pendente' && (
+                        {isAdmin && <td>
+                          {!estaRespondida(m.status || '') && (
                             <button className="btn btn-success btn-sm" onClick={() => responderManifestacao(m.id)}>
                               <i className="las la-check"></i> Marcar Respondida
                             </button>
                           )}
-                        </td>
+                        </td>}
                       </tr>
                     )
                   })

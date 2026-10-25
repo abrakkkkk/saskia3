@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 interface Lembrete {
-  id: number;
+  id: string;
   titulo: string;
   tipo: 'consulta' | 'medicacao' | 'exame' | 'cirurgia' | 'pessoal';
   data: string; // YYYY-MM-DD
@@ -31,6 +31,22 @@ interface Lembrete {
   concluido: boolean;
   criadoPor: string;
   criadoEm: string;
+}
+
+function dateForInput(value: string | Date) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function timeForInput(value: string | Date) {
+  const date = new Date(value);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function toIsoDateTime(date: string, time: string) {
+  const value = new Date(`${date}T${time}:00`);
+  if (Number.isNaN(value.getTime())) throw new Error('Data e horário inválidos.');
+  return value.toISOString();
 }
 
 const TIPO_INFO = {
@@ -57,7 +73,7 @@ export default function LembretesPage() {
   const [form, setForm] = useState({
     titulo: '',
     tipo: 'consulta' as Lembrete['tipo'],
-    data: new Date().toISOString().split('T')[0],
+    data: dateForInput(new Date()),
     hora: '09:00',
     descricao: '',
     relacionado: ''
@@ -69,11 +85,10 @@ export default function LembretesPage() {
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          // Normaliza os nomes de campos se necessário
           const mapData = data.map(d => ({
             ...d,
-            data: d.dataHora ? d.dataHora.split('T')[0] : (d.data || ''),
-            hora: d.dataHora ? new Date(d.dataHora).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) : (d.hora || '')
+            data: d.dataHora ? dateForInput(d.dataHora) : (d.data || ''),
+            hora: d.dataHora ? timeForInput(d.dataHora) : (d.hora || '')
           }));
           setLembretes(mapData);
         }
@@ -101,7 +116,7 @@ export default function LembretesPage() {
       setForm({
         titulo: '',
         tipo: 'consulta',
-        data: dataAtual.toISOString().split('T')[0],
+        data: dateForInput(dataAtual),
         hora: '09:00',
         descricao: '',
         relacionado: ''
@@ -111,66 +126,72 @@ export default function LembretesPage() {
   };
 
   const salvarLembrete = async () => {
-    if (!form.titulo || !form.data) {
+    if (!form.titulo.trim() || !form.data || !form.hora) {
       alert("Preencha título e data!");
       return;
     }
     
     try {
+      const dataHora = toIsoDateTime(form.data, form.hora);
+      let res: Response;
       if (lembreteEditando) {
-        await fetch(`/api/lembretes/${lembreteEditando.id}`, {
+        res = await fetch(`/api/lembretes/${lembreteEditando.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...form,
-            dataHora: `${form.data}T${form.hora}:00Z`
+            dataHora
           })
         });
       } else {
-        await fetch('/api/lembretes', {
+        res = await fetch('/api/lembretes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...form,
-            dataHora: `${form.data}T${form.hora}:00Z`,
+            dataHora,
             criadoPor: usuario?.nome || "Usuário"
           })
         });
+      }
+      if (!res.ok) {
+        const response = await res.json().catch(() => ({}));
+        throw new Error(response.error || 'Não foi possível salvar o lembrete.');
       }
       carregarLembretes();
       setIsModalOpen(false);
     } catch (e) {
       console.error(e);
-      alert("Erro ao salvar lembrete!");
+      alert(e instanceof Error ? e.message : "Erro ao salvar lembrete!");
     }
   };
 
-  const concluirLembrete = async (id: number | string) => {
+  const concluirLembrete = async (id: string) => {
     try {
-      await fetch(`/api/lembretes/${id}`, {
+      const res = await fetch(`/api/lembretes/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ concluido: true })
       });
+      if (!res.ok) throw new Error((await res.json()).error || 'Não foi possível concluir o lembrete.');
       carregarLembretes();
     } catch (e) {
       console.error(e);
+      alert(e instanceof Error ? e.message : 'Erro ao concluir o lembrete.');
     }
   };
 
-  const excluirLembrete = async (id: number | string) => {
-    const senha = prompt("Ação destrutiva: Digite sua senha para excluir este lembrete:");
-    if (senha === usuario?.senha) {
-      try {
-        await fetch(`/api/lembretes/${id}`, {
+  const excluirLembrete = async (id: string) => {
+    if (!window.confirm('Excluir este lembrete? Esta ação não pode ser desfeita.')) return;
+    try {
+        const res = await fetch(`/api/lembretes/${id}`, {
           method: 'DELETE'
         });
+        if (!res.ok) throw new Error((await res.json()).error || 'Não foi possível excluir o lembrete.');
         carregarLembretes();
-      } catch (e) {
-        console.error(e);
-      }
-    } else if (senha !== null) {
-      alert("Senha incorreta!");
+    } catch (e) {
+      console.error(e);
+      alert(e instanceof Error ? e.message : 'Erro ao excluir o lembrete.');
     }
   };
 
@@ -181,12 +202,15 @@ export default function LembretesPage() {
   };
 
   const selecionarData = (dataStr: string) => {
-    setForm(prev => ({ ...prev, data: dataStr }));
-    abrirModal();
+    setLembreteEditando(null);
+    setForm({
+      titulo: '', tipo: 'consulta', data: dataStr, hora: '09:00', descricao: '', relacionado: ''
+    });
+    setIsModalOpen(true);
   };
 
   // Stats
-  const hojeStr = new Date().toISOString().split('T')[0];
+  const hojeStr = dateForInput(new Date());
   const stats = {
     pendentes: lembretes.filter(l => !l.concluido).length,
     hoje: lembretes.filter(l => l.data === hojeStr && !l.concluido).length,
@@ -394,11 +418,11 @@ export default function LembretesPage() {
                   onChange={e => setForm({...form, tipo: e.target.value as any})}
                   className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm bg-white"
                 >
-                  <option value="consulta">📋 Consulta</option>
-                  <option value="medicacao">💊 Medicação</option>
-                  <option value="exame">🔬 Exame</option>
-                  <option value="cirurgia">🏥 Cirurgia</option>
-                  <option value="pessoal">👤 Pessoal</option>
+                  <option value="consulta"> Consulta</option>
+                  <option value="medicacao"> Medicação</option>
+                  <option value="exame"> Exame</option>
+                  <option value="cirurgia"> Cirurgia</option>
+                  <option value="pessoal"> Pessoal</option>
                 </select>
               </div>
               

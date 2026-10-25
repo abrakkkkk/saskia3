@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 export async function GET() {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json([], { status: 401 })
+    if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const hospitalId = session.user.hospitalId
     const agendamentos = await prisma.agendamento.findMany({
@@ -21,7 +21,7 @@ export async function GET() {
     return NextResponse.json(agendamentos)
   } catch (error) {
     console.error('Erro ao buscar agendamentos:', error)
-    return NextResponse.json([])
+    return NextResponse.json({ error: 'Erro ao buscar agendamentos' }, { status: 500 })
   }
 }
 
@@ -32,33 +32,51 @@ export async function POST(request: NextRequest) {
 
     const hospitalId = session.user.hospitalId
     const usuarioId = session.user.id
-    const body = await request.json()
+    const body: unknown = await request.json()
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    }
+    const input = body as Record<string, unknown>
 
-    if (!body.pacienteId || !body.dataHora || !body.especialidade) {
+    if (typeof input.pacienteId !== 'string' || !input.pacienteId || typeof input.dataHora !== 'string' || typeof input.especialidade !== 'string' || !input.especialidade.trim()) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }
 
     // Verify if Paciente belongs to the hospital
-    const paciente = await prisma.paciente.findUnique({
-      where: { id: body.pacienteId }
+    const paciente = await prisma.paciente.findFirst({
+      where: { id: input.pacienteId, hospitalId },
+      select: { id: true },
     })
-    
-    if (!paciente || paciente.hospitalId !== hospitalId) {
+    if (!paciente) {
       return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
+    }
+
+    const dataHora = new Date(input.dataHora)
+    if (Number.isNaN(dataHora.getTime())) return NextResponse.json({ error: 'Data inválida' }, { status: 400 })
+    const optionalText = (key: string, max: number) => {
+      const value = input[key]
+      return value == null ? undefined : typeof value === 'string' && value.length <= max ? value.trim() : null
+    }
+    const tipo = optionalText('tipo', 80)
+    const profissional = optionalText('profissional', 120)
+    const sala = optionalText('sala', 80)
+    const observacoes = optionalText('observacoes', 1000)
+    if ([tipo, profissional, sala, observacoes].includes(null)) {
+      return NextResponse.json({ error: 'Um ou mais campos excedem o formato permitido' }, { status: 400 })
     }
 
     const agendamento = await prisma.agendamento.create({
       data: {
         hospitalId,
-        pacienteId: body.pacienteId,
+        pacienteId: input.pacienteId,
         usuarioId,
-        dataHora: new Date(body.dataHora),
-        tipo: body.tipo || 'Consulta',
-        especialidade: body.especialidade,
-        profissional: body.profissional,
-        sala: body.sala,
+        dataHora,
+        tipo: tipo || 'Consulta',
+        especialidade: input.especialidade.trim().slice(0, 100),
+        profissional,
+        sala,
         status: 'AGENDADO',
-        observacoes: body.observacoes
+        observacoes
       },
       include: {
         paciente: true

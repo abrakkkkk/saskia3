@@ -168,7 +168,7 @@ export default function FarmaciaPage() {
       setModalEntrada(false);
       setEntMed(''); setEntPrincipio(''); setEntLote(''); setEntValidade('');
       setEntQtd(1); setEntMinima(10); setEntFornecedor(''); setEntUnidade('Comprimido');
-      alert("✅ Entrada registrada com sucesso!");
+      alert(" Entrada registrada com sucesso!");
       carregarDados();
     } catch (e: any) {
       alert(e.message);
@@ -206,7 +206,7 @@ export default function FarmaciaPage() {
       setModalDispensacao(false);
       setDispPaciente(''); setDispMedicamentoId(''); setDispQtd(1);
       setDispVia('Oral'); setDispLeito('');
-      alert("✅ Dispensação realizada com sucesso!");
+      alert(" Dispensação realizada com sucesso!");
       carregarDados();
     } catch (e: any) {
       alert(e.message);
@@ -222,8 +222,7 @@ export default function FarmaciaPage() {
   const stats = {
     entradas: entradasHoje.length,
     saidas: saidasHoje.length,
-    estoque: estoque.length,
-    pendentes: 0
+    estoque: estoque.length
   };
 
   const entradas = movimentacoes.filter(m => m.tipo === 'ENTRADA');
@@ -267,7 +266,6 @@ export default function FarmaciaPage() {
           <div className="status-card entrada"><div className="card-icon"><i className="las la-box"></i></div><div className="card-numero">{stats.entradas}</div><div className="card-label">Entradas Hoje</div></div>
           <div className="status-card saida"><div className="card-icon"><i className="las la-truck"></i></div><div className="card-numero">{stats.saidas}</div><div className="card-label">Dispensações Hoje</div></div>
           <div className="status-card estoque"><div className="card-icon"><i className="las la-warehouse"></i></div><div className="card-numero">{stats.estoque}</div><div className="card-label">Medicamentos em Estoque</div></div>
-          <div className="status-card pendente"><div className="card-icon"><i className="las la-clock"></i></div><div className="card-numero">{stats.pendentes}</div><div className="card-label">Pacientes Aguardando</div></div>
         </div>
 
         <div className="tabs-farmacia">

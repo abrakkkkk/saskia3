@@ -35,7 +35,7 @@ export default function PoliticasPrivacidadePage() {
     </div>
 
     <div class="destaque">
-        <p><strong>📌 Resumo da Política:</strong> A Saskia Saúde Integrada está comprometida com a proteção dos seus dados pessoais. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos as informações dos usuários do nosso sistema, em conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018).</p>
+        <p><strong> Resumo da Política:</strong> A Saskia Saúde Integrada está comprometida com a proteção dos seus dados pessoais. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos as informações dos usuários do nosso sistema, em conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018).</p>
     </div>
 
     <!-- 1. INFORMAÇÕES GERAIS -->
@@ -175,9 +175,9 @@ export default function PoliticasPrivacidadePage() {
     <h2>9. ENCARREGADO PELA PROTEÇÃO DE DADOS (DPO)</h2>
     <p>A Saskia designou um Encarregado (Data Protection Officer - DPO) para atuar como canal de comunicação entre a empresa, os titulares dos dados e a Autoridade Nacional de Proteção de Dados (ANPD).</p>
     <div class="destaque">
-        <p><strong>📧 E-mail do DPO:</strong> <a href="mailto:dpo@saskia.com.br">dpo@saskia.com.br</a><br>
-        <strong>📞 Telefone do DPO:</strong> (85) 9 98228864<br>
-        <strong>👤 Nome do DPO:</strong> Marcelo Marinho Moura</p>
+        <p><strong> E-mail do DPO:</strong> <a href="mailto:dpo@saskia.com.br">dpo@saskia.com.br</a><br>
+        <strong> Telefone do DPO:</strong> (85) 9 98228864<br>
+        <strong> Nome do DPO:</strong> Marcelo Marinho Moura</p>
     </div>
 
     <!-- 10. COOKIES E TECNOLOGIAS DE RASTREAMENTO -->
@@ -240,9 +240,9 @@ export default function PoliticasPrivacidadePage() {
         <i class="las la-shield-alt" style="font-size: 32px;"></i>
         <h3>Dúvidas sobre Privacidade?</h3>
         <p>Entre em contato com nosso Encarregado de Proteção de Dados (DPO):</p>
-        <p><strong>📧 E-mail:</strong> <a href="mailto:privacidade@saskia.com.br">privacidade@saskia.com.br</a> | <a href="mailto:dpo@saskia.com.br">dpo@saskia.com.br</a></p>
-        <p><strong>📞 Telefone/WhatsApp:</strong> (85) 9 98228864</p>
-        <p><strong>📍 Endereço:</strong> R. Azevedo Bolão, 1369 - Parquelândia, Fortaleza - CE, CEP: 60455-610</p>
+        <p><strong> E-mail:</strong> <a href="mailto:privacidade@saskia.com.br">privacidade@saskia.com.br</a> | <a href="mailto:dpo@saskia.com.br">dpo@saskia.com.br</a></p>
+        <p><strong> Telefone/WhatsApp:</strong> (85) 9 98228864</p>
+        <p><strong> Endereço:</strong> R. Azevedo Bolão, 1369 - Parquelândia, Fortaleza - CE, CEP: 60455-610</p>
         <p><small>Esta Política de Privacidade foi atualizada pela última vez em 02 de maio de 2026.</small></p>
     </div>
 

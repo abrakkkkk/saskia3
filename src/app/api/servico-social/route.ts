@@ -62,20 +62,21 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Verify tenancy
-    const casoExistente = await prisma.casoSocial.findUnique({ where: { id } });
-    if (!casoExistente || casoExistente.hospitalId !== hospitalId) {
+    const casoExistente = await prisma.casoSocial.findFirst({ where: { id, hospitalId } });
+    if (!casoExistente) {
       return NextResponse.json({ error: 'Caso não encontrado ou não autorizado' }, { status: 404 });
     }
 
-    const atualizado = await prisma.casoSocial.update({
-      where: { id },
+    const atualizado = await prisma.casoSocial.updateMany({
+      where: { id, hospitalId },
       data: {
         ...(status ? { status } : {}),
         ...(detalhe !== undefined ? { detalhe } : {})
       }
     });
 
-    return NextResponse.json(atualizado);
+    if (atualizado.count === 0) return NextResponse.json({ error: 'Caso não encontrado' }, { status: 404 });
+    return NextResponse.json(await prisma.casoSocial.findFirst({ where: { id, hospitalId } }));
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

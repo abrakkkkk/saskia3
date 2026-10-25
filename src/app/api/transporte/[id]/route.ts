@@ -10,14 +10,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const body = await request.json();
 
-    const atualizado = await prisma.transportePaciente.update({
-      where: { id: id },
+    const atualizado = await prisma.transportePaciente.updateMany({
+      where: { id, hospitalId: session.user.hospitalId },
       data: {
         status: body.status
       }
     });
 
-    return NextResponse.json(atualizado);
+    if (atualizado.count === 0) return NextResponse.json({ error: 'Transporte não encontrado' }, { status: 404 })
+
+    const transporte = await prisma.transportePaciente.findFirst({
+      where: { id, hospitalId: session.user.hospitalId },
+    });
+    return NextResponse.json(transporte);
   } catch (error: any) {
     return NextResponse.json({ error: 'Erro ao atualizar transporte' }, { status: 500 });
   }

@@ -58,14 +58,21 @@ export default function ServicoSocialPage() {
 
   const registrarAtendimento = async () => {
     if (!form.paciente || !form.profissional) {
-      alert("⚠️ Preencha paciente e assistente social!");
+      alert(" Preencha paciente e assistente social!");
       return;
     }
 
     const payload = {
       pacienteNome: form.paciente,
       situacao: form.demanda,
-      detalhe: form.relato || (form.tipo + ' - ' + form.demanda)
+      status: form.status,
+      detalhe: [
+        `Tipo de atendimento: ${form.tipo}`,
+        `Profissional: ${form.profissional}`,
+        `Data do atendimento: ${form.data}`,
+        form.relato.trim() ? `Relato / evolução: ${form.relato.trim()}` : '',
+        form.encaminhamentos.trim() ? `Encaminhamentos: ${form.encaminhamentos.trim()}` : ''
+      ].filter(Boolean).join('\n')
     };
 
     try {
@@ -77,7 +84,7 @@ export default function ServicoSocialPage() {
       if (!res.ok) throw new Error('Erro ao registrar atendimento');
       
       setForm(prev => ({ ...prev, relato: '', encaminhamentos: '', paciente: '' }));
-      alert("✅ Atendimento registrado com sucesso!");
+      alert(" Atendimento registrado com sucesso!");
       carregarDados();
       setTabAtiva('lista');
     } catch (error: any) {
@@ -105,15 +112,14 @@ export default function ServicoSocialPage() {
   
   const pendentes = atendimentos.filter(a => {
     const s = (a.status || '').toUpperCase();
-    return s.includes('ACOMPANHAMENTO') || s.includes('PENDENTE') || s.includes('ANDAMENTO') || s === 'EM ANDAMENTO';
+    return s.includes('ACOMPANHAMENTO') || s.includes('PENDENTE') || s.includes('ANDAMENTO');
   }).length;
   const concluidos = atendimentos.filter(a => {
     const s = (a.status || '').toUpperCase();
     return s.includes('CONCLU') || s.includes('RESOLVIDO') || s.includes('FINALIZADO');
   }).length;
   const comEncaminhamentos = atendimentos.filter(a => {
-    const s = (a.status || '').toUpperCase();
-    return s.includes('ENCAMINHA');
+    return (a.detalhe || '').toLowerCase().includes('encaminhamentos:');
   }).length;
 
   if (loading && atendimentos.length === 0) {
@@ -257,8 +263,9 @@ export default function ServicoSocialPage() {
                   ) : (
                     listaFiltrada.map((a) => {
                       let badge = "badge-info";
-                      if (a.status === 'Concluído') badge = "badge-success";
-                      if (a.status === 'Aguardando Retorno') badge = "badge-warning";
+                      const status = (a.status || '').toUpperCase();
+                      if (status.includes('CONCLU')) badge = "badge-success";
+                      if (status.includes('AGUARDANDO') || status.includes('ACOMPANHAMENTO') || status.includes('ANDAMENTO')) badge = "badge-warning";
                       
                       return (
                         <tr key={a.id}>
@@ -278,36 +285,35 @@ export default function ServicoSocialPage() {
         )}
 
         {tabAtiva === 'encaminhamentos' && (
-          <div className="encaminhamentos-grid">
+          <div>
+            <p role="note" style={{ padding: '12px 16px', borderRadius: 8, background: '#fff7ed', color: '#9a3412', marginBottom: 16 }}>
+              O sistema não envia ofícios, notificações ou pedidos de vaga. Use os canais institucionais autorizados e registre o encaminhamento no atendimento.
+            </p>
+            <div className="encaminhamentos-grid">
             <div className="enc-card">
               <h4>CRAS / CREAS</h4>
               <p>Centro de Referência de Assistência Social</p>
-              <button className="btn btn-outline">Emitir Ofício</button>
             </div>
             <div className="enc-card">
               <h4>Conselho Tutelar</h4>
               <p>Para casos de vulnerabilidade infantil</p>
-              <button className="btn btn-outline">Emitir Notificação</button>
             </div>
             <div className="enc-card">
               <h4>Delegacia da Mulher (DEAM)</h4>
               <p>Violência doméstica</p>
-              <button className="btn btn-outline">Comunicar Fato</button>
             </div>
             <div className="enc-card">
               <h4>Abrigos Institucionais</h4>
               <p>Pessoas em situação de rua</p>
-              <button className="btn btn-outline">Solicitar Vaga</button>
             </div>
             <div className="enc-card">
               <h4>INSS</h4>
               <p>Auxílio doença e benefícios</p>
-              <button className="btn btn-outline">Relatório Social</button>
             </div>
             <div className="enc-card">
               <h4>Vara da Infância/Idoso</h4>
               <p>Ministério Público</p>
-              <button className="btn btn-outline">Enviar Relatório</button>
+            </div>
             </div>
           </div>
         )}

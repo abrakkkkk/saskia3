@@ -1,41 +1,9 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { getSessionUser } from '@/lib/session';
+import { useSession } from 'next-auth/react';
 import './receituario.css';
 
-// --- DATA CONSTANTS ---
-const categoriasData: any = {
-    medico: [
-        { nome: "Cardiovascular", icone: "las la-heart", itens: ["Hipertensão", "Insuficiência Cardíaca", "Arritmias", "Anti-hipertensivos"] },
-        { nome: "Endócrino", icone: "las la-chart-line", itens: ["Diabetes Tipo 1", "Diabetes Tipo 2", "Hipotireoidismo", "Hipertireoidismo"] },
-        { nome: "Antibióticos", icone: "las la-capsules", itens: ["Amoxicilina", "Azitromicina", "Cefalexina", "Clindamicina"] },
-        { nome: "Saúde da Mulher", icone: "las la-female", itens: ["Anticoncepcionais", "Reposição Hormonal", "ISTs", "Pré-natal"] },
-        { nome: "Saúde do Homem", icone: "las la-male", itens: ["Próstata", "Testosterona", "Disfunção Erétil"] },
-        { nome: "Saúde Mental", icone: "las la-brain", itens: ["Depressão", "Ansiedade", "Insônia", "TDAH"] },
-        { nome: "Pediatria", icone: "las la-child", itens: ["Febre", "Otite", "Bronquiolite", "Vacinas"] },
-        { nome: "Pneumologia", icone: "las la-lungs", itens: ["Asma", "DPOC", "Pneumonia", "Bronquite"] },
-        { nome: "Sintomáticos", icone: "las la-thermometer", itens: ["Analgésicos", "Antitérmicos", "Anti-inflamatórios"] },
-        { nome: "Sintomáticos Injetáveis", icone: "las la-syringe", itens: ["Dipirona", "Cetoprofeno", "Buscopan"] }
-    ],
-    enfermeiro: [
-        { nome: "NANDA-I", icone: "las la-clipboard-list", itens: ["00001 - Desequilíbrio nutricional", "00002 - Risco de infecção"] },
-        { nome: "NOC", icone: "las la-chart-line", itens: ["1000 - Controle da dor", "1002 - Controle de infecção"] },
-        { nome: "NIC", icone: "las la-syringe", itens: ["1100 - Administração de medicamentos", "1160 - Curativos"] },
-        { nome: "SAE", icone: "las la-stethoscope", itens: ["Histórico", "Diagnóstico", "Planejamento"] }
-    ],
-    fisioterapeuta: [
-        { nome: "Recursos", icone: "las la-bolt", itens: ["Eletroterapia", "Ultrassom"] },
-        { nome: "Exercícios", icone: "las la-walking", itens: ["Alongamento", "Fortalecimento"] }
-    ],
-    odontologista: [
-        { nome: "Procedimentos", icone: "las la-tooth", itens: ["Restauração", "Canal"] },
-        { nome: "Anestésicos", icone: "las la-syringe", itens: ["Lidocaína", "Articaína"] }
-    ],
-    nutricionista: [
-        { nome: "Dietas", icone: "las la-utensils", itens: ["Hipocalórica", "Low Carb"] },
-        { nome: "Suplementos", icone: "las la-capsules", itens: ["Vitaminas", "Minerais"] }
-    ]
-};
+// As sugestões terapêuticas do sistema anterior foram removidas: não eram um formulário institucional validado.
 
 const adesivosCombinados = [
   { "nome": "1", "arquivo": "1.png", "icone": "las la-tag" },
@@ -181,14 +149,49 @@ interface Paciente {
   nome: string;
 }
 
+const ALLOWED_RECIPE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR', 'P', 'DIV', 'UL', 'OL', 'LI', 'IMG']);
+const DROP_CONTENT_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH', 'TEMPLATE']);
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] || character);
+}
+
+function sanitizeRecipeHtml(value: string) {
+  if (typeof window === 'undefined') return escapeHtml(value);
+  const document = new DOMParser().parseFromString(value, 'text/html');
+  for (const element of Array.from(document.body.querySelectorAll('*'))) {
+    if (!ALLOWED_RECIPE_TAGS.has(element.tagName)) {
+      if (DROP_CONTENT_TAGS.has(element.tagName)) element.remove();
+      else element.replaceWith(...Array.from(element.childNodes));
+      continue;
+    }
+    if (element.tagName === 'IMG') {
+      const src = element.getAttribute('src') || '';
+      const alt = element.getAttribute('alt') || '';
+      if (!src.startsWith('/adesivos/') || src.includes('..') || src.includes('\\')) {
+        element.remove();
+        continue;
+      }
+      for (const attribute of Array.from(element.attributes)) element.removeAttribute(attribute.name);
+      element.setAttribute('src', src);
+      element.setAttribute('alt', alt.slice(0, 120));
+    } else {
+      for (const attribute of Array.from(element.attributes)) element.removeAttribute(attribute.name);
+    }
+  }
+  return document.body.innerHTML;
+}
+
 export default function ReceituarioPage() {
-  const [perfilAtual, setPerfilAtual] = useState('medico');
+  const { data: session } = useSession();
+  const isMedico = (session?.user as any)?.cargo === 'MEDICO';
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [activeTab, setActiveTab] = useState<'receituario'|'adesivos'|'modelos'|'historico'>('receituario');
-  const [activeCategoria, setActiveCategoria] = useState<string | null>(null);
   const [historico, setHistorico] = useState<any[]>([]);
-  
+  const [erroCarga, setErroCarga] = useState('');
+  const [salvandoPrescricao, setSalvandoPrescricao] = useState(false);
+
   // Header form
   const [estabelecimento, setEstabelecimento] = useState('');
   const [registro, setRegistro] = useState('');
@@ -213,42 +216,46 @@ export default function ReceituarioPage() {
         fetch('/api/receitas')
       ]);
       if(resPacientes.ok) setPacientes(await resPacientes.json());
-      if(resReceitas.ok) setHistorico(await resReceitas.json());
+      else throw new Error('Não foi possível carregar pacientes para a prescrição.');
+      if(resReceitas.ok) {
+        const receitas = await resReceitas.json();
+        setHistorico(Array.isArray(receitas) ? receitas.map((receita: any) => ({
+          ...receita,
+          medicamentos: Array.isArray(receita.medicamentos)
+            ? receita.medicamentos.map((medicamento: any) => ({
+                ...medicamento,
+                conteudo: typeof medicamento.conteudo === 'string' ? sanitizeRecipeHtml(medicamento.conteudo) : '',
+              }))
+            : [],
+        })) : []);
+        setErroCarga('');
+      } else {
+        const erro = await resReceitas.json().catch(() => ({}));
+        throw new Error(erro.error || 'Não foi possível carregar as prescrições.');
+      }
     } catch(e) {
       console.error(e);
+      setErroCarga(e instanceof Error ? e.message : 'Não foi possível carregar os dados de prescrição.');
     }
   };
 
   useEffect(() => {
     carregarDados();
     try {
-      const usuario = getSessionUser();
-      const hospNome = usuario?.hospitalNome || usuario?.hospital?.nome || "Hospital Saskia";
-      setEstabelecimento(hospNome);
-      const ano = new Date().getFullYear();
-      const seq = String(Math.floor(1000 + Math.random() * 9000));
-      setRegistro(`REC-${ano}-${seq}`);
+      fetch('/api/me').then(async response => {
+        const data = await response.json();
+        if (response.ok && typeof data.hospital?.nome === 'string') setEstabelecimento(data.hospital.nome);
+      }).catch(() => {});
     } catch {}
   }, []);
 
   const saveDadosMemoria = (meds: Medicamento[]) => {
     setMedicamentos(meds);
-  };
-
-  const mudarPerfil = (perfil: string) => {
-    setPerfilAtual(perfil);
-    setActiveCategoria(null);
+    setRegistro('');
   };
 
   const getTitulos = () => {
-    const map: any = {
-      medico: { titulo: "RECEITUÁRIO", subtitulo: "RECEITA MÉDICA - VIA DO PACIENTE" },
-      enfermeiro: { titulo: "PRESCRIÇÃO DE ENFERMAGEM", subtitulo: "CUIDADOS DE ENFERMAGEM" },
-      fisioterapeuta: { titulo: "PLANO TERAPÊUTICO", subtitulo: "FISIOTERAPIA - CONDUTA" },
-      odontologista: { titulo: "PRESCRIÇÃO ODONTOLÓGICA", subtitulo: "TRATAMENTO ODONTOLÓGICO" },
-      nutricionista: { titulo: "PLANO ALIMENTAR", subtitulo: "ORIENTAÇÃO NUTRICIONAL" }
-    };
-    return map[perfilAtual] || map.medico;
+    return { titulo: 'RECEITUÁRIO', subtitulo: 'RECEITA MÉDICA - VIA DO PACIENTE' };
   };
 
   const addMedicamento = () => {
@@ -269,27 +276,14 @@ export default function ReceituarioPage() {
 
   const handleEditorInput = (idx: number, html: string) => {
     const meds = [...medicamentos];
-    meds[idx].conteudo = html;
-    saveDadosMemoria(meds);
-  };
-
-  const insertTextPronto = (text: string) => {
-    let meds = [...medicamentos];
-    if (meds.length === 0) {
-      meds.push({ id: Date.now(), viaUso: "Oral", conteudo: text });
-    } else {
-      meds[meds.length - 1].conteudo += `\n${text}`;
-      if (editorRefs.current[meds.length - 1]) {
-         editorRefs.current[meds.length - 1]!.innerHTML = meds[meds.length - 1].conteudo;
-      }
-    }
+    meds[idx].conteudo = sanitizeRecipeHtml(html);
     saveDadosMemoria(meds);
   };
 
   const inserirTextoEditor = (idx: number, texto: string) => {
     const ref = editorRefs.current[idx];
     if (ref) {
-      ref.innerHTML += texto;
+      ref.insertAdjacentText('beforeend', texto);
       handleEditorInput(idx, ref.innerHTML);
     }
   };
@@ -313,15 +307,20 @@ export default function ReceituarioPage() {
   };
 
   const salvarPrescricao = async () => {
+    if (!isMedico) {
+      alert('Somente usuários com cargo MEDICO podem registrar prescrições.');
+      return;
+    }
     if (!pacienteId) {
-      alert("⚠️ Selecione um paciente cadastrado para salvar no prontuário!");
+      alert(" Selecione um paciente cadastrado para salvar no prontuário!");
       return;
     }
     if (medicamentos.length === 0) {
-      alert("⚠️ Adicione ao menos um item prescrito!");
+      alert(" Adicione ao menos um item prescrito!");
       return;
     }
 
+    setSalvandoPrescricao(true);
     try {
       const res = await fetch('/api/receitas', {
         method: 'POST',
@@ -333,16 +332,24 @@ export default function ReceituarioPage() {
         })
       });
 
-      if (!res.ok) throw new Error("Erro ao salvar prescrição");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao salvar prescrição');
 
-      alert("✅ Prescrição salva no prontuário com sucesso!");
-      carregarDados();
+      if (typeof data.id === 'string') setRegistro(data.id);
+      alert(" Prescrição salva no prontuário com sucesso!");
+      await carregarDados();
     } catch(e: any) {
       alert(e.message);
+    } finally {
+      setSalvandoPrescricao(false);
     }
   };
 
   const imprimir = () => {
+    if (!estabelecimento || (!pacienteId && !nomePaciente.trim()) || medicamentos.length === 0) {
+      alert('Informe o estabelecimento, paciente e ao menos um item antes de imprimir.');
+      return;
+    }
     window.print();
   };
 
@@ -373,7 +380,7 @@ export default function ReceituarioPage() {
 
   const imprimirAdesivosBtn = () => {
     if (bandejaAdesivos.length === 0) {
-      alert("⚠️ Adicione adesivos à bandeja para imprimir!");
+      alert(" Adicione adesivos à bandeja para imprimir!");
       return;
     }
     setIsPrintingAdesivos(true);
@@ -388,13 +395,10 @@ export default function ReceituarioPage() {
       saveDadosMemoria([]);
       setPacienteId('');
       setNomePaciente('');
-      const ano = new Date().getFullYear();
-      const seq = String(Math.floor(1000 + Math.random() * 9000));
-      setRegistro(`REC-${ano}-${seq}`);
+      setRegistro('');
     }
   };
 
-  const categorias = categoriasData[perfilAtual] || [];
   const listaAdesivosFiltrados = filtroAdesivo === 'todos' ? todosAdesivos : todosAdesivos.filter(a => a.categoria === filtroAdesivo);
 
   const pacienteNomeExibido = pacienteId ? pacientes.find(p => p.id === pacienteId)?.nome : nomePaciente;
@@ -402,79 +406,62 @@ export default function ReceituarioPage() {
   return (
     <div className="container-receituario">
       <div className="sidebar-receita hide-on-print">
+        {!isMedico && <p role="status" className="aviso-permissao">Somente usuários MEDICO podem criar e imprimir prescrições.</p>}
+        {isMedico && <>
         <div className="professional-switcher">
-          <label><i className="las la-user-md"></i> Perfil Profissional</label>
+          <label><i className="las la-user-md"></i> Perfil da sessão</label>
           <div className="perfis-lista">
-            <button className={`perfil-btn ${perfilAtual === 'medico' ? 'ativo' : ''}`} onClick={() => mudarPerfil('medico')}><i className="las la-stethoscope"></i> Médico</button>
-            <button className={`perfil-btn ${perfilAtual === 'enfermeiro' ? 'ativo' : ''}`} onClick={() => mudarPerfil('enfermeiro')}><i className="las la-user-nurse"></i> Enfermeiro</button>
-            <button className={`perfil-btn ${perfilAtual === 'fisioterapeuta' ? 'ativo' : ''}`} onClick={() => mudarPerfil('fisioterapeuta')}><i className="las la-walking"></i> Fisioterapeuta</button>
-            <button className={`perfil-btn ${perfilAtual === 'odontologista' ? 'ativo' : ''}`} onClick={() => mudarPerfil('odontologista')}><i className="las la-tooth"></i> Odontologista</button>
-            <button className={`perfil-btn ${perfilAtual === 'nutricionista' ? 'ativo' : ''}`} onClick={() => mudarPerfil('nutricionista')}><i className="las la-apple-alt"></i> Nutricionista</button>
+            <span className="perfil-btn ativo"><i className="las la-stethoscope"></i> Médico</span>
           </div>
         </div>
         <button className="cta-button" onClick={addMedicamento}><i className="las la-plus-circle"></i> Adicionar Prescrição</button>
-        <div className="search-box">
-          <input type="text" placeholder="Buscar medicamento..." />
-        </div>
-        <div>
-          {categorias.map((cat: any, i: number) => (
-            <div className="acordeao-item" key={i}>
-              <div className={`acordeao-header ${activeCategoria === cat.nome ? 'ativo' : ''}`} onClick={() => setActiveCategoria(activeCategoria === cat.nome ? null : cat.nome)}>
-                <div><i className={cat.icone}></i> {cat.nome}</div>
-                <i className="las la-angle-right chevron"></i>
-              </div>
-              <div className={`acordeao-conteudo ${activeCategoria === cat.nome ? 'ativo' : ''}`}>
-                {cat.itens.map((item: string, j: number) => (
-                  <div className="acordeao-item-lista" key={j} onClick={() => insertTextPronto(item)}>
-                    <i className="las la-file-alt"></i> {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <div role="note" className="aviso-permissao"><i className="las la-info-circle" aria-hidden="true"></i> Catálogo institucional não integrado. A receita é preenchida pelo profissional, sem sugestões automáticas de medicamentos.</div>
+        </>}
       </div>
 
       <div className="main-receita">
+        {erroCarga && <div role="alert" className="aviso-permissao">{erroCarga}</div>}
         <div className="tabs-receita hide-on-print">
           <button className={`tab-btn ${activeTab === 'receituario' ? 'ativo' : ''}`} onClick={() => setActiveTab('receituario')}><i className="las la-prescription-bottle"></i> Editor de Receita</button>
           <button className={`tab-btn ${activeTab === 'historico' ? 'ativo' : ''}`} onClick={() => setActiveTab('historico')}><i className="las la-history"></i> Histórico do Paciente</button>
           <button className={`tab-btn ${activeTab === 'adesivos' ? 'ativo' : ''}`} onClick={() => setActiveTab('adesivos')}><i className="las la-tag"></i> Adesivos</button>
         </div>
 
-        {activeTab === 'receituario' && (
+        {activeTab === 'receituario' && !isMedico && <div role="status" className="papel-receita">A criação e impressão de prescrições está disponível apenas para usuários MEDICO.</div>}
+
+        {activeTab === 'receituario' && isMedico && (
           <div className="toolbar-receita hide-on-print" style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
             <button className="tool-btn" onClick={() => { setEditorAtivoIndex(medicamentos.length > 0 ? medicamentos.length - 1 : null); setModalAdesivosAberto(true); }}><i className="las la-tag"></i> Inserir Adesivo</button>
-            <button className="tool-btn" onClick={imprimir} style={{background: '#e2e8f0', color: '#1e293b'}}><i className="las la-print"></i> Imprimir</button>
-            <button className="tool-btn" onClick={salvarPrescricao} style={{background: '#16a34a', color: 'white'}}><i className="las la-save"></i> Salvar no Prontuário</button>
+            <button className="tool-btn" onClick={imprimir} disabled={!estabelecimento || (!pacienteId && !nomePaciente.trim()) || medicamentos.length === 0} style={{background: '#e2e8f0', color: '#1e293b'}}><i className="las la-print"></i> Imprimir</button>
+            <button className="tool-btn" onClick={salvarPrescricao} disabled={salvandoPrescricao} style={{background: '#16a34a', color: 'white'}}><i className="las la-save"></i> {salvandoPrescricao ? 'Salvando…' : 'Salvar no Prontuário'}</button>
             <button className="tool-btn danger" onClick={limparTudo}><i className="las la-trash-alt"></i> Limpar Tudo</button>
           </div>
         )}
 
-        {activeTab === 'receituario' && (
+        {activeTab === 'receituario' && isMedico && (
           <div className="papel-receita" id="papelReceita">
             <h1 id="tituloDocumento">{getTitulos().titulo}</h1>
             <div className="subtitulo" id="subtituloDocumento">{getTitulos().subtitulo}</div>
-            
+
             <div className="form-row hide-on-print">
               <div className="form-campo">
                 <label>ESTABELECIMENTO DE SAÚDE (Institucional):</label>
-                <input 
-                  type="text" 
-                  value={estabelecimento} 
-                  readOnly 
+                <input
+                  type="text"
+                  value={estabelecimento}
+                  readOnly
                   style={{ backgroundColor: '#f8fafc', cursor: 'not-allowed', color: '#1e293b', fontWeight: 600, border: '1px solid #cbd5e1' }}
                   title="Vinculado automaticamente à unidade de atendimento da sua sessão"
                 />
               </div>
               <div className="form-campo">
-                <label>REGISTRO Nº (Sequencial):</label>
-                <input 
-                  type="text" 
-                  value={registro} 
-                  readOnly 
+                <label>CÓDIGO DO REGISTRO:</label>
+                <input
+                  type="text"
+                  value={registro || 'Rascunho — ainda não registrado'}
+                  readOnly
                   style={{ backgroundColor: '#f8fafc', cursor: 'not-allowed', color: '#0369a1', fontWeight: 700, border: '1px solid #cbd5e1' }}
-                  title="Código identificador sequencial gerado para segurança clínica"
+                  title="O código real é atribuído pelo servidor após salvar no prontuário"
                 />
               </div>
             </div>
@@ -495,7 +482,7 @@ export default function ReceituarioPage() {
             {/* Print Header */}
             <div className="print-header" style={{display:'none'}}>
               {estabelecimento && <p><strong>Estabelecimento:</strong> {estabelecimento}</p>}
-              {registro && <p><strong>Registro:</strong> {registro}</p>}
+              {registro ? <p><strong>Registro:</strong> {registro}</p> : <p><strong>RASCUNHO — NÃO REGISTRADO NO PRONTUÁRIO</strong></p>}
               {pacienteNomeExibido && <p style={{marginTop:'10px', fontSize:'18px'}}><strong>Paciente:</strong> {pacienteNomeExibido}</p>}
               <hr style={{margin:'20px 0'}} />
             </div>
@@ -521,22 +508,22 @@ export default function ReceituarioPage() {
                       <button className="btn-remove-card" onClick={() => removerMedicamento(idx)}><i className="las la-trash"></i></button>
                     </div>
                     <div className="print-via-uso" style={{display:'none', fontWeight:'bold', marginBottom:'5px'}}>Uso: {med.viaUso}</div>
-                    
-                    <div 
-                      className="editor-custom" 
+
+                    <div
+                      className="editor-custom"
                       contentEditable
                       suppressContentEditableWarning
                       ref={el => { if(el) { editorRefs.current[idx] = el; } }}
                       onBlur={e => handleEditorInput(idx, e.currentTarget.innerHTML)}
-                      dangerouslySetInnerHTML={{ __html: med.conteudo }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeRecipeHtml(med.conteudo) }}
                       style={{ whiteSpace: 'pre-wrap' }}
                     />
 
                     <div className="card-footer hide-on-print">
                       <button className="icon-btn" onClick={() => { setEditorAtivoIndex(idx); setModalAdesivosAberto(true); }}><i className="las la-smile-wink"></i></button>
-                      <button className="icon-btn" onClick={() => inserirTextoEditor(idx, '📅')}><i className="las la-calendar"></i></button>
-                      <button className="icon-btn" onClick={() => inserirTextoEditor(idx, '✅')}><i className="las la-check-circle"></i></button>
-                      <button className="icon-btn" onClick={() => inserirTextoEditor(idx, '❌')}><i className="las la-times-circle"></i></button>
+                      <button className="icon-btn" onClick={() => inserirTextoEditor(idx, '')}><i className="las la-calendar"></i></button>
+                      <button className="icon-btn" onClick={() => inserirTextoEditor(idx, '')}><i className="las la-check-circle"></i></button>
+                      <button className="icon-btn" onClick={() => inserirTextoEditor(idx, '')}><i className="las la-times-circle"></i></button>
                     </div>
                   </div>
                 ))
@@ -572,7 +559,7 @@ export default function ReceituarioPage() {
                   <p style={{color: '#64748b', fontSize: '13px'}}>{h.observacoes} | Profissional: {h.profissional}</p>
                   <ul style={{marginTop: '10px', fontSize: '14px'}}>
                     {(h.medicamentos as any[]).map((m, i) => (
-                      <li key={i}><strong>Uso {m.viaUso}:</strong> <span dangerouslySetInnerHTML={{__html: m.conteudo}} /></li>
+                      <li key={i}><strong>Uso {m.viaUso}:</strong> <span dangerouslySetInnerHTML={{ __html: sanitizeRecipeHtml(typeof m.conteudo === 'string' ? m.conteudo : '') }} /></li>
                     ))}
                   </ul>
                 </div>
@@ -585,14 +572,14 @@ export default function ReceituarioPage() {
           <div className="papel-receita">
             <h2><i className="las la-tag"></i> Gerador de Adesivos</h2>
             <p style={{color: '#64748b', marginBottom: '20px'}}>Selecione os adesivos abaixo para adicioná-los à sua cartela de impressão.</p>
-            
+
             <div className="modal-tabs" style={{marginBottom: '15px'}}>
               <button className={`modal-tab ${filtroAdesivo === 'todos' ? 'ativo' : ''}`} onClick={() => setFiltroAdesivo('todos')}><i className="las la-list-ul"></i> Todos</button>
               <button className={`modal-tab ${filtroAdesivo === 'combinados' ? 'ativo' : ''}`} onClick={() => setFiltroAdesivo('combinados')}><i className="las la-puzzle-piece"></i> Combinados</button>
               <button className={`modal-tab ${filtroAdesivo === 'motivo' ? 'ativo' : ''}`} onClick={() => setFiltroAdesivo('motivo')}><i className="las la-question-circle"></i> Motivos</button>
               <button className={`modal-tab ${filtroAdesivo === 'viauso' ? 'ativo' : ''}`} onClick={() => setFiltroAdesivo('viauso')}><i className="las la-syringe"></i> Vias ADM</button>
             </div>
-            
+
             <div className="adesivos-grid" style={{maxHeight: '300px', marginBottom: '30px', border: '1px solid #e2e8f0', padding: '15px', borderRadius: '8px', background: '#f8fafc'}}>
               {listaAdesivosFiltrados.map((a, i) => (
                 <div className="adesivo-item" key={i} onClick={() => addAdesivoBandeja(a.pasta, a.arquivo, a.nome)}>
@@ -671,7 +658,7 @@ export default function ReceituarioPage() {
 
       {isPrintingAdesivos && (
         <div className="print-adesivos-container">
-          {bandejaAdesivos.flatMap((b, idx) => 
+          {bandejaAdesivos.flatMap((b, idx) =>
             Array.from({ length: b.qtd }).map((_, i) => (
               <div className="print-adesivo-item" key={`${idx}-${i}`}>
                 <img src={`/adesivos/${b.pasta}/${b.arquivo}`} alt={b.nome} />

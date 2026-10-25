@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import { CargoUsuario } from '@prisma/client'
 
 export async function GET() {
   try {
@@ -34,14 +35,16 @@ export async function POST(request: NextRequest) {
 
     const hospitalId = session.user.hospitalId
     if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-    const body = await request.json()
-    const { nome, email, senha, cargo } = body
-    const cargosPermitidos = ['ADMIN', 'MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'TECNICO_ENFERMAGEM', 'RECEPCIONISTA', 'FARMACEUTICO', 'OUTROS']
+    let body: unknown
+    try { body = await request.json() } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }) }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    const { nome, email, senha, cargo } = body as Record<string, unknown>
+    const cargosPermitidos = new Set<string>(['ADMIN', 'MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'TECNICO_ENFERMAGEM', 'RECEPCIONISTA', 'FARMACEUTICO', 'OUTROS'])
 
-    if (typeof nome !== 'string' || !nome.trim() || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof senha !== 'string' || senha.length < 12) {
-       return NextResponse.json({ error: 'Nome, e-mail válido e senha com pelo menos 12 caracteres são obrigatórios' }, { status: 400 })
+    if (typeof nome !== 'string' || !nome.trim() || nome.length > 160 || typeof email !== 'string' || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof senha !== 'string' || senha.length < 12 || new TextEncoder().encode(senha).length > 72) {
+       return NextResponse.json({ error: 'Nome, e-mail válido e senha entre 12 e 72 bytes são obrigatórios' }, { status: 400 })
     }
-    if (!cargosPermitidos.includes(cargo)) return NextResponse.json({ error: 'Cargo inválido' }, { status: 400 })
+    if (typeof cargo !== 'string' || !cargosPermitidos.has(cargo)) return NextResponse.json({ error: 'Cargo inválido' }, { status: 400 })
 
     const hash = await bcrypt.hash(senha, 12)
 
@@ -50,7 +53,7 @@ export async function POST(request: NextRequest) {
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
         senha: hash,
-        cargo,
+        cargo: cargo as CargoUsuario,
         hospitalId
       },
       select: { id: true, nome: true, email: true, cargo: true, ativo: true, createdAt: true }

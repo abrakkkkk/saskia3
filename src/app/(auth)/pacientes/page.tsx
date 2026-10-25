@@ -31,6 +31,8 @@ export default function PacientesPage() {
   const [busca, setBusca] = useState('');
   const [pagina, setPagina] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [mostrarArquivados, setMostrarArquivados] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const { chamarPaciente } = useCallSystem();
   const [modalChamada, setModalChamada] = useState<{ aberto: boolean, paciente: Paciente | null, consultorio: string }>({ aberto: false, paciente: null, consultorio: 'Consultório 1' });
@@ -43,15 +45,14 @@ export default function PacientesPage() {
   }>(INITIAL_FORM_PACIENTE);
 
   const fetchPacientes = () => {
-    fetch('/api/pacientes')
+    fetch(`/api/pacientes${mostrarArquivados ? '?arquivados=1' : ''}`)
       .then(r => r.json())
-      .then(data => { setPacientes(data); setLoading(false); })
+      .then(data => { setPacientes(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));
   };
 
   useEffect(() => {
-    fetchPacientes();
-    
+    setIsAdmin(getSessionUser()?.cargo === 'ADMIN');
     // Load salas
     fetch('/api/salas')
       .then(r => r.json())
@@ -60,6 +61,11 @@ export default function PacientesPage() {
       })
       .catch(console.error);
   }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchPacientes();
+  }, [mostrarArquivados]);
 
   const criarPaciente = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,9 +134,12 @@ export default function PacientesPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
         <h2 style={{ margin: 0, fontSize: '24px', color: '#f1f5f9' }}><i className="las la-user-injured"></i> Pacientes</h2>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={() => setModalAberto(true)} style={{ borderRadius: '8px', padding: '8px 16px', fontSize: '14px' }}>
+          {isAdmin && <button className="btn btn-outline" onClick={() => { setMostrarArquivados(value => !value); setPagina(1); }} style={{ borderRadius: 8, padding: '8px 16px', fontSize: 14 }}>
+            <i className={`las ${mostrarArquivados ? 'la-users' : 'la-archive'}`} aria-hidden="true"></i> {mostrarArquivados ? 'Pacientes ativos' : 'Arquivados'}
+          </button>}
+          {!mostrarArquivados && <button className="btn btn-primary" onClick={() => setModalAberto(true)} style={{ borderRadius: '8px', padding: '8px 16px', fontSize: '14px' }}>
             <i className="las la-plus"></i> Novo Paciente
-          </button>
+          </button>}
           <button className="btn" onClick={exportarCSV} style={{ background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '14px' }}>
             <i className="las la-file-csv"></i> Exportar CSV
           </button>
@@ -232,7 +241,7 @@ export default function PacientesPage() {
                 transition: 'all 0.2s'
               }}
             >
-              <span>{info.emoji}</span>
+              <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: '50%', background: info.markerColor }} />
               <span>{cor}</span>
               <span style={{
                 background: isSelected ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.06)',
@@ -310,17 +319,30 @@ export default function PacientesPage() {
                         <button className="btn btn-xs" style={{ background: '#10b981', color: 'white' }} title="Chamar no Painel" onClick={() => setModalChamada({ aberto: true, paciente: p, consultorio: 'Consultório 1' })}>
                           <i className="las la-bullhorn"></i>
                         </button>
-                        <Link href={`/pacientes/${p.id}`} className="btn btn-primary btn-xs">
+                        {!mostrarArquivados && <Link href={`/pacientes/${p.id}`} className="btn btn-primary btn-xs">
                           <i className="las la-eye"></i>
-                        </Link>
-                        <button className="btn btn-danger btn-xs" onClick={async () => {
-                          if (await confirm('Excluir este paciente?')) {
-                            fetch(`/api/pacientes/${p.id}`, { method: 'DELETE' })
-                              .then(() => setPacientes(prev => prev.filter(x => x.id !== p.id)));
+                        </Link>}
+                        {isAdmin && (mostrarArquivados ? <button className="btn btn-primary btn-xs" title="Restaurar paciente" onClick={async () => {
+                          const response = await fetch(`/api/pacientes/${p.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ arquivadoEm: null }) });
+                          if (!response.ok) {
+                            const result = await response.json().catch(() => ({}));
+                            alert(result.error || 'Não foi possível restaurar o paciente.');
+                            return;
                           }
+                          setPacientes(prev => prev.filter(x => x.id !== p.id));
+                        }}><i className="las la-undo" aria-hidden="true"></i> Restaurar</button> : <button className="btn btn-danger btn-xs" title="Arquivar paciente" onClick={async () => {
+                          const confirmado = await confirm(`Arquivar ${p.nome}? O paciente sairá desta lista, mas o prontuário e os registros clínicos serão preservados.`);
+                          if (!confirmado) return;
+                          const response = await fetch(`/api/pacientes/${p.id}`, { method: 'DELETE' });
+                          if (!response.ok) {
+                            const result = await response.json().catch(() => ({}));
+                            alert(result.error || 'Não foi possível arquivar o paciente.');
+                            return;
+                          }
+                          setPacientes(prev => prev.filter(x => x.id !== p.id));
                         }}>
-                          <i className="las la-trash"></i>
-                        </button>
+                          <i className="las la-archive" aria-hidden="true"></i> Arquivar
+                        </button>)}
                       </div>
                     </td>
                   </tr>
@@ -533,7 +555,7 @@ export default function PacientesPage() {
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>{s.nome}</div>
                         <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                          {s.setor || ''}{s.andar ? ` - ${s.andar}` : ''} | {isLivre ? '✅ Livre' : '🔴 Em uso'}
+                          {s.setor || ''}{s.andar ? ` - ${s.andar}` : ''} | {isLivre ? ' Livre' : ' Em uso'}
                         </div>
                       </div>
                       <i className="las la-chevron-right" style={{ color: isSelected ? '#1e3a8a' : '#94a3b8' }}></i>
@@ -549,6 +571,7 @@ export default function PacientesPage() {
                 className="btn btn-primary"
                 onClick={() => {
                   chamarPaciente({
+                    pacienteId: modalChamada.paciente!.id,
                     nome: modalChamada.paciente!.nome,
                     cpf: modalChamada.paciente!.cpf || '',
                     consultorio: modalChamada.consultorio,

@@ -51,12 +51,12 @@ export const STATUS_PACIENTE = [
   'Evasão', 'Óbito', 'Finalizado', 'Retorno',
 ] as const;
 
-export const MANCHESTER_CORES: Record<string, { bg: string; text: string; emoji: string; border: string }> = {
-  Vermelho: { bg: '#fef2f2', text: '#dc2626', emoji: '🔴', border: '#fecaca' },
-  Laranja: { bg: '#fff7ed', text: '#ea580c', emoji: '🟠', border: '#fed7aa' },
-  Amarelo: { bg: '#fefce8', text: '#ca8a04', emoji: '🟡', border: '#fde68a' },
-  Verde: { bg: '#f0fdf4', text: '#16a34a', emoji: '🟢', border: '#bbf7d0' },
-  Azul: { bg: '#eff6ff', text: '#2563eb', emoji: '🔵', border: '#bfdbfe' },
+export const MANCHESTER_CORES: Record<string, { bg: string; text: string; markerColor: string; border: string }> = {
+  Vermelho: { bg: '#fef2f2', text: '#dc2626', markerColor: '#dc2626', border: '#fecaca' },
+  Laranja: { bg: '#fff7ed', text: '#ea580c', markerColor: '#ea580c', border: '#fed7aa' },
+  Amarelo: { bg: '#fefce8', text: '#ca8a04', markerColor: '#ca8a04', border: '#fde68a' },
+  Verde: { bg: '#f0fdf4', text: '#16a34a', markerColor: '#16a34a', border: '#bbf7d0' },
+  Azul: { bg: '#eff6ff', text: '#2563eb', markerColor: '#2563eb', border: '#bfdbfe' },
 };
 
 export const STATUS_CORES: Record<string, { bg: string; text: string }> = {

@@ -6,6 +6,7 @@ import { isRecord } from '@/lib/request-validation';
 export async function GET() {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  if (session.user.cargo !== 'ADMIN') return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
   const hospitalId = session.user.hospitalId;
   if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
 

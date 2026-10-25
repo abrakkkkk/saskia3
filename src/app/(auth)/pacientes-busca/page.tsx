@@ -176,11 +176,11 @@ export default function BuscarPacientesPage() {
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '15px' }}>
           <span style={{ fontSize: '11px', color: '#64748b', marginRight: '8px', fontWeight: 600, display: 'flex', alignItems: 'center' }}>Buscas rápidas:</span>
-          <button onClick={() => setFiltros({...filtros, status: 'Internado'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}>🏥 Internados</button>
-          <button onClick={() => setFiltros({...filtros, status: 'Alta Médica'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}>✅ Altas</button>
-          <button onClick={() => setFiltros({...filtros, status: 'Óbito'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}>🕊️ Óbitos</button>
-          <button onClick={() => setFiltros({...filtros, status: 'Evasão'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}>🚫 Evasões</button>
-          <button onClick={limparFiltros} style={{ background: '#f8fafc', color: '#64748b', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid #e2e8f0', fontWeight: 600, cursor: 'pointer' }}>🔄 Limpar Filtros</button>
+          <button onClick={() => setFiltros({...filtros, status: 'Internado'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}> Internados</button>
+          <button onClick={() => setFiltros({...filtros, status: 'Alta Médica'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}> Altas</button>
+          <button onClick={() => setFiltros({...filtros, status: 'Óbito'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}> Óbitos</button>
+          <button onClick={() => setFiltros({...filtros, status: 'Evasão'})} style={{ background: '#eff6ff', color: '#1e3a8a', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid transparent', fontWeight: 600, cursor: 'pointer' }}> Evasões</button>
+          <button onClick={limparFiltros} style={{ background: '#f8fafc', color: '#64748b', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', border: '1px solid #e2e8f0', fontWeight: 600, cursor: 'pointer' }}> Limpar Filtros</button>
         </div>
       </div>
 

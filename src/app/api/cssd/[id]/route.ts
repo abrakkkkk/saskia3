@@ -19,17 +19,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Lote não encontrado' }, { status: 404 });
     }
 
-    const atualizado = await prisma.cssdLote.update({
-      where: { id: id },
+    const atualizado = await prisma.cssdLote.updateMany({
+      where: { id, hospitalId },
       data: {
         status: body.status
       },
-      include: {
-        itens: true
-      }
     });
-
-    return NextResponse.json(atualizado);
+    if (atualizado.count === 0) return NextResponse.json({ error: 'Lote não encontrado' }, { status: 404 });
+    return NextResponse.json(await prisma.cssdLote.findFirst({ where: { id, hospitalId }, include: { itens: true } }));
   } catch (error: any) {
     console.error("Erro ao atualizar lote CSSD:", error);
     return NextResponse.json({ error: 'Erro ao atualizar lote CSSD' }, { status: 500 });

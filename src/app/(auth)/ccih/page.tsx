@@ -32,48 +32,40 @@ interface ATM {
 
 // ── API helpers ────────────────────────────────────────
 async function loadFromAPI(tipo: string): Promise<any[]> {
-  try {
-    const res = await fetch(`/api/ccih?tipo=${tipo}`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.map((r: any) => {
-      const isTratado = r.status === 'TRATADO' || r.status === 'Tratada' || r.dados?.status === 'Tratada';
-      return { 
-        ...r.dados, 
-        id: r.id, 
-        _registroId: r.id, 
-        status: isTratado ? 'Tratada' : (r.dados?.status || 'Ativa') 
-      };
-    });
-  } catch { return []; }
+  const res = await fetch(`/api/ccih?tipo=${tipo}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Não foi possível carregar os registros de CCIH.');
+  if (!Array.isArray(data)) throw new Error('Resposta de CCIH inválida.');
+  return data.map((r: any) => {
+    const isTratado = r.status === 'TRATADO' || r.status === 'Tratada' || r.dados?.status === 'Tratada';
+    return { ...r.dados, id: r.id, _registroId: r.id, status: isTratado ? 'Tratada' : (r.dados?.status || 'Ativa') };
+  });
 }
-async function saveToAPI(tipo: string, item: any, criadoPor: string): Promise<any> {
-  try {
-    const res = await fetch('/api/ccih', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tipo,
-        subtipo: item.tipo || item.momento || null,
-        descricao: item.paciente || item.setor || item.nome || '',
-        dados: item,
-        data: item.data || item.dataNotificacao || new Date().toISOString(),
-        status: item.status === 'Tratada' ? 'TRATADO' : 'ATIVO',
-        criadoPor
-      })
-    });
-    if (res.ok) return await res.json();
-  } catch {}
-  return null;
+async function saveToAPI(tipo: string, item: any): Promise<any> {
+  const res = await fetch('/api/ccih', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tipo,
+      subtipo: item.tipo || item.momento || null,
+      descricao: item.paciente || item.setor || item.nome || '',
+      dados: item,
+      data: item.data || item.dataNotificacao || new Date().toISOString(),
+      status: item.status === 'Tratada' ? 'TRATADO' : 'ATIVO'
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Não foi possível registrar o evento de CCIH.');
+  return data;
 }
 async function updateAPIStatus(id: string, status: string, dados?: any): Promise<void> {
-  try {
-    await fetch(`/api/ccih/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, ...(dados ? { dados } : {}) })
-    });
-  } catch {}
+  const res = await fetch(`/api/ccih/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, ...(dados ? { dados } : {}) })
+  });
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.error || 'Não foi possível atualizar o evento de CCIH.');
 }
 
 const HOJE = () => new Date().toISOString().split('T')[0];
@@ -83,8 +75,8 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Ag
 // ── componente principal ───────────────────────────────
 export default function CcihPage() {
   const { data: session } = useSession();
-  const nomeUsuario = (session?.user as any)?.name || session?.user?.name || 'Sistema';
-  const hospitalId = (session?.user as any)?.hospitalId || (session?.user as any)?.id || 'hospital_001';
+  const hospitalId = (session?.user as any)?.hospitalId || '';
+  const nomeUsuario = session?.user?.name || '';
 
   // carregar dados
   const reloadAll = async () => {
@@ -98,6 +90,7 @@ export default function CcihPage() {
     setCulturas(culturasData);
     setHmObs(hmData);
     setAntimicrobianos(atmData);
+    setErroCarga('');
   };
 
   const [tab, setTab] = useState<Tab>('notificacao');
@@ -145,13 +138,15 @@ export default function CcihPage() {
 
   // feedback
   const [aviso, setAviso] = useState('');
+  const [erroCarga, setErroCarga] = useState('');
   const [irasDetalhe, setIrasDetalhe] = useState<IRAS | null>(null);
 
   // pacientes para selects (via API)
   const [pacientes, setPacientes] = useState<{id:string; nome:string}[]>([]);
 
   useEffect(() => {
-    reloadAll();
+    if (!hospitalId) return;
+    reloadAll().catch(error => setErroCarga(error instanceof Error ? error.message : 'Não foi possível carregar os dados de CCIH.'));
     // buscar pacientes
     fetch('/api/pacientes?limit=200')
       .then(r => r.ok ? r.json() : null)
@@ -180,7 +175,7 @@ export default function CcihPage() {
       microorganismo: fMicro, antibiotico: fAtb, obs: fObs,
       status: 'Ativa', dataNotificacao: new Date().toISOString(), notificadoPor: nomeUsuario,
     };
-    await saveToAPI('IRAS', nova, nomeUsuario);
+    await saveToAPI('IRAS', nova);
 
     if (fMaterial !== 'Não coletado') {
       const novaCultura: any = {
@@ -188,7 +183,7 @@ export default function CcihPage() {
         microorganismo: fMicro, antibiotico: fAtb,
         sensibilidade: 'Aguardando', status: 'Pendente', data: fData,
       };
-      await saveToAPI('CULTURA', novaCultura, nomeUsuario);
+      await saveToAPI('CULTURA', novaCultura);
     }
     await reloadAll();
     setFPaciente(''); setFTipo(''); setFMicro(''); setFAtb(''); setFObs(''); setFData(HOJE());
@@ -205,7 +200,7 @@ export default function CcihPage() {
   const registrarHM = async (e: React.FormEvent) => {
     e.preventDefault();
     const nova: any = { data: new Date().toISOString(), setor: hmSetor, categoria: hmCategoria, momento: hmMomento, realizou: hmRealizou };
-    await saveToAPI('HM', nova, nomeUsuario);
+    await saveToAPI('HM', nova);
     await reloadAll();
     msg('Observação registrada!');
   };
@@ -214,7 +209,7 @@ export default function CcihPage() {
     e.preventDefault();
     if (!atmPaciente || !atmNome) { msg('Preencha paciente e antimicrobiano!'); return; }
     const novo: any = { paciente: atmPaciente, nome: atmNome, dose: atmDose, via: atmVia, frequencia: atmFreq, inicio: atmInicio, duracao: atmDuracao, indicacao: atmIndicacao, status: 'Em uso' };
-    await saveToAPI('ATM', novo, nomeUsuario);
+    await saveToAPI('ATM', novo);
     await reloadAll();
     setAtmNome(''); setAtmDose(''); setAtmFreq('');
     msg('Antimicrobiano prescrito!');

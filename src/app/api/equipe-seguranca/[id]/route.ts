@@ -19,8 +19,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Ocorrência não encontrada' }, { status: 404 });
     }
 
-    const atualizada = await prisma.ocorrenciaSeguranca.update({
-      where: { id: id },
+    const atualizada = await prisma.ocorrenciaSeguranca.updateMany({
+      where: { id, hospitalId },
       data: {
         resolvido: body.resolvido,
         resolvidoPor: body.resolvidoPor,
@@ -28,7 +28,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     });
 
-    return NextResponse.json(atualizada);
+    if (atualizada.count === 0) return NextResponse.json({ error: 'Ocorrência não encontrada' }, { status: 404 });
+    return NextResponse.json(await prisma.ocorrenciaSeguranca.findFirst({ where: { id, hospitalId } }));
   } catch (error: any) {
     console.error("Erro ao atualizar ocorrência:", error);
     return NextResponse.json({ error: 'Erro ao atualizar ocorrência' }, { status: 500 });

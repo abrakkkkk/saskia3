@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    if (!session.user.hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
     const apiKey = process.env.GOOGLE_DRIVE_API_KEY;
     const folderId = '1a0gzCh2yfoCIHQtQMRp-AJXuCPTAmoP6';
 

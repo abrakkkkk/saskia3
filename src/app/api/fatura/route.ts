@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { auth } from '@/lib/auth';
+import { isRecord } from '@/lib/request-validation';
 
 export async function GET() {
   try {
@@ -36,12 +37,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
-    const body = await request.json();
+    let body: unknown;
+    try { body = await request.json(); } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }); }
+    if (!isRecord(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     const hospitalId = session.user.hospitalId;
-    const valor = Number(body.valor);
-    const vencimento = new Date(body.vencimento);
+    const valor = typeof body.valor === 'number' ? body.valor : Number(body.valor);
+    const vencimento = typeof body.vencimento === 'string' ? new Date(body.vencimento) : new Date(Number.NaN);
     if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
-    if (!Number.isFinite(valor) || valor < 0 || !body.vencimento || Number.isNaN(vencimento.getTime())) {
+    if (!Number.isFinite(valor) || valor < 0 || valor > Number.MAX_SAFE_INTEGER || Number.isNaN(vencimento.getTime())) {
       return NextResponse.json({ error: 'Dados incompletos da fatura' }, { status: 400 });
     }
 

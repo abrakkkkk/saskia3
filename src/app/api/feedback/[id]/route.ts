@@ -28,15 +28,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const body = await request.json();
     const { status, resposta } = body;
 
-    const atualizado = await prisma.feedback.update({
-      where: { id },
+    const atualizado = await prisma.feedback.updateMany({
+      where: { id, hospitalId },
       data: {
         status: status || 'RESPONDIDO',
         ...(resposta ? { mensagem: `${feedbackExistente.mensagem}\n\n[RESPOSTA DA EQUIPE]: ${resposta}` } : {})
       }
     });
 
-    return NextResponse.json(atualizado);
+    if (atualizado.count === 0) return NextResponse.json({ error: 'Feedback não encontrado' }, { status: 404 });
+    return NextResponse.json(await prisma.feedback.findFirst({ where: { id, hospitalId } }));
   } catch (error) {
     console.error('Erro ao atualizar feedback:', error);
     return NextResponse.json({ error: 'Erro ao atualizar feedback' }, { status: 500 });

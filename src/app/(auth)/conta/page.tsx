@@ -53,8 +53,22 @@ export default function ContaPage() {
   const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setErro('Selecione um arquivo de imagem válido.');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      setErro('A imagem deve ter no máximo 1 MB.');
+      e.target.value = '';
+      return;
+    }
+    setErro('');
     const reader = new FileReader();
-    reader.onload = (ev) => setFotoSrc(ev.target?.result as string);
+    reader.onload = (ev) => {
+      if (typeof ev.target?.result === 'string') setFotoSrc(ev.target.result);
+    };
+    reader.onerror = () => setErro('Não foi possível ler a imagem selecionada.');
     reader.readAsDataURL(file);
   };
 

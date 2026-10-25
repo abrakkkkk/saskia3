@@ -1,6 +1,6 @@
 'use client';
-import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import './prontuarios.css';
 
 interface CampoProntuario {
@@ -10,14 +10,19 @@ interface CampoProntuario {
 }
 
 interface ModeloProntuario {
+  id: string;
   titulo: string;
   descricao: string;
   campos: CampoProntuario[];
 }
 
 export default function AdminProntuariosPage() {
-  const [hospitalId, setHospitalId] = useState('hospital_001');
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.cargo === 'ADMIN';
   const [modelos, setModelos] = useState<ModeloProntuario[]>([]);
+  const [erro, setErro] = useState('');
+  const [carregando, setCarregando] = useState(true);
+  const [salvando, setSalvando] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,22 +32,22 @@ export default function AdminProntuariosPage() {
   const [formDescricao, setFormDescricao] = useState('');
   const [formCampos, setFormCampos] = useState<CampoProntuario[]>([]);
 
-  const carregarModelos = () => {
-    fetch('/api/prontuarios-modelos')
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) setModelos(data);
-      })
-      .catch(console.error);
+  const carregarModelos = async () => {
+    setCarregando(true);
+    try {
+      const response = await fetch('/api/prontuarios-modelos');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Não foi possível carregar os modelos.');
+      setModelos(Array.isArray(data) ? data : []);
+      setErro('');
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível carregar os modelos.');
+    } finally {
+      setCarregando(false);
+    }
   };
 
   useEffect(() => {
-    try {
-      const u = JSON.stringify(getSessionUser());
-      const usuario = u ? JSON.parse(u) : null;
-      const hid = usuario?.hospitalId || usuario?.id || 'hospital_001';
-      setHospitalId(hid);
-    } catch(e) {}
     carregarModelos();
   }, []);
 
@@ -70,7 +75,7 @@ export default function AdminProntuariosPage() {
   const adicionarCampo = () => {
     setFormCampos([
       ...formCampos, 
-      { id: Date.now().toString() + Math.random(), nome: 'Novo campo', tipo: 'texto' }
+      { id: crypto.randomUUID(), nome: 'Novo campo', tipo: 'texto' }
     ]);
   };
 
@@ -102,38 +107,46 @@ export default function AdminProntuariosPage() {
       campos: formCampos
     };
 
+    setSalvando(true);
     try {
+      let response: Response;
       if (editIndex !== null) {
-        const id = (modelos[editIndex] as any).id;
-        await fetch(`/api/prontuarios-modelos/${id}`, {
+        const id = modelos[editIndex].id;
+        response = await fetch(`/api/prontuarios-modelos/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
       } else {
-        await fetch('/api/prontuarios-modelos', {
+        response = await fetch('/api/prontuarios-modelos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
       }
-      carregarModelos();
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Não foi possível salvar o modelo.');
+      await carregarModelos();
       fecharModal();
-      alert("✅ Modelo salvo com sucesso!");
-    } catch {
-      alert("Erro ao salvar modelo.");
+      alert(" Modelo salvo com sucesso!");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao salvar modelo.');
+    } finally {
+      setSalvando(false);
     }
   };
 
   const excluirModelo = async (index: number) => {
     if(await confirm("Deseja realmente excluir este modelo?")) {
-      const id = (modelos[index] as any).id;
+      const id = modelos[index].id;
       if (!id) return;
       try {
-        await fetch(`/api/prontuarios-modelos/${id}`, { method: 'DELETE' });
-        carregarModelos();
-      } catch {
-        alert("Erro ao excluir.");
+        const response = await fetch(`/api/prontuarios-modelos/${id}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Não foi possível excluir o modelo.');
+        await carregarModelos();
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Erro ao excluir.');
       }
     }
   };
@@ -156,13 +169,18 @@ export default function AdminProntuariosPage() {
           <h2><i className="las la-file-alt"></i> Modelos de Prontuários</h2>
           <p>Crie e gerencie formulários customizados para os registros clínicos da sua unidade.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => abrirModal()} style={{ padding: '12px 24px' }}>
+        {isAdmin && <button className="btn btn-primary" onClick={() => abrirModal()} style={{ padding: '12px 24px' }}>
           <i className="las la-plus"></i> Novo Modelo
-        </button>
+        </button>}
       </div>
 
+      {!isAdmin && <p role="alert" style={{ color: '#b91c1c', marginBottom: 16 }}>Acesso restrito a administradores do hospital.</p>}
+
       <div className="lista-modelos">
-        {modelos.length === 0 ? (
+        {erro && <p role="alert" style={{ gridColumn: '1 / -1', color: '#b91c1c' }}>{erro}</p>}
+        {carregando ? (
+          <p role="status" style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#64748b', padding: '40px' }}>Carregando modelos…</p>
+        ) : modelos.length === 0 ? (
           <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#94a3b8', padding: '40px' }}>Nenhum modelo de prontuário cadastrado.</p>
         ) : (
           modelos.map((m, idx) => (
@@ -170,10 +188,10 @@ export default function AdminProntuariosPage() {
               <div>
                 <div className="modelo-header">
                   <h4><i className="las la-file-medical"></i> {m.titulo}</h4>
-                  <div className="modelo-acoes">
+                  {isAdmin && <div className="modelo-acoes">
                     <button className="btn-editar" onClick={() => abrirModal(idx)} title="Editar Modelo"><i className="las la-edit"></i></button>
                     <button className="btn-excluir" onClick={() => excluirModelo(idx)} title="Excluir Modelo"><i className="las la-trash"></i></button>
-                  </div>
+                  </div>}
                 </div>
                 <div className="modelo-descricao">
                   {m.descricao || "Nenhuma descrição fornecida."}
@@ -274,7 +292,7 @@ export default function AdminProntuariosPage() {
 
             <div className="modal-footer">
               <button className="btn btn-danger" onClick={fecharModal}>Cancelar</button>
-              <button className="btn btn-success" onClick={salvarModelo}><i className="las la-save"></i> Salvar Modelo</button>
+              <button className="btn btn-success" onClick={salvarModelo} disabled={salvando}><i className="las la-save"></i> {salvando ? 'Salvando…' : 'Salvar Modelo'}</button>
             </div>
           </div>
         </div>

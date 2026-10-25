@@ -43,62 +43,68 @@ export async function POST(request: NextRequest) {
     
     const usuarioId = session.user.id
 
-    const body = await request.json()
-    const { tipo, itemId, quantidade, pacienteId, setor, fornecedor, responsavel, observacao } = body
+    const body: unknown = await request.json()
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    }
+    const input = body as Record<string, unknown>
+    const { tipo, itemId, quantidade, pacienteId, setor, fornecedor, responsavel, observacao } = input
 
-    if (!tipo || !itemId || !quantidade || !responsavel) {
+    if ((tipo !== 'ENTRADA' && tipo !== 'SAIDA') || typeof itemId !== 'string' || !itemId ||
+      typeof quantidade !== 'number' || !Number.isSafeInteger(quantidade) || quantidade <= 0 || quantidade > 2_147_483_647 ||
+      typeof responsavel !== 'string' || !responsavel.trim()) {
       return NextResponse.json({ error: 'Dados obrigatórios faltando' }, { status: 400 })
     }
+    for (const [field, value] of Object.entries({ pacienteId, setor, fornecedor, observacao })) {
+      if (value !== undefined && value !== null && (typeof value !== 'string' || value.length > (field === 'observacao' ? 2000 : 200))) {
+        return NextResponse.json({ error: `Campo ${field} inválido` }, { status: 400 })
+      }
+    }
 
-    if (pacienteId) {
-      const paciente = await prisma.paciente.findUnique({
-        where: { id: pacienteId }
-      })
-      if (!paciente || paciente.hospitalId !== hospitalId) {
+    if (typeof pacienteId === 'string' && pacienteId) {
+      const paciente = await prisma.paciente.findFirst({ where: { id: pacienteId, hospitalId }, select: { id: true } })
+      if (!paciente) {
         return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
       }
     }
 
-    // Execute in a transaction to guarantee data integrity
+    // Debits are conditional updates so concurrent requests cannot overdraw stock.
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Get current item
-      const item = await tx.estoqueItem.findUnique({ where: { id: itemId } })
-      if (!item) throw new Error('Item não encontrado no estoque')
-
-      // 2. Validate Saida
-      if (tipo === 'SAIDA' && item.quantidade < Number(quantidade)) {
-        throw new Error(`Estoque insuficiente. Disponível: ${item.quantidade}`)
+      const atualizado = await tx.estoqueItem.updateMany({
+        where: {
+          id: itemId,
+          hospitalId,
+          ...(tipo === 'SAIDA' ? { quantidade: { gte: quantidade } } : { quantidade: { lte: 2_147_483_647 - quantidade } }),
+        },
+        data: { quantidade: { [tipo === 'ENTRADA' ? 'increment' : 'decrement']: quantidade } },
+      })
+      if (atualizado.count === 0) {
+        const item = await tx.estoqueItem.findFirst({ where: { id: itemId, hospitalId }, select: { quantidade: true } })
+        if (!item) throw new Error('Item não encontrado no estoque')
+        if (tipo === 'SAIDA') throw new Error(`Estoque insuficiente. Disponível: ${item.quantidade}`)
+        throw new Error('A quantidade final excede o limite permitido')
       }
 
-      // 3. Create Movimentacao
-      const mov = await tx.movimentacaoEstoque.create({
+      return tx.movimentacaoEstoque.create({
         data: {
           hospitalId,
           tipo,
           itemId,
-          quantidade: Number(quantidade),
-          pacienteId: pacienteId || null,
+          quantidade,
+          pacienteId: typeof pacienteId === 'string' && pacienteId ? pacienteId : null,
           usuarioId,
-          setor: setor || null,
-          fornecedor: fornecedor || null,
-          responsavel,
-          observacao: observacao || null
+          setor: typeof setor === 'string' && setor ? setor : null,
+          fornecedor: typeof fornecedor === 'string' && fornecedor ? fornecedor : null,
+          responsavel: responsavel.trim(),
+          observacao: typeof observacao === 'string' && observacao ? observacao : null
         }
       })
-
-      // 4. Update EstoqueItem quantity
-      const incrementValue = tipo === 'ENTRADA' ? Number(quantidade) : -Number(quantidade)
-      await tx.estoqueItem.update({
-        where: { id: itemId },
-        data: { quantidade: { increment: incrementValue } }
-      })
-
-      return mov
     })
 
     return NextResponse.json(result, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao registrar movimentação:', error)
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    const message = error instanceof Error ? error.message : 'Erro ao registrar movimentação'
+    return NextResponse.json({ error: message }, { status: message === 'Erro ao registrar movimentação' ? 500 : 400 })
   }
 }

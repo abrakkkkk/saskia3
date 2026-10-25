@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import './relatorios.css';
 
@@ -8,28 +7,25 @@ import './relatorios.css';
 const COLORS = ['#f59e0b', '#3b82f6', '#ec4899', '#22c55e', '#64748b'];
 
 export default function RelatoriosPage() {
-  const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('geral');
   const [filtroRapido, setFiltroRapido] = useState('mes');
+  const [erro, setErro] = useState('');
   
   const [inicio, setInicio] = useState('');
   const [fim, setFim] = useState('');
 
   // --- Estados de Dados Brutos ---
-  const [pacientes, setPacientes] = useState<any[]>([]);
+  const [agendamentosProfissionais, setAgendamentosProfissionais] = useState<any[]>([]);
   const [utiLeitos, setUtiLeitos] = useState<any[]>([]);
-  const [transfusoes, setTransfusoes] = useState<any[]>([]);
   
   // --- Estados Computados (Cards) ---
   const [data, setData] = useState({
-    totalPacientes: 0, atendimentos: 0, internacoes: 0, altas: 0, obitos: 0,
-    taxaUTI: '0%', tmp: '-', dispensacoes: 0, itensAlmox: 0, cirurgias: 0,
-    exames: 0, transfusoes: 0, iras: 0, taxaIRAS: '0%', hm: '0%', cssd: 0, ouvidoria: 0
+    totalPacientes: 0, atendimentos: 0, internacoes: 0, obitos: 0,
+    taxaUTI: '—', cirurgias: 0,
   });
 
   // --- Gráficos Data ---
-  const [chartAtend, setChartAtend] = useState<any[]>([]);
   const [chartStatus, setChartStatus] = useState<any[]>([]);
   const [chartLeitos, setChartLeitos] = useState<any[]>([]);
   const [chartProd, setChartProd] = useState<any[]>([]);
@@ -40,9 +36,7 @@ export default function RelatoriosPage() {
   }, []);
 
   useEffect(() => {
-    if (mounted && inicio && fim) {
-      gerarRelatorios();
-    }
+    if (mounted) void gerarRelatorios();
   }, [inicio, fim, mounted]);
 
   const aplicarFiltroRapido = (periodo: string) => {
@@ -68,112 +62,51 @@ export default function RelatoriosPage() {
     }
   };
 
-  const carregarMockDados = () => {
-    // Gerar pacientes mock para o gráfico e tabelas
-    const pcts = [];
-    const statusArr = ["Recepção", "Em Atendimento Médico", "Internado", "Alta Médica", "Óbito"];
-    const medicos = ["Dr. João", "Dra. Maria", "Dr. Carlos", "Dra. Ana"];
-    for(let i=0; i<150; i++) {
-      const m = Math.floor(Math.random() * 12);
-      const d = new Date(2026, m, Math.floor(Math.random()*28)+1);
-      pcts.push({
-        id: i,
-        nome: `Paciente Mock ${i}`,
-        status: statusArr[Math.floor(Math.random()*statusArr.length)],
-        dataCadastro: d.toISOString(),
-        profissional: medicos[Math.floor(Math.random()*medicos.length)]
+  const gerarRelatorios = async () => {
+    setErro('');
+    try {
+      const params = new URLSearchParams({ inicio, fim });
+      const response = await fetch(`/api/relatorios?${params.toString()}`);
+      const report = await response.json();
+      if (!response.ok) throw new Error(report.error || 'Não foi possível carregar os dados do relatório.');
+      const agendamentos = Array.isArray(report.agendamentos) ? report.agendamentos : [];
+      const leitos = Array.isArray(report.leitos) ? report.leitos : [];
+      setAgendamentosProfissionais(agendamentos);
+      setUtiLeitos(leitos.map((leito: any) => ({ tipo: leito.tipo, status: leito.status === 'OCUPADO' ? 'ocupado' : 'livre' })));
+      const concluidos = agendamentos.filter((item: any) => item.status === 'CONCLUIDO').reduce((sum: number, item: any) => sum + item.total, 0);
+      const ocupados = leitos.filter((leito: any) => leito.status === 'OCUPADO').length;
+      setData({
+        totalPacientes: report.pacientesNoPeriodo,
+        atendimentos: concluidos,
+        internacoes: report.internadosAgora,
+        obitos: report.obitosNoPeriodo,
+        taxaUTI: leitos.length ? `${Math.round(ocupados / leitos.length * 100)}%` : '—',
+        cirurgias: report.cirurgiasNoPeriodo,
       });
+      const statuses = ['AGENDADO', 'CONFIRMADO', 'EM_ESPERA', 'EM_ATENDIMENTO', 'CONCLUIDO', 'CANCELADO', 'FALTOU'];
+      setChartStatus(statuses.map(name => ({ name, value: agendamentos.filter((item: any) => item.status === name).reduce((sum: number, item: any) => sum + item.total, 0) })));
+      const tipos = Array.from(new Set(leitos.map((leito: any) => leito.tipo).filter(Boolean)));
+      setChartLeitos(tipos.map(tipo => ({ tipo, ocupados: leitos.filter((leito: any) => leito.tipo === tipo && leito.status === 'OCUPADO').length, total: leitos.filter((leito: any) => leito.tipo === tipo).length })));
+      const porProfissional = new Map<string, number>();
+      agendamentos.forEach((item: any) => porProfissional.set(item.profissional || 'Não informado', (porProfissional.get(item.profissional || 'Não informado') || 0) + item.total));
+      setChartProd(Array.from(porProfissional, ([name, valor]) => ({ name, valor })));
+
+    } catch (error) {
+      console.error('Erro ao carregar relatórios:', error);
+      setErro(error instanceof Error ? error.message : 'Erro ao carregar relatórios.');
+      setData({ totalPacientes: 0, atendimentos: 0, internacoes: 0, obitos: 0, taxaUTI: '—', cirurgias: 0 });
     }
-
-    const leitos = [
-      { id: 1, tipo: 'UTI Adulto', status: 'ocupado' }, { id: 2, tipo: 'UTI Adulto', status: 'livre' },
-      { id: 3, tipo: 'UTI Pediátrica', status: 'ocupado' }, { id: 4, tipo: 'UTI Pediátrica', status: 'ocupado' },
-      { id: 5, tipo: 'Enfermaria', status: 'ocupado' }, { id: 6, tipo: 'Enfermaria', status: 'livre' }, { id: 7, tipo: 'Enfermaria', status: 'livre' }
-    ];
-
-    const bsTransf = localStorage.getItem('saskiaBsTransfusoes') ? JSON.parse(localStorage.getItem('saskiaBsTransfusoes') as string) : new Array(42).fill({ data: new Date().toISOString() });
-
-    return { pcts, leitos, bsTransf };
-  };
-
-  const gerarRelatorios = () => {
-    const { pcts, leitos, bsTransf } = carregarMockDados();
-    setPacientes(pcts);
-    setUtiLeitos(leitos);
-    setTransfusoes(bsTransf);
-
-    // Filter by date (mock implementation for visuals)
-    const fPacientes = pcts; // In a real app, filter by 'inicio' e 'fim'
-    
-    // Cards
-    const altas = fPacientes.filter(p => p.status === "Alta Médica").length;
-    const internados = fPacientes.filter(p => p.status === "Internado").length;
-    const obitos = fPacientes.filter(p => p.status === "Óbito").length;
-    
-    const utiOcup = leitos.filter(l => l.status === "ocupado").length;
-    const taxaUTI = Math.round((utiOcup / leitos.length) * 100);
-
-    setData({
-      totalPacientes: fPacientes.length,
-      atendimentos: fPacientes.filter(p => p.status !== "Recepção").length,
-      internacoes: internados,
-      altas: altas,
-      obitos: obitos,
-      taxaUTI: taxaUTI + '%',
-      tmp: '4.2',
-      dispensacoes: 854,
-      itensAlmox: 1205,
-      cirurgias: 34,
-      exames: 215,
-      transfusoes: bsTransf.length,
-      iras: 2,
-      taxaIRAS: '1.3%',
-      hm: '85%',
-      cssd: 45,
-      ouvidoria: 12
-    });
-
-    // Chart Atendimentos por Mês
-    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    const dadosMeses = new Array(12).fill(0);
-    fPacientes.forEach(p => { const m = new Date(p.dataCadastro).getMonth(); dadosMeses[m]++; });
-    setChartAtend(meses.map((m, i) => ({ mes: m, atendimentos: dadosMeses[i] })));
-
-    // Chart Status
-    setChartStatus([
-      { name: 'Recepção', value: fPacientes.filter(p => p.status === "Recepção").length },
-      { name: 'Atendimento', value: fPacientes.filter(p => p.status === "Em Atendimento Médico").length },
-      { name: 'Internado', value: internados },
-      { name: 'Alta', value: altas },
-      { name: 'Óbito', value: obitos }
-    ]);
-
-    // Chart Leitos
-    const tipos = Array.from(new Set(leitos.map(l => l.tipo)));
-    setChartLeitos(tipos.map(t => {
-      return {
-        tipo: t,
-        ocupados: leitos.filter(l => l.tipo === t && l.status === 'ocupado').length,
-        total: leitos.filter(l => l.tipo === t).length
-      }
-    }));
-
-    // Chart Produção
-    setChartProd([
-      { name: 'Atendimentos', valor: fPacientes.length },
-      { name: 'Cirurgias', valor: 34 },
-      { name: 'Exames', valor: 215 }
-    ]);
   };
 
   const handleExportCSV = () => {
-    let csv = "Nome;Status;Profissional\n";
-    pacientes.forEach(p => { csv += `"${p.nome}";"${p.status}";"${p.profissional}"\n`; });
-    const blob = new Blob([csv], {type: 'text/csv'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'relatorio_pacientes.csv';
-    a.click();
+    const csv = 'Indicador;Valor\n' + Object.entries(data).map(([nome, valor]) => `"${nome}";"${valor}"`).join('\n');
+    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'relatorio-gerencial.csv';
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   const handlePrint = () => {
@@ -190,7 +123,7 @@ export default function RelatoriosPage() {
         <div className="banner-rel" style={{ background: 'linear-gradient(135deg, #0a1f44, #1e3a8a)', borderRadius: '8px', padding: '30px 40px', color: 'white', marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
           <div>
             <h1 style={{ fontSize: '28px', margin: 0 }}><i className="las la-chart-bar"></i> Relatórios Gerenciais Avançados</h1>
-            <p style={{ opacity: 0.9, marginTop: '5px' }}>Indicadores hospitalares, ANS, CFM, gráficos e exportação</p>
+            <p style={{ opacity: 0.9, marginTop: '5px' }}>Indicadores calculados a partir dos registros do hospital e exportação</p>
           </div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button className="btn btn-success" onClick={handleExportCSV} style={{ padding: '11px 22px', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}><i className="las la-file-excel"></i> Exportar Excel</button>
@@ -212,15 +145,16 @@ export default function RelatoriosPage() {
           <div><label style={{display:'block', fontSize:'12px', fontWeight:600, color:'#64748b', marginBottom:'4px'}}>Data Final</label><input type="date" value={fim} onChange={e => setFim(e.target.value)} style={{ padding: '10px 14px', border: '2px solid #e2e8f0', borderRadius: '8px' }} /></div>
           <button onClick={gerarRelatorios} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', height: '42px' }}><i className="las la-sync-alt"></i> Atualizar</button>
         </div>
+        {erro && <p role="alert" style={{ margin: '0 0 16px', padding: '12px 16px', background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: 8 }}>{erro}</p>}
 
         {/* MINI CARDS (STATS GRID) */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '15px', marginBottom: '25px' }}>
-          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #1e3a8a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px'}}><i className="las la-users"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.totalPacientes}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Total Pacientes</div></div>
-          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #16a34a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#16a34a'}}><i className="las la-check-circle"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.altas}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Altas</div></div>
-          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #f59e0b', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#f59e0b'}}><i className="las la-clock"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.internacoes}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Internados</div></div>
-          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #dc2626', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#dc2626'}}><i className="las la-cross"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.obitos}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Óbitos</div></div>
-          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #1e3a8a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px'}}><i className="las la-bed"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.taxaUTI}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Taxa Ocup. UTI</div></div>
-          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #16a34a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#16a34a'}}><i className="las la-chart-line"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.tmp}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Média Perm. (dias)</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #1e3a8a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px'}}><i className="las la-users"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.totalPacientes}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Total Pacientes</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #16a34a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#16a34a'}}><i className="las la-calendar-check"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.atendimentos}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Atendimentos concluídos no período</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #f59e0b', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#f59e0b'}}><i className="las la-clock"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.internacoes}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Internados agora</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #dc2626', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#dc2626'}}><i className="las la-cross"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.obitos}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Óbitos</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #1e3a8a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px'}}><i className="las la-bed"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.taxaUTI}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Ocupação UTI atual</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #16a34a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#16a34a'}}><i className="las la-chart-line"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.cirurgias}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Cirurgias cadastradas no período</div></div>
         </div>
 
         {/* TAB MENU */}
@@ -229,7 +163,6 @@ export default function RelatoriosPage() {
             { id: 'geral', icon: 'la-chart-pie', label: 'Dashboard Geral (Gráficos)' },
             { id: 'producao', icon: 'la-user-md', label: 'Produção Médica' },
             { id: 'leitos', icon: 'la-bed', label: 'Ocupação Leitos' },
-            { id: 'ans', icon: 'la-file-medical', label: 'ANS / CFM' }
           ].map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id)} style={{ padding: '13px 26px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: activeTab === t.id ? '#1e3a8a' : '#64748b', borderBottom: `3px solid ${activeTab === t.id ? '#1e3a8a' : 'transparent'}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <i className={`las ${t.icon}`}></i> {t.label}
@@ -243,15 +176,15 @@ export default function RelatoriosPage() {
             {/* GRÁFICOS */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '25px', marginBottom: '25px' }}>
               <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
-                <h3 style={{ color: '#0a1f44', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-chart-bar"></i> Atendimentos por Mês</h3>
+                <h3 style={{ color: '#0a1f44', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-chart-bar"></i> Agendamentos por profissional</h3>
                 <div style={{ height: '300px' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartAtend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <BarChart data={chartProd} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="mes" axisLine={false} tickLine={false} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
                       <YAxis axisLine={false} tickLine={false} />
                       <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}} />
-                      <Bar dataKey="atendimentos" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="valor" fill="#3b82f6" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -291,32 +224,10 @@ export default function RelatoriosPage() {
                 </div>
               </div>
 
-              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
-                <h3 style={{ color: '#0a1f44', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-user-md"></i> Produção Médica Rápida</h3>
-                <div style={{ height: '300px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartProd} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                      <YAxis axisLine={false} tickLine={false} />
-                      <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}} />
-                      <Bar dataKey="valor" fill="#10b981" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+
             </div>
 
             {/* TABELAS DETALHADAS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '25px' }}>
-              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', borderLeft: '5px solid #1e3a8a' }}>
-                <h3 style={{ color: '#0a1f44', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-shield-virus"></i> CCIH & Qualidade</h3>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>IRAS Notificadas</span><span style={{fontWeight:700, color:'#dc2626'}}>{data.iras}</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Densidade Incidência IRAS</span><span style={{fontWeight:700, color:'#1e3a8a'}}>{data.taxaIRAS}</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Adesão Higiene de Mãos</span><span style={{fontWeight:700, color:'#16a34a'}}>{data.hm}</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Manifestações Ouvidoria</span><span style={{fontWeight:700, color:'#f59e0b'}}>{data.ouvidoria}</span></div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -327,19 +238,16 @@ export default function RelatoriosPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ background: '#0f172a' }}>
                   <tr>
-                    {['Profissional', 'Atendimentos', 'Cirurgias', 'Exames Solicitados', 'Total Procedimentos'].map(th => <th key={th} style={{ padding: '14px 16px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>{th}</th>)}
+                    {['Profissional', 'Agendamentos no período'].map(th => <th key={th} style={{ padding: '14px 16px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>{th}</th>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.from(new Set(pacientes.map(p => p.profissional))).map((prof, i) => {
-                    const atds = pacientes.filter(p => p.profissional === prof).length;
+                  {Array.from(new Set(agendamentosProfissionais.map(p => p.profissional || 'Não informado'))).map((prof, i) => {
+                    const atds = agendamentosProfissionais.filter(p => (p.profissional || 'Não informado') === prof).reduce((sum, item) => sum + item.total, 0);
                     return (
                       <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.2s' }}>
                         <td style={{ padding: '14px 16px', fontSize: '13px', color: '#334155', fontWeight: 'bold' }}>{prof}</td>
                         <td style={{ padding: '14px 16px', fontSize: '13px', color: '#334155' }}>{atds}</td>
-                        <td style={{ padding: '14px 16px', fontSize: '13px', color: '#334155' }}>-</td>
-                        <td style={{ padding: '14px 16px', fontSize: '13px', color: '#334155' }}>-</td>
-                        <td style={{ padding: '14px 16px', fontSize: '13px', color: '#16a34a', fontWeight: 'bold' }}>{atds}</td>
                       </tr>
                     );
                   })}
@@ -356,7 +264,7 @@ export default function RelatoriosPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ background: '#0f172a' }}>
                   <tr>
-                    {['Leito/Tipo', 'Ocupação (dias)', 'Taxa Ocupação', 'Giro de Leito', 'Média Permanência'].map(th => <th key={th} style={{ padding: '14px 16px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>{th}</th>)}
+                    {['Tipo de leito UTI', 'Leitos ocupados / total', 'Taxa de ocupação atual'].map(th => <th key={th} style={{ padding: '14px 16px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>{th}</th>)}
                   </tr>
                 </thead>
                 <tbody>
@@ -374,8 +282,6 @@ export default function RelatoriosPage() {
                           </div>
                           {taxa}%
                         </td>
-                        <td style={{ padding: '14px 16px', fontSize: '13px', color: '#334155' }}>-</td>
-                        <td style={{ padding: '14px 16px', fontSize: '13px', color: '#334155' }}>-</td>
                       </tr>
                     );
                   })}
@@ -385,26 +291,6 @@ export default function RelatoriosPage() {
           </div>
         )}
 
-        {/* TAB ANS */}
-        {activeTab === 'ans' && (
-          <div className="animate-in fade-in duration-300">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '25px' }}>
-              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', borderLeft: '5px solid #1e3a8a' }}>
-                <h3 style={{ color: '#0a1f44', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-file-medical"></i> Indicadores ANS</h3>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Taxa de Ocupação Operacional</span><span style={{fontWeight:700, color:'#1e3a8a'}}>{data.taxaUTI}</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Média de Permanência Geral</span><span style={{fontWeight:700, color:'#1e3a8a'}}>{data.tmp} dias</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Índice de Rotatividade</span><span style={{fontWeight:700, color:'#1e3a8a'}}>-</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Taxa de Cesáreas</span><span style={{fontWeight:700, color:'#1e3a8a'}}>-</span></div>
-              </div>
-              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', borderLeft: '5px solid #f59e0b' }}>
-                <h3 style={{ color: '#0a1f44', margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-user-md"></i> Indicadores CFM</h3>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Consultas/Hora (Recomendado: 4)</span><span style={{fontWeight:700, color:'#f59e0b'}}>-</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Pacientes-dia</span><span style={{fontWeight:700, color:'#f59e0b'}}>{data.internacoes}</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}><span style={{color:'#64748b'}}>Taxa de Suspensão Cirúrgica</span><span style={{fontWeight:700, color:'#f59e0b'}}>-</span></div>
-              </div>
-            </div>
-          </div>
-        )}
 
       </div>
     </div>

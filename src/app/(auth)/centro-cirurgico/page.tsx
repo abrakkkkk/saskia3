@@ -1,13 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import './centro-cirurgico.css';
-
-interface Checklist {
-  signIn: boolean[];
-  timeOut: boolean[];
-  signOut: boolean[];
-}
 
 interface Paciente {
   id: string;
@@ -29,43 +24,23 @@ interface Cirurgia {
   createdAt: string;
 }
 
-const checklistItens = {
-  signIn: [
-    "Paciente confirmou identidade, sítio cirúrgico e procedimento",
-    "Sítio cirúrgico demarcado",
-    "Verificação de segurança anestésica concluída",
-    "Oxímetro de pulso colocado e funcionando",
-    "Paciente possui alergia conhecida?",
-    "Via aérea difícil ou risco de aspiração?",
-    "Risco de perda sanguínea > 500ml?"
-  ],
-  timeOut: [
-    "Confirmar nomes de todos os membros da equipe",
-    "Cirurgião, anestesista e enfermeiro confirmam: paciente, sítio e procedimento",
-    "Antecipação de eventos críticos pelo cirurgião",
-    "Antecipação de eventos críticos pelo anestesista",
-    "Antecipação de eventos críticos pela enfermagem",
-    "Profilaxia antibiótica realizada nos últimos 60 min?",
-    "Imagens essenciais disponíveis?"
-  ],
-  signOut: [
-    "Enfermeiro confirma nome do procedimento",
-    "Contagem de compressas, gazes e agulhas correta",
-    "Amostras identificadas corretamente",
-    "Problemas com equipamentos a serem resolvidos?",
-    "Plano de cuidados pós-operatórios revisado"
-  ]
-};
-
-const DEFAULT_SALAS = ["SO 1", "SO 2", "SO 3", "SO 4"];
+function dataLocalKey(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
 
 export default function CentroCirurgicoPage() {
-  const [activeTab, setActiveTab] = useState<'agendamento' | 'salas' | 'lista' | 'checklist'>('agendamento');
+  const { data: session, status: sessionStatus } = useSession();
+  const cargo = (session?.user as any)?.cargo;
+  const podeGerenciar = cargo === 'ADMIN' || cargo === 'MEDICO';
+  const [activeTab, setActiveTab] = useState<'agendamento' | 'salas' | 'lista'>('agendamento');
   const [cirurgias, setCirurgias] = useState<Cirurgia[]>([]);
   const [pacientesGerais, setPacientesGerais] = useState<Paciente[]>([]);
-  const [salas, setSalas] = useState<string[]>(DEFAULT_SALAS);
+  const [salas, setSalas] = useState<string[]>([]);
   const [profissionais, setProfissionais] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
 
   // Filters
   const [buscaCirurgia, setBuscaCirurgia] = useState('');
@@ -78,8 +53,6 @@ export default function CentroCirurgicoPage() {
     circulante: '', anestesia: 'Geral', duracao: '1', obs: ''
   });
 
-  const [selectedCirurgiaId, setSelectedCirurgiaId] = useState<string>('');
-  const [currentChecklist, setCurrentChecklist] = useState<Checklist>({ signIn: [], timeOut: [], signOut: [] });
 
   const carregarDados = async () => {
     try {
@@ -87,8 +60,11 @@ export default function CentroCirurgicoPage() {
         fetch('/api/cirurgias'),
         fetch('/api/pacientes'),
         fetch('/api/salas'),
-        fetch('/api/usuario')
+        fetch('/api/chat/contatos')
       ]);
+      if (!resCirurgias.ok || !resPacientes.ok || !resSalas.ok) {
+        throw new Error('Não foi possível carregar os dados do centro cirúrgico. Atualize a página e tente novamente.');
+      }
       if (resCirurgias.ok) {
         const dCir = await resCirurgias.json();
         setCirurgias(Array.isArray(dCir) ? dCir : []);
@@ -99,17 +75,16 @@ export default function CentroCirurgicoPage() {
       }
       if (resSalas.ok) {
         const dSalas = await resSalas.json();
-        if (Array.isArray(dSalas) && dSalas.length > 0) {
-          const salasNomes = dSalas.map((s: any) => s.nome);
-          setSalas(salasNomes);
-          setFormAgendamento(prev => ({ ...prev, sala: prev.sala || salasNomes[0] }));
-        }
+        const salasNomes = Array.isArray(dSalas) ? dSalas.map((s: any) => s.nome).filter((nome: unknown): nome is string => typeof nome === 'string' && Boolean(nome.trim())) : [];
+        setSalas(salasNomes);
+        setFormAgendamento(prev => ({ ...prev, sala: salasNomes.includes(prev.sala) ? prev.sala : (salasNomes[0] || '') }));
       }
       if (resUsuarios.ok) {
         const dUsers = await resUsuarios.json();
         if (Array.isArray(dUsers)) setProfissionais(dUsers);
       }
     } catch (e) {
+      setErroCarga(e instanceof Error ? e.message : 'Erro ao carregar dados do centro cirúrgico.');
       console.error('Erro ao carregar dados do centro cirúrgico:', e);
     } finally {
       setLoading(false);
@@ -117,18 +92,23 @@ export default function CentroCirurgicoPage() {
   };
 
   useEffect(() => {
-    setFormAgendamento(f => ({ ...f, data: new Date().toISOString().split('T')[0] }));
+    setFormAgendamento(f => ({ ...f, data: dataLocalKey(new Date()) }));
     carregarDados();
   }, []);
 
   const agendarCirurgia = async () => {
     const { pacienteId, data, hora, procedimento, cirurgiao, anestesista, instrumentador, circulante, anestesia, prioridade, sala, obs } = formAgendamento;
-    if (!pacienteId || !data || !hora || !procedimento || !cirurgiao) {
-      alert("⚠️ Preencha todos os campos obrigatórios (*)");
+    if (!pacienteId || !sala || !salas.includes(sala) || !data || !hora || !procedimento.trim() || !cirurgiao.trim()) {
+      alert(" Preencha todos os campos obrigatórios (*)");
       return;
     }
 
-    const dataHoraNova = `${data}T${hora}:00`;
+    const dataHoraSelecionada = new Date(`${data}T${hora}:00`);
+    if (Number.isNaN(dataHoraSelecionada.getTime())) {
+      alert('Data e horário inválidos.');
+      return;
+    }
+    const dataHoraNova = dataHoraSelecionada.toISOString();
     
     // 1. Bloqueio Clínico: O mesmo paciente não pode estar agendado em 2 cirurgias no mesmo horário (Card 24)
     const conflitoPaciente = cirurgias.find(c => 
@@ -141,7 +121,7 @@ export default function CentroCirurgicoPage() {
 
     if (conflitoPaciente) {
       const horaStr = conflitoPaciente.dataHora ? new Date(conflitoPaciente.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'horário agendado';
-      alert(`⛔ Bloqueio Clínico de Segurança: O paciente selecionado já possui cirurgia agendada ("${conflitoPaciente.procedimento}" às ${horaStr} na sala ${conflitoPaciente.sala}). Não é permitido agendamento simultâneo!`);
+      alert(` Bloqueio Clínico de Segurança: O paciente selecionado já possui cirurgia agendada ("${conflitoPaciente.procedimento}" às ${horaStr} na sala ${conflitoPaciente.sala}). Não é permitido agendamento simultâneo!`);
       return;
     }
 
@@ -155,7 +135,7 @@ export default function CentroCirurgicoPage() {
     );
 
     if (conflito) {
-      if (!await confirm(`⚠️ Conflito de Agendamento: A sala "${sala}" já possui cirurgia agendada ("${conflito.procedimento}" - ${conflito.paciente?.nome || 'Paciente'}) no mesmo horário.\n\nDeseja confirmar o agendamento mesmo assim?`)) {
+      if (!await confirm(` Conflito de Agendamento: A sala "${sala}" já possui cirurgia agendada ("${conflito.procedimento}" - ${conflito.paciente?.nome || 'Paciente'}) no mesmo horário.\n\nDeseja confirmar o agendamento mesmo assim?`)) {
         return;
       }
     }
@@ -186,7 +166,7 @@ export default function CentroCirurgicoPage() {
         instrumentador: '', circulante: '', obs: ''
       });
 
-      alert("✅ Cirurgia agendada com sucesso!");
+      alert(" Cirurgia agendada com sucesso!");
       carregarDados();
       setActiveTab('lista');
     } catch(e: any) {
@@ -195,6 +175,7 @@ export default function CentroCirurgicoPage() {
   };
 
   const alterarStatus = async (id: string, novoStatus: string) => {
+    if (!podeGerenciar) return;
     const cirurgia = cirurgias.find(c => c.id === id);
     if (!cirurgia) return;
     
@@ -212,9 +193,9 @@ export default function CentroCirurgicoPage() {
         });
         if(!res.ok) throw new Error("Erro ao atualizar cirurgia");
         
-        if (novoStatus === 'EM_ANDAMENTO') alert("🔪 Cirurgia iniciada!");
-        if (novoStatus === 'CONCLUIDA') alert("✅ Cirurgia concluída!");
-        if (novoStatus === 'CANCELADA') alert("❌ Cirurgia cancelada.");
+        if (novoStatus === 'EM_ANDAMENTO') alert(" Cirurgia iniciada!");
+        if (novoStatus === 'CONCLUIDA') alert(" Cirurgia concluída!");
+        if (novoStatus === 'CANCELADA') alert(" Cirurgia cancelada.");
         carregarDados();
       } catch(e: any) {
         alert(e.message);
@@ -222,44 +203,17 @@ export default function CentroCirurgicoPage() {
     }
   };
 
-  const carregarChecklist = (id: string) => {
-    setSelectedCirurgiaId(id);
-    if (!id) {
-      setCurrentChecklist({ signIn: [], timeOut: [], signOut: [] });
-      return;
-    }
-    // We mock checklist state saving for now since we didn't put a JSON field in Prisma for Cirurgia Checklist
-    // In a real scenario, we'd save this to `cirurgia.observacoes` or a dedicated model
-    setCurrentChecklist({
-      signIn: new Array(checklistItens.signIn.length).fill(false),
-      timeOut: new Array(checklistItens.timeOut.length).fill(false),
-      signOut: new Array(checklistItens.signOut.length).fill(false),
-    });
-  };
-
-  const toggleChecklist = (secao: 'signIn' | 'timeOut' | 'signOut', index: number) => {
-    setCurrentChecklist(prev => {
-      const novos = [...prev[secao]];
-      novos[index] = !novos[index];
-      return { ...prev, [secao]: novos };
-    });
-  };
-
-  const salvarChecklist = () => {
-    if (!selectedCirurgiaId) { alert("Selecione uma cirurgia!"); return; }
-    alert("✅ Checklist de segurança salvo localmente!");
-  };
 
   // Stats
-  const hojeISO = new Date().toISOString().split('T')[0];
+  const hojeISO = dataLocalKey(new Date());
   const stats = {
-    agendadas: cirurgias.filter(c => c.dataHora && c.dataHora.startsWith(hojeISO)).length,
+    agendadas: cirurgias.filter(c => c.dataHora && dataLocalKey(new Date(c.dataHora)) === hojeISO).length,
     andamento: cirurgias.filter(c => c.status === "EM_ANDAMENTO").length,
-    concluidas: cirurgias.filter(c => c.status === "CONCLUIDA" && c.dataHora && c.dataHora.startsWith(hojeISO)).length,
+    concluidas: cirurgias.filter(c => c.status === "CONCLUIDA" && c.dataHora && dataLocalKey(new Date(c.dataHora)) === hojeISO).length,
     canceladas: cirurgias.filter(c => c.status === "CANCELADA").length,
   };
 
-  const cirurgiasHoje = cirurgias.filter(c => c.dataHora && c.dataHora.startsWith(hojeISO));
+  const cirurgiasHoje = cirurgias.filter(c => c.dataHora && dataLocalKey(new Date(c.dataHora)) === hojeISO);
 
   let cirurgiasFiltradas = [...cirurgias].reverse();
   if (filtroStatus !== 'todos') {
@@ -305,14 +259,16 @@ export default function CentroCirurgicoPage() {
         <div className="banner-cc">
           <div>
             <h1><i className="las la-scalpel"></i> Centro Cirúrgico</h1>
-            <p>Gestão de cirurgias, salas, equipe e checklist de segurança</p>
+            <p>Gestão de cirurgias e salas</p>
           </div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button className="btn btn-success" onClick={() => setActiveTab('agendamento')}>
+            {podeGerenciar && <button className="btn btn-success" onClick={() => setActiveTab('agendamento')}>
               <i className="las la-plus-circle"></i> Agendar Cirurgia
-            </button>
+            </button>}
           </div>
         </div>
+
+        {erroCarga && <div role="alert" className="alert-erro" style={{ marginBottom: 16 }}>{erroCarga}</div>}
 
         <div className="stats-grid">
           <div className="stat-card"><div className="stat-icon blue"><i className="las la-calendar-check"></i></div><div className="stat-numero">{stats.agendadas}</div><div className="stat-label">Cirurgias Hoje</div></div>
@@ -323,13 +279,14 @@ export default function CentroCirurgicoPage() {
         </div>
 
         <div className="tabs-cc">
-          <button className={`tab-btn ${activeTab === 'agendamento' ? 'ativo' : ''}`} onClick={() => setActiveTab('agendamento')}><i className="las la-calendar-plus"></i> Agendamento</button>
+          {podeGerenciar && <button className={`tab-btn ${activeTab === 'agendamento' ? 'ativo' : ''}`} onClick={() => setActiveTab('agendamento')}><i className="las la-calendar-plus"></i> Agendamento</button>}
           <button className={`tab-btn ${activeTab === 'salas' ? 'ativo' : ''}`} onClick={() => setActiveTab('salas')}><i className="las la-door-open"></i> Salas Cirúrgicas</button>
           <button className={`tab-btn ${activeTab === 'lista' ? 'ativo' : ''}`} onClick={() => setActiveTab('lista')}><i className="las la-list"></i> Lista de Cirurgias</button>
-          <button className={`tab-btn ${activeTab === 'checklist' ? 'ativo' : ''}`} onClick={() => setActiveTab('checklist')}><i className="las la-clipboard-check"></i> Checklist</button>
         </div>
 
-        {activeTab === 'agendamento' && (
+        {sessionStatus === 'authenticated' && !podeGerenciar && <div role="status" className="cc-panel" style={{ marginBottom: 16 }}>Somente ADMIN e MEDICO podem agendar cirurgias ou alterar status.</div>}
+
+        {activeTab === 'agendamento' && podeGerenciar && (
           <div className="cc-grid">
             <div className="cc-panel">
               <h3><i className="las la-calendar-plus"></i> Agendar Nova Cirurgia</h3>
@@ -344,6 +301,7 @@ export default function CentroCirurgicoPage() {
                 <div className="form-grupo">
                   <label>Sala Cirúrgica *</label>
                   <select value={formAgendamento.sala} onChange={e => setFormAgendamento({...formAgendamento, sala: e.target.value})}>
+                    <option value="">{salas.length ? 'Selecione uma sala' : 'Cadastre uma sala antes de agendar'}</option>
                     {salas.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
@@ -415,7 +373,7 @@ export default function CentroCirurgicoPage() {
                 <div className="form-grupo"><label>Duração Prevista (h)</label><input type="number" min="0.5" step="0.5" value={formAgendamento.duracao} onChange={e => setFormAgendamento({...formAgendamento, duracao: e.target.value})} /></div>
                 <div className="form-grupo full"><label>Observações</label><textarea rows={2} value={formAgendamento.obs} onChange={e => setFormAgendamento({...formAgendamento, obs: e.target.value})}></textarea></div>
               </div>
-              <button className="btn btn-success" onClick={agendarCirurgia} style={{ width: '100%', marginTop: '15px', justifyContent: 'center', padding: '14px' }}>
+              <button className="btn btn-success" onClick={agendarCirurgia} disabled={!salas.length || !pacientesGerais.length || loading} style={{ width: '100%', marginTop: '15px', justifyContent: 'center', padding: '14px' }}>
                 <i className="las la-save"></i> Agendar Cirurgia
               </button>
             </div>
@@ -426,7 +384,7 @@ export default function CentroCirurgicoPage() {
                   <p style={{ color: '#94a3b8', textAlign: 'center', padding: '30px' }}>Nenhuma cirurgia agendada para hoje.</p>
                 ) : (
                   cirurgiasHoje.map(c => (
-                    <div key={c.id} style={{ background: '#f8fafc', borderRadius: '8px', padding: '15px', marginBottom: '10px', borderLeft: `4px solid ${c.status==='EM_ANDAMENTO'?'#f59e0b':c.status==='CONCLUIDA'?'#22c55e':'#1e3a8a'}` }}>
+                    <div key={c.id} style={{ background: '#f8fafc', borderRadius: '8px', padding: '15px', marginBottom: '10px', borderTop: `3px solid ${c.status==='EM_ANDAMENTO'?'#f59e0b':c.status==='CONCLUIDA'?'#22c55e':'#1e3a8a'}` }}>
                       <strong>{c.dataHora ? new Date(c.dataHora).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : ''}</strong> - {c.paciente.nome}<br />
                       <small>{c.procedimento} | Sala {c.sala} | {c.equipe}</small><br />
                       <span className={`badge ${getStatusBadge(c.status)}`}>{getStatusName(c.status)}</span>
@@ -441,15 +399,15 @@ export default function CentroCirurgicoPage() {
         {activeTab === 'salas' && (
           <div className="salas-grid">
             {salas.map(sala => {
-              const ocupada = cirurgias.find(c => (c.status === "EM_ANDAMENTO" || (c.status === "AGENDADA" && c.dataHora && c.dataHora.startsWith(hojeISO))) && c.sala === sala);
+              const ocupada = cirurgias.find(c => (c.status === "EM_ANDAMENTO" || (c.status === "AGENDADA" && c.dataHora && dataLocalKey(new Date(c.dataHora)) === hojeISO)) && c.sala === sala);
               const isEmAndamento = ocupada && ocupada.status === 'EM_ANDAMENTO';
               
               let classe = "disponivel";
-              let statusText = "✅ Disponível";
+              let statusText = " Disponível";
               if (isEmAndamento) {
-                classe = "ocupada"; statusText = "🔴 Ocupada";
+                classe = "ocupada"; statusText = " Ocupada";
               } else if (ocupada) {
-                classe = "limpeza"; statusText = "🟡 Reservada (Agendada p/ hoje)";
+                classe = "limpeza"; statusText = " Reservada (Agendada p/ hoje)";
               }
 
               return (
@@ -495,9 +453,11 @@ export default function CentroCirurgicoPage() {
                         <td style={{fontSize:'12px'}}>{c.equipe}</td>
                         <td><span className={`badge ${getStatusBadge(c.status)}`}>{getStatusName(c.status)}</span></td>
                         <td>
+                          {podeGerenciar && <>
                           <button className="btn btn-sm btn-primary" onClick={() => alterarStatus(c.id, 'EM_ANDAMENTO')} disabled={c.status !== 'AGENDADA'}><i className="las la-play"></i></button>
                           <button className="btn btn-sm btn-warning" onClick={() => alterarStatus(c.id, 'CONCLUIDA')} disabled={c.status !== 'EM_ANDAMENTO'} style={{ marginLeft: '4px' }}><i className="las la-check"></i></button>
                           <button className="btn btn-sm btn-danger" onClick={() => alterarStatus(c.id, 'CANCELADA')} disabled={c.status === 'CANCELADA' || c.status === 'CONCLUIDA'} style={{ marginLeft: '4px' }}><i className="las la-times"></i></button>
+                          </>}
                         </td>
                       </tr>
                     ))
@@ -508,59 +468,7 @@ export default function CentroCirurgicoPage() {
           </div>
         )}
 
-        {activeTab === 'checklist' && (
-          <div className="cc-panel">
-            <h3><i className="las la-clipboard-check"></i> Checklist de Segurança Cirúrgica (OMS)</h3>
-            <p style={{ color: '#64748b', marginBottom: '20px', fontSize: '13px' }}>Selecione a cirurgia para preencher o checklist:</p>
-            <div className="form-grupo">
-              <label>Cirurgia</label>
-              <select value={selectedCirurgiaId} onChange={e => carregarChecklist(e.target.value)}>
-                <option value="">Selecione...</option>
-                {cirurgias.filter(c => c.status !== "CANCELADA").map(c => (
-                  <option key={c.id} value={c.id}>{c.dataHora ? new Date(c.dataHora).toLocaleDateString() : ''} - {c.paciente.nome} - {c.procedimento}</option>
-                ))}
-              </select>
-            </div>
-            
-            {selectedCirurgiaId && (
-              <>
-                <h4 style={{ color: '#1e3a8a', margin: '20px 0 15px' }}>1. ANTES DA INDUÇÃO ANESTÉSICA (Sign In)</h4>
-                <div className="checklist-grid">
-                  {checklistItens.signIn.map((item, i) => (
-                    <div key={i} className={`checklist-item ${currentChecklist.signIn[i] ? 'check' : ''}`} onClick={() => toggleChecklist('signIn', i)}>
-                      <span className="check-icon">{currentChecklist.signIn[i] ? '✓' : ''}</span>
-                      <span className="check-label">{item}</span>
-                    </div>
-                  ))}
-                </div>
 
-                <h4 style={{ color: '#1e3a8a', margin: '20px 0 15px' }}>2. ANTES DA INCISÃO CIRÚRGICA (Time Out)</h4>
-                <div className="checklist-grid">
-                  {checklistItens.timeOut.map((item, i) => (
-                    <div key={i} className={`checklist-item ${currentChecklist.timeOut[i] ? 'check' : ''}`} onClick={() => toggleChecklist('timeOut', i)}>
-                      <span className="check-icon">{currentChecklist.timeOut[i] ? '✓' : ''}</span>
-                      <span className="check-label">{item}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <h4 style={{ color: '#1e3a8a', margin: '20px 0 15px' }}>3. ANTES DO PACIENTE SAIR DA SALA (Sign Out)</h4>
-                <div className="checklist-grid">
-                  {checklistItens.signOut.map((item, i) => (
-                    <div key={i} className={`checklist-item ${currentChecklist.signOut[i] ? 'check' : ''}`} onClick={() => toggleChecklist('signOut', i)}>
-                      <span className="check-icon">{currentChecklist.signOut[i] ? '✓' : ''}</span>
-                      <span className="check-label">{item}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <button className="btn btn-success" onClick={salvarChecklist} style={{ width: '100%', marginTop: '20px', justifyContent: 'center', padding: '14px' }}>
-                  <i className="las la-save"></i> Salvar Checklist
-                </button>
-              </>
-            )}
-          </div>
-        )}
 
       </div>
     </div>

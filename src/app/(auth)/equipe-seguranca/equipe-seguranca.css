@@ -189,3 +189,17 @@
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .btn { width: 100%; }
 }
+.seg-flow-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 14px 16px;
+  border: 1px solid #f2c66d;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #713f12;
+}
+
+.seg-error { color: #b91c1c; margin: 12px 0; }
+.seg-empty { padding: 32px; text-align: center; color: #64748b; }

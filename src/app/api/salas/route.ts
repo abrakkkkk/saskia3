@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
     const session = await auth()
     if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    const hospitalId = session.user.hospitalId || 'hospital_001'
+    const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
 
     const salas = await prisma.sala.findMany({
       where: { hospitalId },
@@ -25,7 +26,8 @@ export async function POST(request: NextRequest) {
     const session = await auth()
     if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    const hospitalId = session.user.hospitalId || 'hospital_001'
+    const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
     const body = await request.json()
 
     const sala = await prisma.sala.create({

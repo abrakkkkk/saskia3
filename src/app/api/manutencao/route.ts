@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { isRecord } from '@/lib/request-validation';
 
 export async function GET() {
   try {
     const session = await auth();
-    if (!session) return NextResponse.json([], { status: 401 });
+    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
 
     const hospitalId = session.user.hospitalId;
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
     
     const ordens = await prisma.manutencaoOS.findMany({
       where: { hospitalId },
@@ -16,28 +18,43 @@ export async function GET() {
 
     return NextResponse.json(ordens);
   } catch (error) {
-    return NextResponse.json([], { status: 500 });
+    return NextResponse.json({ error: 'Erro ao buscar ordens de manutenção' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
 
     const hospitalId = session.user.hospitalId;
-    const body = await request.json();
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
+    }
+    if (
+      !isRecord(body) ||
+      typeof body.equipamento !== 'string' || !body.equipamento.trim() || body.equipamento.length > 200 ||
+      typeof body.setor !== 'string' || !body.setor.trim() || body.setor.length > 100 ||
+      typeof body.tipo !== 'string' || !['Preventiva', 'Corretiva', 'Preditiva', 'Calibração', 'Emergencial'].includes(body.tipo) ||
+      typeof body.prioridade !== 'string' || !['Normal', 'Urgente', 'Emergência'].includes(body.prioridade) ||
+      (body.data !== undefined && (typeof body.data !== 'string' || Number.isNaN(new Date(body.data).getTime()))) ||
+      (body.descricao !== undefined && body.descricao !== null && (typeof body.descricao !== 'string' || body.descricao.length > 2000))
+    ) return NextResponse.json({ error: 'Dados da ordem de manutenção inválidos' }, { status: 400 });
 
     const ordem = await prisma.manutencaoOS.create({
       data: {
         hospitalId,
-        equipamento: body.equipamento,
-        setor: body.setor,
+        equipamento: body.equipamento.trim(),
+        setor: body.setor.trim(),
         tipo: body.tipo,
         prioridade: body.prioridade,
-        solicitante: body.solicitante,
-        data: body.data,
-        descricao: body.descricao,
+        solicitante: session.user.name || session.user.email || 'Profissional autenticado',
+        data: body.data || new Date().toISOString().slice(0, 10),
+        descricao: typeof body.descricao === 'string' ? body.descricao.trim() : '',
         status: 'Aberta'
       }
     });

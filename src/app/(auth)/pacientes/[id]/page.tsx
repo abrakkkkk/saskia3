@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { calcularIdade, MANCHESTER_CORES, STATUS_CORES } from '@/lib/utils'
+import { AlertCircle, AlertTriangle, Frown, Meh, Pill, Smile } from 'lucide-react'
 
 export default function FichaPacientePage() {
   const params = useParams()
@@ -39,14 +40,12 @@ export default function FichaPacientePage() {
   const [sinaisVitais, setSinaisVitais] = useState<any[]>([])
   const [novoSinal, setNovoSinal] = useState({ pressao: '', fc: '', fr: '', temp: '', satO2: '', glicemia: '' })
 
-  // Outros (LocalStorage)
+  // Demais avaliações carregadas do prontuário persistido
   const [nutricao, setNutricao] = useState({ peso: '', altura: '', dieta: 'Via Oral', restricoes: '' })
   const [medico, setMedico] = useState({ responsavel: '', crm: '', especialidade: '', diagnostico: '', conduta: '' })
   const [enfermagem, setEnfermagem] = useState({ responsavel: '', coren: '', evolucao: '', prescricao: '' })
   const [timelineEvents, setTimelineEvents] = useState<any[]>([])
   const [novoTimeline, setNovoTimeline] = useState({ tipo: 'Anotação Geral', descricao: '' })
-
-  const getHospId = () => session?.user?.hospitalId || session?.user?.id || 'default'
 
   const carregarPaciente = () => {
     fetch(`/api/pacientes/${params.id}`)
@@ -328,7 +327,7 @@ export default function FichaPacientePage() {
       {paciente.alergias && paciente.alergias.trim() !== '' && (
         <div style={{ background: 'linear-gradient(135deg, #dc2626, #991b1b)', color: 'white', padding: '15px 25px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600, fontSize: '16px', animation: 'pulsarAlergia 2s infinite', boxShadow: '0 4px 20px rgba(220,38,38,0.4)' }}>
           <i className="las la-exclamation-triangle" style={{ fontSize: 28 }}></i>
-          <span>⚠️ Paciente alérgico a: <strong>{paciente.alergias}</strong></span>
+          <span><AlertTriangle size={16} aria-hidden="true" /> Paciente alérgico a: <strong>{paciente.alergias}</strong></span>
         </div>
       )}
 
@@ -354,17 +353,18 @@ export default function FichaPacientePage() {
               <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: manch.text, display: 'inline-block' }}></span> {paciente.classificacao}
             </span>
           )}
-          <select value={paciente.status} onChange={e => mudarStatus(e.target.value)} style={{ background: statusCor.bg, color: statusCor.text, fontSize: 13, padding: '8px 12px', borderRadius: '8px', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none' }}>
-            <option value="Recepção">📋 Recepção</option>
-            <option value="Aguardando Triagem">⏳ Aguardando Triagem</option>
-            <option value="Em Triagem">🩺 Em Triagem</option>
-            <option value="Aguardando Médico">👨‍⚕️ Aguardando Médico</option>
-            <option value="Em Atendimento Médico">🏥 Em Atendimento</option>
-            <option value="Retorno">🔄 Retorno</option>
-            <option value="Internado">🛏️ Internado</option>
-            <option value="Alta Médica">✅ Alta Médica</option>
-            <option value="Transferido">🚑 Transferido</option>
-            <option value="Evasão">⚠️ Evasão</option>
+          <i className={`las ${paciente.status === 'Aguardando Triagem' ? 'la-hourglass-half' : 'la-clipboard-check'}`} aria-hidden="true"></i>
+          <select aria-label="Status do atendimento" value={paciente.status} onChange={e => mudarStatus(e.target.value)} style={{ background: statusCor.bg, color: statusCor.text, fontSize: 13, padding: '8px 12px', borderRadius: '8px', fontWeight: 700, border: 'none', cursor: 'pointer', outline: 'none' }}>
+            <option value="Recepção">Recepção</option>
+            <option value="Aguardando Triagem">Aguardando Triagem</option>
+            <option value="Em Triagem">Em Triagem</option>
+            <option value="Aguardando Médico">Aguardando Médico</option>
+            <option value="Em Atendimento Médico">Em Atendimento</option>
+            <option value="Retorno">Retorno</option>
+            <option value="Internado">Internado</option>
+            <option value="Alta Médica">Alta Médica</option>
+            <option value="Transferido">Transferido</option>
+            <option value="Evasão">Evasão</option>
           </select>
         </div>
       </div>
@@ -460,11 +460,11 @@ export default function FichaPacientePage() {
                 <label className="form-label" style={{ fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>Classificação Manchester / Risco</label>
                 <select className="input-field" value={triagem.classificacao} onChange={e => setTriagem({ ...triagem, classificacao: e.target.value })}>
                   <option value="">Selecione o Risco...</option>
-                  <option value="Vermelho">🔴 Vermelho (Emergência - 0 min)</option>
-                  <option value="Laranja">🟠 Laranja (Muito Urgente - 10 min)</option>
-                  <option value="Amarelo">🟡 Amarelo (Urgente - 50 min)</option>
-                  <option value="Verde">🟢 Verde (Pouco Urgente - 120 min)</option>
-                  <option value="Azul">🔵 Azul (Não Urgente - 240 min)</option>
+                  <option value="Vermelho">Vermelho (Emergência)</option>
+                  <option value="Laranja">Laranja (Muito urgente)</option>
+                  <option value="Amarelo">Amarelo (Urgente)</option>
+                  <option value="Verde">Verde (Pouco urgente)</option>
+                  <option value="Azul">Azul (Não urgente)</option>
                 </select>
               </div>
               <div style={{ background: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
@@ -595,10 +595,10 @@ export default function FichaPacientePage() {
               <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px', gridColumn: '1 / -1' }}>
                 <h4 style={{ color: '#d97706', marginBottom: '15px' }}>Escala Visual Analógica (Dor)</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', flexWrap: 'wrap', gap: 10 }}>
-                  {[{ val: 0, emoji: '😊', label: 'Sem dor' }, { val: 2, emoji: '😐', label: 'Leve' }, { val: 5, emoji: '😣', label: 'Moderada' }, { val: 8, emoji: '😫', label: 'Intensa' }, { val: 10, emoji: '😭', label: 'Máxima' }].map(d => (
-                    <div key={d.val} onClick={() => setDor(d.val)} style={{ flex: 1, minWidth: 60, textAlign: 'center', cursor: 'pointer', padding: '10px', borderRadius: '8px', background: dor === d.val ? '#fefce8' : 'transparent', border: dor === d.val ? '2px solid #eab308' : '2px solid transparent', transform: dor === d.val ? 'scale(1.05)' : 'scale(1)', transition: 'all 0.2s' }}>
-                      <div style={{ fontSize: '32px' }}>{d.emoji}</div><div style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', marginTop: '5px' }}>{d.label}</div><div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>{d.val}</div>
-                    </div>
+                  {[{ val: 0, Icon: Smile, label: 'Sem dor' }, { val: 2, Icon: Smile, label: 'Leve' }, { val: 5, Icon: Meh, label: 'Moderada' }, { val: 8, Icon: Frown, label: 'Intensa' }, { val: 10, Icon: AlertCircle, label: 'Máxima' }].map(({ val, Icon, label }) => (
+                    <button key={val} type="button" aria-pressed={dor === val} onClick={() => setDor(val)} style={{ flex: 1, minWidth: 60, textAlign: 'center', cursor: 'pointer', padding: '10px', borderRadius: '8px', background: dor === val ? '#fefce8' : 'transparent', border: dor === val ? '2px solid #eab308' : '2px solid transparent', transition: 'all 0.2s' }}>
+                      <Icon size={28} aria-hidden="true" style={{ color: dor === val ? '#ca8a04' : '#64748b' }} /><div style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', marginTop: '5px' }}>{label}</div><div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>{val}</div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -625,7 +625,7 @@ export default function FichaPacientePage() {
                 <button className="btn btn-primary" style={{ width: '100%', marginBottom: 20 }} onClick={registrarEvolucao} disabled={isSaving}>{isSaving ? 'Salvando...' : 'Salvar Evolução SOAP'}</button>
 
                 {paciente.evolucoes?.length > 0 ? paciente.evolucoes.map((ev: any, i: number) => (
-                  <div key={i} style={{ background: '#f8fafc', padding: 15, marginBottom: 10, borderLeft: '4px solid #1e3a8a', borderRadius: 8 }}>
+                  <div key={i} style={{ background: '#f8fafc', padding: 15, marginBottom: 10, borderTop: '3px solid #1e3a8a', borderRadius: 8 }}>
                     <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>{ev.profissional} - {new Date(ev.createdAt).toLocaleString('pt-BR')}</div>
                     <div style={{ fontSize: 13, color: '#475569', whiteSpace: 'pre-wrap' }}>{ev.descricao}</div>
                   </div>
@@ -668,8 +668,8 @@ export default function FichaPacientePage() {
                 <button className="btn btn-primary" style={{ width: '100%', marginBottom: 20 }} onClick={registrarPrescricao} disabled={isSaving}>{isSaving ? 'Registrando...' : 'Adicionar à Prescrição'}</button>
                 <ul style={{ listStyle: 'none', padding: 0 }}>
                   {paciente.prescricoes?.length > 0 ? paciente.prescricoes.map((m: any, i: number) => (
-                    <li key={i} style={{ background: '#f8fafc', padding: '12px', marginBottom: '8px', borderRadius: '8px', borderLeft: '4px solid #1e3a8a', display: 'flex', justifyContent: 'space-between' }}>
-                      <span><strong>💊 {m.medicamento}</strong> {m.dose} - {m.via} {m.frequencia}</span>
+                    <li key={i} style={{ background: '#f8fafc', padding: '12px', marginBottom: '8px', borderRadius: '8px', borderTop: '3px solid #1e3a8a', display: 'flex', justifyContent: 'space-between' }}>
+                      <span><Pill size={14} aria-hidden="true" /> <strong>{m.medicamento}</strong> {m.dose} - {m.via} {m.frequencia}</span>
                       <span style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(m.createdAt).toLocaleDateString('pt-BR')}</span>
                     </li>
                   )) : <div style={{ textAlign: 'center', color: '#94a3b8', padding: 20 }}>Nenhum medicamento prescrito</div>}
@@ -749,15 +749,9 @@ export default function FichaPacientePage() {
         {/* ===================== DOCUMENTOS ===================== */}
         {tab === 'documentos' && (
           <div>
-            <h3 style={{ marginBottom: 20, color: '#0a1f44' }}>Upload de Documentos</h3>
-            <div style={{ display: 'flex', gap: 15, marginBottom: 20, background: '#f8fafc', padding: 20, borderRadius: 12, flexWrap: 'wrap' }}>
-              <input className="input-field" placeholder="Nome do Arquivo (Ex: Raio-X Torax)" style={{ flex: 1 }} />
-              <input type="file" className="input-field" style={{ background: 'white', flex: 1 }} />
-              <button className="btn btn-primary" onClick={() => alert('Emulação: Documento anexado!')}>Anexar Arquivo</button>
-            </div>
-            <div style={{ textAlign: 'center', padding: '30px', color: '#94a3b8', border: '2px dashed #cbd5e1', borderRadius: 12 }}>
-              <i className="las la-file-upload" style={{ fontSize: 40, marginBottom: 10 }}></i>
-              <p>Nenhum documento anexado ao prontuário.</p>
+            <h3 style={{ marginBottom: 20, color: '#0a1f44' }}>Documentos do prontuário</h3>
+            <div role="note" style={{ padding: 20, background: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa', borderRadius: 8 }}>
+              <p style={{ margin: 0 }}><strong>Anexos desativados.</strong> O sistema ainda não tem armazenamento seguro e auditável de arquivos clínicos. Não selecione nem envie documentos por esta tela.</p>
             </div>
           </div>
         )}

@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { inter } from '@/app/fonts'
 
 interface PacienteData {
+  id?: string;
   nome: string;
   cpf: string | null;
   telefone: string | null;
@@ -18,7 +19,7 @@ interface Agendamento {
   especialidade: string;
   profissional: string | null;
   sala: string | null;
-  status: 'AGENDADO' | 'CONFIRMADO' | 'CANCELADO' | 'EM ATENDIMENTO' | 'FINALIZADO';
+  status: 'AGENDADO' | 'CONFIRMADO' | 'CANCELADO' | 'EM_ATENDIMENTO' | 'CONCLUIDO' | 'EM_ESPERA' | 'FALTOU';
   paciente: PacienteData;
   observacoes?: string;
 }
@@ -29,7 +30,11 @@ export default function AgendaPage() {
   const usuario = session?.user as any;
   
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [pacientes, setPacientes] = useState<Array<{ id: string; nome: string }>>([]);
   const [loading, setLoading] = useState(true);
+  const [criando, setCriando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState('');
   
   const [filtroData, setFiltroData] = useState(new Date().toISOString().split('T')[0]);
   const [filtroEspecialidade, setFiltroEspecialidade] = useState('Todas');
@@ -39,14 +44,21 @@ export default function AgendaPage() {
   const [agendaSelecionada, setAgendaSelecionada] = useState<Agendamento | null>(null);
 
   const carregarAgendamentos = async () => {
+    setErro('');
     try {
       const res = await fetch('/api/agendamentos');
       if (res.ok) {
         const data = await res.json();
         setAgendamentos(Array.isArray(data) ? data : []);
+      } else {
+        const result = await res.json().catch(() => ({}));
+        setAgendamentos([]);
+        setErro(result.error || 'Não foi possível carregar os agendamentos.');
       }
     } catch (error) {
       console.error('Erro ao buscar agendamentos', error);
+      setAgendamentos([]);
+      setErro('Falha de conexão ao carregar os agendamentos.');
     } finally {
       setLoading(false);
     }
@@ -54,7 +66,35 @@ export default function AgendaPage() {
 
   useEffect(() => {
     carregarAgendamentos();
+    fetch('/api/pacientes').then(async response => {
+      if (!response.ok) throw new Error('Não foi possível carregar os pacientes.');
+      const data = await response.json();
+      setPacientes(Array.isArray(data) ? data.map((item: { id: string; nome: string }) => ({ id: item.id, nome: item.nome })) : []);
+    }).catch(error => setErro(error instanceof Error ? error.message : 'Erro ao carregar pacientes.'));
   }, []);
+
+  const criarAgendamento = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    setSalvando(true);
+    setErro('');
+    const form = new FormData(formElement);
+    const dataHora = new Date(`${form.get('data')}T${form.get('hora')}:00`);
+    try {
+      const response = await fetch('/api/agendamentos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pacienteId: form.get('pacienteId'), dataHora: dataHora.toISOString(), tipo: form.get('tipo'), especialidade: form.get('especialidade'), profissional: form.get('profissional') || undefined, sala: form.get('sala') || undefined, observacoes: form.get('observacoes') || undefined }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Não foi possível criar o agendamento.');
+      await carregarAgendamentos();
+      setCriando(false);
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Erro de conexão ao criar agendamento.');
+    } finally {
+      setSalvando(false);
+    }
+  };
 
   const alterarStatus = async (id: string, novoStatus: Agendamento['status']) => {
     if (novoStatus === 'CANCELADO') {
@@ -85,14 +125,16 @@ export default function AgendaPage() {
       case 'AGENDADO': return { bg: '#eff6ff', text: '#1e40af', border: '#bfdbfe' };
       case 'CONFIRMADO': return { bg: '#f0fdf4', text: '#166534', border: '#bbf7d0' };
       case 'CANCELADO': return { bg: '#fef2f2', text: '#b91c1c', border: '#fecaca' };
-      case 'EM ATENDIMENTO': return { bg: '#fff7ed', text: '#c2410c', border: '#fed7aa' };
-      case 'FINALIZADO': return { bg: '#f8fafc', text: '#475569', border: '#e2e8f0' };
+      case 'EM_ESPERA': return { bg: '#fffbeb', text: '#92400e', border: '#fde68a' };
+      case 'FALTOU': return { bg: '#fef2f2', text: '#991b1b', border: '#fecaca' };
+      case 'EM_ATENDIMENTO': return { bg: '#fff7ed', text: '#c2410c', border: '#fed7aa' };
+      case 'CONCLUIDO': return { bg: '#f8fafc', text: '#475569', border: '#e2e8f0' };
       default: return { bg: '#f8fafc', text: '#475569', border: '#e2e8f0' };
     }
   };
 
   const agendamentosFiltrados = agendamentos.filter(a => {
-    const dataMatch = a.dataHora.startsWith(filtroData);
+    const dataMatch = new Date(a.dataHora).toLocaleDateString('sv-SE') === filtroData;
     const espMatch = filtroEspecialidade === 'Todas' || a.especialidade === filtroEspecialidade;
     const buscaMatch = termoBusca === '' || 
       a.paciente.nome.toLowerCase().includes(termoBusca.toLowerCase()) ||
@@ -105,7 +147,7 @@ export default function AgendaPage() {
   const stats = {
     agendados: agendamentosFiltrados.filter(a => a.status === 'AGENDADO').length,
     confirmados: agendamentosFiltrados.filter(a => a.status === 'CONFIRMADO').length,
-    atendidos: agendamentosFiltrados.filter(a => a.status === 'FINALIZADO').length,
+    atendidos: agendamentosFiltrados.filter(a => a.status === 'CONCLUIDO').length,
     cancelados: agendamentosFiltrados.filter(a => a.status === 'CANCELADO').length,
   };
 
@@ -125,7 +167,7 @@ export default function AgendaPage() {
         <div style={{ display: 'flex', gap: '12px' }}>
           <button 
             style={{ backgroundColor: '#0f172a', color: 'white', padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, border: '1px solid #0f172a', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}
-            onClick={() => alert('Novo agendamento em desenvolvimento')}
+            onClick={() => { setErro(''); setCriando(true); }}
           >
             <i className="las la-plus-circle" style={{ fontSize: '18px', opacity: 0.9 }}></i> Novo Agendamento
           </button>
@@ -245,6 +287,8 @@ export default function AgendaPage() {
                     <p style={{ color: '#475569', fontWeight: 600, fontSize: '14px', margin: 0 }}>Carregando agendamentos...</p>
                   </td>
                 </tr>
+              ) : erro ? (
+                <tr><td colSpan={5} role="alert" style={{ padding: 48, textAlign: 'center', color: '#991b1b' }}>{erro}</td></tr>
               ) : agendamentosFiltrados.length === 0 ? (
                 <tr>
                   <td colSpan={5} style={{ padding: '80px 24px', textAlign: 'center' }}>
@@ -351,7 +395,7 @@ export default function AgendaPage() {
               </button>
               
               <button 
-                onClick={() => alterarStatus(agendaSelecionada.id, 'EM ATENDIMENTO')}
+                onClick={() => alterarStatus(agendaSelecionada.id, 'EM_ATENDIMENTO')}
                 style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '8px', border: '1px solid #2563eb', backgroundColor: '#eff6ff', color: '#1e40af', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', cursor: 'pointer' }}
               >
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', color: '#2563eb' }}>
@@ -361,7 +405,7 @@ export default function AgendaPage() {
               </button>
 
               <button 
-                onClick={() => alterarStatus(agendaSelecionada.id, 'FINALIZADO')}
+                onClick={() => alterarStatus(agendaSelecionada.id, 'CONCLUIDO')}
                 style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#ffffff', color: '#1e293b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', cursor: 'pointer' }}
               >
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', color: '#334155' }}>
@@ -384,6 +428,26 @@ export default function AgendaPage() {
 
             </div>
           </div>
+        </div>
+      )}
+
+      {criando && (
+        <div role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCriando(false); }} style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(15,23,42,.55)' }}>
+          <form onSubmit={criarAgendamento} aria-labelledby="novo-agendamento-titulo" style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 560, padding: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 id="novo-agendamento-titulo" style={{ gridColumn: '1 / -1', margin: 0, color: '#0f172a' }}>Novo agendamento</h3>
+            {erro && <p role="alert" style={{ gridColumn: '1 / -1', color: '#b91c1c', margin: 0 }}>{erro}</p>}
+            <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>Paciente
+              <select required name="pacienteId" defaultValue="" disabled={!pacientes.length} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }}><option value="" disabled>{pacientes.length ? 'Selecione o paciente' : 'Nenhum paciente disponível'}</option>{pacientes.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select>
+            </label>
+            <label style={{ display: 'grid', gap: 6 }}>Data<input required name="data" type="date" defaultValue={filtroData} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
+            <label style={{ display: 'grid', gap: 6 }}>Horário<input required name="hora" type="time" style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
+            <label style={{ display: 'grid', gap: 6 }}>Tipo<input required name="tipo" defaultValue="Consulta" maxLength={80} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
+            <label style={{ display: 'grid', gap: 6 }}>Especialidade<input required name="especialidade" maxLength={100} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
+            <label style={{ display: 'grid', gap: 6 }}>Profissional<input name="profissional" maxLength={120} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
+            <label style={{ display: 'grid', gap: 6 }}>Sala<input name="sala" maxLength={80} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
+            <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>Observações<textarea name="observacoes" maxLength={1000} rows={3} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
+            <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: 10 }}><button type="button" onClick={() => setCriando(false)} style={{ padding: '10px 16px' }}>Fechar</button><button disabled={salvando || pacientes.length === 0} type="submit" style={{ padding: '10px 16px', background: '#0f172a', color: '#fff', border: 0, borderRadius: 6 }}>{salvando ? 'Salvando…' : 'Criar agendamento'}</button></div>
+          </form>
         </div>
       )}
 

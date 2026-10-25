@@ -54,7 +54,7 @@ export default function TransportePage() {
 
   const solicitarTransporte = async () => {
     if (!transpPaciente) {
-      alert("⚠️ Selecione o paciente!");
+      alert(" Selecione o paciente!");
       return;
     }
 
@@ -77,7 +77,7 @@ export default function TransportePage() {
       if (!res.ok) throw new Error('Erro ao solicitar transporte');
       
       setTranspSolicitante('');
-      alert("✅ Transporte solicitado!");
+      alert(" Transporte solicitado!");
       setActiveTab('lista');
       carregarDados();
     } catch (error: any) {

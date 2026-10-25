@@ -21,7 +21,7 @@ import {
 type TipoFeedback = 'sugestao' | 'elogio' | 'reclamacao' | 'bug';
 
 interface Feedback {
-  id: number;
+  id: string;
   tipo: TipoFeedback;
   assunto: string;
   mensagem: string;
@@ -48,7 +48,6 @@ const TIPO_COLORS: Record<TipoFeedback, { bg: string, text: string, border: stri
 export default function FeedbackPage() {
   const { data: session } = useSession();
   const hospitalId = (session?.user as any)?.hospitalId;
-  const usuario = session?.user as any;
   
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [filtro, setFiltro] = useState<TipoFeedback | 'todos'>('todos');
@@ -67,28 +66,29 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     if (!hospitalId) return;
-    fetch(`/api/feedback?hospitalId=${hospitalId}`)
+    fetch('/api/feedback')
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setFeedbacks(data);
-        } else {
-          // Mock Data
-          const mock: Feedback[] = [
-            { id: 1, tipo: 'sugestao', assunto: 'Melhoria no módulo de pacientes', mensagem: 'Sugiro adicionar um campo para parentesco nos dados do paciente.', data: new Date().toISOString(), usuario: 'Dr. Carlos Silva', respondido: false, resposta: null },
-            { id: 2, tipo: 'elogio', assunto: 'Sistema muito intuitivo', mensagem: 'Parabéns pela plataforma, muito fácil de usar!', data: new Date().toISOString(), usuario: 'Ana Recepção', respondido: true, resposta: 'Agradecemos seu feedback!' },
-          ];
-          setFeedbacks(mock);
-        }
+        if (!Array.isArray(data)) return setFeedbacks([]);
+        setFeedbacks(data.map((item: any) => ({
+          id: item.id,
+          tipo: (item.tipo?.toLowerCase() || 'sugestao') as TipoFeedback,
+          assunto: item.mensagem?.split('(').at(-1)?.replace(/\)$/, '') || 'Mensagem',
+          mensagem: item.mensagem?.split('(')[0]?.trim() || item.mensagem,
+          data: item.createdAt,
+          usuario: item.usuario?.nome || 'Profissional',
+          respondido: item.status === 'RESPONDIDO',
+          resposta: item.mensagem?.includes('[RESPOSTA DA EQUIPE]:') ? item.mensagem.split('[RESPOSTA DA EQUIPE]:')[1]?.trim() : null,
+        })));
       })
-      .catch(console.error);
+      .catch(() => setFeedbacks([]));
   }, [hospitalId]);
 
   const carregarFeedbacks = () => {
     fetch('/api/feedback')
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const mapped: Feedback[] = data.map((d: any) => ({
             id: d.id,
             tipo: d.tipo?.toLowerCase() || 'sugestao',
@@ -100,7 +100,7 @@ export default function FeedbackPage() {
             resposta: d.mensagem.includes('[RESPOSTA DA EQUIPE]:') ? d.mensagem.split('[RESPOSTA DA EQUIPE]:')[1]?.trim() : null
           }));
           setFeedbacks(mapped);
-        }
+        } else setFeedbacks([]);
       })
       .catch(console.error);
   };

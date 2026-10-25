@@ -157,6 +157,11 @@ model Usuario {
   agendamentos         Agendamento[]
   cirurgias            Cirurgia[]
   movimentacaoEstoques MovimentacaoEstoque[]
+  ticketsCriados      Ticket[]                @relation("TicketCriador")
+  mensagensEnviadas    MensagemChat[]          @relation("MensagemEnviada")
+  mensagensRecebidas   MensagemChat[]          @relation("MensagemRecebida")
+  lembretesCriados     Lembrete[]              @relation("LembreteCriador")
+  manifestacoesOuvidoria OuvidoriaTicket[]     @relation("OuvidoriaAutor")
 
   @@index([hospitalId])
 }
@@ -193,6 +198,7 @@ model Paciente {
   queixaPrincipal String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  arquivadoEm     DateTime?
 
   triagens     Triagem[]
   evolucoes    Evolucao[]
@@ -224,6 +230,8 @@ model Triagem {
   pacienteId    String
   paciente      Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
   classificacao String
+  fluxograma    String?
+  avpu          String?
   pressao       String? // Mantido como String para formatos como "120/80"
   temperatura   Float? // Convertido para número decimal (ex: 37.5)
   frequenciaC   Int? // Convertido para número inteiro (ex: 80 bpm)
@@ -403,6 +411,8 @@ model Ticket {
   id          String           @id @default(uuid())
   hospitalId  String
   hospital    Hospital         @relation(fields: [hospitalId], references: [id])
+  creatorId   String?
+  creator     Usuario?         @relation("TicketCriador", fields: [creatorId], references: [id], onDelete: SetNull)
   numero      Int              @unique @default(autoincrement())
   solicitante String
   titulo      String
@@ -414,6 +424,7 @@ model Ticket {
   updatedAt   DateTime         @updatedAt
 
   @@index([hospitalId])
+  @@index([creatorId])
 }
 
 model Chamada {
@@ -518,14 +529,18 @@ model Obito {
 }
 
 model MensagemChat {
-  id         String   @id @default(uuid())
-  hospitalId String
-  hospital   Hospital @relation(fields: [hospitalId], references: [id])
-  remetente  String
-  texto      String
-  dataHora   DateTime @default(now())
+  id          String    @id @default(uuid())
+  hospitalId  String
+  hospital    Hospital  @relation(fields: [hospitalId], references: [id])
+  senderId    String?
+  sender      Usuario?  @relation("MensagemEnviada", fields: [senderId], references: [id])
+  recipientId String?
+  recipient   Usuario?  @relation("MensagemRecebida", fields: [recipientId], references: [id])
+  remetente   String
+  texto       String
+  dataHora    DateTime  @default(now())
 
-  @@index([hospitalId])
+  @@index([hospitalId, senderId, recipientId, dataHora])
 }
 
 model CasoSocial {
@@ -545,6 +560,8 @@ model OuvidoriaTicket {
   id         String   @id @default(uuid())
   hospitalId String
   hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  autorId    String?
+  autor      Usuario? @relation("OuvidoriaAutor", fields: [autorId], references: [id], onDelete: SetNull)
   protocolo  String   @unique
   tipo       String
   setor      String
@@ -555,6 +572,7 @@ model OuvidoriaTicket {
   createdAt  DateTime @default(now())
 
   @@index([hospitalId])
+  @@index([autorId])
 }
 
 model VeiculoTransporte {
@@ -847,6 +865,8 @@ model Lembrete {
   id          String   @id @default(uuid())
   hospitalId  String
   hospital    Hospital @relation(fields: [hospitalId], references: [id])
+  criadoPorId String?
+  autor       Usuario? @relation("LembreteCriador", fields: [criadoPorId], references: [id], onDelete: SetNull)
   titulo      String
   tipo        String   @default("consulta")
   descricao   String?
@@ -858,6 +878,7 @@ model Lembrete {
   createdAt   DateTime @default(now())
 
   @@index([hospitalId])
+  @@index([criadoPorId])
 }
 
 model PontoRegistro {

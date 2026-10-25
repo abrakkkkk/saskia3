@@ -62,7 +62,7 @@ export default function ObitosPage() {
 
   const registrarObito = async () => {
     if (!form.nome || !form.data || !form.hora || !form.causa || !form.medico) {
-      alert("⚠️ Preencha os campos obrigatórios (*): Nome, Data, Hora, Causa Principal e Médico!");
+      alert(" Preencha os campos obrigatórios (*): Nome, Data, Hora, Causa Principal e Médico!");
       return;
     }
 
@@ -86,7 +86,7 @@ export default function ObitosPage() {
       if (!res.ok) throw new Error('Erro ao registrar óbito');
 
       limparFormulario();
-      alert("✅ Óbito registrado com sucesso!");
+      alert(" Óbito registrado com sucesso!");
       carregarDados();
     } catch (error: any) {
       alert(error.message);
@@ -142,7 +142,7 @@ export default function ObitosPage() {
       });
       if (!res.ok) throw new Error('Erro ao emitir certidão');
       
-      alert("✅ Certidão emitida com sucesso!");
+      alert(" Certidão emitida com sucesso!");
       carregarDados();
     } catch (error: any) {
       alert(error.message);
@@ -306,7 +306,7 @@ export default function ObitosPage() {
               <div className="form-grupo">
                 <label><i className="las la-file-upload"></i> Documento Assinado pelo Médico (PDF / Foto)</label>
                 <input type="file" accept=".pdf,image/*" onChange={handleFileChange} />
-                {form.documentoAnexo && <small style={{ color: '#16a34a', display: 'block', marginTop: 4 }}>✓ Anexado: {form.documentoAnexo}</small>}
+                {form.documentoAnexo && <small style={{ color: '#16a34a', display: 'block', marginTop: 4 }}> Anexado: {form.documentoAnexo}</small>}
               </div>
               <div className="form-grupo">
                 <label><i className="las la-user-friends"></i> Responsável Familiar</label>

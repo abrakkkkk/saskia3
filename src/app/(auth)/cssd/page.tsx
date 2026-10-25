@@ -61,7 +61,7 @@ export default function CSSDPage() {
 
   const criarLote = async () => {
     if(!loteNumero || !loteSetor || !loteOperador){
-      alert("⚠️ Preencha lote, setor e operador!");
+      alert(" Preencha lote, setor e operador!");
       return;
     }
     
@@ -89,7 +89,7 @@ export default function CSSDPage() {
       
       setLoteOperador('');
       setLoteObs('');
-      alert("✅ Lote criado com sucesso!");
+      alert(" Lote criado com sucesso!");
       setActiveTab('lotes');
       carregarDados();
     } catch (error: any) {
@@ -136,7 +136,7 @@ export default function CSSDPage() {
 
   const adicionarItem = async () => {
     if(!itemLote || !itemNome){
-      alert("⚠️ Selecione o lote e digite o nome do material!");
+      alert(" Selecione o lote e digite o nome do material!");
       return;
     }
     
@@ -160,7 +160,7 @@ export default function CSSDPage() {
       
       setItemNome('');
       setItemQuantidade(1);
-      alert("✅ Item adicionado ao lote!");
+      alert(" Item adicionado ao lote!");
       setActiveTab('lotes');
       carregarDados();
     } catch (error: any) {

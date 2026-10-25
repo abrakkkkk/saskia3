@@ -26,21 +26,31 @@ export async function POST(request: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
     const body = await request.json()
 
-    if (!body.numero || !body.tipo) {
+    const numero = Number(body.numero)
+    if (!Number.isInteger(numero) || numero < 1 || typeof body.tipo !== 'string' || !body.tipo) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
+    }
+
+    if (body.pacienteId) {
+      const paciente = await prisma.paciente.findFirst({
+        where: { id: body.pacienteId, hospitalId },
+        select: { id: true },
+      })
+      if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
     }
 
     const leito = await prisma.utiLeito.create({
       data: {
         hospitalId,
-        numero: Number(body.numero),
+        numero,
         tipo: body.tipo,
-        status: body.status || 'LIVRE',
-        pacienteId: body.pacienteId || null,
-        pacienteNome: body.pacienteNome || null,
-        pacienteCpf: body.pacienteCpf || null
+        status: 'LIVRE',
+        pacienteId: null,
+        pacienteNome: null,
+        pacienteCpf: null,
       }
     })
 

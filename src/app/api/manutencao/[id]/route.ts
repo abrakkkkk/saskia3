@@ -19,14 +19,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'OS não encontrada' }, { status: 404 });
     }
 
-    const atualizada = await prisma.manutencaoOS.update({
-      where: { id: id },
+    const atualizada = await prisma.manutencaoOS.updateMany({
+      where: { id, hospitalId },
       data: {
         status: body.status
       }
     });
 
-    return NextResponse.json(atualizada);
+    if (atualizada.count === 0) return NextResponse.json({ error: 'OS não encontrada' }, { status: 404 });
+    return NextResponse.json(await prisma.manutencaoOS.findFirst({ where: { id, hospitalId } }));
   } catch (error: any) {
     console.error("Erro ao atualizar OS:", error);
     return NextResponse.json({ error: 'Erro ao atualizar OS' }, { status: 500 });

@@ -72,18 +72,19 @@ export default function RecepcaoPage() {
 
   const enviarParaTriagem = async (id: string) => {
     try {
-      await fetch(`/api/pacientes/${id}`, {
+      const res = await fetch(`/api/pacientes/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'Aguardando Triagem' })
       });
+      if (!res.ok) throw new Error('Erro ao enviar paciente para triagem');
       fetchPacientes();
       if (resultadoBusca && resultadoBusca.id === id) {
         setResultadoBusca({ ...resultadoBusca, status: 'Aguardando Triagem' });
       }
       alert('Paciente enviado para triagem!');
     } catch (e) {
-      alert('Erro ao enviar para triagem');
+      alert(e instanceof Error ? e.message : 'Erro ao enviar para triagem');
     }
   };
 
@@ -149,14 +150,15 @@ export default function RecepcaoPage() {
   const darSaidaVisitante = async (id: string) => {
     if (!await confirm('Confirmar saída deste visitante?')) return;
     try {
-      await fetch(`/api/visitantes/${id}`, {
+      const res = await fetch(`/api/visitantes/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'SAIU' })
       });
+      if (!res.ok) throw new Error('Erro ao registrar saída.');
       fetchVisitantes();
     } catch (error) {
-      alert('Erro ao registrar saída.');
+      alert(error instanceof Error ? error.message : 'Erro ao registrar saída.');
     }
   };
 
@@ -495,7 +497,7 @@ export default function RecepcaoPage() {
                               <i className="las la-sign-out-alt"></i> Dar Saída
                             </button>
                           ) : (
-                            <span style={{ color: '#94a3b8', fontSize: '12px' }}>✓ Concluído</span>
+                            <span style={{ color: '#94a3b8', fontSize: '12px' }}> Concluído</span>
                           )}
                         </td>
                       </tr>

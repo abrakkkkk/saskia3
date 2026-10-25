@@ -1,11 +1,11 @@
 'use client';
-import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import './admin.css';
 
 interface Ticket {
-  id: number;
+  id: string;
   numero: string;
   solicitante: string;
   titulo: string;
@@ -17,8 +17,10 @@ interface Ticket {
 }
 
 export default function AdminPage() {
-  const [hospitalId, setHospitalId] = useState('hospital_001');
+  const { data: session, status: sessionStatus } = useSession();
+  const isAdmin = (session?.user as any)?.cargo === 'ADMIN';
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [erroTickets, setErroTickets] = useState('');
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,31 +42,29 @@ export default function AdminPage() {
   };
 
   const fetchTickets = () => {
-    try {
-      const u = JSON.stringify(getSessionUser());
-      const usuario = u ? JSON.parse(u) : null;
-      const hid = usuario?.hospitalId || usuario?.id || 'hospital_001';
-      setHospitalId(hid);
-
-      fetch('/api/tickets')
-        .then(r => r.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setTickets(data.map((t: any) => ({
-              id: t.id,
-              numero: `SUP-${t.numero || t.id.slice(0,6)}`,
-              titulo: t.titulo,
-              descricao: t.descricao,
-              status: mapStatus(t.status),
-              prioridade: mapPrioridade(t.prioridade),
-              data: t.createdAt,
-              solicitante: t.solicitante,
-              respostas: t.respostas || []
-            })));
-          }
-        })
-        .catch(console.error);
-    } catch(e) {}
+    if (!isAdmin) return;
+    fetch('/api/tickets')
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Não foi possível carregar os tickets.');
+        return data;
+      })
+      .then(data => {
+        if (!Array.isArray(data)) throw new Error('Resposta de tickets inválida.');
+        setTickets(data.map((t: any) => ({
+          id: t.id,
+          numero: `SUP-${t.numero || t.id.slice(0,6)}`,
+          titulo: t.titulo,
+          descricao: t.descricao,
+          status: mapStatus(t.status),
+          prioridade: mapPrioridade(t.prioridade),
+          data: t.createdAt,
+          solicitante: t.solicitante,
+          respostas: Array.isArray(t.respostas) ? t.respostas : []
+        })));
+        setErroTickets('');
+      })
+      .catch(error => setErroTickets(error instanceof Error ? error.message : 'Erro ao carregar tickets.'));
   };
 
   useEffect(() => {
@@ -73,7 +73,11 @@ export default function AdminPage() {
       fetchTickets();
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isAdmin]);
+
+  if (sessionStatus === 'authenticated' && !isAdmin) {
+    return <div className="conteudo"><div role="alert" className="alert-erro">Acesso restrito a administradores do hospital.</div></div>;
+  }
 
   const abrirModal = (ticket: Ticket) => {
     setTicketSelecionado(ticket);
@@ -101,7 +105,7 @@ export default function AdminPage() {
     ];
 
     try {
-      await fetch(`/api/tickets/${ticketSelecionado.id}`, {
+      const response = await fetch(`/api/tickets/${ticketSelecionado.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -109,16 +113,18 @@ export default function AdminPage() {
           respostas: novasRespostas 
         })
       });
-      fetchTickets();
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Erro ao enviar resposta.');
+      await fetchTickets();
       fecharModal();
       alert(`Resposta enviada! Ticket atualizado para: ${respostaStatus}`);
-    } catch {
-      alert('Erro ao enviar resposta.');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao enviar resposta.');
     }
   };
 
   const verTicket = (ticket: Ticket) => {
-    alert(`📋 TICKET ${ticket.numero}\n\nTítulo: ${ticket.titulo}\nDescrição: ${ticket.descricao}\nStatus: ${ticket.status}\nPrioridade: ${ticket.prioridade}\nSolicitante: ${ticket.solicitante}`);
+    alert(` TICKET ${ticket.numero}\n\nTítulo: ${ticket.titulo}\nDescrição: ${ticket.descricao}\nStatus: ${ticket.status}\nPrioridade: ${ticket.prioridade}\nSolicitante: ${ticket.solicitante}`);
   };
 
   const getPrioridadeClasse = (p: string) => {
@@ -127,8 +133,8 @@ export default function AdminPage() {
   };
 
   const getPrioridadeIcone = (p: string) => {
-    const i: any = { "Baixa":"🟢", "Média":"🟡", "Alta":"🔴", "Urgente":"⚠️" };
-    return i[p] || "📌";
+    const i: any = { "Baixa":"", "Média":"", "Alta":"", "Urgente":"" };
+    return i[p] || "";
   };
 
   const enviado = tickets.filter(t => t.status === "Enviado").length;
@@ -176,6 +182,7 @@ export default function AdminPage() {
       <div className="secao-tickets">
         <h2><i className="las la-headset"></i> Tickets de Suporte</h2>
         <p>Gerencie as solicitações de suporte dos usuários do sistema.</p>
+          {erroTickets && <div role="alert" className="alert-erro">{erroTickets}</div>}
 
         <div className="tickets-resumo">
           <div className="card-resumo-ticket pendente">

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export interface ChamadaData {
+  pacienteId?: string;
   nome: string;
   cpf: string;
   consultorio: string;
@@ -28,6 +29,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          pacienteId: dados.pacienteId,
           pacienteNome: dados.nome,
           cpf: dados.cpf,
           consultorio: dados.consultorio

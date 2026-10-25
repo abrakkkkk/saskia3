@@ -1,5 +1,4 @@
 'use client';
-import { getSessionUser } from '@/lib/session';
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -20,6 +19,8 @@ export default function PontoPage() {
   const [horaAtual, setHoraAtual] = useState('');
   const [dataAtual, setDataAtual] = useState('');
   const [tabAtiva, setTabAtiva] = useState('hoje');
+  const [erroApi, setErroApi] = useState('');
+  const [salvando, setSalvando] = useState(false);
 
   // Filtros Histórico
   const [busca, setBusca] = useState('');
@@ -39,24 +40,18 @@ export default function PontoPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const getHospitalId = () => {
-    const u = JSON.stringify(getSessionUser());
-    const usuario = session?.user || (u ? JSON.parse(u) : null);
-    return usuario?.hospitalId || 'hospital_001';
-  };
-
   const getNomeProfissional = () => {
-    const u = JSON.stringify(getSessionUser());
-    const usuario = session?.user || (u ? JSON.parse(u) : null);
-    return usuario?.name || usuario?.nome || 'Profissional Desconhecido';
+    const usuario = session?.user;
+    return usuario?.name || 'Profissional Desconhecido';
   };
 
-  const fetchRegistros = () => {
+  const fetchRegistros = async () => {
     try {
-      fetch('/api/pontoregistro')
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
+      const res = await fetch('/api/pontoregistro');
+      if (!res.ok) throw new Error('Não foi possível carregar os registros de ponto.');
+      const data = await res.json();
+      setErroApi('');
+      if (Array.isArray(data)) {
             // Map db object to UI model
             const mapped = data.map(r => {
               const dt = new Date(r.dataHora);
@@ -68,46 +63,35 @@ export default function PontoPage() {
                 timestamp: dt.getTime()
               }
             });
-            setRegistros(mapped);
-          }
-        });
-    } catch(e) {}
+      setRegistros(mapped);
+      } else {
+        setErroApi('A resposta do servidor de ponto é inválida.');
+      }
+    } catch {
+      setErroApi('Não foi possível carregar os registros de ponto. Tente novamente.');
+    }
   };
 
-  const registrar = (tipo: string) => {
-    const profissional = getNomeProfissional();
-    
-    const agora = new Date();
-    const novoRegistro: RegistroPonto = {
-      data: agora.toLocaleDateString('pt-BR'),
-      hora: agora.toLocaleTimeString('pt-BR'),
-      tipo,
-      profissional,
-      timestamp: agora.getTime()
-    };
-
-    const novosRegistros = [novoRegistro, ...registros];
-    setRegistros(novosRegistros);
-
-    fetch('/api/pontoregistro', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tipo
-      })
-    })
-    .then(res => {
-      if (res.ok) fetchRegistros();
-    })
-    .catch(console.error);
-
-    const msgs: Record<string, string> = {
-      'ENTRADA': '✅ ENTRADA REGISTRADA! 💪',
-      'SAÍDA': '👋 SAÍDA REGISTRADA! 🏠',
-      'INÍCIO INTERVALO': '☕ INTERVALO INICIADO!',
-      'FIM INTERVALO': '🔄 INTERVALO FINALIZADO!'
-    };
-    alert(msgs[tipo] || 'Registro efetuado!');
+  const registrar = async (tipo: string) => {
+    setSalvando(true);
+    setErroApi('');
+    try {
+      const res = await fetch('/api/pontoregistro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo })
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(payload?.error || 'O servidor não confirmou o registro de ponto.');
+      }
+      await fetchRegistros();
+      alert('Registro de ponto confirmado pelo servidor.');
+    } catch (error) {
+      setErroApi(error instanceof Error ? error.message : 'Falha ao registrar o ponto.');
+    } finally {
+      setSalvando(false);
+    }
   };
 
   // Status computation
@@ -216,6 +200,7 @@ export default function PontoPage() {
   };
 
   return (
+    <>    <div role="status" aria-live="polite">{erroApi}</div>
     <div className="conteudo">
       <div className="ponto-container">
         <div className="banner-ponto">
@@ -235,16 +220,16 @@ export default function PontoPage() {
           </div>
           
           <div className="ponto-botoes">
-            <button className="btn-ponto-acao btn-entrada" disabled={btnEntradaDisabled} onClick={() => registrar('ENTRADA')}>
+            <button className="btn-ponto-acao btn-entrada" disabled={btnEntradaDisabled || salvando} onClick={() => registrar('ENTRADA')}>
               <i className="las la-sign-in-alt"></i><span>ENTRADA</span>
             </button>
-            <button className="btn-ponto-acao btn-inicio-intervalo" disabled={btnInicioIntervaloDisabled} onClick={() => registrar('INÍCIO INTERVALO')}>
+            <button className="btn-ponto-acao btn-inicio-intervalo" disabled={btnInicioIntervaloDisabled || salvando} onClick={() => registrar('INÍCIO INTERVALO')}>
               <i className="las la-coffee"></i><span>INTERVALO</span>
             </button>
-            <button className="btn-ponto-acao btn-fim-intervalo" disabled={btnFimIntervaloDisabled} onClick={() => registrar('FIM INTERVALO')}>
+            <button className="btn-ponto-acao btn-fim-intervalo" disabled={btnFimIntervaloDisabled || salvando} onClick={() => registrar('FIM INTERVALO')}>
               <i className="las la-undo-alt"></i><span>FIM INTERVALO</span>
             </button>
-            <button className="btn-ponto-acao btn-saida" disabled={btnSaidaDisabled} onClick={() => registrar('SAÍDA')}>
+            <button className="btn-ponto-acao btn-saida" disabled={btnSaidaDisabled || salvando} onClick={() => registrar('SAÍDA')}>
               <i className="las la-sign-out-alt"></i><span>SAÍDA</span>
             </button>
           </div>
@@ -301,7 +286,7 @@ export default function PontoPage() {
                 ) : (
                   [...registrosHoje].reverse().map((r, i) => {
                     const icones: Record<string, string> = {
-                      'ENTRADA': '🟢', 'SAÍDA': '🔴', 'INÍCIO INTERVALO': '🟡', 'FIM INTERVALO': '🔵'
+                      'ENTRADA': '', 'SAÍDA': '', 'INÍCIO INTERVALO': '', 'FIM INTERVALO': ''
                     };
                     return (
                       <tr key={i}>
@@ -378,5 +363,6 @@ export default function PontoPage() {
 
       </div>
     </div>
+    </>
   );
 }

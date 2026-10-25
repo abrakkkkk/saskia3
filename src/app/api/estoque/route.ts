@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { isRecord } from '@/lib/request-validation'
 
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json([], { status: 401 })
+    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const { searchParams } = new URL(request.url)
     const categoria = searchParams.get('categoria')
 
     const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
     const items = await prisma.estoqueItem.findMany({
       where: { 
         hospitalId,
@@ -22,33 +24,54 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(items)
   } catch (error) {
     console.error('Erro ao buscar estoque:', error)
-    return NextResponse.json([])
+    return NextResponse.json({ error: 'Erro ao buscar estoque' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const hospitalId = session.user.hospitalId
-    const body = await request.json()
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    }
 
-    if (!body.nome || !body.categoria || body.quantidade === undefined) {
+    if (!isRecord(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    const quantidade = typeof body.quantidade === 'number' ? body.quantidade : Number(body.quantidade)
+    const minimo = body.minimo === undefined || body.minimo === null || body.minimo === '' ? 0 : Number(body.minimo)
+    if (
+      typeof body.nome !== 'string' || !body.nome.trim() || body.nome.length > 200 ||
+      !['FARMACIA', 'ALMOXARIFADO'].includes(String(body.categoria)) ||
+      !Number.isInteger(quantidade) || quantidade < 0 || quantidade > 2147483647 ||
+      !Number.isInteger(minimo) || minimo < 0 || minimo > 2147483647 ||
+      (body.unidade !== undefined && body.unidade !== null && (typeof body.unidade !== 'string' || body.unidade.length > 30)) ||
+      (body.lote !== undefined && body.lote !== null && (typeof body.lote !== 'string' || body.lote.length > 100)) ||
+      (body.fornecedor !== undefined && body.fornecedor !== null && (typeof body.fornecedor !== 'string' || body.fornecedor.length > 200))
+    ) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
+    }
+    const validade = body.validade ? new Date(String(body.validade)) : null
+    if (body.validade && (!validade || Number.isNaN(validade.getTime()))) {
+      return NextResponse.json({ error: 'Data de validade inválida' }, { status: 400 })
     }
 
     const item = await prisma.estoqueItem.create({
       data: {
         hospitalId,
-        categoria: body.categoria, // 'FARMACIA' ou 'ALMOXARIFADO'
-        nome: body.nome,
-        quantidade: Number(body.quantidade),
-        unidade: body.unidade || 'un',
-        minimo: body.minimo ? Number(body.minimo) : 0,
-        lote: body.lote || null,
-        validade: body.validade ? new Date(body.validade) : null,
-        fornecedor: body.fornecedor || null
+        categoria: body.categoria as 'FARMACIA' | 'ALMOXARIFADO',
+        nome: body.nome.trim(),
+        quantidade,
+        unidade: typeof body.unidade === 'string' && body.unidade.trim() ? body.unidade.trim() : 'un',
+        minimo,
+        lote: typeof body.lote === 'string' && body.lote.trim() ? body.lote.trim() : null,
+        validade,
+        fornecedor: typeof body.fornecedor === 'string' && body.fornecedor.trim() ? body.fornecedor.trim() : null
       }
     })
 

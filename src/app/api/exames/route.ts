@@ -38,6 +38,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }
 
+    const paciente = await prisma.paciente.findFirst({ where: { id: body.pacienteId, hospitalId }, select: { id: true } })
+    if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
+
     const exame = await prisma.exame.create({
       data: {
         hospitalId,

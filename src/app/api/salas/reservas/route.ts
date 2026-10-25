@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
     const session = await auth()
     if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    const hospitalId = session.user.hospitalId || 'hospital_001'
+    const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
 
     const reservas = await prisma.reservaSala.findMany({
       where: { hospitalId },
@@ -25,11 +26,17 @@ export async function POST(request: NextRequest) {
     const session = await auth()
     if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    const hospitalId = session.user.hospitalId || 'hospital_001'
+    const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
     const body = await request.json()
 
-    // Create the reservation and conditionally update the room status if it's currently starting
     const reserva = await prisma.$transaction(async (tx) => {
+      const sala = await tx.sala.findFirst({
+        where: { id: body.salaId, hospitalId },
+        select: { id: true },
+      })
+      if (!sala) return null
+
       const nova = await tx.reservaSala.create({
         data: {
           hospitalId,
@@ -43,14 +50,13 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      // Simple logic: if the reservation starts now, mark room as ocupada
       const agora = new Date()
       const hojeStr = agora.toISOString().split('T')[0]
       if (body.data === hojeStr) {
         const horaAtual = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
         if (horaAtual >= body.horaInicio && horaAtual <= body.horaFim) {
-          await tx.sala.update({
-            where: { id: body.salaId },
+          await tx.sala.updateMany({
+            where: { id: sala.id, hospitalId },
             data: { status: 'OCUPADO' }
           })
         }
@@ -58,6 +64,8 @@ export async function POST(request: NextRequest) {
 
       return nova;
     })
+
+    if (!reserva) return NextResponse.json({ error: 'Sala não encontrada' }, { status: 404 })
 
     return NextResponse.json(reserva, { status: 201 })
   } catch (error: any) {

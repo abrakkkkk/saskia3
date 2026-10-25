@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { isRecord } from '@/lib/request-validation';
 
 export async function GET() {
   try {
@@ -56,11 +57,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sessão inválida' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { tipo, localizacao } = body;
+    let body: unknown;
+    try { body = await request.json(); } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }); }
+    if (!isRecord(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
+    const tipo = body.tipo;
+    const localizacao = body.localizacao;
 
     const tiposValidos = ['ENTRADA', 'SAÍDA', 'SAIDA', 'ALMOÇO - INÍCIO', 'ALMOCO - INICIO', 'ALMOÇO - RETORNO', 'ALMOCO - RETORNO', 'PAUSA - INÍCIO', 'PAUSA - RETORNO'];
-    if (!tipo || !tiposValidos.includes(tipo.toUpperCase())) {
+    if (typeof tipo !== 'string' || !tiposValidos.includes(tipo.toUpperCase()) || (localizacao !== undefined && localizacao !== null && (typeof localizacao !== 'string' || localizacao.length > 200))) {
       return NextResponse.json({ error: 'Tipo de ponto inválido' }, { status: 400 });
     }
 
@@ -73,7 +77,7 @@ export async function POST(request: NextRequest) {
         usuarioId,
         tipo: tipo.toUpperCase(),
         dataHora: agora,
-        localizacao: localizacao || null
+        localizacao: typeof localizacao === 'string' && localizacao.trim() ? localizacao.trim() : null
       },
       include: {
         usuario: {

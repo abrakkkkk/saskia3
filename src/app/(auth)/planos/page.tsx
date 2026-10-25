@@ -6,25 +6,28 @@ export default function PlanosPage() {
     <div className="conteudo">
       <div className="container-planos">
 
+        <div role="note" className="card" style={{ padding: 16, marginBottom: 16 }}>
+          Valores e condições abaixo são apenas referências informativas e não configuram plano contratado, proposta comercial vigente ou cobrança do hospital.
+        </div>
         <div className="banner-planos">
-          <div className="icone-banner">💰</div>
+          <div className="icone-banner"></div>
           <h1>Planos e Valores</h1>
           <p>Soluções sob medida para cada porte de instituição. Da prefeitura de uma pequena cidade à grande rede hospitalar privada.</p>
         </div>
 
         <div className="cards-destaque">
           <div className="card-destaque anual">
-            <div className="icone-destaque">💎</div>
+            <div className="icone-destaque"></div>
             <h4>Plano Anual com Desconto</h4>
             <p>Economize o equivalente a <strong>2 meses</strong> de mensalidade contratando o plano anual. Mesmo suporte, menor custo.</p>
           </div>
           <div className="card-destaque suporte">
-            <div className="icone-destaque">🆘</div>
+            <div className="icone-destaque"></div>
             <h4>Suporte 24/7</h4>
             <p>Adicione <strong>20% a 30%</strong> sobre a mensalidade para suporte VIP com atendimento prioritário por telefone e WhatsApp.</p>
           </div>
           <div className="card-destaque implementacao">
-            <div className="icone-destaque">🔧</div>
+            <div className="icone-destaque"></div>
             <h4>Taxa de Implementação</h4>
             <p>Cobrada uma única vez. Inclui parametrização do sistema, treinamento da equipe e migração de dados.</p>
           </div>

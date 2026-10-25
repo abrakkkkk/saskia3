@@ -26,22 +26,22 @@ interface Reserva {
 }
 
 const tiposSala: any = {
-  consultorio: "🏥 Consultório",
-  cirurgica: "🔪 Sala Cirúrgica",
-  exame: "🔬 Sala de Exames",
-  reuniao: "💼 Sala de Reunião",
-  triagem: "🩺 Sala de Triagem",
-  observacao: "🛏️ Sala de Observação",
-  procedimento: "💉 Sala de Procedimentos",
-  aula: "📚 Sala de Aula",
-  outro: "📋 Outro"
+  consultorio: " Consultório",
+  cirurgica: " Sala Cirúrgica",
+  exame: " Sala de Exames",
+  reuniao: " Sala de Reunião",
+  triagem: " Sala de Triagem",
+  observacao: " Sala de Observação",
+  procedimento: " Sala de Procedimentos",
+  aula: " Sala de Aula",
+  outro: " Outro"
 };
 
 const statusLabel: any = {
-  LIVRE: "🟢 Livre",
-  OCUPADO: "🔴 Em Uso",
-  RESERVADO: "🟡 Reservada",
-  MANUTENCAO: "⚫ Manutenção"
+  LIVRE: " Livre",
+  OCUPADO: " Em Uso",
+  RESERVADO: " Reservada",
+  MANUTENCAO: " Manutenção"
 };
 
 export default function GestaoSalasPage() {
@@ -89,7 +89,7 @@ export default function GestaoSalasPage() {
   }, []);
 
   const cadastrarSala = async () => {
-    if (!formSala.nome) { alert("⚠️ Digite o nome da sala!"); return; }
+    if (!formSala.nome) { alert(" Digite o nome da sala!"); return; }
     setIsSaving(true);
     try {
       const res = await fetch('/api/salas', {
@@ -110,7 +110,7 @@ export default function GestaoSalasPage() {
 
       setFormSala({ nome: '', tipo: 'consultorio', setor: 'Consultórios', andar: '', capacidade: 1, equipamentos: '', obs: '' });
       setActiveTab('mapa');
-      alert("✅ Sala cadastrada com sucesso!");
+      alert(" Sala cadastrada com sucesso!");
       carregarDados();
     } catch (e: any) {
       alert(e.message);
@@ -151,7 +151,7 @@ export default function GestaoSalasPage() {
 
   const confirmarReserva = async () => {
     if(!formReserva.salaId || !formReserva.profissional || !formReserva.data || !formReserva.horaInicio || !formReserva.horaFim){
-      alert("⚠️ Preencha todos os campos obrigatórios (*)!");
+      alert(" Preencha todos os campos obrigatórios (*)!");
       return;
     }
     setIsSaving(true);
@@ -172,7 +172,7 @@ export default function GestaoSalasPage() {
       if (!res.ok) throw new Error("Erro ao criar reserva");
 
       setIsModalOpen(false);
-      alert("✅ Reserva confirmada com sucesso!");
+      alert(" Reserva confirmada com sucesso!");
       carregarDados();
     } catch (e: any) {
       alert(e.message);
@@ -190,7 +190,7 @@ export default function GestaoSalasPage() {
       });
 
       if (!res.ok) throw new Error("Erro ao liberar sala");
-      alert("✅ Sala liberada com sucesso!");
+      alert(" Sala liberada com sucesso!");
       carregarDados();
     } catch (e: any) {
       alert(e.message);
@@ -205,7 +205,7 @@ export default function GestaoSalasPage() {
         body: JSON.stringify({ status })
       });
       if (!res.ok) throw new Error("Erro ao atualizar status");
-      alert(`✅ Status alterado para: ${statusLabel[status]}`);
+      alert(` Status alterado para: ${statusLabel[status]}`);
       carregarDados();
     } catch (e: any) {
       alert(e.message);
@@ -253,18 +253,18 @@ export default function GestaoSalasPage() {
         </div>
 
         <div className="stats-grid">
-          <div className="stat-card livre"><div className="stat-icon"><i className="las la-check-circle"></i></div><div className="stat-valor">{stats.livres}</div><div className="stat-label">🟢 Livres</div></div>
-          <div className="stat-card ocupado"><div className="stat-icon"><i className="las la-door-closed"></i></div><div className="stat-valor">{stats.ocupadas}</div><div className="stat-label">🔴 Em Uso</div></div>
-          <div className="stat-card reservado"><div className="stat-icon"><i className="las la-clock"></i></div><div className="stat-valor">{stats.reservadas}</div><div className="stat-label">🟡 Reservadas</div></div>
-          <div className="stat-card manutencao"><div className="stat-icon"><i className="las la-tools"></i></div><div className="stat-valor">{stats.manutencao}</div><div className="stat-label">⚫ Manutenção</div></div>
+          <div className="stat-card livre"><div className="stat-icon"><i className="las la-check-circle"></i></div><div className="stat-valor">{stats.livres}</div><div className="stat-label"> Livres</div></div>
+          <div className="stat-card ocupado"><div className="stat-icon"><i className="las la-door-closed"></i></div><div className="stat-valor">{stats.ocupadas}</div><div className="stat-label"> Em Uso</div></div>
+          <div className="stat-card reservado"><div className="stat-icon"><i className="las la-clock"></i></div><div className="stat-valor">{stats.reservadas}</div><div className="stat-label"> Reservadas</div></div>
+          <div className="stat-card manutencao"><div className="stat-icon"><i className="las la-tools"></i></div><div className="stat-valor">{stats.manutencao}</div><div className="stat-label"> Manutenção</div></div>
           <div className="stat-card"><div className="stat-icon"><i className="las la-door-open"></i></div><div className="stat-valor">{stats.total}</div><div className="stat-label">Total de Salas</div></div>
         </div>
 
         <div className="legenda-salas">
-          <div className="legenda-item"><div className="legenda-cor" style={{background:'#22c55e'}}></div> 🟢 Livre - Disponível para uso</div>
-          <div className="legenda-item"><div className="legenda-cor" style={{background:'#f59e0b'}}></div> 🟡 Reservada - Agendada para horário futuro</div>
-          <div className="legenda-item"><div className="legenda-cor" style={{background:'#dc2626'}}></div> 🔴 Em Uso - Ocupada neste momento</div>
-          <div className="legenda-item"><div className="legenda-cor" style={{background:'#6b7280'}}></div> ⚫ Manutenção - Indisponível temporariamente</div>
+          <div className="legenda-item"><div className="legenda-cor" style={{background:'#22c55e'}}></div>  Livre - Disponível para uso</div>
+          <div className="legenda-item"><div className="legenda-cor" style={{background:'#f59e0b'}}></div>  Reservada - Agendada para horário futuro</div>
+          <div className="legenda-item"><div className="legenda-cor" style={{background:'#dc2626'}}></div>  Em Uso - Ocupada neste momento</div>
+          <div className="legenda-item"><div className="legenda-cor" style={{background:'#6b7280'}}></div>  Manutenção - Indisponível temporariamente</div>
         </div>
 
         <div className="tabs-salas">
@@ -280,10 +280,10 @@ export default function GestaoSalasPage() {
               <input type="text" placeholder="Buscar sala por nome, tipo ou setor..." value={buscarSala} onChange={e => setBuscarSala(e.target.value)} />
               <select value={filtroStatusSala} onChange={e => setFiltroStatusSala(e.target.value)}>
                 <option value="todos">Todos os Status</option>
-                <option value="LIVRE">🟢 Livres</option>
-                <option value="RESERVADO">🟡 Reservadas</option>
-                <option value="OCUPADO">🔴 Em Uso</option>
-                <option value="MANUTENCAO">⚫ Manutenção</option>
+                <option value="LIVRE"> Livres</option>
+                <option value="RESERVADO"> Reservadas</option>
+                <option value="OCUPADO"> Em Uso</option>
+                <option value="MANUTENCAO"> Manutenção</option>
               </select>
             </div>
             <div className="mapa-salas">
@@ -309,7 +309,7 @@ export default function GestaoSalasPage() {
                           tempoRestante = 'Encerrando agora...';
                           classeUrgente = 'urgente';
                       } else {
-                          tempoRestante = '⏰ Tempo esgotado! Liberando...';
+                          tempoRestante = 'Prazo da reserva encerrado';
                           classeUrgente = 'urgente';
                       }
                   }
@@ -365,11 +365,11 @@ export default function GestaoSalasPage() {
             <div className="form-grid">
               <div className="form-grupo"><label>Nome da Sala *</label><input type="text" placeholder="Ex: Consultório 3" value={formSala.nome} onChange={e => setFormSala({...formSala, nome: e.target.value})} /></div>
               <div className="form-grupo"><label>Tipo *</label><select value={formSala.tipo} onChange={e => setFormSala({...formSala, tipo: e.target.value})}>
-                <option value="consultorio">🏥 Consultório</option><option value="cirurgica">🔪 Sala Cirúrgica</option>
-                <option value="exame">🔬 Sala de Exames</option><option value="reuniao">💼 Sala de Reunião</option>
-                <option value="triagem">🩺 Sala de Triagem</option><option value="observacao">🛏️ Sala de Observação</option>
-                <option value="procedimento">💉 Sala de Procedimentos</option><option value="aula">📚 Sala de Aula</option>
-                <option value="outro">📋 Outro</option>
+                <option value="consultorio"> Consultório</option><option value="cirurgica"> Sala Cirúrgica</option>
+                <option value="exame"> Sala de Exames</option><option value="reuniao"> Sala de Reunião</option>
+                <option value="triagem"> Sala de Triagem</option><option value="observacao"> Sala de Observação</option>
+                <option value="procedimento"> Sala de Procedimentos</option><option value="aula"> Sala de Aula</option>
+                <option value="outro"> Outro</option>
               </select></div>
               <div className="form-grupo"><label>Setor *</label><select value={formSala.setor} onChange={e => setFormSala({...formSala, setor: e.target.value})}>
                 <option>Consultórios</option><option>Centro Cirúrgico</option><option>Emergência</option>
@@ -397,7 +397,7 @@ export default function GestaoSalasPage() {
                   reservasFiltradas.filter(r => r.status === 'ATIVA' || r.status === 'RESERVADA').map(r => {
                     const sala = salas.find(s => s.id === r.salaId);
                     const stB = r.status === 'ATIVA' ? 'badge-ocupado' : 'badge-reservado';
-                    const stL = r.status === 'ATIVA' ? '🔴 Em Uso' : '🟡 Reservada';
+                    const stL = r.status === 'ATIVA' ? ' Em Uso' : ' Reservada';
                     return (
                       <tr key={r.id}>
                         <td><strong>{sala ? sala.nome : '—'}</strong></td>
@@ -431,7 +431,7 @@ export default function GestaoSalasPage() {
                 reservas.map(r => {
                   const sala = salas.find(s => s.id === r.salaId);
                   const stB = r.status === 'ATIVA' ? 'badge-ocupado' : r.status === 'RESERVADA' ? 'badge-reservado' : 'badge-livre';
-                  const stL = r.status === 'ATIVA' ? '🔴 Em Uso' : r.status === 'RESERVADA' ? '🟡 Reservada' : (r.status === 'FINALIZADA' ? '✅ Finalizada' : '✖️ Cancelada');
+                  const stL = r.status === 'ATIVA' ? ' Em Uso' : r.status === 'RESERVADA' ? ' Reservada' : (r.status === 'FINALIZADA' ? ' Finalizada' : ' Cancelada');
                   return (
                     <tr key={r.id}>
                         <td>{new Date(r.data+'T00:00:00').toLocaleDateString('pt-BR')}</td>

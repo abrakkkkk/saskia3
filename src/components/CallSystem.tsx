@@ -26,7 +26,7 @@ export default function CallSystem() {
         CPF: {chamadaAtiva.cpf || 'N/I'} | Status: {chamadaAtiva.status}
       </div>
       <div style={{ fontSize: '18px', marginTop: '10px', color: '#fefce8' }}>
-        📍 Dirija-se ao {chamadaAtiva.consultorio}
+        <MapPin size={14} aria-hidden="true" /> Dirija-se ao {chamadaAtiva.consultorio}
       </div>
       <button 
         onClick={fecharChamada} 
@@ -41,3 +41,4 @@ export default function CallSystem() {
     </div>
   );
 }
+import { MapPin } from 'lucide-react'

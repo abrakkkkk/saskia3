@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { isRecord } from '@/lib/request-validation';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -33,25 +34,29 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Não encontrado' }, { status: 404 });
     }
 
-    const body = await request.json();
-    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    let body: unknown;
+    try { body = await request.json(); } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }); }
+    if (!isRecord(body)) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     }
     const nome = typeof body.nome === 'string' ? body.nome.trim() : '';
-    if (!nome) return NextResponse.json({ error: 'Nome da instituição é obrigatório' }, { status: 400 });
+    if (!nome || nome.length > 160) return NextResponse.json({ error: 'Nome da instituição inválido' }, { status: 400 });
     const cnpj = typeof body.cnpj === 'string' ? body.cnpj.trim() : '';
-    if (!cnpj) return NextResponse.json({ error: 'CNPJ da instituição é obrigatório' }, { status: 400 });
-    const optionalString = (value: unknown) =>
-      typeof value === 'string' ? value.trim() || null : null;
+    if (!cnpj || cnpj.length > 20) return NextResponse.json({ error: 'CNPJ da instituição inválido' }, { status: 400 });
+    const optionalString = (value: unknown, max: number) => typeof value === 'string' ? (value.trim().length <= max ? value.trim() || null : undefined) : null;
+    const endereco = optionalString(body.endereco, 300);
+    const telefone = optionalString(body.telefone, 40);
+    const logo = optionalString(body.logoUrl, 2048);
+    if (endereco === undefined || telefone === undefined || logo === undefined) return NextResponse.json({ error: 'Dados da instituição excedem os limites permitidos' }, { status: 400 });
 
     const hospital = await prisma.hospital.update({
       where: { id: session.user.hospitalId },
       data: {
         nome,
         cnpj,
-        endereco: optionalString(body.endereco),
-        telefone: optionalString(body.telefone),
-        logo: optionalString(body.logoUrl),
+        endereco,
+        telefone,
+        logo,
       }
     });
 

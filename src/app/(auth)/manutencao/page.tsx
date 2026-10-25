@@ -51,7 +51,7 @@ export default function ManutencaoPage() {
 
   const criarOS = async () => {
     if (!form.equipamento || !form.solicitante) {
-      alert("⚠️ Preencha o equipamento/local e o solicitante!");
+      alert(" Preencha o equipamento/local e o solicitante!");
       return;
     }
 
@@ -65,7 +65,7 @@ export default function ManutencaoPage() {
       if (!res.ok) throw new Error('Erro ao criar OS');
 
       setForm(prev => ({ ...prev, equipamento: '', descricao: '' }));
-      alert(`✅ OS criada com sucesso!`);
+      alert(` OS criada com sucesso!`);
       setTabAtiva('lista');
       carregarOrdens();
     } catch (error: any) {

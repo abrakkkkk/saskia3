@@ -35,7 +35,6 @@ export default function AlmoxarifadoPage() {
   const [itens, setItens] = useState<EstoqueItem[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoEstoque[]>([]);
   
-  const [categoriaFiltro, setCategoriaFiltro] = useState('todos');
   const [buscarItem, setBuscarItem] = useState('');
   const [buscarMov, setBuscarMov] = useState('');
   const [filtroTipoMov, setFiltroTipoMov] = useState('todos');
@@ -129,7 +128,7 @@ export default function AlmoxarifadoPage() {
 
       setModalEntrada(false);
       setEntradaItemId(''); setEntradaQtd(1); setEntradaFornecedor('');
-      alert("✅ Entrada registrada!");
+      alert(" Entrada registrada!");
       carregarDados();
     } catch (e: any) {
       alert(e.message);
@@ -164,7 +163,7 @@ export default function AlmoxarifadoPage() {
 
       setModalSaida(false);
       setSaidaItemId(''); setSaidaQtd(1); setSaidaSetor('Farmácia');
-      alert("📦 Saída registrada!");
+      alert(" Saída registrada!");
       carregarDados();
     } catch (e: any) {
       alert(e.message);
@@ -218,7 +217,7 @@ export default function AlmoxarifadoPage() {
 
       setModalNovoItem(false);
       setNovoNome(''); setNovoCodigo(''); setNovoQtd(0); setNovoMinimo(10);
-      alert("✅ Item cadastrado!");
+      alert(" Item cadastrado!");
       carregarDados();
     } catch (e: any) {
       alert(e.message);
@@ -236,20 +235,10 @@ export default function AlmoxarifadoPage() {
     entradas: entradasHoje.length,
     saidas: saidasHoje.length,
     baixos: itens.filter(i => i.quantidade <= i.minimo).length,
-    catTodos: itens.length,
-    // O mock antigo contava baseado no campo categoria. Como agora ALMOXARIFADO é a categoria master no banco, 
-    // a sub-categoria estava no mock. Aqui vamos fazer um fallback ou apenas mostrar tudo.
-    catHospitalar: itens.length,
-    catEquipamentos: 0,
-    catHigiene: 0,
-    catEPIs: 0,
-    catEscritorio: 0
+    catTodos: itens.length
   };
 
   let listaEstoque = itens;
-  if (categoriaFiltro !== 'todos') {
-    // Para simplificar a refatoração, vamos ignorar a subcategoria visual se não estiver usando o observacao para guardar
-  }
   if (buscarItem) {
     const t = buscarItem.toLowerCase();
     listaEstoque = listaEstoque.filter(i => i.nome.toLowerCase().includes(t) || (i.codigo || '').toLowerCase().includes(t));

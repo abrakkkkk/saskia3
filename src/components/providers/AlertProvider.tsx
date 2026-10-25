@@ -33,11 +33,11 @@ export default function AlertProvider() {
       let type = 'info';
       
       // Detecção de tipo baseada no conteúdo da string original
-      if (msgStr.includes('✅') || msgStr.toLowerCase().includes('sucesso')) {
+      if (msgStr.toLowerCase().includes('sucesso')) {
         type = 'success';
-      } else if (msgStr.includes('⚠️') || msgStr.toLowerCase().includes('atenção') || msgStr.toLowerCase().includes('preencha')) {
+      } else if (msgStr.toLowerCase().includes('atenção') || msgStr.toLowerCase().includes('preencha')) {
         type = 'warning';
-      } else if (msgStr.includes('🚨') || msgStr.toLowerCase().includes('erro') || msgStr.toLowerCase().includes('falha')) {
+      } else if (msgStr.toLowerCase().includes('erro') || msgStr.toLowerCase().includes('falha')) {
         type = 'error';
       }
 

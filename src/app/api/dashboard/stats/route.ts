@@ -5,9 +5,10 @@ import { prisma } from '@/lib/db'
 export async function GET() {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json({}, { status: 401 })
+    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
 
     // Resumo Geral
     const totalPacientes = await prisma.paciente.count({ where: { hospitalId } })
@@ -90,10 +91,6 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Error fetching dashboard stats:', error)
-    return NextResponse.json({
-      pacientesAtendidos: 0, aguardando: 0, ocupadosVermelha: 0, ocupadosAmarela: 0,
-      salasCirurgicas: 0, leitosUti: 0, altas: 0, evasoes: 0, transferencias: 0,
-      mediaEtaria: 0, totalPacientes: 0, obitos: 0
-    })
+    return NextResponse.json({ error: 'Não foi possível carregar os indicadores do hospital' }, { status: 500 })
   }
 }

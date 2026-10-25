@@ -245,11 +245,11 @@ export default function SuportePage() {
 
   const getPrioridadeIcon = (prio: string) => {
     switch (prio) {
-      case 'Baixa': return '🟢';
-      case 'Média': return '🟡';
-      case 'Alta': return '🔴';
-      case 'Urgente': return '⚠️';
-      default: return '📌';
+      case 'Baixa': return '';
+      case 'Média': return '';
+      case 'Alta': return '';
+      case 'Urgente': return '';
+      default: return '';
     }
   };
 
@@ -381,10 +381,10 @@ export default function SuportePage() {
                   onChange={e => setNovaPrioridade(e.target.value as Ticket['prioridade'])}
                   className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm bg-white"
                 >
-                  <option value="Baixa">🟢 Baixa</option>
-                  <option value="Média">🟡 Média</option>
-                  <option value="Alta">🔴 Alta</option>
-                  <option value="Urgente">⚠️ Urgente</option>
+                  <option value="Baixa"> Baixa</option>
+                  <option value="Média"> Média</option>
+                  <option value="Alta"> Alta</option>
+                  <option value="Urgente"> Urgente</option>
                 </select>
               </div>
 

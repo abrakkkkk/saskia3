@@ -145,7 +145,7 @@ export default function DashboardPage() {
         </div>
 
         {(isModuleActive('btn_panico') || isModuleActive('btn_pcr')) && (
-          <EmergencyButtons userName={user?.name || ''} />
+          <EmergencyButtons />
         )}
 
         <div className="perfil-badge">

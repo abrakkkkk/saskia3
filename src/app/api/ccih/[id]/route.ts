@@ -21,8 +21,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const novosDados = typeof body.dados === 'object' && body.dados !== null ? body.dados : {};
     const dadosMesclados = { ...dadosAntigos, ...novosDados };
 
-    const atualizado = await prisma.ccihRegistro.update({
-      where: { id },
+    const atualizado = await prisma.ccihRegistro.updateMany({
+      where: { id, hospitalId },
       data: {
         status: body.status !== undefined ? body.status : registro.status,
         dados: dadosMesclados,
@@ -31,7 +31,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     });
 
-    return NextResponse.json(atualizado);
+    if (atualizado.count === 0) return NextResponse.json({ error: 'Registro não encontrado' }, { status: 404 });
+    return NextResponse.json(await prisma.ccihRegistro.findFirst({ where: { id, hospitalId } }));
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -49,7 +50,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     });
     if (!registro) return NextResponse.json({ error: 'Registro não encontrado' }, { status: 404 });
 
-    await prisma.ccihRegistro.delete({ where: { id } });
+    const removido = await prisma.ccihRegistro.deleteMany({ where: { id, hospitalId } });
+    if (removido.count === 0) return NextResponse.json({ error: 'Registro não encontrado' }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -28,16 +28,22 @@ export async function POST(request: NextRequest) {
     const hospitalId = session.user.hospitalId
     const body = await request.json()
 
-    if (!body.pacienteNome || !body.consultorio) {
+    if (!body.pacienteId || !body.consultorio) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }
+
+    const paciente = await prisma.paciente.findFirst({
+      where: { id: body.pacienteId, hospitalId },
+      select: { id: true, nome: true, cpf: true },
+    })
+    if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
 
     const chamada = await prisma.chamada.create({
       data: {
         hospitalId,
-        pacienteId: body.pacienteId || null,
-        pacienteNome: body.pacienteNome,
-        cpf: body.cpf || null,
+        pacienteId: paciente.id,
+        pacienteNome: paciente.nome,
+        cpf: paciente.cpf,
         consultorio: body.consultorio,
         status: 'ATIVA'
       }
