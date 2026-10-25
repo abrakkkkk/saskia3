@@ -40,6 +40,7 @@
   "exclude": [
     "node_modules",
     "prisma/seed.ts",
-    "prisma.config.ts"
+    "prisma.config.ts",
+    "Audit-Saskia-2026-10-23"
   ]
 }

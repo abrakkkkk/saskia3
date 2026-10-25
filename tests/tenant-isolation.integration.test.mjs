@@ -35,6 +35,7 @@ function request(path, options = {}) {
 before(async () => {
   if (!baseUrl || !databaseUrl) return;
   prisma = new PrismaClient({ adapter: new PrismaPg(new Pool({ connectionString: databaseUrl })) });
+  await prisma.usuario.update({ where: { email: 'audit.admin@example.test' }, data: { cargo: 'MEDICO' } });
   await prisma.sala.update({ where: { id: 'audit-room-b' }, data: { status: 'RESERVADO' } });
   await prisma.reservaSala.update({ where: { id: 'audit-reservation-b' }, data: { status: 'ATIVA' } });
   await prisma.transportePaciente.update({ where: { id: 'audit-transport-b' }, data: { status: 'Pendente' } });

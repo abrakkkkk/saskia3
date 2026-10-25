@@ -1,0 +1,533 @@
+[
+  {
+    "coverage_id": "src%2Fapp%2Fapi%2F%2A%2A%2Froute.ts::src%2Flib%2Fauth.ts%23per-route-auth::src%2Fapp%2Fapi::ATTACK-CLASSES.md%23Access%20control::request-to-sink",
+    "canonical_refs": {
+      "surface": "src/app/api/**/route.ts",
+      "boundary": "src/lib/auth.ts#per-route-auth",
+      "subsystem": "src/app/api",
+      "attack_class": "ATTACK-CLASSES.md#Access control",
+      "lifecycle": "request-to-sink"
+    },
+    "surface": "App Router API handlers",
+    "boundary": "Authentication and authorization at each handler",
+    "subsystem": "API authorization and service-backed operations",
+    "attack_class": "Access control",
+    "lifecycle": "request-to-sink",
+    "starting_paths": [
+      "src/app/api/adminlog/route.ts",
+      "src/app/api/categoria/route.ts",
+      "src/app/api/procedimento/route.ts",
+      "src/app/api/ccihregistro/route.ts",
+      "src/app/api/chat-ia/route.ts"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+    "selected_companion_blocks": [
+      "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+      "WEB-PROTOCOL-AND-AUTH.md#Universal moves",
+      "WEB-PROTOCOL-AND-AUTH.md#Validation rules",
+      "AI-AND-LLM.md#Core discipline",
+      "AI-AND-LLM.md#Output and disclosure attack classes",
+      "AI-AND-LLM.md#Universal moves",
+      "AI-AND-LLM.md#Validation rules"
+    ],
+    "excluded_blocks": [
+      {
+        "block": "CLIENT-SIDE.md#DOM and object-state attack classes",
+        "reason": "The primary source-to-sink paths in this unit execute in API handlers; client DOM rendering is assigned separately."
+      }
+    ],
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunt_access",
+    "reviewed_paths": [
+      "src/app/api/adminlog/route.ts",
+      "src/app/api/categoria/route.ts",
+      "src/app/api/procedimento/route.ts",
+      "src/app/api/ccihregistro/route.ts",
+      "src/app/api/chat-ia/route.ts",
+      "src/app/api/ccih/route.ts",
+      "src/app/api/categorias/route.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunt_access",
+        "reviewed_paths": [
+          "src/app/api/adminlog/route.ts",
+          "src/app/api/categoria/route.ts",
+          "src/app/api/procedimento/route.ts",
+          "src/app/api/ccihregistro/route.ts",
+          "src/app/api/chat-ia/route.ts"
+        ],
+        "invariant": "Unauthenticated callers must not read or mutate tenant records or spend server-owned provider quota.",
+        "method": "source",
+        "result": "Source review found unauthenticated legacy CRUD routes and an OpenAI proxy that forwards caller-selected messages and request parameters.",
+        "artifact": null
+      },
+      {
+        "agent_id": "hunt_tenant",
+        "reviewed_paths": [
+          "src/app/api/adminlog/route.ts",
+          "src/app/api/categoria/route.ts",
+          "src/app/api/procedimento/route.ts",
+          "src/app/api/ccihregistro/route.ts"
+        ],
+        "invariant": "Reads and writes must derive tenant identity from the authenticated session.",
+        "method": "source",
+        "result": "Independent source review confirmed the same missing-auth and caller-selected-tenant pattern; alternative plural handlers use session scope.",
+        "artifact": null
+      },
+      {
+        "agent_id": "hunt_output",
+        "reviewed_paths": [
+          "src/app/api/chat-ia/route.ts"
+        ],
+        "invariant": "Only authorized, bounded requests may use the server-held OpenAI credential.",
+        "method": "source",
+        "result": "Independent review found no session check before the API-key-backed outbound request; deployment reachability remains unknown.",
+        "artifact": null
+      },
+      {
+        "agent_id": "verify_legacy_api",
+        "reviewed_paths": [
+          "src/app/api/adminlog/route.ts",
+          "src/app/api/categoria/route.ts",
+          "src/app/api/procedimento/route.ts",
+          "src/app/api/ccihregistro/route.ts",
+          "src/app/api/categorias/route.ts",
+          "src/app/api/ccih/route.ts"
+        ],
+        "invariant": "Tenant selection and authentication must be enforced by the handler, not caller input.",
+        "method": "source",
+        "result": "Independent verification confirmed the four handlers accept caller-selected tenant IDs and request bodies; external gateway reachability is unknown.",
+        "artifact": null
+      },
+      {
+        "agent_id": "verify_chat_proxy",
+        "reviewed_paths": [
+          "src/app/api/chat-ia/route.ts",
+          "src/app/(auth)/layout.tsx"
+        ],
+        "invariant": "Server-owned paid provider calls require authenticated and bounded callers.",
+        "method": "source",
+        "result": "Independent verification confirmed no route-level session guard and caller-controlled OpenAI request fields; external controls remain unknown.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [
+      "saskia:api-auth-legacy",
+      "saskia:api-chat-proxy"
+    ],
+    "unresolved": [
+      "No sandboxed local handler/database check was possible; deployed route reachability, gateway auth, API-key configuration, and provider billing are unverified."
+    ]
+  },
+  {
+    "coverage_id": "src%2Fapp%2Fapi%2Fpacientes%2F%5Bid%5D%2F%2A%2A%2Froute.ts::prisma%2Fschema.prisma%23patient-child-relations::src%2Fapp%2Fapi%2Fpacientes::ATTACK-CLASSES.md%23Access%20control::patient-id-to-child-write",
+    "canonical_refs": {
+      "surface": "src/app/api/pacientes/[id]/**/route.ts",
+      "boundary": "prisma/schema.prisma#patient-child-relations",
+      "subsystem": "src/app/api/pacientes",
+      "attack_class": "ATTACK-CLASSES.md#Access control",
+      "lifecycle": "patient-id-to-child-write"
+    },
+    "surface": "Patient child-record APIs",
+    "boundary": "Hospital ownership of the patient referenced by a child write",
+    "subsystem": "Clinical records and patient lifecycle",
+    "attack_class": "Access control",
+    "lifecycle": "patient-id-to-child-write",
+    "starting_paths": [
+      "src/app/api/pacientes/[id]/sinais/route.ts",
+      "src/app/api/pacientes/[id]/timeline/route.ts",
+      "src/app/api/pacientes/[id]/enfermagem/route.ts",
+      "src/app/api/pacientes/[id]/nutricao/route.ts",
+      "prisma/schema.prisma"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+    "selected_companion_blocks": [
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Tenant and object-isolation attack classes",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Universal moves",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Validation rules"
+    ],
+    "excluded_blocks": [],
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunt_tenant",
+    "reviewed_paths": [
+      "src/app/api/pacientes/[id]/sinais/route.ts",
+      "src/app/api/pacientes/[id]/timeline/route.ts",
+      "src/app/api/pacientes/[id]/enfermagem/route.ts",
+      "src/app/api/pacientes/[id]/nutricao/route.ts",
+      "src/app/api/pacientes/[id]/route.ts",
+      "src/app/api/pacientes/[id]/triagens/route.ts",
+      "prisma/schema.prisma"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunt_tenant",
+        "reviewed_paths": [
+          "src/app/api/pacientes/[id]/sinais/route.ts",
+          "src/app/api/pacientes/[id]/timeline/route.ts",
+          "src/app/api/pacientes/[id]/enfermagem/route.ts",
+          "src/app/api/pacientes/[id]/nutricao/route.ts",
+          "prisma/schema.prisma"
+        ],
+        "invariant": "Every clinical child write must verify that the referenced patient belongs to the session hospital.",
+        "method": "source",
+        "result": "Four handlers use the URL patient ID without a hospital-scoped ownership lookup; Prisma relations enforce only patient ID existence.",
+        "artifact": null
+      },
+      {
+        "agent_id": "verify_patient_tenant",
+        "reviewed_paths": [
+          "src/app/api/pacientes/[id]/sinais/route.ts",
+          "src/app/api/pacientes/[id]/timeline/route.ts",
+          "src/app/api/pacientes/[id]/enfermagem/route.ts",
+          "src/app/api/pacientes/[id]/nutricao/route.ts",
+          "src/app/api/pacientes/[id]/route.ts",
+          "src/app/api/pacientes/[id]/triagens/route.ts",
+          "prisma/schema.prisma"
+        ],
+        "invariant": "A patient ID from a request cannot cross the hospital boundary without a matching session tenant.",
+        "method": "source",
+        "result": "Independent source verification confirmed the missing ownership check and contrasted nearby properly scoped patient and triage handlers.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [
+      "saskia:patient-child-cross-tenant-write"
+    ],
+    "unresolved": [
+      "The source-level missing check is verified, but no bounded local dummy-tenant write was run to confirm runtime/database effects."
+    ]
+  },
+  {
+    "coverage_id": "src%2Fapp%2Fapi%2Fusuarios%2F%2A%2Froute.ts::src%2Fapp%2Fapi%2Fusuarios%2F%5Bid%5D%2Froute.ts%23role-and-tenant-update::src%2Fapp%2Fapi%2Fusuarios::ATTACK-CLASSES.md%23Access%20control::session-to-user-record",
+    "canonical_refs": {
+      "surface": "src/app/api/usuarios/*/route.ts",
+      "boundary": "src/app/api/usuarios/[id]/route.ts#role-and-tenant-update",
+      "subsystem": "src/app/api/usuarios",
+      "attack_class": "ATTACK-CLASSES.md#Access control",
+      "lifecycle": "session-to-user-record"
+    },
+    "surface": "Plural user-management API",
+    "boundary": "Role assignment and tenant-safe user mutation",
+    "subsystem": "User administration",
+    "attack_class": "Access control",
+    "lifecycle": "session-to-user-record",
+    "starting_paths": [
+      "src/app/api/usuarios/route.ts",
+      "src/app/api/usuarios/[id]/route.ts",
+      "src/app/(auth)/usuario/page.tsx"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+    "selected_companion_blocks": [
+      "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+      "WEB-PROTOCOL-AND-AUTH.md#Universal moves",
+      "WEB-PROTOCOL-AND-AUTH.md#Validation rules"
+    ],
+    "excluded_blocks": [],
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunt_access",
+    "reviewed_paths": [
+      "src/app/api/usuarios/route.ts",
+      "src/app/api/usuarios/[id]/route.ts",
+      "src/app/api/usuario/route.ts",
+      "src/app/(auth)/usuario/page.tsx",
+      "src/app/api/pontoregistro/route.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunt_access",
+        "reviewed_paths": [
+          "src/app/api/usuarios/route.ts",
+          "src/app/api/usuarios/[id]/route.ts",
+          "src/app/api/usuario/route.ts"
+        ],
+        "invariant": "Only authorized managers may create, promote, modify, or delete hospital users; request fields cannot change tenant scope.",
+        "method": "source",
+        "result": "The plural API checks only session, accepts cargo on create, and spreads the full PUT body after an ownership check; singular handler has an ADMIN check.",
+        "artifact": null
+      },
+      {
+        "agent_id": "verify_role_escalation",
+        "reviewed_paths": [
+          "src/app/api/usuarios/route.ts",
+          "src/app/api/usuarios/[id]/route.ts",
+          "src/app/api/usuario/route.ts",
+          "src/app/(auth)/usuario/page.tsx",
+          "src/app/api/pontoregistro/route.ts"
+        ],
+        "invariant": "Role and hospital claims must be authorized and derived at the server-side mutation boundary.",
+        "method": "source",
+        "result": "Independent verification confirmed body-controlled role promotion and hospitalId mutation through the plural endpoints, used by the user UI.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [
+      "saskia:user-role-tenant-escalation"
+    ],
+    "unresolved": [
+      "No local dummy-user mutation was executed; session refresh and deployed reachability details remain unverified."
+    ]
+  },
+  {
+    "coverage_id": "src%2Fapp%2Fapi%2Fconfig-dashboard%2Froute.ts%23POST::src%2Fapp%2Fapi%2Fconfig-dashboard%2Froute.ts%23role-authorization::src%2Fapp%2Fapi%2Fconfig-dashboard::ATTACK-CLASSES.md%23Access%20control::session-to-config-upsert",
+    "canonical_refs": {
+      "surface": "src/app/api/config-dashboard/route.ts#POST",
+      "boundary": "src/app/api/config-dashboard/route.ts#role-authorization",
+      "subsystem": "src/app/api/config-dashboard",
+      "attack_class": "ATTACK-CLASSES.md#Access control",
+      "lifecycle": "session-to-config-upsert"
+    },
+    "surface": "Dashboard configuration POST",
+    "boundary": "Role authorization for hospital-shared dashboard module settings",
+    "subsystem": "Dashboard administration",
+    "attack_class": "Access control",
+    "lifecycle": "session-to-config-upsert",
+    "starting_paths": [
+      "src/app/api/config-dashboard/route.ts",
+      "src/app/(auth)/admin-config-dashboard/page.tsx",
+      "src/app/api/verify-support-password/route.ts"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+    "selected_companion_blocks": [
+      "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+      "WEB-PROTOCOL-AND-AUTH.md#Universal moves",
+      "WEB-PROTOCOL-AND-AUTH.md#Validation rules"
+    ],
+    "excluded_blocks": [],
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "verify_dashboard_rbac",
+    "reviewed_paths": [
+      "src/app/api/config-dashboard/route.ts",
+      "src/app/(auth)/admin-config-dashboard/page.tsx",
+      "src/app/(auth)/layout.tsx",
+      "src/app/api/verify-support-password/route.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "verify_dashboard_rbac",
+        "reviewed_paths": [
+          "src/app/api/config-dashboard/route.ts",
+          "src/app/(auth)/admin-config-dashboard/page.tsx",
+          "src/app/(auth)/layout.tsx",
+          "src/app/api/verify-support-password/route.ts"
+        ],
+        "invariant": "Only authorized administrators may mutate hospital-shared module visibility; client-side password unlocks are not server authorization.",
+        "method": "source",
+        "result": "The configuration POST checks for a session and scopes by hospital but has no ADMIN check; the support-password gate only unlocks UI state.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [
+      "saskia:dashboard-config-missing-rbac"
+    ],
+    "unresolved": [
+      "Source confirms missing role enforcement; no isolated local authorization test was possible. The support-password fallback is active only if the deployment variable is absent."
+    ]
+  },
+  {
+    "coverage_id": "SASKIA_T1%2F%2A.html%20and%20src%2Fcomponents::client-side-dom-storage::src%2Fapp%20and%20SASKIA_T1::ATTACK-CLASSES.md%23Injection::input-to-render",
+    "canonical_refs": {
+      "surface": "SASKIA_T1/*.html and src/components",
+      "boundary": "client-side-dom-storage",
+      "subsystem": "src/app and SASKIA_T1",
+      "attack_class": "ATTACK-CLASSES.md#Injection",
+      "lifecycle": "input-to-render"
+    },
+    "surface": "Current and legacy browser-facing UI",
+    "boundary": "Untrusted input, persistence and DOM output",
+    "subsystem": "Client rendering and browser storage",
+    "attack_class": "Injection",
+    "lifecycle": "input-to-render",
+    "starting_paths": [
+      "src/components/chatbot/ChatbotWindow.tsx",
+      "src/app/(auth)/receituario/page.tsx",
+      "src/app/(auth)/admin-financeiro/page.tsx",
+      "SASKIA_T1/script.js",
+      "SASKIA_T1/index.html"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Injection",
+    "selected_companion_blocks": [
+      "CLIENT-SIDE.md#Core discipline",
+      "CLIENT-SIDE.md#DOM and object-state attack classes",
+      "CLIENT-SIDE.md#Browser-storage disclosure and stale authorization",
+      "CLIENT-SIDE.md#Universal moves",
+      "CLIENT-SIDE.md#Validation rules"
+    ],
+    "excluded_blocks": [],
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 2,
+    "status": "blocked",
+    "agent_id": "hunt_client_legacy",
+    "reviewed_paths": [
+      "src/app/(auth)/receituario/page.tsx",
+      "src/components/chatbot/ChatbotWindow.tsx",
+      "SASKIA_T1/ficha-paciente.html",
+      "SASKIA_T1/pacientes.html",
+      "SASKIA_T1/index.html",
+      "SASKIA_T1/script.js",
+      "SASKIA_T1/admin-hospitais.html"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunt_client_legacy",
+        "method": "source",
+        "result": "A crítica de cobertura identificou fluxos a separar: HTML de receita armazenado, resposta do chatbot, armazenamento no cliente e sinks innerHTML em T1. O XSS armazenado T1 foi confirmado por leitura de fonte, mas distribuição/origem/uso multiusuário não foram estabelecidos.",
+        "artifact": null,
+        "invariant": "Dados controlados por usuário não podem virar HTML executável e dados/sessões locais não podem cruzar fronteiras de usuário/hospital.",
+        "reviewed_paths": "src/app/(auth)/receituario/page.tsx src/components/chatbot/ChatbotWindow.tsx SASKIA_T1/ficha-paciente.html SASKIA_T1/pacientes.html SASKIA_T1/index.html SASKIA_T1/script.js SASKIA_T1/admin-hospitais.html"
+      }
+    ],
+    "result_fingerprints": [],
+    "unresolved": [
+      "Unidade mistura lifecycle DOM e browser storage; requer divisão e revisão source completa.",
+      "Renderização visual e comportamento do app atual não foram executados em sandbox; T1 deployment/distribuição e compartilhamento do perfil do browser são desconhecidos."
+    ]
+  },
+  {
+    "coverage_id": "src%2Fapp%2Fapi%2Fadmin-and-hospital-routes::src%2Flib%2Fauth.ts%23session-tenant-and-role::src%2Fapp%2Fapi::ATTACK-CLASSES.md%23Access%20control::request-to-database",
+    "canonical_refs": {
+      "surface": "src/app/api/admin-and-hospital-routes",
+      "boundary": "src/lib/auth.ts#session-tenant-and-role",
+      "subsystem": "src/app/api",
+      "attack_class": "ATTACK-CLASSES.md#Access control",
+      "lifecycle": "request-to-database"
+    },
+    "surface": "Remaining administrative and hospital-scoped APIs",
+    "boundary": "Per-route role, tenant and object authorization",
+    "subsystem": "API authorization and hospital administration",
+    "attack_class": "Access control",
+    "lifecycle": "request-to-database",
+    "starting_paths": [
+      "src/app/api/fatura/route.ts",
+      "src/app/api/hospital/route.ts",
+      "src/app/api/hospitais/[id]/route.ts",
+      "src/app/api/drive/route.ts",
+      "src/app/api/relatorios/geral/route.ts"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+    "selected_companion_blocks": [
+      "WEB-PROTOCOL-AND-AUTH.md#Core discipline",
+      "WEB-PROTOCOL-AND-AUTH.md#Universal moves",
+      "WEB-PROTOCOL-AND-AUTH.md#Validation rules",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Tenant and object-isolation attack classes",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Universal moves",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Validation rules"
+    ],
+    "excluded_blocks": [],
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 2,
+    "status": "blocked",
+    "agent_id": "hunt_admin_api",
+    "reviewed_paths": [
+      "src/app/api/hospitais/[id]/route.ts",
+      "src/app/api/hospitais/route.ts",
+      "src/app/api/hospital/route.ts",
+      "src/app/api/fatura/route.ts",
+      "src/app/api/drive/route.ts",
+      "src/app/api/dashboard/stats/route.ts",
+      "src/app/api/relatorios/geral/route.ts",
+      "src/app/api/verify-support-password/route.ts",
+      "src/app/api/me/route.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunt_admin_api",
+        "method": "source",
+        "result": "Revisão encontrou handlers de hospitais/fatura/drive a aprofundar; diferenças entre endpoint singular/plural e escopo global de ADMIN não foram reconciliadas. Relatórios com escopo foram identificados como controle positivo.",
+        "artifact": null,
+        "invariant": "Cada leitura e escrita deve impor papel e hospital apropriados no handler, além de validar relações entre recursos do tenant.",
+        "reviewed_paths": "src/app/api/hospitais/[id]/route.ts src/app/api/hospitais/route.ts src/app/api/hospital/route.ts src/app/api/fatura/route.ts src/app/api/drive/route.ts src/app/api/dashboard/stats/route.ts src/app/api/relatorios/geral/route.ts src/app/api/verify-support-password/route.ts src/app/api/me/route.ts"
+      }
+    ],
+    "result_fingerprints": [],
+    "unresolved": [
+      "A crítica encontrou handlers e verbos administrativos não cobertos e exige revisão por endpoint antes de concluir.",
+      "Efeito em runtime e controles de gateway/deployment desconhecidos."
+    ]
+  },
+  {
+    "coverage_id": "src%2Fapp%2Fapi%2Fclinical-operational-routes::prisma%2Fschema.prisma%23Hospital-relations-and-status::src%2Fapp%2Fapi%2Fclinical-operations::ATTACK-CLASSES.md%23Business%20logic::state-transition",
+    "canonical_refs": {
+      "surface": "src/app/api/clinical-operational-routes",
+      "boundary": "prisma/schema.prisma#Hospital-relations-and-status",
+      "subsystem": "src/app/api/clinical-operations",
+      "attack_class": "ATTACK-CLASSES.md#Business logic",
+      "lifecycle": "state-transition"
+    },
+    "surface": "Remaining clinical and operational mutation routes",
+    "boundary": "Tenant ownership, validation and clinical workflow state transitions",
+    "subsystem": "Clinical and operational modules",
+    "attack_class": "Business logic",
+    "lifecycle": "state-transition",
+    "starting_paths": [
+      "src/app/api/pacientes/[id]/",
+      "src/app/api/agendamentos/",
+      "src/app/api/cirurgias/",
+      "src/app/api/estoque/",
+      "src/app/api/uti/",
+      "src/app/api/obitos/"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Business logic",
+    "selected_companion_blocks": [
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Core discipline",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Tenant and object-isolation attack classes",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Deletion, revocation, and lifecycle attack classes",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Universal moves",
+      "DATA-ISOLATION-AND-LIFECYCLE.md#Validation rules"
+    ],
+    "excluded_blocks": [],
+    "prior_status": "none",
+    "attempts": [],
+    "wave": 2,
+    "status": "blocked",
+    "agent_id": "hunt_clinical_ops",
+    "reviewed_paths": [
+      "src/app/api/pacientes/[id]/sinais/route.ts",
+      "src/app/api/pacientes/[id]/timeline/route.ts",
+      "src/app/api/pacientes/[id]/enfermagem/route.ts",
+      "src/app/api/pacientes/[id]/nutricao/route.ts",
+      "src/app/api/pacientes/[id]/exames/route.ts",
+      "src/app/api/exames/route.ts",
+      "src/app/api/uti/[id]/route.ts",
+      "src/app/api/estoque/movimentacao/route.ts",
+      "src/app/api/agendamentos/[id]/route.ts",
+      "src/app/api/visitantes/[id]/route.ts",
+      "src/app/api/transporte/[id]/route.ts",
+      "src/app/api/salas/[id]/route.ts",
+      "src/app/api/salas/reservas/route.ts",
+      "src/app/api/salas/reservas/[id]/route.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunt_clinical_ops",
+        "method": "source",
+        "result": "Revisões independentes de fonte encontraram candidatos para associação de exames, leito UTI, item de estoque, agendamento e mutações por ID em visitantes/transporte/salas/reservas. Cobertura dos 82 handlers não foi concluída; há sobreposição com patient-child.",
+        "artifact": null,
+        "invariant": "Toda associação clínica e mutação deve validar hospital da sessão para recurso e relações; campos/status devem ser permitidos e validados.",
+        "reviewed_paths": "src/app/api/pacientes/[id]/sinais/route.ts src/app/api/pacientes/[id]/timeline/route.ts src/app/api/pacientes/[id]/enfermagem/route.ts src/app/api/pacientes/[id]/nutricao/route.ts src/app/api/pacientes/[id]/exames/route.ts src/app/api/exames/route.ts src/app/api/uti/[id]/route.ts src/app/api/estoque/movimentacao/route.ts src/app/api/agendamentos/[id]/route.ts src/app/api/visitantes/[id]/route.ts src/app/api/transporte/[id]/route.ts src/app/api/salas/[id]/route.ts src/app/api/salas/reservas/route.ts src/app/api/salas/reservas/[id]/route.ts"
+      }
+    ],
+    "result_fingerprints": [],
+    "unresolved": [
+      "Candidatos Wave 2 não foram consolidados/validados em registros finais e não devem ser tratados como achados finais.",
+      "Unidade mistura relações de paciente e transições operacionais; requer separação por lifecycle.",
+      "Nenhum efeito de banco foi testado em fixture isolada."
+    ]
+  }
+]

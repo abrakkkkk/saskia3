@@ -1,0 +1,49 @@
+{
+  "run_id": "saskia-security-2026-10-23-run-1",
+  "repo": "davidkhauan/Saskia",
+  "target": "C:\\Users\\abrah\\OneDrive\\Documents\\Saskia",
+  "source_ref": "bea67c836d60daa07941d0227720e421c542a020; clean main, origin/main",
+  "profile": "deep",
+  "scope_paths": [
+    "src/",
+    "prisma/",
+    "SASKIA_T1/",
+    "package.json",
+    "package-lock.json",
+    "next.config.ts",
+    "prisma.config.ts",
+    ".gitignore",
+    "README.md"
+  ],
+  "budget": 36,
+  "execution_policy": "sandboxed-source-and-local-only",
+  "selected_companion_files": [
+    ".agents/skills/security-audit/WEB-PROTOCOL-AND-AUTH.md",
+    ".agents/skills/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+    ".agents/skills/security-audit/CLIENT-SIDE.md",
+    ".agents/skills/security-audit/AI-AND-LLM.md",
+    ".agents/skills/security-audit/CLOUD-AND-DEPLOYMENT.md",
+    ".agents/skills/security-audit/SUPPLY-CHAIN-AND-RELEASE.md"
+  ],
+  "prior_run_paths": [],
+  "shared_file_owners": {
+    "findings.json": "parent",
+    "run-metadata.json": "parent",
+    "FINDINGS-DETAIL.md": "parent",
+    "architecture.md": "parent",
+    "REPORT.md": "parent",
+    "coverage-ledger.json": "parent",
+    "NEEDS-VALIDATION.md": "parent"
+  },
+  "run_status": "incomplete",
+  "pre_recon_budget_estimate": {
+    "validation_reserve": 10,
+    "mandatory_critics": 2,
+    "covers_estimate": false,
+    "seeded_units": "Resumed at HEAD bea67c8, 81 API handlers and 55 page.tsx surfaces; prior 7 units are insufficient and source changed across 165 paths since 15e76df.",
+    "remaining_hunting_budget": 14,
+    "implied_hunters": "14 maximum remaining hunter calls after estimated 10 prior invocations and reserving critic plus final-clean critic and validation; current wave uses 3 focused source-only hunters. Full UI/product scope exceeds security-agent budget and remains incomplete."
+  },
+  "incomplete_reason": "server_start_blocked_by_runner_policy",
+  "execution_blocker": "Docker exec/npm commands and builds work. Next build succeeds up to 3 actual workers. Starting the Next server as a foreground process is rejected by runner policy; integration HTTP/Playwright tests cannot run until user starts server manually or provides an approved persistent-process runner."
+}

@@ -1,0 +1,326 @@
+[
+  {
+    "verdict": "needs_validation",
+    "fingerprint": "saskia:api-auth-legacy",
+    "title": "Handlers legados leem e gravam dados de hospitais sem autenticação no próprio endpoint",
+    "description": "As rotas adminlog, categoria, procedimento e ccihregistro exportam GET e POST sem auth(). GET usa hospitalId enviado na query; POST passa o JSON do caller diretamente a Prisma create. Há handlers alternativos plurais para categorias e CCIH que fazem auth e escopo, mas não protegem os caminhos legados. CCIH pode conter dados de vigilância clínica. A exposição sem gateway externo depende do deployment.",
+    "claimed_root_cause": "Quatro Route Handlers legados não exigem identidade nem derivam hospitalId da sessão antes de retornar ou persistir registros hospitalares.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/app/api/adminlog/route.ts",
+        "line": 4,
+        "scope": "GET /api/adminlog",
+        "description": "Handler exporta GET sem obter sessão; usa hospitalId da query."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/app/api/adminlog/route.ts",
+        "line": 11,
+        "scope": "prisma.adminLog.findMany",
+        "description": "Filtro de tenant é controlado pelo parâmetro recebido do caller."
+      },
+      {
+        "kind": "sink",
+        "file": "src/app/api/adminlog/route.ts",
+        "line": 15,
+        "scope": "NextResponse.json",
+        "description": "Retorna ao caller os registros encontrados para o hospitalId escolhido."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/app/api/adminlog/route.ts",
+        "line": 21,
+        "description": "POST não chama auth(); parseia o corpo e cria adminLog com data: body."
+      },
+      {
+        "file": "src/app/api/categoria/route.ts",
+        "line": 4,
+        "description": "GET e POST não autenticam; GET seleciona hospitalId da query e POST passa o body ao Prisma."
+      },
+      {
+        "file": "src/app/api/procedimento/route.ts",
+        "line": 4,
+        "description": "GET e POST não autenticam; GET seleciona hospitalId da query e POST passa o body ao Prisma."
+      },
+      {
+        "file": "src/app/api/ccihregistro/route.ts",
+        "line": 4,
+        "description": "GET e POST não autenticam; GET seleciona hospitalId da query e POST passa o body ao Prisma."
+      },
+      {
+        "file": "src/app/api/categorias/route.ts",
+        "line": 5,
+        "description": "Handler alternativo plural deriva hospitalId da sessão e filtra campos de criação."
+      },
+      {
+        "file": "src/app/api/ccih/route.ts",
+        "line": 5,
+        "description": "Handler alternativo exige sessão e escopa os registros pelo hospital da sessão."
+      }
+    ],
+    "blockers": [
+      "Não há sandbox aprovado para executar handlers com banco fictício e verificar resposta/escrita; não foi possível confirmar efeitos runtime.",
+      "Não foi observado se proxy, gateway ou middleware fora do repositório exige autenticação nessas rotas no deployment.",
+      "Verificação independente final (Phase 5) confirmou a alegação no código-fonte. O veredito permanece needs_validation porque efeito com principals/DB fictícios e controles externos de deployment não foram testados."
+    ],
+    "validation_plan": {
+      "local": "Em ambiente descartável e isolado, com dois hospitais e registros fictícios, chamar os quatro GET/POST sem sessão e confirmar se dados são retornados ou criados; comparar os handlers plurais protegidos.",
+      "deployment": "Responsável pela infraestrutura deve confirmar se os caminhos `/api/adminlog`, `/api/categoria`, `/api/procedimento` e `/api/ccihregistro` estão expostos e protegidos por autenticação na borda. Não usar dados ou contas de produção."
+    }
+  },
+  {
+    "verdict": "needs_validation",
+    "fingerprint": "saskia:api-chat-proxy",
+    "title": "Proxy de IA aceita chamadas sem autenticação usando credencial paga do servidor",
+    "description": "POST /api/chat-ia lê OPENAI_API_KEY e encaminha mensagens, modelo e max_tokens controlados pelo caller para a OpenAI sem verificar sessão nem impor limites aparentes. Se o endpoint estiver acessível e a chave estiver configurada, um caller anônimo pode gerar consumo da quota/cobrança do operador. A reachability e eventual proteção externa não são visíveis no repositório.",
+    "claimed_root_cause": "O handler do proxy não autentica o caller nem restringe os parâmetros que determinam o uso da credencial e da quota do serviço externo.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/app/api/chat-ia/route.ts",
+        "line": 5,
+        "scope": "POST /api/chat-ia",
+        "description": "Handler recebe requisição sem chamar auth() ou validar sessão."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/app/api/chat-ia/route.ts",
+        "line": 17,
+        "scope": "body.messages/model/max_tokens",
+        "description": "Parâmetros do caller são aceitos; model e max_tokens recebem apenas defaults quando ausentes."
+      },
+      {
+        "kind": "sink",
+        "file": "src/app/api/chat-ia/route.ts",
+        "line": 28,
+        "scope": "fetch OpenAI Chat Completions",
+        "description": "Executa solicitação externa com API key armazenada no servidor."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/app/api/chat-ia/route.ts",
+        "line": 6,
+        "description": "O handler lê OPENAI_API_KEY, mas não obtém sessão."
+      },
+      {
+        "file": "src/app/api/chat-ia/route.ts",
+        "line": 35,
+        "description": "O corpo encaminhado usa model e max_tokens fornecidos pelo caller sem allowlist/limite visível."
+      },
+      {
+        "file": "src/app/(auth)/layout.tsx",
+        "line": 11,
+        "description": "A autenticação do layout protege páginas do grupo; o Route Handler de API está fora do grupo."
+      }
+    ],
+    "blockers": [
+      "Não foi executado teste local isolado; disponibilidade da chave, cobrança/limites do provedor e alcance real não foram verificados.",
+      "Não foi observado se a borda de produção exige sessão, limita taxa ou restringe tamanho/modelo fora do código.",
+      "Verificação independente final (Phase 5) confirmou a alegação no código-fonte. O veredito permanece needs_validation porque efeito com principals/DB fictícios e controles externos de deployment não foram testados."
+    ],
+    "validation_plan": {
+      "local": "Em sandbox isolado, substituir OpenAI por endpoint fictício sem rede externa e usar requisições de teste sem identidade para confirmar se o handler tenta encaminhar chamadas e parâmetros não permitidos.",
+      "deployment": "Responsável pelo deployment deve confirmar configuração da chave e controles de gateway/rate limit sem expor segredo ou acionar quota paga."
+    }
+  },
+  {
+    "verdict": "needs_validation",
+    "fingerprint": "saskia:patient-child-cross-tenant-write",
+    "title": "Rotas de registros clínicos filhos não conferem o hospital do paciente",
+    "description": "Sinais vitais, timeline, anotações de enfermagem e avaliação nutricional exigem sessão, mas gravam o ID de paciente recebido na URL sem buscar o paciente no hospital da sessão. As relações Prisma apontam para Paciente pelo ID e não carregam hospitalId. Um usuário autenticado com um ID de outro hospital pode alcançar o caminho de escrita no prontuário alheio se a relação/DB aceitar o registro. A verificação de efeito runtime permanece bloqueada.",
+    "claimed_root_cause": "Os quatro handlers filhos validam apenas autenticação; não aplicam o vínculo hospitalId entre sessão e paciente antes da escrita clínica.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/app/api/pacientes/[id]/sinais/route.ts",
+        "line": 5,
+        "scope": "POST /api/pacientes/:id/sinais",
+        "description": "Handler aceita requisição de qualquer usuário autenticado."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/app/api/pacientes/[id]/sinais/route.ts",
+        "line": 11,
+        "scope": "params.id",
+        "description": "ID da URL é usado como pacienteId sem lookup por hospitalId da sessão."
+      },
+      {
+        "kind": "sink",
+        "file": "src/app/api/pacientes/[id]/sinais/route.ts",
+        "line": 14,
+        "scope": "prisma.sinalVital.create",
+        "description": "Cria registro clínico associado ao paciente indicado."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/app/api/pacientes/[id]/timeline/route.ts",
+        "line": 7,
+        "description": "Exige sessão, mas cria evento com pacienteId do parâmetro de rota sem consulta de propriedade."
+      },
+      {
+        "file": "src/app/api/pacientes/[id]/enfermagem/route.ts",
+        "line": 7,
+        "description": "Exige sessão, mas não valida que o paciente pertence ao hospital da sessão."
+      },
+      {
+        "file": "src/app/api/pacientes/[id]/nutricao/route.ts",
+        "line": 7,
+        "description": "Exige sessão, mas não valida que o paciente pertence ao hospital da sessão."
+      },
+      {
+        "file": "src/app/api/pacientes/[id]/route.ts",
+        "line": 12,
+        "description": "A rota-base do prontuário filtra pelo ID e hospitalId, mostrando o controle esperado."
+      },
+      {
+        "file": "src/app/api/pacientes/[id]/triagens/route.ts",
+        "line": 12,
+        "description": "A rota de triagens valida o paciente no hospital da sessão antes de criar."
+      },
+      {
+        "file": "prisma/schema.prisma",
+        "line": 616,
+        "description": "SinalVital e outros registros filhos referenciam pacienteId sem chave hospitalId própria/composite tenant constraint."
+      }
+    ],
+    "blockers": [
+      "Não foi possível reproduzir escrita com usuários e pacientes fictícios em hospitais separados dentro de sandbox isolado; consequência runtime/constraint não foi testada.",
+      "Verificação independente final (Phase 5) confirmou a alegação no código-fonte. O veredito permanece needs_validation porque efeito com principals/DB fictícios e controles externos de deployment não foram testados."
+    ],
+    "validation_plan": {
+      "local": "Criar dois tenants fictícios e um paciente em cada; sob sessão do tenant A, tentar POST somente nos quatro handlers filhos com o ID do tenant B e confirmar rejeição sem persistência.",
+      "deployment": "Responsável clínico/técnico deve confirmar se há controles externos ou restrições de banco compostas por tenant, sem consultar ou alterar prontuários reais."
+    }
+  },
+  {
+    "verdict": "needs_validation",
+    "fingerprint": "saskia:user-role-tenant-escalation",
+    "title": "API plural de usuários permite a qualquer sessão criar ou promover administradores",
+    "description": "Os handlers plurais de usuários aceitam qualquer sessão. POST recebe cargo do corpo e cria usuário no hospital da sessão; PUT verifica o alvo no hospital, mas depois aplica o corpo inteiro, permitindo alterar cargo e hospitalId. A interface chama esses endpoints. Isso cria um caminho de elevação persistente para ADMIN e alteração de vínculo de tenant; o impacto efetivo e a sessão após a mudança dependem do runtime.",
+    "claimed_root_cause": "Os endpoints de usuário não fazem RBAC no servidor e não fazem allowlist dos campos atualizáveis; o PUT valida o tenant antes de aceitar hospitalId controlado pelo corpo.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/app/api/usuarios/route.ts",
+        "line": 27,
+        "scope": "POST /api/usuarios",
+        "description": "Handler requer sessão, mas não cargo ADMIN ou permissão de gestão."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/app/api/usuarios/route.ts",
+        "line": 34,
+        "scope": "request cargo",
+        "description": "Cargo de conta nova é recebido do JSON do caller."
+      },
+      {
+        "kind": "sink",
+        "file": "src/app/api/usuarios/route.ts",
+        "line": 42,
+        "scope": "prisma.usuario.create",
+        "description": "Persiste usuário com cargo informado pelo caller e hospitalId da sessão."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/app/api/usuarios/[id]/route.ts",
+        "line": 16,
+        "description": "O alvo é validado no hospital da sessão antes da atualização."
+      },
+      {
+        "file": "src/app/api/usuarios/[id]/route.ts",
+        "line": 19,
+        "description": "O PUT copia o objeto inteiro do caller para updateData."
+      },
+      {
+        "file": "src/app/api/usuarios/[id]/route.ts",
+        "line": 26,
+        "description": "A atualização Prisma usa apenas where id após a checagem inicial; hospitalId do body pode ser aplicado."
+      },
+      {
+        "file": "src/app/api/usuario/route.ts",
+        "line": 44,
+        "description": "Handler singular alternativo exige ADMIN, mas não protege os handlers plurais."
+      },
+      {
+        "file": "src/app/(auth)/usuario/page.tsx",
+        "line": 30,
+        "description": "A tela de usuários chama os endpoints plurais."
+      }
+    ],
+    "blockers": [
+      "Não foi possível executar fluxo com usuários fictícios; persistência, atualização de sessão e ações ADMIN alcançáveis não foram testadas em ambiente isolado.",
+      "O deployment pode aplicar controles fora do repositório, não observados nesta revisão.",
+      "Verificação independente final (Phase 5) confirmou a alegação no código-fonte. O veredito permanece needs_validation porque efeito com principals/DB fictícios e controles externos de deployment não foram testados."
+    ],
+    "validation_plan": {
+      "local": "Em banco descartável, autenticar uma conta não ADMIN e testar criação de cargo ADMIN e PUT com cargo/hospitalId; confirmar resposta, estado persistido e autorização de rotas sensíveis sem usar contas reais.",
+      "deployment": "Responsável pela aplicação deve confirmar exposição dos handlers plurais e se RBAC é aplicado no gateway ou em outro serviço antes dessas rotas."
+    }
+  },
+  {
+    "verdict": "needs_validation",
+    "fingerprint": "saskia:dashboard-config-missing-rbac",
+    "title": "Qualquer usuário autenticado pode alterar a configuração compartilhada do dashboard do hospital",
+    "description": "POST /api/config-dashboard exige sessão e deriva hospitalId da sessão, mas não verifica papel ADMIN. A página apresenta uma senha de suporte que apenas destrava o estado client-side; a API não consome essa autorização. Assim, a configuração de módulos compartilhada pelo hospital pode ser alterada por qualquer usuário autenticado que chame a rota. O endpoint de senha também usa uma senha fallback quando a variável não está definida; a presença dessa variável em produção é desconhecida.",
+    "claimed_root_cause": "A autorização administrativa está somente no bloqueio visual da página, sem verificação de papel na API que grava a configuração compartilhada.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/app/api/config-dashboard/route.ts",
+        "line": 22,
+        "scope": "POST /api/config-dashboard",
+        "description": "Handler aceita uma sessão sem exigir cargo administrativo."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/app/api/config-dashboard/route.ts",
+        "line": 31,
+        "scope": "config JSON",
+        "description": "O corpo recebido é usado como config do hospital derivado da sessão."
+      },
+      {
+        "kind": "sink",
+        "file": "src/app/api/config-dashboard/route.ts",
+        "line": 33,
+        "scope": "prisma.configDashboard.upsert",
+        "description": "Persiste configuração compartilhada de módulos para o hospital."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/app/api/config-dashboard/route.ts",
+        "line": 25,
+        "description": "O controle no servidor verifica apenas existência de sessão."
+      },
+      {
+        "file": "src/app/(auth)/admin-config-dashboard/page.tsx",
+        "line": 94,
+        "description": "A tela faz verificação de senha separada antes de liberar a interface."
+      },
+      {
+        "file": "src/app/(auth)/admin-config-dashboard/page.tsx",
+        "line": 161,
+        "description": "Salvar configuração envia diretamente ao endpoint, sem token de autorização de suporte."
+      },
+      {
+        "file": "src/app/api/verify-support-password/route.ts",
+        "line": 10,
+        "description": "A API de senha usa fallback fixo quando SENHA_SUPORTE está ausente; estado de deployment não conhecido."
+      }
+    ],
+    "blockers": [
+      "Não foi possível testar mutação de configuração com usuário fictício de baixo privilégio em sandbox isolado.",
+      "Não foi possível confirmar a configuração de SENHA_SUPORTE ou controles externos do deployment.",
+      "Verificação independente final (Phase 5) confirmou a alegação no código-fonte. O veredito permanece needs_validation porque efeito com principals/DB fictícios e controles externos de deployment não foram testados."
+    ],
+    "validation_plan": {
+      "local": "Em banco de teste, chamar POST com sessão de usuário não ADMIN e configuração fictícia; confirmar se a alteração persiste e é consumida pelo dashboard do mesmo tenant.",
+      "deployment": "Responsável pelo deployment deve confirmar configuração de SENHA_SUPORTE e proteções de borda, sem revelar o valor do segredo."
+    }
+  }
+]

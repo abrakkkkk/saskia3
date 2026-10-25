@@ -45,4 +45,5 @@ next-env.d.ts
 # Pasta de referência legado e testes (não enviar para git)
 SASKIA_T1/
 .playwright-mcp/
+Audit-*/runtime-sandbox/
 
