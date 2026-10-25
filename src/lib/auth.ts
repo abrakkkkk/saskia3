@@ -3,7 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "./db"
 import bcrypt from "bcryptjs"
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const { handlers, auth: readSession, signIn, signOut } = NextAuth({
   trustHost: true,
   providers: [
     CredentialsProvider({
@@ -93,3 +93,43 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: "/",
   },
 })
+
+export { handlers, signIn, signOut }
+
+export async function auth() {
+  const session = await readSession()
+  const userId = session?.user?.id
+  const hospitalId = session?.user?.hospitalId
+
+  if (!userId || !hospitalId) return null
+
+  const activeUser = await prisma.usuario.findFirst({
+    where: {
+      id: userId,
+      hospitalId,
+      ativo: true,
+      hospital: { ativo: true },
+    },
+    select: {
+      nome: true,
+      email: true,
+      cargo: true,
+      avatar: true,
+      hospital: { select: { nome: true } },
+    },
+  })
+
+  if (!activeUser) return null
+
+  return {
+    ...session,
+    user: {
+      ...session.user,
+      name: activeUser.nome,
+      email: activeUser.email,
+      cargo: activeUser.cargo,
+      hospitalNome: activeUser.hospital.nome,
+      avatar: activeUser.avatar,
+    },
+  }
+}

@@ -27,6 +27,7 @@ const INITIAL_FORM_PACIENTE = {
 export default function PacientesPage() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [filtroManchester, setFiltroManchester] = useState('todos');
   const [busca, setBusca] = useState('');
   const [pagina, setPagina] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -88,7 +89,8 @@ export default function PacientesPage() {
   const filtrados = pacientes.filter(p => {
     const matchStatus = filtroStatus === 'todos' || p.status === filtroStatus;
     const matchBusca = !busca || p.nome?.toLowerCase().includes(busca.toLowerCase()) || p.cpf?.includes(busca);
-    return matchStatus && matchBusca;
+    const matchManchester = filtroManchester === 'todos' || (p.classificacao && p.classificacao.toLowerCase() === filtroManchester.toLowerCase());
+    return matchStatus && matchBusca && matchManchester;
   });
 
   const exportarCSV = () => {
@@ -193,6 +195,54 @@ export default function PacientesPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Filtro Rápido Manchester */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap', padding: '8px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '4px' }}>
+          Prioridade Manchester:
+        </span>
+        <button
+          onClick={() => { setFiltroManchester('todos'); setPagina(1); }}
+          style={{
+            padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+            border: filtroManchester === 'todos' ? '1px solid #1e3a8a' : '1px solid #cbd5e1',
+            background: filtroManchester === 'todos' ? '#1e3a8a' : '#ffffff',
+            color: filtroManchester === 'todos' ? '#ffffff' : '#475569',
+            boxShadow: filtroManchester === 'todos' ? '0 2px 4px rgba(30, 58, 138, 0.3)' : '0 1px 2px rgba(0,0,0,0.05)',
+            transition: 'all 0.2s'
+          }}
+        >
+          Todas
+        </button>
+        {Object.entries(MANCHESTER_CORES).map(([cor, info]) => {
+          const count = pacientes.filter(p => p.classificacao && p.classificacao.toLowerCase() === cor.toLowerCase()).length;
+          const isSelected = filtroManchester.toLowerCase() === cor.toLowerCase();
+          return (
+            <button
+              key={cor}
+              onClick={() => { setFiltroManchester(isSelected ? 'todos' : cor); setPagina(1); }}
+              style={{
+                padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                border: isSelected ? `2px solid ${info.text}` : `1px solid ${info.border}`,
+                background: isSelected ? info.text : info.bg,
+                color: isSelected ? '#ffffff' : info.text,
+                boxShadow: isSelected ? `0 2px 8px ${info.text}55` : '0 1px 2px rgba(0,0,0,0.05)',
+                transition: 'all 0.2s'
+              }}
+            >
+              <span>{info.emoji}</span>
+              <span>{cor}</span>
+              <span style={{
+                background: isSelected ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.06)',
+                padding: '1px 5px', borderRadius: '4px', fontSize: '10px'
+              }}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Tabela */}

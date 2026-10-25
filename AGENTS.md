@@ -8,16 +8,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# PROTOCOLO OBRIGATÓRIO DE EXECUÇÃO (TODAS AS SESSÕES)
+# DIRETRIZES DE COMUNICAÇÃO
 
-Em 100% das sessões, você DEVE seguir e acionar as skills e regras abaixo:
-
-1. **Prioridade de Estilo e Comunicação:** Seguir rigorosamente `i-have-adhd` em todas as respostas (sem preâmbulos, respostas diretas, estimativas de tempo, listas curtas, pt-BR).
-2. **Início e Seleção de Skills:** Invocar `using-superpowers` no início de qualquer tarefa para determinar o fluxo correto antes de agir.
-3. **Design e Criação:** Para novas telas, componentes ou mudanças visuais, invocar obrigatoriamente `brainstorming`, `ui-ux-pro-max` e `design-system`.
-4. **Erros e Bugs:** Ao encontrar qualquer erro ou comportamento inesperado, invocar `systematic-debugging` antes de propor ou tentar qualquer correção.
-5. **Planejamento e Execução:** Para tarefas de múltiplos passos, usar `writing-plans` seguido de `executing-plans` ou `subagent-driven-development`.
-6. **Verificação Obrigatória:** Antes de declarar conclusão ou fazer commit/push, rodar `verification-before-completion` (evidências reais de build/testes).
+- Respostas em pt-BR, diretas, sem preâmbulos.
+- Listas curtas. Sem fechamento prolixo.
 
 ---
 

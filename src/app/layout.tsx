@@ -1,10 +1,8 @@
 import type { Metadata } from 'next'
 import AuthProvider from '@/components/providers/AuthProvider'
 import AlertProvider from '@/components/providers/AlertProvider'
-import { Inter } from 'next/font/google'
+import { inter } from './fonts'
 import './globals.css'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Saskia Saúde - Sistema Integrado de Gestão Hospitalar',

@@ -50,16 +50,20 @@ export default function CategoriasPage() {
   };
 
   const handleRemoveCategoria = async (id: string) => {
-    if (await confirm('Tem certeza que deseja remover esta categoria?')) {
+    if (window.confirm('Tem certeza que deseja remover esta categoria?')) {
       try {
         const res = await fetch(`/api/categorias/${id}`, {
           method: 'DELETE'
         });
         if (res.ok) {
           carregarCategorias();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert(err.error || 'Erro ao remover categoria.');
         }
       } catch (e) {
         console.error(e);
+        alert('Erro de conexão ao remover categoria.');
       }
     }
   };

@@ -1,22 +1,17 @@
 'use client';
-import { getSessionUser } from '@/lib/session';
+import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { ArrowLeft, Building2, Hospital, ImagePlus, Save } from 'lucide-react';
 import './configuracao.css';
 
-interface Hospital {
-  id: string;
-  nome: string;
-  cnpj?: string;
-  endereco?: string;
-  telefone?: string;
-  logoUrl?: string;
-  ativo?: boolean;
-}
-
 export default function AdminConfiguracaoPage() {
-  const [hospitalId, setHospitalId] = useState('hosp_matriz');
-  const [hospital, setHospital] = useState<Hospital | null>(null);
+  const { data: session, status } = useSession();
+  const hospitalId = session?.user?.hospitalId ?? '';
+  const canManageHospital = status === 'authenticated' && session.user.cargo === 'ADMIN' && Boolean(hospitalId);
+  const [loadingHospital, setLoadingHospital] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState('');
 
   // Form states
   const [nome, setNome] = useState('');
@@ -26,48 +21,53 @@ export default function AdminConfiguracaoPage() {
   const [logoUrl, setLogoUrl] = useState('');
 
   useEffect(() => {
-    try {
-      const u = JSON.stringify(getSessionUser());
-      const usuario = u ? JSON.parse(u) : null;
-      const hid = usuario?.hospitalId || usuario?.id || 'hosp_matriz';
-      setHospitalId(hid);
+    if (!canManageHospital) return;
 
-      fetch(`/api/hospitais/${hid}`)
-        .then(r => r.json())
-        .then(current => {
-          if (current && !current.error) {
-            setHospital({ ...current, logoUrl: current.logo });
-            setNome(current.nome || '');
-            setCnpj(current.cnpj || '');
-            setEndereco(current.endereco || '');
-            setTelefone(current.telefone || '');
-            setLogoUrl(current.logo || '');
-          }
-        })
-        .catch(console.error);
-    } catch(e) {}
-  }, []);
+    const controller = new AbortController();
+    fetch(`/api/hospitais/${encodeURIComponent(hospitalId)}`, { signal: controller.signal })
+      .then(async response => {
+        const current = await response.json();
+        if (!response.ok) throw new Error(current.error || 'Não foi possível carregar os dados do hospital.');
+        setNome(current.nome || '');
+        setCnpj(current.cnpj || '');
+        setEndereco(current.endereco || '');
+        setTelefone(current.telefone || '');
+        setLogoUrl(current.logo || '');
+      })
+      .catch(error => {
+        if (error instanceof Error && error.name !== 'AbortError') setFeedback(error.message || 'Erro ao carregar os dados do hospital.');
+      })
+      .finally(() => setLoadingHospital(false));
 
-  const handleSalvar = async () => {
-    if(!nome.trim()) {
-      alert("O nome da instituição é obrigatório!");
+    return () => controller.abort();
+  }, [canManageHospital, hospitalId]);
+
+  const handleSalvar = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (session?.user?.cargo !== 'ADMIN' || !hospitalId) {
+      setFeedback('Apenas o administrador do hospital pode alterar estas configurações.');
+      return;
+    }
+    if (!nome.trim()) {
+      setFeedback('O nome da instituição é obrigatório.');
       return;
     }
 
+    setSaving(true);
+    setFeedback('');
     try {
-      const response = await fetch(`/api/hospitais/${hospitalId}`, {
+      const response = await fetch(`/api/hospitais/${encodeURIComponent(hospitalId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome, cnpj, endereco, telefone, logoUrl })
       });
-
-      if (response.ok) {
-        alert("✅ Configurações salvas com sucesso!");
-      } else {
-        alert("Erro ao salvar configurações.");
-      }
-    } catch(e) {
-      alert("Erro ao salvar configurações.");
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Erro ao salvar configurações.');
+      setFeedback('Configurações salvas com sucesso.');
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : 'Erro ao salvar configurações.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -76,18 +76,23 @@ export default function AdminConfiguracaoPage() {
       <div className="config-container">
         <div className="banner-config">
           <div>
-            <h1><i className="las la-building"></i> Configurações da Instituição</h1>
+            <h1><Building2 aria-hidden="true" /> Configurações da Instituição</h1>
             <p>Gerencie os dados da sua instituição, endereço e identidade visual</p>
           </div>
           <div>
             <Link href="/admin" className="btn btn-secondary" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px' }}>
-              <i className="las la-arrow-left"></i> Voltar
+              <ArrowLeft aria-hidden="true" /> Voltar
             </Link>
           </div>
         </div>
 
-        <div className="form-panel">
-          <h3><i className="las la-hospital-alt"></i> Dados Cadastrais</h3>
+        {status !== 'loading' && !canManageHospital && (
+          <p role="alert" className="config-feedback">Apenas o administrador do hospital pode alterar estas configurações.</p>
+        )}
+        {feedback && <p role="status" aria-live="polite" className="config-feedback">{feedback}</p>}
+
+        {status === 'loading' || (canManageHospital && loadingHospital) ? <p role="status">Carregando dados da instituição…</p> : canManageHospital && <form className="form-panel" onSubmit={handleSalvar}>
+          <h3><Hospital aria-hidden="true" /> Dados Cadastrais</h3>
           
           <div className="form-grid">
             <div className="form-grupo full">
@@ -101,7 +106,7 @@ export default function AdminConfiguracaoPage() {
             </div>
             
             <div className="form-grupo">
-              <label>CNPJ</label>
+              <label>CNPJ *</label>
               <input 
                 type="text" 
                 value={cnpj} 
@@ -143,7 +148,7 @@ export default function AdminConfiguracaoPage() {
                   <img src={logoUrl} alt="Logo preview" onError={(e) => { e.currentTarget.style.display='none'; }} />
                 ) : (
                   <>
-                    <i className="las la-image"></i>
+                    <ImagePlus aria-hidden="true" />
                     <p>Nenhum logotipo configurado</p>
                   </>
                 )}
@@ -151,14 +156,15 @@ export default function AdminConfiguracaoPage() {
             </div>
           </div>
 
-          <button 
-            className="btn btn-success" 
-            onClick={handleSalvar} 
+          <button
+            type="submit"
+            disabled={saving}
+            className="btn btn-success"
             style={{ width: '100%', marginTop: '30px', justifyContent: 'center', padding: '16px', fontSize: '16px' }}
           >
-            <i className="las la-save"></i> Salvar Configurações
+            <Save aria-hidden="true" /> {saving ? 'Salvando…' : 'Salvar Configurações'}
           </button>
-        </div>
+        </form>}
       </div>
     </div>
   );

@@ -1,25 +1,40 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { prisma } from '@/lib/db';
+import { auth } from '@/lib/auth';
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    if (session.user.cargo !== 'ADMIN') {
+      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
+    }
+
+    if (!session.user.hospitalId) {
+      return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
+    }
+
     const data = await prisma.hospital.findMany({
-      orderBy: { createdAt: 'desc' }
+      where: { id: session.user.hospitalId }
     });
     return NextResponse.json(data);
-  } catch (error) {
-    return NextResponse.json({ error: 'Erro ao buscar dados' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Erro ao buscar hospitais' }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
-    const body = await request.json();
-    const data = await prisma.hospital.create({
-      data: body
-    });
-    return NextResponse.json(data, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ error: 'Erro ao criar dado' }, { status: 500 });
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    return NextResponse.json({ error: 'Criação de hospitais exige provisionamento autorizado' }, { status: 403 });
+  } catch {
+    return NextResponse.json({ error: 'Erro ao criar hospital' }, { status: 500 });
   }
 }

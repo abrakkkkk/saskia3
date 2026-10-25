@@ -84,60 +84,77 @@ export default function FeedbackPage() {
       .catch(console.error);
   }, [hospitalId]);
 
-  const salvar = (lista: Feedback[]) => {
-    setFeedbacks(lista);
-    const novo = lista[0]; // the newest is at the top
-    const sess = session?.user as any;
-    
-    if (hospitalId && novo) {
-      fetch('/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          hospitalId,
-          usuarioId: sess?.id || 'usuario_anonimo',
-          tipo: novo.tipo,
-          mensagem: novo.mensagem + ' (' + novo.assunto + ')'
-        })
-      }).catch(console.error);
-    }
+  const carregarFeedbacks = () => {
+    fetch('/api/feedback')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped: Feedback[] = data.map((d: any) => ({
+            id: d.id,
+            tipo: d.tipo?.toLowerCase() || 'sugestao',
+            assunto: d.mensagem.split('(')[1]?.replace(')', '') || 'Mensagem',
+            mensagem: d.mensagem.split('(')[0]?.trim() || d.mensagem,
+            data: d.createdAt,
+            usuario: d.usuario?.nome || 'Profissional',
+            respondido: d.status === 'RESPONDIDO',
+            resposta: d.mensagem.includes('[RESPOSTA DA EQUIPE]:') ? d.mensagem.split('[RESPOSTA DA EQUIPE]:')[1]?.trim() : null
+          }));
+          setFeedbacks(mapped);
+        }
+      })
+      .catch(console.error);
   };
 
-  const enviarFeedback = (e: React.FormEvent) => {
+  const enviarFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!assunto.trim() || !mensagem.trim()) return;
     
-    const novo: Feedback = {
-      id: Date.now(),
-      tipo,
-      assunto,
-      mensagem,
-      data: new Date().toISOString(),
-      usuario: usuario?.nome || usuario?.email || 'Usuário',
-      respondido: false,
-      resposta: null,
-    };
-    
-    salvar([novo, ...feedbacks]);
-    setAssunto('');
-    setMensagem('');
-    setEnviado(true);
-    setTimeout(() => setEnviado(false), 3000);
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: tipo.toUpperCase(),
+          mensagem: `${mensagem.trim()} (${assunto.trim()})`
+        })
+      });
+
+      if (res.ok) {
+        setAssunto('');
+        setMensagem('');
+        setEnviado(true);
+        carregarFeedbacks();
+        setTimeout(() => setEnviado(false), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const enviarResposta = () => {
+  const enviarResposta = async () => {
     if (!respostaTexto.trim() || !modalFeedback) return;
     
-    const senha = prompt("Ação Administrativa: Digite sua senha para responder:");
-    if (senha === usuario?.senha) {
-      const atualizado = feedbacks.map(f =>
-        f.id === modalFeedback.id ? { ...f, respondido: true, resposta: respostaTexto } : f
-      );
-      salvar(atualizado);
-      setModalFeedback(null);
-      setRespostaTexto('');
-    } else if (senha !== null) {
-      alert("Senha incorreta!");
+    try {
+      const res = await fetch(`/api/feedback/${modalFeedback.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'RESPONDIDO',
+          resposta: respostaTexto.trim()
+        })
+      });
+
+      if (res.ok) {
+        setModalFeedback(null);
+        setRespostaTexto('');
+        carregarFeedbacks();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Apenas administradores podem responder feedbacks.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao enviar resposta.');
     }
   };
 

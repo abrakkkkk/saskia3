@@ -71,15 +71,27 @@ export default function CurvasCrescimentoPage() {
   const handleDriveAction = (curva: Curva, action: 'view' | 'download') => {
     const driveFile = driveFiles.find(f => f.name === curva.nome);
     
-    if (!driveFile) {
-      alert(`Arquivo "${curva.nome}" não encontrado no Google Drive.`);
+    if (driveFile) {
+      if (action === 'download' && driveFile.webContentLink) {
+        window.open(driveFile.webContentLink, '_blank');
+      } else {
+        window.open(driveFile.webViewLink, '_blank');
+      }
       return;
     }
     
-    if (action === 'download' && driveFile.webContentLink) {
-      window.open(driveFile.webContentLink, '_blank');
+    // Suporte local seguro (offline-first para pediatria)
+    const filePath = `/docs/${encodeURIComponent(curva.nome)}`;
+
+    if (action === 'download') {
+      const a = document.createElement('a');
+      a.href = filePath;
+      a.download = curva.nome;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } else {
-      window.open(driveFile.webViewLink, '_blank');
+      window.open(filePath, '_blank');
     }
   };
 

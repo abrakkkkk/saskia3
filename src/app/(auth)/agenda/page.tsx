@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 
-import { Inter } from 'next/font/google';
-
-const inter = Inter({ subsets: ['latin'] });
+import { inter } from '@/app/fonts'
 
 interface PacienteData {
   nome: string;
@@ -55,18 +53,13 @@ export default function AgendaPage() {
   };
 
   useEffect(() => {
-    if (hospitalId) {
-      carregarAgendamentos();
-    }
-  }, [hospitalId]);
+    carregarAgendamentos();
+  }, []);
 
   const alterarStatus = async (id: string, novoStatus: Agendamento['status']) => {
     if (novoStatus === 'CANCELADO') {
-      const senha = prompt("Ação Restrita: Digite sua senha para cancelar este agendamento:");
-      if (senha !== usuario?.senha) {
-        alert("Senha incorreta!");
-        return;
-      }
+      const confirmacao = window.confirm("Deseja realmente cancelar este agendamento?");
+      if (!confirmacao) return;
     }
     
     try {

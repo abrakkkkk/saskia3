@@ -28,8 +28,10 @@ export async function POST(request: NextRequest) {
     const hospitalId = session.user.hospitalId;
     const body = await request.json();
 
-    // Gera um protocolo simples: OUV- + timestamp
-    const protocoloId = `OUV-${Date.now().toString().slice(-4)}`;
+    // Gera um protocolo único e rastreável: OUV-AAAAMM-RANDOM-TIMESTAMP
+    const anoMes = new Date().toISOString().slice(0, 7).replace('-', '');
+    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const protocoloId = `OUV-${anoMes}-${rand}-${Date.now().toString().slice(-4)}`;
 
     const ticket = await prisma.ouvidoriaTicket.create({
       data: {

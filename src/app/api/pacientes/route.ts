@@ -14,6 +14,7 @@ export async function GET() {
       select: {
         id: true, nome: true, cpf: true, nascimento: true,
         status: true, classificacao: true, leitoTipo: true, leitoNumero: true,
+        createdAt: true,
       },
     })
 

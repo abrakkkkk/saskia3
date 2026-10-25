@@ -21,6 +21,7 @@ export default function BancoSanguePage() {
   // Filtros Estoque
   const [buscaEstoque, setBuscaEstoque] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todas');
+  const [modalBolsas, setModalBolsas] = useState<{ aberto: boolean; grupo: any | null }>({ aberto: false, grupo: null });
 
   // Pacientes mock
   const [pacientesMock] = useState(['João Silva', 'Maria Souza', 'José Pereira', 'Ana Costa', 'Carlos Mendes']);
@@ -224,15 +225,17 @@ export default function BancoSanguePage() {
                   const qtd = g.bolsas.length;
                   const cor = qtd <= 2 ? '#dc2626' : (qtd <= 5 ? '#f59e0b' : '#16a34a');
                   return (
-                    <div key={i} className="estoque-card" style={{ background: 'white', borderRadius: '8px', padding: '25px', textAlign: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', position: 'relative', borderTop: `5px solid ${cor}` }}
-                      onClick={() => alert(`Detalhes (${g.tipo} ${g.abrev}):\n` + g.bolsas.map(b => `- ${b.numero} | ${b.status} | Val: ${new Date(b.validade).toLocaleDateString()}`).join('\n'))}
+                    <div key={i} className="estoque-card" style={{ background: 'white', borderRadius: '8px', padding: '25px', textAlign: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', position: 'relative', borderTop: `5px solid ${cor}`, cursor: 'pointer' }}
+                      onClick={() => setModalBolsas({ aberto: true, grupo: g })}
                     >
                       <div style={{ fontSize: '48px', marginBottom: '10px' }}>{g.icone}</div>
                       <div style={{ fontWeight: 700, color: '#0a1f44', fontSize: '18px', marginBottom: '2px' }}>{g.tipo}</div>
                       <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', fontWeight: 600 }}>{g.abrev}</div>
                       <div style={{ fontSize: '48px', fontWeight: 800, margin: '10px 0', color: cor }}>{qtd}</div>
                       <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px' }}>
-                        <span style={{ display: 'inline-block', background: '#f1f5f9', padding: '4px 10px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>Clique para ver as {qtd} bolsas</span>
+                        <span style={{ display: 'inline-block', background: '#f1f5f9', padding: '4px 10px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
+                          {qtd === 1 ? 'Ver 1 bolsa' : `Ver ${qtd} bolsas`}
+                        </span>
                       </div>
                     </div>
                   );
@@ -386,6 +389,55 @@ export default function BancoSanguePage() {
                   ))
                 }
              </div>
+          </div>
+        )}
+
+        {/* Modal de Detalhes das Bolsas do Tipo */}
+        {modalBolsas.aberto && modalBolsas.grupo && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(10, 31, 68, 0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <div style={{ background: '#ffffff', borderRadius: '12px', width: '100%', maxWidth: '600px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)' }}>
+              <div style={{ padding: '18px 24px', background: '#0f172a', color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '24px' }}>{modalBolsas.grupo.icone}</span>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>{modalBolsas.grupo.tipo} - {modalBolsas.grupo.componente}</h3>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>Total de {modalBolsas.grupo.bolsas.length} bolsa(s) registrada(s)</p>
+                  </div>
+                </div>
+                <button onClick={() => setModalBolsas({ aberto: false, grupo: null })} style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '22px', cursor: 'pointer', padding: '4px' }}>✕</button>
+              </div>
+
+              <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {modalBolsas.grupo.bolsas.map((b: Bolsa) => {
+                    const statusColor = b.status === 'Disponível' ? '#16a34a' : (b.status === 'Transfundida' ? '#2563eb' : (b.status === 'Bloqueada' ? '#dc2626' : '#d97706'));
+                    const statusBg = b.status === 'Disponível' ? '#dcfce7' : (b.status === 'Transfundida' ? '#eff6ff' : (b.status === 'Bloqueada' ? '#fee2e2' : '#fef3c7'));
+                    return (
+                      <div key={b.id} style={{ padding: '14px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '14px' }}>Nº {b.numero}</div>
+                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                            Volume: <strong>{b.volume} ml</strong> • Validade: <strong>{new Date(b.validade).toLocaleDateString('pt-BR')}</strong>
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                            Origem: {b.origem} • Sorologia: {b.sorologias}
+                          </div>
+                        </div>
+                        <span style={{ background: statusBg, color: statusColor, padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>
+                          {b.status}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ padding: '14px 20px', background: '#f1f5f9', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
+                <button onClick={() => setModalBolsas({ aberto: false, grupo: null })} style={{ padding: '8px 18px', background: '#0f172a', color: '#ffffff', borderRadius: '6px', border: 'none', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+                  Fechar
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

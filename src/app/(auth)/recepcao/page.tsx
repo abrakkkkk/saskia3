@@ -13,6 +13,7 @@ interface Paciente {
   classificacao: string | null;
   nascimento: string | null;
   dataCadastro?: string;
+  createdAt?: string;
 }
 
 interface Visitante {
@@ -186,10 +187,30 @@ export default function RecepcaoPage() {
   const visitantesHojeSairam = visitantes.filter(v => v.status === 'SAIU' && v.saida && new Date(v.saida).toDateString() === hoje);
 
   const recentes = [...pacientes].sort((a, b) => {
-    const dataA = a.dataCadastro ? new Date(a.dataCadastro).getTime() : 0;
-    const dataB = b.dataCadastro ? new Date(b.dataCadastro).getTime() : 0;
+    const dataA = (a.createdAt || a.dataCadastro) ? new Date(a.createdAt || a.dataCadastro!).getTime() : 0;
+    const dataB = (b.createdAt || b.dataCadastro) ? new Date(b.createdAt || b.dataCadastro!).getTime() : 0;
     return dataB - dataA;
   }).slice(0, 10);
+
+  const formatChegada = (p: Paciente) => {
+    const raw = p.createdAt || p.dataCadastro;
+    if (!raw) return '-';
+    try {
+      const dt = new Date(raw);
+      if (isNaN(dt.getTime())) return '-';
+      const horaStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const agora = new Date();
+      if (dt.toDateString() === agora.toDateString()) {
+        const diffMin = Math.round((agora.getTime() - dt.getTime()) / 60000);
+        if (diffMin < 2) return `Agora (${horaStr})`;
+        if (diffMin < 60) return `há ${diffMin} min (${horaStr})`;
+        return horaStr;
+      }
+      return `${dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${horaStr}`;
+    } catch {
+      return '-';
+    }
+  };
 
   const formatHora = (d: string) => {
     const date = new Date(d);
@@ -360,7 +381,9 @@ export default function RecepcaoPage() {
                         <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#fafbfc' : 'white', transition: 'background 0.15s' }}>
                           <td style={{ padding: '12px 14px', fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>{p.nome}</td>
                           <td style={{ padding: '12px 14px', fontSize: '13px', color: '#475569' }}>{p.cpf || '-'}</td>
-                          <td style={{ padding: '12px 14px', fontSize: '13px', color: '#475569' }}>{p.dataCadastro ? new Date(p.dataCadastro).toLocaleDateString('pt-BR') : '-'}</td>
+                          <td style={{ padding: '12px 14px', fontSize: '13px', color: '#475569' }}>
+                            <span style={{ fontWeight: 600, color: '#1e293b' }}>{formatChegada(p)}</span>
+                          </td>
                           <td style={{ padding: '12px 14px', fontSize: '13px' }}>
                             <span style={{
                               display: 'inline-block', padding: '4px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold',
@@ -371,16 +394,23 @@ export default function RecepcaoPage() {
                             </span>
                           </td>
                           <td style={{ padding: '12px 14px' }}>
-                            <div style={{ display: 'flex', gap: '5px' }}>
-                              <Link href={`/pacientes/${p.id}`} style={{ background: 'transparent', border: 'none', color: '#1e3a8a', cursor: 'pointer', padding: '5px 8px', borderRadius: '8px', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Ver Ficha">
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <Link href={`/pacientes/${p.id}`} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a', cursor: 'pointer', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }} title="Ver Prontuário / Ficha">
                                 <i className="las la-eye"></i>
+                                <span>Ficha</span>
                               </Link>
                               {p.status === 'Recepção' && (
                                 <button
                                   onClick={() => enviarParaTriagem(p.id)}
-                                  style={{ background: 'transparent', border: 'none', color: '#16a34a', cursor: 'pointer', padding: '5px 8px', borderRadius: '8px', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                  title="Enviar para Triagem"
+                                  style={{
+                                    background: '#dcfce7', border: '1px solid #86efac', color: '#16a34a',
+                                    cursor: 'pointer', padding: '6px 10px', borderRadius: '6px', fontSize: '12px',
+                                    fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                    boxShadow: '0 1px 2px rgba(22, 163, 74, 0.15)', transition: 'all 0.15s'
+                                  }}
+                                  title="Encaminhar paciente para Triagem e Classificação de Manchester"
                                 >
+                                  <span>Triagem</span>
                                   <i className="las la-arrow-right"></i>
                                 </button>
                               )}

@@ -103,11 +103,27 @@ export default function ServicoSocialPage() {
     return (d.getMonth() + 1) === mesAtual && d.getFullYear() === anoAtual;
   }).length;
   
-  const pendentes = atendimentos.filter(a => a.status !== "Concluído").length;
-  const concluidos = atendimentos.filter(a => a.status === "Concluído").length;
-  const comEncaminhamentos = atendimentos.filter(a => a.status === "Encaminhado").length; // ou algo similar
+  const pendentes = atendimentos.filter(a => {
+    const s = (a.status || '').toUpperCase();
+    return s.includes('ACOMPANHAMENTO') || s.includes('PENDENTE') || s.includes('ANDAMENTO') || s === 'EM ANDAMENTO';
+  }).length;
+  const concluidos = atendimentos.filter(a => {
+    const s = (a.status || '').toUpperCase();
+    return s.includes('CONCLU') || s.includes('RESOLVIDO') || s.includes('FINALIZADO');
+  }).length;
+  const comEncaminhamentos = atendimentos.filter(a => {
+    const s = (a.status || '').toUpperCase();
+    return s.includes('ENCAMINHA');
+  }).length;
 
-  if (loading && atendimentos.length === 0) return <div>Carregando...</div>;
+  if (loading && atendimentos.length === 0) {
+    return (
+      <div className="conteudo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '350px', gap: '16px' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+        <p style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>Carregando dados do Serviço Social...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="conteudo">

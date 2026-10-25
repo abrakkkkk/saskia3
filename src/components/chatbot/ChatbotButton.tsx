@@ -13,6 +13,8 @@ export default function ChatbotButton() {
         className="chatbot-fab"
         onClick={() => setOpen(!open)}
         title="EnfBia Bot — Assistente IA"
+        aria-label={open ? 'Fechar assistente' : 'Abrir assistente'}
+        aria-expanded={open}
       >
         <Image
           src="/images/enfbiabot.png"
@@ -22,7 +24,6 @@ export default function ChatbotButton() {
           className="chatbot-fab-img"
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
         />
-        {!open && <span className="chatbot-notif">1</span>}
       </button>
       {open && <ChatbotWindow onClose={() => setOpen(false)} />}
     </>

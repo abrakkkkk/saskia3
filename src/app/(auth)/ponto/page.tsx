@@ -53,8 +53,7 @@ export default function PontoPage() {
 
   const fetchRegistros = () => {
     try {
-      const hid = getHospitalId();
-      fetch(`/api/pontoregistro?hospitalId=${hid}`)
+      fetch('/api/pontoregistro')
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {
@@ -77,7 +76,6 @@ export default function PontoPage() {
 
   const registrar = (tipo: string) => {
     const profissional = getNomeProfissional();
-    const hid = getHospitalId();
     
     const agora = new Date();
     const novoRegistro: RegistroPonto = {
@@ -88,22 +86,20 @@ export default function PontoPage() {
       timestamp: agora.getTime()
     };
 
-    const novosRegistros = [...registros, novoRegistro];
+    const novosRegistros = [novoRegistro, ...registros];
     setRegistros(novosRegistros);
-
-    const u = JSON.stringify(getSessionUser());
-    const sess = session?.user || (u ? JSON.parse(u) : null);
 
     fetch('/api/pontoregistro', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        hospitalId: hid,
-        usuarioId: sess?.id || 'usuario_anonimo',
-        tipo,
-        dataHora: agora.toISOString()
+        tipo
       })
-    }).catch(console.error);
+    })
+    .then(res => {
+      if (res.ok) fetchRegistros();
+    })
+    .catch(console.error);
 
     const msgs: Record<string, string> = {
       'ENTRADA': '✅ ENTRADA REGISTRADA! 💪',

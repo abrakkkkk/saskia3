@@ -1,60 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { isRecord } from '@/lib/request-validation';
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function PUT(request: NextRequest, { params }: RouteContext) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  if (session.user.cargo !== 'ADMIN') return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
+  const hospitalId = session.user.hospitalId;
+  if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
+
+  const { id } = await params;
+  let body: unknown;
   try {
-    const { id } = await params;
-    const session = await auth();
-    if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
+  }
 
-    const hospitalId = session.user.hospitalId;
-    const body = await request.json();
+  if (
+    !isRecord(body) ||
+    (!('nome' in body) && !('tipo' in body) && !('descricao' in body)) ||
+    (body.nome !== undefined && (typeof body.nome !== 'string' || !body.nome.trim() || body.nome.length > 100)) ||
+    (body.tipo !== undefined && (typeof body.tipo !== 'string' || !body.tipo.trim() || body.tipo.length > 60)) ||
+    (body.descricao !== undefined && body.descricao !== null && (typeof body.descricao !== 'string' || body.descricao.length > 1000))
+  ) {
+    return NextResponse.json({ error: 'Categoria inválida' }, { status: 400 });
+  }
 
-    const cat = await prisma.categoria.findFirst({
-      where: { id: id, hospitalId }
-    });
+  const data = {
+    ...(typeof body.nome === 'string' ? { nome: body.nome.trim() } : {}),
+    ...(typeof body.tipo === 'string' ? { tipo: body.tipo.trim() } : {}),
+    ...(typeof body.descricao === 'string' || body.descricao === null ? { descricao: body.descricao } : {}),
+  };
 
-    if (!cat) {
-      return NextResponse.json({ error: 'Categoria não encontrada' }, { status: 404 });
-    }
-
-    const atualizada = await prisma.categoria.update({
-      where: { id: id },
-      data: {
-        nome: body.nome !== undefined ? body.nome : cat.nome,
-        tipo: body.tipo !== undefined ? body.tipo : cat.tipo,
-        descricao: body.descricao !== undefined ? body.descricao : cat.descricao
-      }
-    });
-
-    return NextResponse.json(atualizada);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    const updated = await prisma.categoria.updateMany({ where: { id, hospitalId }, data });
+    if (updated.count === 0) return NextResponse.json({ error: 'Categoria não encontrada' }, { status: 404 });
+    const categoria = await prisma.categoria.findFirst({ where: { id, hospitalId } });
+    return NextResponse.json(categoria);
+  } catch {
+    return NextResponse.json({ error: 'Erro ao atualizar categoria' }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  if (session.user.cargo !== 'ADMIN') return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
+  const hospitalId = session.user.hospitalId;
+  if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
+
+  const { id } = await params;
   try {
-    const { id } = await params;
-    const session = await auth();
-    if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-
-    const hospitalId = session.user.hospitalId;
-    const cat = await prisma.categoria.findFirst({
-      where: { id: id, hospitalId }
-    });
-
-    if (!cat) {
-      return NextResponse.json({ error: 'Categoria não encontrada' }, { status: 404 });
-    }
-
-    await prisma.categoria.delete({
-      where: { id: id }
-    });
-
+    const deleted = await prisma.categoria.deleteMany({ where: { id, hospitalId } });
+    if (deleted.count === 0) return NextResponse.json({ error: 'Categoria não encontrada' }, { status: 404 });
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Erro ao excluir categoria' }, { status: 500 });
   }
 }

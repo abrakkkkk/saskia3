@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import './config-dashboard.css';
 
 
@@ -53,19 +53,21 @@ const modulosConfigOriginal = [
 ];
 
 export default function AdminConfigDashboardPage() {
-  const router = useRouter();
-  
-  // States
-  const [isLocked, setIsLocked] = useState(true);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [passError, setPassError] = useState(false);
-  
+  const { data: session, status } = useSession();
+  const [configLoading, setConfigLoading] = useState(true);
+  const [configLoadError, setConfigLoadError] = useState(false);
+  const [feedback, setFeedback] = useState('');
   const [configState, setConfigState] = useState<Record<string, boolean>>({});
   const [activeProfile, setActiveProfile] = useState<string>('');
 
   useEffect(() => {
-    fetch('/api/config-dashboard')
-      .then(r => r.json())
+    if (status !== 'authenticated' || session?.user?.cargo !== 'ADMIN') return;
+    let cancelled = false;
+    fetch('/api/config-dashboard', { cache: 'no-store' })
+      .then(async response => {
+        if (!response.ok) throw new Error('Não foi possível carregar a configuração.');
+        return response.json();
+      })
       .then(stored => {
         let parsed: Record<string, boolean> = {};
         if (stored && Object.keys(stored).length > 0) {
@@ -80,48 +82,17 @@ export default function AdminConfigDashboardPage() {
           if (parsed[m.id] === undefined) parsed[m.id] = true;
         });
 
-        setConfigState(parsed);
+        if (!cancelled) setConfigState(parsed);
       })
-      .catch(() => {
-        let parsed: Record<string, boolean> = {};
-        modulosConfigOriginal.forEach(m => { parsed[m.id] = true; });
-        setConfigState(parsed);
-      });
-  }, []);
-
-  const [isVerifying, setIsVerifying] = useState(false);
-
-  const handleVerifyPassword = async () => {
-    if (!passwordInput) return;
-    
-    setIsVerifying(true);
-    setPassError(false);
-    
-    try {
-      const response = await fetch('/api/verify-support-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senha: passwordInput })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setIsLocked(false);
-      } else {
-        setPassError(true);
-        setPasswordInput('');
-      }
-    } catch (error) {
-      setPassError(true);
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
-  const handleLogout = () => {
-    router.push('/dashboard');
-  };
+      .catch(error => {
+        if (!cancelled) {
+          setConfigLoadError(true);
+          setFeedback(error instanceof Error ? error.message : 'Erro ao carregar configuração.');
+        }
+      })
+      .finally(() => { if (!cancelled) setConfigLoading(false); });
+    return () => { cancelled = true; };
+  }, [session, status]);
 
   const toggleModule = (id: string) => {
     setConfigState(prev => ({ ...prev, [id]: !prev[id] }));
@@ -143,7 +114,7 @@ export default function AdminConfigDashboardPage() {
     const p = perfis[perfil];
     if (!p) return;
 
-    let newState = { ...configState };
+    const newState = { ...configState };
     
     if (perfil === 'todos') {
       modulosConfigOriginal.forEach(m => newState[m.id] = true);
@@ -159,75 +130,46 @@ export default function AdminConfigDashboardPage() {
   };
 
   const saveConfig = async () => {
+    setFeedback('');
     try {
-      await fetch('/api/config-dashboard', {
+      const response = await fetch('/api/config-dashboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(configState)
       });
-      alert("✅ Configuração salva com sucesso! O dashboard será atualizado na próxima carga.");
+      if (!response.ok) throw new Error('Não foi possível salvar a configuração.');
+      setFeedback('Configuração salva. O dashboard será atualizado na próxima carga.');
     } catch {
-      alert("❌ Erro ao salvar configuração!");
+      setFeedback('Erro ao salvar configuração.');
     }
   };
 
   const resetConfig = async () => {
-    if(await confirm("⚠️ Tem certeza que deseja restaurar TODOS os módulos para o padrão (ativados)?")) {
-      let newState = { ...configState };
+    if(await confirm("Tem certeza que deseja restaurar todos os módulos para o padrão (ativados)?")) {
+      const newState = { ...configState };
       modulosConfigOriginal.forEach(m => newState[m.id] = true);
-      setConfigState(newState);
       try {
-        await fetch('/api/config-dashboard', {
+        const response = await fetch('/api/config-dashboard', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newState)
         });
+        if (!response.ok) throw new Error('Não foi possível restaurar a configuração.');
+        setConfigState(newState);
         setActiveProfile('todos');
-        alert("✅ Configuração restaurada para o padrão!");
+        setFeedback('Configuração restaurada para o padrão.');
       } catch {
-        alert("❌ Erro ao restaurar configuração!");
+        setFeedback('Erro ao restaurar configuração.');
       }
     }
   };
 
   const totalAtivos = Object.values(configState).filter(Boolean).length;
-
-  // Render lock screen if locked
-  if (isLocked) {
-    return (
-      <div className="conteudo">
-        <div className="modal-verificacao">
-          <div className="modal-verificacao-content">
-            <div className="lock-icon"><i className="las la-lock"></i></div>
-            <h3>Verificação de Segurança</h3>
-            <p>Esta é uma área restrita da equipe de suporte. Digite a senha master para continuar.</p>
-            
-            <input 
-              type="password" 
-              value={passwordInput}
-              onChange={e => setPasswordInput(e.target.value)}
-              placeholder="Digite a senha de suporte" 
-              onKeyDown={e => { if (e.key === 'Enter') handleVerifyPassword(); }}
-              autoFocus
-            />
-            
-            {passError && (
-              <div className="erro-msg">
-                <i className="las la-exclamation-triangle"></i> Senha incorreta! Tente novamente.
-              </div>
-            )}
-            
-            <button className="btn btn-primary" onClick={handleVerifyPassword} style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}>
-              <i className="las la-check-circle"></i> Verificar e Acessar
-            </button>
-            <button className="btn-logout" onClick={handleLogout}>
-              <i className="las la-arrow-left"></i> Voltar para o Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (status === 'loading') return <div className="conteudo">Carregando permissões…</div>;
+  if (!session?.user) return <div className="conteudo">Entre no sistema para continuar.</div>;
+  if (session.user.cargo !== 'ADMIN') return <div className="conteudo">Acesso restrito ao administrador do hospital.</div>;
+  if (configLoading) return <div className="conteudo">Carregando configuração…</div>;
+  if (configLoadError) return <div className="conteudo"><p className="config-feedback" role="alert">{feedback}</p><button className="btn btn-primary" onClick={() => window.location.reload()}>Tentar novamente</button></div>;
 
   // Agrupar seções
   const secoes: Record<string, typeof modulosConfigOriginal> = {};
@@ -254,10 +196,12 @@ export default function AdminConfigDashboardPage() {
         <div className="alerta-restrito">
           <i className="las la-shield-alt icone"></i>
           <div>
-            <strong>⚠️ Área de Configuração Avançada</strong>
+            <strong><i className="las la-exclamation-triangle" aria-hidden="true"></i> Área de Configuração Avançada</strong>
             <p>Alterações aqui afetam diretamente a experiência do usuário final. Modifique com cuidado.</p>
           </div>
         </div>
+
+        {feedback && <p className="config-feedback" role="status">{feedback}</p>}
 
         <div className="acoes-bar">
           <div>

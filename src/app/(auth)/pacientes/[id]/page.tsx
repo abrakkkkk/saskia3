@@ -447,43 +447,107 @@ export default function FichaPacientePage() {
 
         {/* ===================== TRIAGEM ===================== */}
         {tab === 'triagem' && (
-          <div>
-            <h3 style={{ marginBottom: 20, color: '#0a1f44' }}>Registro de Triagem</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 20 }}>
+          <div className="space-y-6">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
-                <label className="form-label">Classificação de Risco</label>
+                <h3 style={{ margin: 0, color: '#0a1f44', fontSize: '20px', fontWeight: 800 }}>Registro de Triagem e Classificação de Risco</h3>
+                <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '13px' }}>Aferição de sinais vitais, cálculo do escore MEWS e protocolo de acolhimento</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 15, marginBottom: 20 }}>
+              <div style={{ background: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                <label className="form-label" style={{ fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>Classificação Manchester / Risco</label>
                 <select className="input-field" value={triagem.classificacao} onChange={e => setTriagem({ ...triagem, classificacao: e.target.value })}>
-                  <option value="">Selecione...</option><option value="Vermelho">Vermelho</option><option value="Laranja">Laranja</option><option value="Amarelo">Amarelo</option><option value="Verde">Verde</option><option value="Azul">Azul</option>
+                  <option value="">Selecione o Risco...</option>
+                  <option value="Vermelho">🔴 Vermelho (Emergência - 0 min)</option>
+                  <option value="Laranja">🟠 Laranja (Muito Urgente - 10 min)</option>
+                  <option value="Amarelo">🟡 Amarelo (Urgente - 50 min)</option>
+                  <option value="Verde">🟢 Verde (Pouco Urgente - 120 min)</option>
+                  <option value="Azul">🔵 Azul (Não Urgente - 240 min)</option>
                 </select>
               </div>
-              <div>
-                <label className="form-label">Fluxograma Principal</label>
+              <div style={{ background: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                <label className="form-label" style={{ fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>Fluxograma Clínico Principal</label>
                 <select className="input-field" value={triagem.fluxograma} onChange={e => setTriagem({ ...triagem, fluxograma: e.target.value })}>
-                  <option value="">Selecione...</option><option value="Dor torácica">Dor torácica</option><option value="Dispneia">Dispneia</option><option value="Febre">Febre</option><option value="Trauma">Trauma</option><option value="Dor abdominal">Dor abdominal</option>
+                  <option value="">Selecione o Fluxograma...</option>
+                  <option value="Dor torácica">Dor torácica / Cardiopatia</option>
+                  <option value="Dispneia">Dispneia / Insuficiência Respiratória</option>
+                  <option value="Febre">Febre / Síndrome Infecciosa</option>
+                  <option value="Trauma">Trauma / Acidente / Queda</option>
+                  <option value="Dor abdominal">Dor abdominal / Abdome Agudo</option>
+                  <option value="Cefaleia">Cefaleia / Alteração Neurológica</option>
+                  <option value="Outros">Outras Queixas Clínicas</option>
                 </select>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 15, marginBottom: 20, background: '#f8fafc', padding: 20, borderRadius: 12 }}>
-              <div><label className="form-label">PA</label><input type="text" className="input-field" placeholder="120/80" value={triagem.pressao} onChange={e => setTriagem({ ...triagem, pressao: e.target.value })} /></div>
-              <div><label className="form-label">FC</label><input type="number" className="input-field" placeholder="80" value={triagem.frequenciaC} onChange={e => setTriagem({ ...triagem, frequenciaC: e.target.value })} /></div>
-              <div><label className="form-label">FR</label><input type="number" className="input-field" placeholder="18" value={triagem.frequenciaR} onChange={e => setTriagem({ ...triagem, frequenciaR: e.target.value })} /></div>
-              <div><label className="form-label">Temp</label><input type="number" step="0.1" className="input-field" placeholder="36.5" value={triagem.temperatura} onChange={e => setTriagem({ ...triagem, temperatura: e.target.value })} /></div>
-              <div><label className="form-label">SatO2</label><input type="number" className="input-field" placeholder="98" value={triagem.saturacao} onChange={e => setTriagem({ ...triagem, saturacao: e.target.value })} /></div>
-              <div><label className="form-label">HGT</label><input type="number" className="input-field" placeholder="90" value={triagem.glicemia} onChange={e => setTriagem({ ...triagem, glicemia: e.target.value })} /></div>
-              <div><label className="form-label">AVPU</label><select className="input-field" value={triagem.avpu} onChange={e => setTriagem({ ...triagem, avpu: e.target.value })}><option value="A">Alerta</option><option value="V">Voz</option><option value="P">Dor</option><option value="U">Inconsc</option></select></div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginBottom: 20 }}>
-              <div style={{ background: mewsInfo.bg, padding: 20, borderRadius: 12, textAlign: 'center', transition: 'all 0.3s', border: `2px solid ${mewsInfo.text}` }}>
-                <h4 style={{ color: mewsInfo.text, margin: 0, fontSize: 14 }}>Escore MEWS</h4>
-                <div style={{ fontSize: 32, fontWeight: 800, color: mewsInfo.text, margin: '10px 0' }}>{mews}</div>
-                <div style={{ fontSize: 12, color: mewsInfo.text, fontWeight: 600 }}>{mewsInfo.label}</div>
+
+            {/* Sinais Vitais com Unidades Claras */}
+            <div style={{ background: '#ffffff', padding: '20px', borderRadius: '12px', border: '1px solid #cbd5e1', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', marginBottom: 20 }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0a1f44', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="las la-heartbeat" style={{ color: '#dc2626', fontSize: '18px' }}></i> Sinais Vitais & Avaliação Fisiológica
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <textarea className="input-field" rows={2} placeholder="Queixa Principal" value={triagem.queixa} onChange={e => setTriagem({ ...triagem, queixa: e.target.value })}></textarea>
-                <textarea className="input-field" rows={2} placeholder="História da Doença Atual (HDA)" value={triagem.observacoes} onChange={e => setTriagem({ ...triagem, observacoes: e.target.value })}></textarea>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 14 }}>
+                <div>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: 600 }}>PA (mmHg)</label>
+                  <input type="text" className="input-field" placeholder="120/80" value={triagem.pressao} onChange={e => setTriagem({ ...triagem, pressao: e.target.value })} />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: 600 }}>FC (bpm)</label>
+                  <input type="number" className="input-field" placeholder="80" value={triagem.frequenciaC} onChange={e => setTriagem({ ...triagem, frequenciaC: e.target.value })} />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: 600 }}>FR (irpm)</label>
+                  <input type="number" className="input-field" placeholder="18" value={triagem.frequenciaR} onChange={e => setTriagem({ ...triagem, frequenciaR: e.target.value })} />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: 600 }}>Temp (°C)</label>
+                  <input type="number" step="0.1" className="input-field" placeholder="36.5" value={triagem.temperatura} onChange={e => setTriagem({ ...triagem, temperatura: e.target.value })} />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: 600 }}>SpO2 (%)</label>
+                  <input type="number" className="input-field" placeholder="98" value={triagem.saturacao} onChange={e => setTriagem({ ...triagem, saturacao: e.target.value })} />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: 600 }}>Glicemia (mg/dL)</label>
+                  <input type="number" className="input-field" placeholder="90" value={triagem.glicemia} onChange={e => setTriagem({ ...triagem, glicemia: e.target.value })} />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: 600 }}>Nível Consciência</label>
+                  <select className="input-field" value={triagem.avpu} onChange={e => setTriagem({ ...triagem, avpu: e.target.value })}>
+                    <option value="A">A - Alerta</option>
+                    <option value="V">V - Responde à Voz</option>
+                    <option value="P">P - Responde à Dor</option>
+                    <option value="U">U - Inconsciente</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <button className="btn btn-primary" style={{ width: '100%' }} onClick={registrarTriagem} disabled={isSaving}>{isSaving ? 'Registrando...' : 'Registrar Triagem'}</button>
+
+            {/* MEWS e Anamnese */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) 2fr', gap: 18, marginBottom: 20 }}>
+              <div style={{ background: mewsInfo.bg, padding: 20, borderRadius: 12, textAlign: 'center', transition: 'all 0.3s', border: `2px solid ${mewsInfo.text}`, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h4 style={{ color: mewsInfo.text, margin: 0, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Escore MEWS Fisiológico</h4>
+                <div style={{ fontSize: 38, fontWeight: 900, color: mewsInfo.text, margin: '8px 0' }}>{mews}</div>
+                <div style={{ fontSize: 13, color: mewsInfo.text, fontWeight: 700 }}>{mewsInfo.label}</div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label className="form-label" style={{ fontWeight: 700, color: '#1e293b' }}>Queixa Principal</label>
+                  <textarea className="input-field" rows={2} placeholder="Ex: Dor precordial opressiva irradiando para MSE com início há 2 horas..." value={triagem.queixa} onChange={e => setTriagem({ ...triagem, queixa: e.target.value })} style={{ resize: 'vertical' }}></textarea>
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontWeight: 700, color: '#1e293b' }}>História da Doença Atual (HDA) e Antecedentes</label>
+                  <textarea className="input-field" rows={3} placeholder="Descreva os fatores desencadeantes, sintomas associados, alergias e medicações em uso..." value={triagem.observacoes} onChange={e => setTriagem({ ...triagem, observacoes: e.target.value })} style={{ resize: 'vertical' }}></textarea>
+                </div>
+              </div>
+            </div>
+
+            <button className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '15px', fontWeight: 700 }} onClick={registrarTriagem} disabled={isSaving}>
+              {isSaving ? 'Registrando Triagem...' : 'Salvar e Registrar Triagem'}
+            </button>
 
             <h3 style={{ marginTop: 40, marginBottom: 20, color: '#0a1f44' }}>Histórico de Triagens</h3>
             {paciente.triagens?.length > 0 ? paciente.triagens.map((t: any, i: number) => (

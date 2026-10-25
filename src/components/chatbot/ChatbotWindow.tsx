@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
+import { SendHorizontal, X } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -14,6 +15,16 @@ const SUGESTOES = [
   'Triagem Manchester', 'Sinais vitais normais', 'Protocolo de queda',
   'Medicamentos', 'Primeiros socorros', 'Documentação',
 ];
+
+function renderMessageContent(content: string) {
+  return content.split(/(\*\*[^*]+\*\*|\n)/g).map((part, index) => {
+    if (part === '\n') return <br key={index} />;
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
 
 export default function ChatbotWindow({ onClose }: { onClose: () => void }) {
   const { data: session } = useSession();
@@ -31,7 +42,7 @@ export default function ChatbotWindow({ onClose }: { onClose: () => void }) {
       const nome = session.user.name?.split(' ')[0] || 'profissional';
       setMessages([{
         role: 'assistant',
-        content: `Olá, ${nome}! 👋 Sou o **EnfBia Bot**, seu assistente de IA do Saskia Saúde.\n\nEstou aqui para ajudar com protocolos clínicos, dúvidas sobre medicamentos, triagem, cuidados de enfermagem e muito mais.\n\nComo posso ajudar você hoje?`,
+        content: `Olá, ${nome}! Sou o **EnfBia Bot**, seu assistente de IA do Saskia Saúde.\n\nEstou aqui para ajudar com protocolos clínicos, dúvidas sobre medicamentos, triagem, cuidados de enfermagem e muito mais.\n\nComo posso ajudar você hoje?`,
         timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       }]);
     }
@@ -78,7 +89,7 @@ export default function ChatbotWindow({ onClose }: { onClose: () => void }) {
     } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: '⚠️ Não foi possível conectar ao assistente. Tente novamente em instantes.',
+        content: 'Não foi possível conectar ao assistente. Tente novamente em instantes.',
         timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       }]);
     }
@@ -92,10 +103,10 @@ export default function ChatbotWindow({ onClose }: { onClose: () => void }) {
         <Image src="/images/enfbiabot.png" alt="EnfBia Bot" width={40} height={40} className="chatbot-header-img" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
         <div className="chatbot-header-info">
           <h4>EnfBia Bot</h4>
-          <span>Assistente IA — Online</span>
+          <span>Assistente de IA</span>
         </div>
-        <button className="chatbot-close" onClick={onClose}>
-          <i className="las la-times"></i>
+        <button className="chatbot-close" onClick={onClose} aria-label="Fechar assistente">
+          <X size={18} aria-hidden="true" />
         </button>
       </div>
 
@@ -106,11 +117,7 @@ export default function ChatbotWindow({ onClose }: { onClose: () => void }) {
               <Image src="/images/enfbiabot.png" alt="Bot" width={32} height={32} className="chatbot-msg-avatar" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             )}
             <div>
-              <div className="chatbot-msg-bubble" dangerouslySetInnerHTML={{
-                __html: msg.content
-                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                  .replace(/\n/g, '<br />')
-              }} />
+              <div className="chatbot-msg-bubble">{renderMessageContent(msg.content)}</div>
               <div className="chatbot-msg-time">{msg.timestamp}</div>
             </div>
           </div>
@@ -144,8 +151,8 @@ export default function ChatbotWindow({ onClose }: { onClose: () => void }) {
           placeholder="Pergunte sobre protocolos, medicamentos, cuidados..."
           rows={1}
         />
-        <button className="chatbot-send" onClick={() => enviarMensagem()} disabled={loading}>
-          <i className="las la-paper-plane"></i>
+        <button className="chatbot-send" onClick={() => enviarMensagem()} disabled={loading || !input.trim()} aria-label="Enviar mensagem">
+          <SendHorizontal size={18} aria-hidden="true" />
         </button>
       </div>
     </div>

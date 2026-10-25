@@ -4,11 +4,8 @@ import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import Link from 'next/link'
-import { Hospital, Mail, Lock, LogIn, AlertTriangle, Settings } from 'lucide-react'
-import { Inter } from 'next/font/google'
-
-const inter = Inter({ subsets: ['latin'] })
+import { Hospital, Mail, Lock, LogIn, AlertTriangle } from 'lucide-react'
+import { inter } from '@/app/fonts'
 
 interface HospitalData {
   id: string;
@@ -158,17 +155,6 @@ export default function LoginPage() {
             </div>
           </form>
 
-        </div>
-
-        {/* Footer Link com posição absoluta para não empurrar o card para cima */}
-        <div className="absolute bottom-8 w-full text-center">
-          <Link 
-            href="/admin/hospitais" 
-            className="inline-flex items-center gap-2 text-blue-200/50 hover:text-blue-200 transition-colors text-xs font-semibold uppercase tracking-widest"
-          >
-            <Settings className="w-4 h-4" />
-            Configuração Inicial (Admin)
-          </Link>
         </div>
 
       </div>

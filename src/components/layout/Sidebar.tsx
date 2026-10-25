@@ -69,7 +69,6 @@ const ALL_ROUTES = [
   { href: '/admin-prontuarios', icon: 'las la-file-alt', label: 'Modelos de Prontuários' },
   { href: '/admin-financeiro', icon: 'las la-coins', label: 'Financeiro e Pagamentos' },
   { href: '/admin-config-dashboard', icon: 'las la-sliders-h', label: 'Configurar Dashboard' },
-  { href: '/admin-hospitais', icon: 'las la-hospital-alt', label: 'Gerenciar Hospitais (Master)' },
   { href: '/ponto', icon: 'las la-clock', label: 'Ponto Eletrônico' },
   { href: '/suporte', icon: 'las la-headset', label: 'Suporte Técnico' },
   { href: '/feedback', icon: 'las la-comment-dots', label: 'Feedback do Sistema' },

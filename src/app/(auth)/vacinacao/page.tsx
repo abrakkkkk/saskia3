@@ -52,15 +52,27 @@ export default function VacinacaoPage() {
   const handleDriveAction = (doc: VacinaDoc, action: 'view' | 'download') => {
     const driveFile = driveFiles.find(f => f.name === doc.nome);
 
-    if (!driveFile) {
-      alert(`Arquivo "${doc.nome}" não encontrado no Google Drive.`);
+    if (driveFile) {
+      if (action === 'download' && driveFile.webContentLink) {
+        window.open(driveFile.webContentLink, '_blank');
+      } else {
+        window.open(driveFile.webViewLink, '_blank');
+      }
       return;
     }
 
-    if (action === 'download' && driveFile.webContentLink) {
-      window.open(driveFile.webContentLink, '_blank');
+    // Suporte local seguro (offline-first para vacinação)
+    const filePath = `/docs/${encodeURIComponent(doc.nome)}`;
+
+    if (action === 'download') {
+      const a = document.createElement('a');
+      a.href = filePath;
+      a.download = doc.nome;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } else {
-      window.open(driveFile.webViewLink, '_blank');
+      window.open(filePath, '_blank');
     }
   };
 

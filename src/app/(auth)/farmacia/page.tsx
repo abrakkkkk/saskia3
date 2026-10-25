@@ -78,11 +78,31 @@ export default function FarmaciaPage() {
         fetch('/api/pacientes')
       ]);
 
-      if (resEstoque.ok) setEstoque(await resEstoque.json());
-      if (resMov.ok) setMovimentacoes(await resMov.json());
-      if (resPacientes.ok) setPacientes(await resPacientes.json());
+      if (resEstoque.ok) {
+        const dataEst = await resEstoque.json();
+        setEstoque(Array.isArray(dataEst) ? dataEst : []);
+      } else {
+        setEstoque([]);
+      }
+
+      if (resMov.ok) {
+        const dataMov = await resMov.json();
+        setMovimentacoes(Array.isArray(dataMov) ? dataMov : []);
+      } else {
+        setMovimentacoes([]);
+      }
+
+      if (resPacientes.ok) {
+        const dataPac = await resPacientes.json();
+        setPacientes(Array.isArray(dataPac) ? dataPac : []);
+      } else {
+        setPacientes([]);
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Erro ao carregar dados da farmácia:', e);
+      setEstoque([]);
+      setMovimentacoes([]);
+      setPacientes([]);
     } finally {
       setLoading(false);
     }
@@ -219,8 +239,13 @@ export default function FarmaciaPage() {
     (m.codigo || '').toLowerCase().includes(buscarMedicamento.toLowerCase())
   );
 
-  if (loading) {
-    return <div style={{padding:'50px',textAlign:'center'}}><h2>Carregando Farmácia...</h2></div>;
+  if (loading && estoque.length === 0) {
+    return (
+      <div className="conteudo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '350px', gap: '16px' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+        <p style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>Carregando dados da Farmácia Hospitalar...</p>
+      </div>
+    );
   }
 
   return (

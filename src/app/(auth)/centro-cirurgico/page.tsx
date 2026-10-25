@@ -57,12 +57,14 @@ const checklistItens = {
   ]
 };
 
-const SALAS = ["SO 1", "SO 2", "SO 3", "SO 4"];
+const DEFAULT_SALAS = ["SO 1", "SO 2", "SO 3", "SO 4"];
 
 export default function CentroCirurgicoPage() {
   const [activeTab, setActiveTab] = useState<'agendamento' | 'salas' | 'lista' | 'checklist'>('agendamento');
   const [cirurgias, setCirurgias] = useState<Cirurgia[]>([]);
   const [pacientesGerais, setPacientesGerais] = useState<Paciente[]>([]);
+  const [salas, setSalas] = useState<string[]>(DEFAULT_SALAS);
+  const [profissionais, setProfissionais] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -81,14 +83,34 @@ export default function CentroCirurgicoPage() {
 
   const carregarDados = async () => {
     try {
-      const [resCirurgias, resPacientes] = await Promise.all([
+      const [resCirurgias, resPacientes, resSalas, resUsuarios] = await Promise.all([
         fetch('/api/cirurgias'),
-        fetch('/api/pacientes')
+        fetch('/api/pacientes'),
+        fetch('/api/salas'),
+        fetch('/api/usuario')
       ]);
-      if(resCirurgias.ok) setCirurgias(await resCirurgias.json());
-      if(resPacientes.ok) setPacientesGerais(await resPacientes.json());
+      if (resCirurgias.ok) {
+        const dCir = await resCirurgias.json();
+        setCirurgias(Array.isArray(dCir) ? dCir : []);
+      }
+      if (resPacientes.ok) {
+        const dPac = await resPacientes.json();
+        setPacientesGerais(Array.isArray(dPac) ? dPac : []);
+      }
+      if (resSalas.ok) {
+        const dSalas = await resSalas.json();
+        if (Array.isArray(dSalas) && dSalas.length > 0) {
+          const salasNomes = dSalas.map((s: any) => s.nome);
+          setSalas(salasNomes);
+          setFormAgendamento(prev => ({ ...prev, sala: prev.sala || salasNomes[0] }));
+        }
+      }
+      if (resUsuarios.ok) {
+        const dUsers = await resUsuarios.json();
+        if (Array.isArray(dUsers)) setProfissionais(dUsers);
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Erro ao carregar dados do centro cirúrgico:', e);
     } finally {
       setLoading(false);
     }
@@ -106,6 +128,38 @@ export default function CentroCirurgicoPage() {
       return;
     }
 
+    const dataHoraNova = `${data}T${hora}:00`;
+    
+    // 1. Bloqueio Clínico: O mesmo paciente não pode estar agendado em 2 cirurgias no mesmo horário (Card 24)
+    const conflitoPaciente = cirurgias.find(c => 
+      c.pacienteId === pacienteId && 
+      c.dataHora && 
+      c.status !== 'CANCELADA' && 
+      c.status !== 'CONCLUIDA' &&
+      Math.abs(new Date(c.dataHora).getTime() - new Date(dataHoraNova).getTime()) < (parseFloat(formAgendamento.duracao || '2') * 3600 * 1000)
+    );
+
+    if (conflitoPaciente) {
+      const horaStr = conflitoPaciente.dataHora ? new Date(conflitoPaciente.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'horário agendado';
+      alert(`⛔ Bloqueio Clínico de Segurança: O paciente selecionado já possui cirurgia agendada ("${conflitoPaciente.procedimento}" às ${horaStr} na sala ${conflitoPaciente.sala}). Não é permitido agendamento simultâneo!`);
+      return;
+    }
+
+    // 2. Conflito de ocupação da Sala Cirúrgica
+    const conflito = cirurgias.find(c => 
+      c.sala === sala && 
+      c.dataHora && 
+      c.status !== 'CANCELADA' && 
+      c.status !== 'CONCLUIDA' &&
+      Math.abs(new Date(c.dataHora).getTime() - new Date(dataHoraNova).getTime()) < (parseFloat(formAgendamento.duracao || '2') * 3600 * 1000)
+    );
+
+    if (conflito) {
+      if (!await confirm(`⚠️ Conflito de Agendamento: A sala "${sala}" já possui cirurgia agendada ("${conflito.procedimento}" - ${conflito.paciente?.nome || 'Paciente'}) no mesmo horário.\n\nDeseja confirmar o agendamento mesmo assim?`)) {
+        return;
+      }
+    }
+
     try {
       const equipe = `Cirurgião: ${cirurgiao}. Anest: ${anestesista}. Instr: ${instrumentador}. Circ: ${circulante}`;
       const observacoes = `Prioridade: ${prioridade}. Duração Prevista: ${formAgendamento.duracao}h. Obs: ${obs}`;
@@ -117,7 +171,7 @@ export default function CentroCirurgicoPage() {
           pacienteId,
           procedimento,
           sala,
-          dataHora: `${data}T${hora}:00`,
+          dataHora: dataHoraNova,
           equipe,
           anestesia,
           observacoes
@@ -235,7 +289,14 @@ export default function CentroCirurgicoPage() {
     return status;
   };
 
-  if (loading) return <div>Carregando Centro Cirúrgico...</div>;
+  if (loading && cirurgias.length === 0) {
+    return (
+      <div className="conteudo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '350px', gap: '16px' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+        <p style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>Carregando dados do Centro Cirúrgico...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="conteudo">
@@ -257,7 +318,7 @@ export default function CentroCirurgicoPage() {
           <div className="stat-card"><div className="stat-icon blue"><i className="las la-calendar-check"></i></div><div className="stat-numero">{stats.agendadas}</div><div className="stat-label">Cirurgias Hoje</div></div>
           <div className="stat-card"><div className="stat-icon orange"><i className="las la-clock"></i></div><div className="stat-numero">{stats.andamento}</div><div className="stat-label">Em Andamento</div></div>
           <div className="stat-card"><div className="stat-icon green"><i className="las la-check-circle"></i></div><div className="stat-numero">{stats.concluidas}</div><div className="stat-label">Concluídas Hoje</div></div>
-          <div className="stat-card"><div className="stat-icon purple"><i className="las la-door-open"></i></div><div className="stat-numero">{SALAS.length}</div><div className="stat-label">Total Salas</div></div>
+          <div className="stat-card"><div className="stat-icon purple"><i className="las la-door-open"></i></div><div className="stat-numero">{salas.length}</div><div className="stat-label">Total Salas</div></div>
           <div className="stat-card"><div className="stat-icon red"><i className="las la-exclamation-triangle"></i></div><div className="stat-numero">{stats.canceladas}</div><div className="stat-label">Canceladas</div></div>
         </div>
 
@@ -283,7 +344,7 @@ export default function CentroCirurgicoPage() {
                 <div className="form-grupo">
                   <label>Sala Cirúrgica *</label>
                   <select value={formAgendamento.sala} onChange={e => setFormAgendamento({...formAgendamento, sala: e.target.value})}>
-                    {SALAS.map(s => <option key={s} value={s}>{s}</option>)}
+                    {salas.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div className="form-grupo"><label>Data *</label><input type="date" value={formAgendamento.data} onChange={e => setFormAgendamento({...formAgendamento, data: e.target.value})} /></div>
@@ -295,10 +356,56 @@ export default function CentroCirurgicoPage() {
                     <option>Eletiva</option><option>Urgência</option><option>Emergência</option>
                   </select>
                 </div>
-                <div className="form-grupo"><label>Cirurgião Responsável *</label><input type="text" placeholder="Nome do cirurgião" value={formAgendamento.cirurgiao} onChange={e => setFormAgendamento({...formAgendamento, cirurgiao: e.target.value})} /></div>
-                <div className="form-grupo"><label>Anestesista</label><input type="text" placeholder="Nome do anestesista" value={formAgendamento.anestesista} onChange={e => setFormAgendamento({...formAgendamento, anestesista: e.target.value})} /></div>
-                <div className="form-grupo"><label>Enfermeiro Instrumentador</label><input type="text" placeholder="Nome" value={formAgendamento.instrumentador} onChange={e => setFormAgendamento({...formAgendamento, instrumentador: e.target.value})} /></div>
-                <div className="form-grupo"><label>Enfermeiro Circulante</label><input type="text" placeholder="Nome" value={formAgendamento.circulante} onChange={e => setFormAgendamento({...formAgendamento, circulante: e.target.value})} /></div>
+                <div className="form-grupo">
+                  <label>Cirurgião Responsável *</label>
+                  <input 
+                    type="text" 
+                    list="medicos-list"
+                    placeholder="Selecione ou digite o cirurgião" 
+                    value={formAgendamento.cirurgiao} 
+                    onChange={e => setFormAgendamento({...formAgendamento, cirurgiao: e.target.value})} 
+                  />
+                  <datalist id="medicos-list">
+                    {profissionais.filter(u => u.cargo?.toLowerCase().includes('medico') || u.cargo === 'ADMIN' || u.cargo === 'diretor_geral').map(u => (
+                      <option key={u.id} value={`Dr(a). ${u.nome}`} />
+                    ))}
+                  </datalist>
+                </div>
+                <div className="form-grupo">
+                  <label>Anestesista</label>
+                  <input 
+                    type="text" 
+                    list="medicos-list"
+                    placeholder="Selecione ou digite o anestesista" 
+                    value={formAgendamento.anestesista} 
+                    onChange={e => setFormAgendamento({...formAgendamento, anestesista: e.target.value})} 
+                  />
+                </div>
+                <div className="form-grupo">
+                  <label>Enfermeiro Instrumentador</label>
+                  <input 
+                    type="text" 
+                    list="enfermeiros-list"
+                    placeholder="Selecione ou digite o instrumentador" 
+                    value={formAgendamento.instrumentador} 
+                    onChange={e => setFormAgendamento({...formAgendamento, instrumentador: e.target.value})} 
+                  />
+                  <datalist id="enfermeiros-list">
+                    {profissionais.filter(u => u.cargo?.toLowerCase().includes('enferm')).map(u => (
+                      <option key={u.id} value={`Enf. ${u.nome}`} />
+                    ))}
+                  </datalist>
+                </div>
+                <div className="form-grupo">
+                  <label>Enfermeiro Circulante</label>
+                  <input 
+                    type="text" 
+                    list="enfermeiros-list"
+                    placeholder="Selecione ou digite o circulante" 
+                    value={formAgendamento.circulante} 
+                    onChange={e => setFormAgendamento({...formAgendamento, circulante: e.target.value})} 
+                  />
+                </div>
                 <div className="form-grupo">
                   <label>Anestesia Prevista</label>
                   <select value={formAgendamento.anestesia} onChange={e => setFormAgendamento({...formAgendamento, anestesia: e.target.value})}>
@@ -333,7 +440,7 @@ export default function CentroCirurgicoPage() {
 
         {activeTab === 'salas' && (
           <div className="salas-grid">
-            {SALAS.map(sala => {
+            {salas.map(sala => {
               const ocupada = cirurgias.find(c => (c.status === "EM_ANDAMENTO" || (c.status === "AGENDADA" && c.dataHora && c.dataHora.startsWith(hojeISO))) && c.sala === sala);
               const isEmAndamento = ocupada && ocupada.status === 'EM_ANDAMENTO';
               

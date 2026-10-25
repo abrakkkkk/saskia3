@@ -36,7 +36,15 @@ async function loadFromAPI(tipo: string): Promise<any[]> {
     const res = await fetch(`/api/ccih?tipo=${tipo}`);
     if (!res.ok) return [];
     const data = await res.json();
-    return data.map((r: any) => ({ ...r.dados, id: r.id, _registroId: r.id, status: r.status === 'ATIVO' ? (r.dados?.status || 'Ativa') : r.status }));
+    return data.map((r: any) => {
+      const isTratado = r.status === 'TRATADO' || r.status === 'Tratada' || r.dados?.status === 'Tratada';
+      return { 
+        ...r.dados, 
+        id: r.id, 
+        _registroId: r.id, 
+        status: isTratado ? 'Tratada' : (r.dados?.status || 'Ativa') 
+      };
+    });
   } catch { return []; }
 }
 async function saveToAPI(tipo: string, item: any, criadoPor: string): Promise<any> {
@@ -189,9 +197,9 @@ export default function CcihPage() {
   };
 
   const tratarIRAS = async (id: number | string) => {
-    await updateAPIStatus(String(id), 'TRATADO', { dataTratamento: new Date().toISOString() });
+    await updateAPIStatus(String(id), 'TRATADO', { status: 'Tratada', dataTratamento: new Date().toISOString() });
     await reloadAll();
-    msg('IRAS marcada como tratada!');
+    msg('IRAS marcada como tratada com sucesso!');
   };
 
   const registrarHM = async (e: React.FormEvent) => {

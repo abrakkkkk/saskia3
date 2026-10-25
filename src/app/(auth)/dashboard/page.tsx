@@ -4,9 +4,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import EmergencyButtons from '@/components/EmergencyButtons'
-import { Inter } from 'next/font/google'
-
-const inter = Inter({ subsets: ['latin'] })
+import { inter } from '@/app/fonts'
 
 interface DashboardStats {
   pacientesAtendidos: number

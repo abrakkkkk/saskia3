@@ -171,11 +171,6 @@ export default function AdminPage() {
           <h3>Configurar Dashboard</h3>
           <p>Personalize os módulos</p>
         </Link>
-        <Link href="/admin-hospitais" className="card-admin">
-          <i className="las la-hospital-alt"></i>
-          <h3>Hospitais (Master)</h3>
-          <p>Gerencie locatários e faturas</p>
-        </Link>
       </div>
 
       <div className="secao-tickets">

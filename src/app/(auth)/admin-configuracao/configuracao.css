@@ -116,6 +116,20 @@
     object-fit: contain;
 }
 
+.config-feedback {
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    padding: 12px 16px;
+    margin: 0 0 16px;
+}
+
+.form-panel button:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
 .logo-preview-box i {
     font-size: 40px;
     color: #94a3b8;

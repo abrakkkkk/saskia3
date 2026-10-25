@@ -25,6 +25,9 @@ export default function ObitosPage() {
     causaSec: '',
     medico: '',
     prontuario: '',
+    declaracaoObito: '',
+    documentoAnexo: '',
+    documentoBase64: '',
     responsavel: '',
     telefone: '',
     observacoes: ''
@@ -90,6 +93,22 @@ export default function ObitosPage() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (ev.target?.result) {
+        setForm(prev => ({
+          ...prev,
+          documentoAnexo: file.name,
+          documentoBase64: ev.target?.result as string
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const limparFormulario = () => {
     setForm({
       nome: '',
@@ -103,6 +122,9 @@ export default function ObitosPage() {
       causaSec: '',
       medico: '',
       prontuario: '',
+      declaracaoObito: '',
+      documentoAnexo: '',
+      documentoBase64: '',
       responsavel: '',
       telefone: '',
       observacoes: ''
@@ -278,6 +300,15 @@ export default function ObitosPage() {
                 <input type="text" value={form.prontuario} onChange={e => setForm({...form, prontuario: e.target.value})} />
               </div>
               <div className="form-grupo">
+                <label><i className="las la-certificate"></i> Nº Declaração de Óbito (D.O.)</label>
+                <input type="text" value={form.declaracaoObito} onChange={e => setForm({...form, declaracaoObito: e.target.value})} placeholder="Ex: DO-12345678-9" />
+              </div>
+              <div className="form-grupo">
+                <label><i className="las la-file-upload"></i> Documento Assinado pelo Médico (PDF / Foto)</label>
+                <input type="file" accept=".pdf,image/*" onChange={handleFileChange} />
+                {form.documentoAnexo && <small style={{ color: '#16a34a', display: 'block', marginTop: 4 }}>✓ Anexado: {form.documentoAnexo}</small>}
+              </div>
+              <div className="form-grupo">
                 <label><i className="las la-user-friends"></i> Responsável Familiar</label>
                 <input type="text" value={form.responsavel} onChange={e => setForm({...form, responsavel: e.target.value})} />
               </div>
@@ -400,8 +431,19 @@ export default function ObitosPage() {
               <p style={{ gridColumn: '1/-1' }}><strong>Causas Secundárias:</strong> {modalVisualizar.causaSec || 'N/A'}</p>
               <p><strong>Médico:</strong> {modalVisualizar.medico}</p>
               <p><strong>Prontuário:</strong> {modalVisualizar.prontuario || 'N/I'}</p>
+              <p><strong>Nº Declaração Óbito (D.O.):</strong> {modalVisualizar.declaracaoObito || 'N/I'}</p>
               <p><strong>Responsável:</strong> {modalVisualizar.responsavel || 'N/I'}</p>
               <p><strong>Telefone Resp.:</strong> {modalVisualizar.telefone || 'N/I'}</p>
+              {modalVisualizar.documentoBase64 && (
+                <div style={{ gridColumn: '1/-1', background: '#ecfdf5', padding: '12px', borderRadius: '8px', border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '13px', color: '#065f46', fontWeight: 600 }}>
+                    <i className="las la-file-signature" style={{ fontSize: '18px', marginRight: '6px' }}></i> Documento Assinado pelo Médico Anexado
+                  </span>
+                  <a href={modalVisualizar.documentoBase64} download={modalVisualizar.documentoAnexo || 'declaracao_obito_assinada.pdf'} className="btn-obitos btn-success" style={{ padding: '6px 14px', fontSize: '12px', textDecoration: 'none' }}>
+                    <i className="las la-download"></i> Baixar Arquivo ({modalVisualizar.documentoAnexo || 'Documento'})
+                  </a>
+                </div>
+              )}
               <p style={{ gridColumn: '1/-1' }}><strong>Observações:</strong> {modalVisualizar.observacoes || 'Nenhuma'}</p>
             </div>
 

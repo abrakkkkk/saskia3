@@ -71,10 +71,23 @@ export default function AlmoxarifadoPage() {
         fetch('/api/estoque/movimentacao?categoria=ALMOXARIFADO')
       ]);
 
-      if (resItens.ok) setItens(await resItens.json());
-      if (resMov.ok) setMovimentacoes(await resMov.json());
+      if (resItens.ok) {
+        const dataItens = await resItens.json();
+        setItens(Array.isArray(dataItens) ? dataItens : []);
+      } else {
+        setItens([]);
+      }
+
+      if (resMov.ok) {
+        const dataMov = await resMov.json();
+        setMovimentacoes(Array.isArray(dataMov) ? dataMov : []);
+      } else {
+        setMovimentacoes([]);
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Erro ao buscar estoque almoxarifado:', e);
+      setItens([]);
+      setMovimentacoes([]);
     } finally {
       setLoading(false);
     }
@@ -250,7 +263,14 @@ export default function AlmoxarifadoPage() {
     listaMov = listaMov.filter(m => m.item?.nome?.toLowerCase().includes(buscarMov.toLowerCase()));
   }
 
-  if (loading) return <div style={{padding:'50px',textAlign:'center'}}><h2>Carregando Almoxarifado...</h2></div>;
+  if (loading && itens.length === 0) {
+    return (
+      <div className="conteudo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '350px', gap: '16px' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+        <p style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>Carregando dados do Almoxarifado...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="conteudo">
@@ -306,7 +326,12 @@ export default function AlmoxarifadoPage() {
                 <thead><tr><th>Código</th><th>Item</th><th>Unid.</th><th>Qtd.</th><th>Mín.</th><th>Status</th></tr></thead>
                 <tbody>
                   {listaEstoque.length === 0 ? (
-                    <tr><td colSpan={6} style={{textAlign:'center', padding:'30px'}}>Nenhum item</td></tr>
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
+                        <i className="las la-boxes" style={{ fontSize: '32px', display: 'block', marginBottom: '8px', opacity: 0.5 }}></i>
+                        Nenhum item encontrado no estoque do Almoxarifado.
+                      </td>
+                    </tr>
                   ) : (
                     listaEstoque.map(i => {
                       const baixo = i.quantidade <= i.minimo;

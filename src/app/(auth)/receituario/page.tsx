@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { getSessionUser } from '@/lib/session';
 import './receituario.css';
 
 // --- DATA CONSTANTS ---
@@ -220,6 +221,14 @@ export default function ReceituarioPage() {
 
   useEffect(() => {
     carregarDados();
+    try {
+      const usuario = getSessionUser();
+      const hospNome = usuario?.hospitalNome || usuario?.hospital?.nome || "Hospital Saskia";
+      setEstabelecimento(hospNome);
+      const ano = new Date().getFullYear();
+      const seq = String(Math.floor(1000 + Math.random() * 9000));
+      setRegistro(`REC-${ano}-${seq}`);
+    } catch {}
   }, []);
 
   const saveDadosMemoria = (meds: Medicamento[]) => {
@@ -377,10 +386,11 @@ export default function ReceituarioPage() {
   const limparTudo = async () => {
     if (await confirm("Limpar todo o receituário?")) {
       saveDadosMemoria([]);
-      setEstabelecimento('');
-      setRegistro('');
       setPacienteId('');
       setNomePaciente('');
+      const ano = new Date().getFullYear();
+      const seq = String(Math.floor(1000 + Math.random() * 9000));
+      setRegistro(`REC-${ano}-${seq}`);
     }
   };
 
@@ -448,12 +458,24 @@ export default function ReceituarioPage() {
             
             <div className="form-row hide-on-print">
               <div className="form-campo">
-                <label>ESTABELECIMENTO DE SAÚDE:</label>
-                <input type="text" value={estabelecimento} onChange={e => setEstabelecimento(e.target.value)} placeholder="Nome do estabelecimento" />
+                <label>ESTABELECIMENTO DE SAÚDE (Institucional):</label>
+                <input 
+                  type="text" 
+                  value={estabelecimento} 
+                  readOnly 
+                  style={{ backgroundColor: '#f8fafc', cursor: 'not-allowed', color: '#1e293b', fontWeight: 600, border: '1px solid #cbd5e1' }}
+                  title="Vinculado automaticamente à unidade de atendimento da sua sessão"
+                />
               </div>
               <div className="form-campo">
-                <label>REGISTRO Nº:</label>
-                <input type="text" value={registro} onChange={e => setRegistro(e.target.value)} placeholder="Número de registro" />
+                <label>REGISTRO Nº (Sequencial):</label>
+                <input 
+                  type="text" 
+                  value={registro} 
+                  readOnly 
+                  style={{ backgroundColor: '#f8fafc', cursor: 'not-allowed', color: '#0369a1', fontWeight: 700, border: '1px solid #cbd5e1' }}
+                  title="Código identificador sequencial gerado para segurança clínica"
+                />
               </div>
             </div>
             <div className="form-campo hide-on-print">
