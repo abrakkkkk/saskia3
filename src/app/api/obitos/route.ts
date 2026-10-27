@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
+function isValidDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function isValidTime(value: string) {
+  if (!/^\d{2}:\d{2}$/.test(value)) return false;
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours < 24 && minutes < 60;
+}
+
 export async function GET() {
   try {
     const session = await auth();
@@ -35,12 +47,12 @@ export async function POST(request: NextRequest) {
     const stringFields = ['nome', 'nascimento', 'cpf', 'sexo', 'data', 'hora', 'local', 'causa', 'causaSec', 'medico', 'prontuario', 'responsavel', 'telefone', 'observacoes'];
     if (stringFields.some((key) => input[key] !== undefined && input[key] !== null && typeof input[key] !== 'string') ||
       typeof input.nome !== 'string' || !input.nome.trim() || input.nome.length > 160 ||
-      typeof input.data !== 'string' || !input.data.trim() || input.data.length > 40 ||
-      typeof input.hora !== 'string' || !input.hora.trim() || input.hora.length > 20 ||
+      typeof input.data !== 'string' || !isValidDate(input.data) ||
+      (typeof input.nascimento === 'string' && input.nascimento !== '' && !isValidDate(input.nascimento)) ||
+      typeof input.hora !== 'string' || !isValidTime(input.hora) ||
       typeof input.causa !== 'string' || !input.causa.trim() || input.causa.length > 1000 ||
       typeof input.medico !== 'string' || !input.medico.trim() || input.medico.length > 160 ||
       (input.cpf != null && input.cpf !== '' && (input.cpf as string).length > 20) ||
-      (input.certidaoEmitida !== undefined && typeof input.certidaoEmitida !== 'boolean') ||
       Object.entries({ nascimento: 40, cpf: 20, sexo: 40, local: 160, causaSec: 1000, prontuario: 100, responsavel: 160, telefone: 40, observacoes: 4000 }).some(([key, max]) => typeof input[key] === 'string' && (input[key] as string).length > max)) {
       return NextResponse.json({ error: 'Dados do óbito inválidos' }, { status: 400 });
     }
@@ -55,7 +67,7 @@ export async function POST(request: NextRequest) {
         medico: (input.medico as string).trim(), prontuario: optional('prontuario', 100), responsavel: optional('responsavel', 160),
         telefone: optional('telefone', 40), observacoes: optional('observacoes', 4000),
         registradoPor: session.user.name || session.user.email || null,
-        dataRegistro: new Date().toISOString(), certidaoEmitida: input.certidaoEmitida === true,
+        dataRegistro: new Date().toISOString(), certidaoEmitida: false,
       } });
       if (typeof input.cpf === 'string' && input.cpf.trim()) {
         await tx.paciente.updateMany({ where: { cpf: input.cpf.trim(), hospitalId }, data: { status: 'Óbito' } });

@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { Volume2, VolumeX, Bell, Clock, DoorOpen, ActivitySquare, Users, AlertCircle, CheckCircle2, UserCheck, Timer } from 'lucide-react';
 
 interface Paciente {
   id: string;
   nome: string;
-  cpf: string | null;
   status: string;
   classificacao: string | null;
   createdAt: string;
@@ -15,7 +14,7 @@ interface Paciente {
 
 interface Chamada {
   id: string;
-  cpf: string | null;
+  pacienteId: string | null;
   pacienteNome: string;
   status: string;
   consultorio: string;
@@ -29,9 +28,11 @@ interface PacienteFila extends Paciente {
 }
 
 export default function PainelChamadasTV() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [chamadas, setChamadas] = useState<Chamada[]>([]);
+  const [erroCarga, setErroCarga] = useState('');
+  const [carregando, setCarregando] = useState(true);
   const [horaAtual, setHoraAtual] = useState(new Date());
   const [mounted, setMounted] = useState(false);
   
@@ -41,6 +42,8 @@ export default function PainelChamadasTV() {
   
   const audioCtxRef = useRef<any>(null);
   const ultimaChamadaIdRef = useRef<string>('');
+  const chamadasInicializadasRef = useRef(false);
+  const fetchSequenceRef = useRef(0);
 
   useEffect(() => {
     setMounted(true);
@@ -95,37 +98,68 @@ export default function PainelChamadasTV() {
     }, 800);
   };
 
-  const fetchDados = async () => {
+  const fetchDados = useCallback(async () => {
+    const sequence = ++fetchSequenceRef.current;
     try {
       const [resPacientes, resChamadas] = await Promise.all([
-        fetch('/api/pacientes'),
+        fetch('/api/pacientes?visao=painel-chamadas'),
         fetch('/api/chamadas')
       ]);
 
-      if (resPacientes.ok) setPacientes(await resPacientes.json());
-      if (resChamadas.ok) setChamadas(await resChamadas.json());
-    } catch (e) {
-      console.error("Erro ao buscar dados do painel", e);
+      if (!resPacientes.ok || !resChamadas.ok) throw new Error('Não foi possível carregar as chamadas. Verifique a sessão e tente novamente.');
+      const [listaPacientes, listaChamadas] = await Promise.all([resPacientes.json(), resChamadas.json()]);
+      if (!Array.isArray(listaPacientes) || !Array.isArray(listaChamadas)) throw new Error('O servidor retornou dados inválidos para o painel.');
+      if (sequence !== fetchSequenceRef.current) return;
+      if (!chamadasInicializadasRef.current) {
+        chamadasInicializadasRef.current = true;
+        ultimaChamadaIdRef.current = listaChamadas[0]?.id ?? '';
+      }
+      setPacientes(listaPacientes);
+      setChamadas(listaChamadas);
+      setErroCarga('');
+    } catch (error) {
+      if (sequence !== fetchSequenceRef.current) return;
+      setPacientes([]);
+      setChamadas([]);
+      setErroCarga(error instanceof Error ? error.message : 'Erro ao carregar dados do painel.');
+    } finally {
+      if (sequence === fetchSequenceRef.current) setCarregando(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchDados(); 
-    const interval = setInterval(fetchDados, 3000); 
-    const handleStorage = () => fetchDados();
+    if (sessionStatus === 'loading') return;
+    if (sessionStatus !== 'authenticated' || !session?.user) {
+      fetchSequenceRef.current++;
+      setPacientes([]);
+      setChamadas([]);
+      chamadasInicializadasRef.current = false;
+      ultimaChamadaIdRef.current = '';
+      setCarregando(false);
+      return;
+    }
+    setPacientes([]);
+    setChamadas([]);
+    setErroCarga('');
+    chamadasInicializadasRef.current = false;
+    ultimaChamadaIdRef.current = '';
+    setCarregando(true);
+    void fetchDados();
+    const interval = setInterval(() => void fetchDados(), 3000);
+    const handleStorage = () => void fetchDados();
     window.addEventListener('storage', handleStorage);
     return () => {
+      fetchSequenceRef.current++;
       clearInterval(interval);
       window.removeEventListener('storage', handleStorage);
     };
-  }, [session]);
+  }, [sessionStatus, session?.user, fetchDados]);
 
   useEffect(() => {
     if (chamadas.length > 0) {
       // API brings ordered by createdAt desc, so the first is the newest
       const ultima = chamadas[0];
       const chamadaId = ultima.id;
-      
       if (chamadaId !== ultimaChamadaIdRef.current) {
         ultimaChamadaIdRef.current = chamadaId;
         tocarBeep();
@@ -137,7 +171,7 @@ export default function PainelChamadasTV() {
   // LÓGICA DE FILA
   const pacientesAtivos = pacientes.filter(p => !["Finalizado", "Alta Médica", "Evasão", "Transferido", "Óbito"].includes(p.status));
   const filaComChamadas: PacienteFila[] = pacientesAtivos.map(p => {
-    const chamada = chamadas.find(c => (c.cpf && c.cpf === p.cpf) || (!c.cpf && c.pacienteNome === p.nome));
+    const chamada = chamadas.find(c => c.pacienteId === p.id || (!c.pacienteId && c.pacienteNome === p.nome));
     const dataRef = p.createdAt || new Date().toISOString();
     const tempoEsperaMin = Math.floor((new Date().getTime() - new Date(dataRef).getTime()) / 60000);
     return { ...p, foiChamado: !!chamada, dadosChamada: chamada, tempoEsperaMin };
@@ -167,6 +201,13 @@ export default function PainelChamadasTV() {
   const chamadaAtual = chamadas.length > 0 ? chamadas[0] : null;
   const ultimasChamadasHistorico = chamadaAtual ? chamadas.slice(1, 6) : [];
 
+  if (sessionStatus === 'loading') {
+    return <main className="min-h-screen bg-slate-900 text-slate-100 grid place-items-center" role="status">Verificando sessão…</main>;
+  }
+  if (sessionStatus !== 'authenticated' || !session?.user) {
+    return <main className="min-h-screen bg-slate-900 text-slate-100 grid place-items-center p-8"><p role="alert">Entre no sistema para visualizar o painel de chamadas.</p></main>;
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col overflow-hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
       
@@ -195,7 +236,9 @@ export default function PainelChamadasTV() {
       </header>
 
       {/* MAIN CONTENT: SPLIT SCREEN CLASSIC */}
-      <main className="flex-1 flex bg-slate-800">
+      <main className="flex-1 flex bg-slate-800 relative">
+        {erroCarga && <div role="alert" className="absolute top-4 left-1/2 -translate-x-1/2 z-50 rounded bg-red-950 px-5 py-3 text-red-100">{erroCarga}</div>}
+        {carregando && <div role="status" className="absolute top-4 left-1/2 -translate-x-1/2 z-40 rounded bg-slate-800 px-5 py-3 text-slate-100">Carregando chamadas…</div>}
         
         {/* ESQUERDA: CHAMADA ATUAL (MUITO DESTAQUE) */}
         <div className="flex-[3] bg-slate-900 p-12 flex flex-col text-center border-r border-slate-700 shadow-[20px_0_30px_rgba(0,0,0,0.3)] relative z-10">
@@ -285,23 +328,28 @@ export default function PainelChamadasTV() {
           </span>
           <div className="flex items-center justify-around w-full">
             <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.6)]"></div>
+              <div aria-hidden="true" className="w-4 h-4 rounded-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.6)]"></div>
+              <span className="sr-only">Vermelho</span>
               <span className="text-2xl font-bold text-slate-200">{temposMedios["Vermelho"] ?? '--'}</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.6)]"></div>
+              <div aria-hidden="true" className="w-4 h-4 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.6)]"></div>
+              <span className="sr-only">Laranja</span>
               <span className="text-2xl font-bold text-slate-200">{temposMedios["Laranja"] ?? '--'}</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.6)]"></div>
+              <div aria-hidden="true" className="w-4 h-4 rounded-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.6)]"></div>
+              <span className="sr-only">Amarelo</span>
               <span className="text-2xl font-bold text-slate-200">{temposMedios["Amarelo"] ?? '--'}</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)]"></div>
+              <div aria-hidden="true" className="w-4 h-4 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)]"></div>
+              <span className="sr-only">Verde</span>
               <span className="text-2xl font-bold text-slate-200">{temposMedios["Verde"] ?? '--'}</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
+              <div aria-hidden="true" className="w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
+              <span className="sr-only">Azul</span>
               <span className="text-2xl font-bold text-slate-200">{temposMedios["Azul"] ?? '--'}</span>
             </div>
           </div>
@@ -311,6 +359,8 @@ export default function PainelChamadasTV() {
       {/* Audio toggle */}
       <button 
         onClick={() => setVozAtivada(!vozAtivada)} 
+        aria-label={vozAtivada ? "Desativar anúncios por voz" : "Ativar anúncios por voz"}
+        aria-pressed={vozAtivada}
         className="fixed bottom-36 right-6 w-12 h-12 bg-slate-800 text-slate-500 rounded-full flex items-center justify-center hover:bg-slate-700 hover:text-white transition-all z-50 border border-slate-700 shadow-md"
         title={vozAtivada ? "Desativar Voz" : "Ativar Voz"}
       >

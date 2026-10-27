@@ -13,6 +13,7 @@ interface DashboardStats {
   ocupadosAmarela: number
   salasCirurgicas: number
   leitosUti: number
+  totalLeitosUti: number
   altas: number
   evasoes: number
   transferencias: number
@@ -87,17 +88,28 @@ export default function DashboardPage() {
   const { data: session } = useSession()
   const [stats, setStats] = useState<DashboardStats>({
     pacientesAtendidos: 0, aguardando: 0, ocupadosVermelha: 0, ocupadosAmarela: 0,
-    salasCirurgicas: 0, leitosUti: 0, altas: 0, evasoes: 0, transferencias: 0,
+    salasCirurgicas: 0, leitosUti: 0, totalLeitosUti: 0, altas: 0, evasoes: 0, transferencias: 0,
     mediaEtaria: 0, totalPacientes: 0, obitos: 0
   })
 
   const [dashboardConfig, setDashboardConfig] = useState<Record<string, boolean>>({})
+  const [statsErro, setStatsErro] = useState('')
 
   useEffect(() => {
     fetch('/api/dashboard/stats')
-      .then(response => response.json())
-      .then(setStats)
-      .catch(() => {})
+      .then(async response => {
+        if (!response.ok) throw new Error('Não foi possível carregar os indicadores do hospital.')
+        return response.json()
+      })
+      .then(data => {
+        const valores = ['pacientesAtendidos', 'aguardando', 'ocupadosVermelha', 'ocupadosAmarela', 'salasCirurgicas', 'leitosUti', 'totalLeitosUti', 'altas', 'evasoes', 'transferencias', 'mediaEtaria', 'totalPacientes', 'obitos']
+        if (!data || valores.some(campo => typeof data[campo] !== 'number' || !Number.isFinite(data[campo]))) {
+          throw new Error('A resposta dos indicadores está incompleta.')
+        }
+        setStats(data as DashboardStats)
+        setStatsErro('')
+      })
+      .catch(error => setStatsErro(error instanceof Error ? error.message : 'Erro ao carregar indicadores.'))
 
     fetch('/api/config-dashboard')
       .then(r => r.json())
@@ -122,6 +134,7 @@ export default function DashboardPage() {
 
   const statusData = {
     'Aguardando': stats.aguardando,
+    'Finalizado': stats.pacientesAtendidos,
     'Alta Médica': stats.altas,
     'Óbito': stats.obitos,
     'Evasão': stats.evasoes,
@@ -129,6 +142,7 @@ export default function DashboardPage() {
   }
 
   const totalStatus = Object.values (statusData).reduce ((a, b) => a + b, 0)
+  const indicador = (valor: number) => statsErro ? '—' : valor
 
   return (
     <div className={inter.className}>
@@ -153,6 +167,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {statsErro && <p role="alert" style={{ color: '#b91c1c', margin: '0 0 20px' }}>{statsErro}</p>}
+
       <div className="cards-nav">
         {NAV_CARDS.filter(card => isModuleActive(card.id)).map ((card) => (
           <Link key={card.href} href={card.href} style={{ textDecoration: 'none' }}>
@@ -174,7 +190,7 @@ export default function DashboardPage() {
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-users" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Pacientes Atendidos</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.pacientesAtendidos}</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.pacientesAtendidos)}</div>
           </div>
         </div>
         )}
@@ -184,7 +200,7 @@ export default function DashboardPage() {
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-hourglass-half" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Aguardando Atendimento</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.aguardando}</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.aguardando)}</div>
           </div>
         </div>
         )}
@@ -193,9 +209,8 @@ export default function DashboardPage() {
         <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-door-open" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Leitos Sala Vermelha</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{stats.ocupadosVermelha}/7</div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Capacidade: 7 leitos</div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Pacientes Sala Vermelha</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{indicador(stats.ocupadosVermelha)}</div>
           </div>
         </div>
         )}
@@ -204,9 +219,8 @@ export default function DashboardPage() {
         <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-door-closed" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Leitos Sala Amarela</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{stats.ocupadosAmarela}/20</div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Capacidade: 20 leitos</div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Pacientes Sala Amarela</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{indicador(stats.ocupadosAmarela)}</div>
           </div>
         </div>
         )}
@@ -215,9 +229,8 @@ export default function DashboardPage() {
         <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-procedures" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Salas Cirúrgicas</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{stats.salasCirurgicas}/4</div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Capacidade: 4 salas</div>
+            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Cirurgias em andamento</h3>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{indicador(stats.salasCirurgicas)}</div>
           </div>
         </div>
         )}
@@ -227,8 +240,8 @@ export default function DashboardPage() {
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-bed" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Leitos UTI</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{stats.leitosUti}/10</div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Capacidade: 10 leitos</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{statsErro ? '—' : `${stats.leitosUti}/${stats.totalLeitosUti}`}</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Leitos ocupados / total cadastrado</div>
           </div>
         </div>
         )}
@@ -238,7 +251,7 @@ export default function DashboardPage() {
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-check-circle" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Altas</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.altas}</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.altas)}</div>
           </div>
         </div>
         )}
@@ -248,7 +261,7 @@ export default function DashboardPage() {
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-exclamation-triangle" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Evasão</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.evasoes}</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.evasoes)}</div>
           </div>
         </div>
         )}
@@ -258,7 +271,7 @@ export default function DashboardPage() {
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-truck" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Transferências</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.transferencias}</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.transferencias)}</div>
           </div>
         </div>
         )}
@@ -268,7 +281,7 @@ export default function DashboardPage() {
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-chart-bar" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Média Etária</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.mediaEtaria}</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.mediaEtaria)}</div>
             <div style={{ fontSize: '11px', color: '#94a3b8' }}>anos</div>
           </div>
         </div>
@@ -279,7 +292,7 @@ export default function DashboardPage() {
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-file-alt" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Resumo Geral</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.totalPacientes}</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.totalPacientes)}</div>
             <div style={{ fontSize: '11px', color: '#94a3b8' }}>pacientes cadastrados</div>
           </div>
         </div>
@@ -290,7 +303,7 @@ export default function DashboardPage() {
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-cross" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Óbitos</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{stats.obitos}</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.obitos)}</div>
             <div style={{ fontSize: '11px', color: '#94a3b8' }}>registrados</div>
           </div>
         </div>
@@ -348,7 +361,7 @@ export default function DashboardPage() {
             })
           ) : (
             <p style={{ textAlign: 'center', color: '#94a3b8', padding: 20 }}>
-              Nenhum paciente cadastrado
+              {statsErro ? 'Indicadores indisponíveis' : 'Nenhum paciente cadastrado'}
             </p>
           )}
         </div>
@@ -356,19 +369,19 @@ export default function DashboardPage() {
 
         {isModuleActive('grafico_resumo_mes') && (
         <div className="card-grafico" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
-          <h3><i className="las la-chart-line"></i> Performance Hospitalar</h3>
+          <h3><i className="las la-chart-line"></i> Resumo assistencial</h3>
           <div className="resumo-metricas">
             <div className="metrica-box">
-              <div className="metrica-badge"><i className="las la-arrow-up"></i> +12% esse mês</div>
-              <div className="valor">{stats.pacientesAtendidos + stats.aguardando}</div>
-              <div className="label">Atendimentos Ativos</div>
+              <div className="metrica-badge"><i className="las la-users"></i> Atendidos e aguardando</div>
+              <div className="valor">{indicador(stats.pacientesAtendidos + stats.aguardando)}</div>
+              <div className="label">Pacientes nos estados exibidos</div>
             </div>
             <div className="metrica-box">
               <div className="metrica-badge" style={{ background: '#eff6ff', color: '#1e40af' }}>
-                <i className="las la-check-double"></i> Concluídos
+                <i className="las la-check-double"></i> Desfechos
               </div>
-              <div className="valor">{stats.altas + stats.transferencias}</div>
-              <div className="label">Altas e Transferências</div>
+              <div className="valor">{indicador(stats.altas + stats.transferencias)}</div>
+              <div className="label">Altas e transferências</div>
             </div>
           </div>
         </div>

@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, type ComponentType } from 'react';
 import { 
   Wrench, 
   Search, 
   ExternalLink,
+  Activity,
   List,
   FileText,
   Calculator,
   Pill,
-  MoreHorizontal,
   Baby,
   HeartPulse,
   Bone,
@@ -29,7 +29,7 @@ interface Ferramenta {
   categoria: string;
   descricao: string;
   link: string;
-  icone: any;
+  icone: ComponentType<{ className?: string }>;
 }
 
 const ferramentas: Ferramenta[] = [
@@ -63,11 +63,6 @@ const ferramentas: Ferramenta[] = [
   { id: '19', nome: "MSD Manuals", categoria: "Referências", descricao: "Manual de diagnóstico e tratamento", link: "https://www.msdmanuals.com/pt/profissional", icone: BookOpen },
   { id: '20', nome: "SciELO", categoria: "Referências", descricao: "Biblioteca científica brasileira", link: "https://scielo.org/", icone: GraduationCap }
 ];
-
-// Fallback para icone Activity que esqueci de importar
-function Activity(props: any) {
-  return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>;
-}
 
 export default function UtilitariosPage() {
   const [busca, setBusca] = useState('');
@@ -106,6 +101,15 @@ export default function UtilitariosPage() {
     setModalOpen(false);
   };
 
+  useEffect(() => {
+    if (!modalOpen) return;
+    const fecharComEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setModalOpen(false);
+    };
+    window.addEventListener('keydown', fecharComEscape);
+    return () => window.removeEventListener('keydown', fecharComEscape);
+  }, [modalOpen]);
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
       <div className="flex items-center gap-4 bg-gradient-to-r from-blue-900 to-blue-700 p-8 rounded-3xl shadow-lg text-white">
@@ -121,6 +125,7 @@ export default function UtilitariosPage() {
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
         <input 
+          aria-label="Buscar ferramentas clínicas"
           type="text" 
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
@@ -136,6 +141,7 @@ export default function UtilitariosPage() {
             <button 
               key={cat}
               onClick={() => setCategoriaAtiva(cat)}
+              aria-pressed={ativo}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-all duration-300 text-sm ${
                 ativo 
                   ? 'bg-blue-700 text-white shadow-lg shadow-blue-200' 
@@ -197,14 +203,15 @@ export default function UtilitariosPage() {
       {/* Modal Confirmação de Link Externo */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div role="dialog" aria-modal="true" aria-labelledby="utilitarios-dialog-title" className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="bg-blue-900 p-6 flex justify-between items-center">
-              <h3 className="text-white font-bold text-lg flex items-center gap-2">
+              <h3 id="utilitarios-dialog-title" className="text-white font-bold text-lg flex items-center gap-2">
                 <ExternalLink className="w-5 h-5" />
                 Aviso de Redirecionamento
               </h3>
               <button 
                 onClick={() => setModalOpen(false)}
+                aria-label="Fechar aviso de redirecionamento"
                 className="text-white/70 hover:text-white transition-colors"
               >
                 &times;

@@ -13,6 +13,7 @@ interface Curva {
   id: string;
   nome: string;
   titulo: string;
+  localNome?: string;
   driveId?: string; // Para integração com API do Google Drive
 }
 
@@ -42,7 +43,7 @@ const curvasMeninos: Curva[] = [
   { id: '20', nome: 'perimetro_cefalico_meninos_0-5_percentil.pdf', titulo: 'Perímetro Cefálico (0 a 5 anos) - Percentil', driveId: '' },
   { id: '21', nome: 'perimetro_cefalico_meninos_0-5_zscore.pdf', titulo: 'Perímetro Cefálico (0 a 5 anos) - Escore Z', driveId: '' },
   { id: '22', nome: 'peso_meninos_0-5_percentil.pdf', titulo: 'Peso por Idade (0 a 5 anos) - Percentil', driveId: '' },
-  { id: '23', nome: 'peso_meninos_0-5_zscore.pdf', titulo: 'Peso por Idade (0 a 5 anos) - Escore Z', driveId: '' },
+  { id: '23', nome: 'peso_meninos_0-5_zscore.pdf', localNome: '\u007fpeso_meninos_0-5_zscore.pdf', titulo: 'Peso por Idade (0 a 5 anos) - Escore Z', driveId: '' },
   { id: '24', nome: 'peso_meninos_5-10_percentil.pdf', titulo: 'Peso por Idade (5 a 10 anos) - Percentil', driveId: '' },
   { id: '25', nome: 'peso_meninos_5-10_zscore.pdf', titulo: 'Peso por Idade (5 a 10 anos) - Escore Z', driveId: '' },
 ];
@@ -71,17 +72,25 @@ export default function CurvasCrescimentoPage() {
   const handleDriveAction = (curva: Curva, action: 'view' | 'download') => {
     const driveFile = driveFiles.find(f => f.name === curva.nome);
     
-    if (driveFile) {
-      if (action === 'download' && driveFile.webContentLink) {
-        window.open(driveFile.webContentLink, '_blank');
-      } else {
-        window.open(driveFile.webViewLink, '_blank');
+    const remoteUrl = action === 'download' ? driveFile?.webContentLink : driveFile?.webViewLink;
+    if (typeof remoteUrl === 'string') {
+      try {
+        const parsedUrl = new URL(remoteUrl);
+        const hostPermitido = parsedUrl.hostname === 'google.com'
+          || parsedUrl.hostname.endsWith('.google.com')
+          || parsedUrl.hostname === 'googleusercontent.com'
+          || parsedUrl.hostname.endsWith('.googleusercontent.com');
+        if (parsedUrl.protocol === 'https:' && hostPermitido) {
+          window.open(parsedUrl.href, '_blank', 'noopener,noreferrer');
+          return;
+        }
+      } catch {
+        // Link remoto inválido: segue para o arquivo local.
       }
-      return;
     }
     
     // Suporte local seguro (offline-first para pediatria)
-    const filePath = `/docs/${encodeURIComponent(curva.nome)}`;
+    const filePath = `/docs/${encodeURIComponent(curva.localNome ?? curva.nome)}`;
 
     if (action === 'download') {
       const a = document.createElement('a');
@@ -111,6 +120,8 @@ export default function CurvasCrescimentoPage() {
 
       <div className="flex bg-slate-100 p-1 rounded-2xl max-w-sm mx-auto">
         <button
+          type="button"
+          aria-pressed={abaAtiva === 'meninas'}
           onClick={() => setAbaAtiva('meninas')}
           className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${
             abaAtiva === 'meninas' 
@@ -121,6 +132,8 @@ export default function CurvasCrescimentoPage() {
           <Baby className="w-5 h-5" /> Meninas
         </button>
         <button
+          type="button"
+          aria-pressed={abaAtiva === 'meninos'}
           onClick={() => setAbaAtiva('meninos')}
           className={`flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${
             abaAtiva === 'meninos' 

@@ -18,7 +18,7 @@ type Ocorrencia = {
 }
 
 export default function EquipeSegurancaPage() {
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -29,24 +29,25 @@ export default function EquipeSegurancaPage() {
     setLoading(true)
     setError('')
     try {
+      if (sessionStatus === 'loading') return
+      if (sessionStatus !== 'authenticated') {
+        setOcorrencias([])
+        setError('Entre na sua conta para consultar os registros de segurança.')
+        return
+      }
       const response = await fetch('/api/equipe-seguranca', { cache: 'no-store' })
       if (!response.ok) throw new Error('Não foi possível carregar os registros.')
       const rows: unknown = await response.json()
       if (!Array.isArray(rows)) throw new Error('A resposta recebida é inválida.')
-      setOcorrencias(rows.filter((row): row is Ocorrencia => {
-        if (!row || typeof row !== 'object') return false
-        const item = row as Ocorrencia
-        const simulated = `${item.local ?? ''} ${item.relato ?? ''}`.toLowerCase().includes('simula')
-        return !simulated
-      }))
+      setOcorrencias(rows as Ocorrencia[])
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Erro ao carregar registros.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [sessionStatus])
 
-  useEffect(() => { void carregar() }, [carregar])
+  useEffect(() => { void carregar() }, [carregar, sessionStatus])
 
   const ativas = useMemo(() => ocorrencias.filter(item => !item.resolvido), [ocorrencias])
   const historico = useMemo(() => ocorrencias.filter(item => item.resolvido), [ocorrencias])
@@ -55,20 +56,22 @@ export default function EquipeSegurancaPage() {
   )
 
   const resolver = async (id: string) => {
-    const response = await fetch(`/api/equipe-seguranca/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        resolvido: true,
-        resolvidoPor: session?.user?.name ?? 'Profissional autenticado',
-        dataResolucao: new Date().toISOString(),
-      }),
-    })
-    if (!response.ok) {
-      setError('Não foi possível concluir este registro. Atualize e tente novamente.')
-      return
+    setError('')
+    try {
+      const response = await fetch(`/api/equipe-seguranca/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resolvido: true }),
+      })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        setError(payload?.error || 'Não foi possível concluir este registro. Atualize e tente novamente.')
+        return
+      }
+      await carregar()
+    } catch {
+      setError('Não foi possível concluir este registro. Verifique sua conexão e tente novamente.')
     }
-    await carregar()
   }
 
   return (
@@ -79,7 +82,7 @@ export default function EquipeSegurancaPage() {
             <h1><ShieldAlert aria-hidden="true" /> Registros de segurança</h1>
             <p>Consulte e encerre ocorrências registradas neste hospital.</p>
           </div>
-          <button className="btn btn-info" type="button" onClick={() => void carregar()} disabled={loading}>
+          <button className="btn btn-info" type="button" onClick={() => void carregar()} disabled={loading || sessionStatus !== 'authenticated'}>
             <RefreshCw size={16} aria-hidden="true" /> Atualizar
           </button>
         </header>

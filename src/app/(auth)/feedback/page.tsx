@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { 
   MessageSquare, 
@@ -45,9 +45,41 @@ const TIPO_COLORS: Record<TipoFeedback, { bg: string, text: string, border: stri
   bug: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-500' },
 };
 
+function mapearFeedback(item: any): Feedback {
+  const texto = typeof item?.mensagem === 'string' ? item.mensagem : '';
+  const marcadorResposta = '\n\n[RESPOSTA DA EQUIPE]:';
+  const separadorResposta = texto.indexOf(marcadorResposta);
+  const conteudo = separadorResposta >= 0 ? texto.slice(0, separadorResposta) : texto;
+  const resposta = separadorResposta >= 0 ? texto.slice(separadorResposta + marcadorResposta.length).trim() : null;
+  const marcadorAssunto = '\n[ASSUNTO]:';
+  const separadorAssunto = conteudo.lastIndexOf(marcadorAssunto);
+  const legado = conteudo.match(/\s\(([^()]*)\)$/);
+  const mensagem = separadorAssunto >= 0
+    ? conteudo.slice(0, separadorAssunto).trim()
+    : legado ? conteudo.slice(0, legado.index).trim() : conteudo.trim();
+  const assunto = separadorAssunto >= 0
+    ? conteudo.slice(separadorAssunto + marcadorAssunto.length).trim()
+    : legado?.[1]?.trim() || 'Mensagem';
+  const tipoNormalizado = typeof item?.tipo === 'string' ? item.tipo.toLowerCase() : 'sugestao';
+  const tipo = tipoNormalizado in TIPO_LABEL ? tipoNormalizado as TipoFeedback : 'sugestao';
+
+  return {
+    id: String(item?.id || ''),
+    tipo,
+    assunto,
+    mensagem,
+    data: typeof item?.createdAt === 'string' ? item.createdAt : '',
+    usuario: item?.usuario?.nome || 'Profissional',
+    respondido: item?.status === 'RESPONDIDO',
+    resposta,
+  };
+}
+
 export default function FeedbackPage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const hospitalId = (session?.user as any)?.hospitalId;
+  const usuarioId = session?.user?.id;
+  const isAdmin = (session?.user as any)?.cargo === 'ADMIN';
   
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [filtro, setFiltro] = useState<TipoFeedback | 'todos'>('todos');
@@ -63,51 +95,43 @@ export default function FeedbackPage() {
   
   // Alert State
   const [enviado, setEnviado] = useState(false);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  const carregarFeedbacks = useCallback(async () => {
+    setCarregando(true);
+    setErro('');
+    try {
+      const res = await fetch('/api/feedback');
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || 'Não foi possível carregar feedbacks.');
+      if (!Array.isArray(data)) throw new Error('A resposta de feedbacks é inválida.');
+      setFeedbacks(data.map(mapearFeedback));
+    } catch (error) {
+      setFeedbacks([]);
+      setErro(error instanceof Error ? error.message : 'Erro ao carregar feedbacks.');
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!hospitalId) return;
-    fetch('/api/feedback')
-      .then(res => res.json())
-      .then(data => {
-        if (!Array.isArray(data)) return setFeedbacks([]);
-        setFeedbacks(data.map((item: any) => ({
-          id: item.id,
-          tipo: (item.tipo?.toLowerCase() || 'sugestao') as TipoFeedback,
-          assunto: item.mensagem?.split('(').at(-1)?.replace(/\)$/, '') || 'Mensagem',
-          mensagem: item.mensagem?.split('(')[0]?.trim() || item.mensagem,
-          data: item.createdAt,
-          usuario: item.usuario?.nome || 'Profissional',
-          respondido: item.status === 'RESPONDIDO',
-          resposta: item.mensagem?.includes('[RESPOSTA DA EQUIPE]:') ? item.mensagem.split('[RESPOSTA DA EQUIPE]:')[1]?.trim() : null,
-        })));
-      })
-      .catch(() => setFeedbacks([]));
-  }, [hospitalId]);
-
-  const carregarFeedbacks = () => {
-    fetch('/api/feedback')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          const mapped: Feedback[] = data.map((d: any) => ({
-            id: d.id,
-            tipo: d.tipo?.toLowerCase() || 'sugestao',
-            assunto: d.mensagem.split('(')[1]?.replace(')', '') || 'Mensagem',
-            mensagem: d.mensagem.split('(')[0]?.trim() || d.mensagem,
-            data: d.createdAt,
-            usuario: d.usuario?.nome || 'Profissional',
-            respondido: d.status === 'RESPONDIDO',
-            resposta: d.mensagem.includes('[RESPOSTA DA EQUIPE]:') ? d.mensagem.split('[RESPOSTA DA EQUIPE]:')[1]?.trim() : null
-          }));
-          setFeedbacks(mapped);
-        } else setFeedbacks([]);
-      })
-      .catch(console.error);
-  };
+    if (sessionStatus === 'loading') return;
+    if (!hospitalId || !usuarioId) {
+      setFeedbacks([]);
+      setErro('Faça login para acessar os feedbacks.');
+      setCarregando(false);
+      return;
+    }
+    void carregarFeedbacks();
+  }, [hospitalId, usuarioId, sessionStatus, carregarFeedbacks]);
 
   const enviarFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!assunto.trim() || !mensagem.trim()) return;
+    if (!assunto.trim() || !mensagem.trim() || enviando) return;
+    setEnviando(true);
+    setErro('');
     
     try {
       const res = await fetch('/api/feedback', {
@@ -115,19 +139,21 @@ export default function FeedbackPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tipo: tipo.toUpperCase(),
-          mensagem: `${mensagem.trim()} (${assunto.trim()})`
+          mensagem: `${mensagem.trim()}\n[ASSUNTO]: ${assunto.trim()}`
         })
       });
 
-      if (res.ok) {
-        setAssunto('');
-        setMensagem('');
-        setEnviado(true);
-        carregarFeedbacks();
-        setTimeout(() => setEnviado(false), 3000);
-      }
-    } catch (err) {
-      console.error(err);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || 'Não foi possível enviar o feedback.');
+      setAssunto('');
+      setMensagem('');
+      setEnviado(true);
+      void carregarFeedbacks();
+      setTimeout(() => setEnviado(false), 3000);
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Erro de conexão ao enviar feedback.');
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -186,6 +212,8 @@ export default function FeedbackPage() {
         <p className="text-slate-500 mt-1">Ajude-nos a melhorar o sistema enviando suas observações.</p>
       </div>
 
+      {erro && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{erro}</div>}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {(['sugestao', 'elogio', 'reclamacao', 'bug'] as TipoFeedback[]).map(t => {
@@ -235,28 +263,32 @@ export default function FeedbackPage() {
 
           <form onSubmit={enviarFeedback} className="space-y-4">
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+              <label htmlFor="feedback-assunto" className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1.5">
                 <Tag className="w-4 h-4" /> Assunto
               </label>
               <input
+                id="feedback-assunto"
                 type="text"
                 value={assunto}
                 onChange={e => setAssunto(e.target.value)}
                 placeholder="Ex: Melhoria no prontuário"
+                maxLength={160}
                 required
                 className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+              <label htmlFor="feedback-mensagem" className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1.5">
                 <MessageSquare className="w-4 h-4" /> Mensagem
               </label>
               <textarea
+                id="feedback-mensagem"
                 rows={4}
                 value={mensagem}
                 onChange={e => setMensagem(e.target.value)}
                 placeholder="Descreva detalhadamente..."
+                maxLength={3828}
                 required
                 className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm resize-y"
               />
@@ -264,9 +296,10 @@ export default function FeedbackPage() {
             
             <button 
               type="submit" 
+              disabled={enviando}
               className="w-full bg-blue-900 hover:bg-blue-950 text-white font-bold py-3 rounded-xl transition-colors flex justify-center items-center gap-2"
             >
-              <Send className="w-4 h-4" /> Enviar Feedback
+              <Send className="w-4 h-4" /> {enviando ? 'Enviando...' : 'Enviar Feedback'}
             </button>
           </form>
         </div>
@@ -293,7 +326,9 @@ export default function FeedbackPage() {
           </div>
 
           <div className="flex-1 p-4 overflow-y-auto max-h-[600px]">
-            {lista.length === 0 ? (
+            {carregando ? (
+              <p role="status" className="py-16 text-center text-slate-500">Carregando feedbacks...</p>
+            ) : lista.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-4">
                 <Inbox className="w-16 h-16 opacity-30" />
                 <p>Nenhum feedback encontrado nesta categoria.</p>
@@ -334,7 +369,7 @@ export default function FeedbackPage() {
                         </div>
                       )}
                       
-                      {!f.respondido && (
+                      {isAdmin && !f.respondido && (
                         <div>
                           <button
                             onClick={() => { setModalFeedback(f); setRespostaTexto(''); }}
@@ -369,14 +404,16 @@ export default function FeedbackPage() {
                 <p className="text-sm text-slate-600">{modalFeedback.mensagem}</p>
               </div>
               
-              <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+              <label htmlFor="feedback-resposta" className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-1.5">
                 <MessageSquare className="w-4 h-4" /> Sua Resposta
               </label>
               <textarea
+                id="feedback-resposta"
                 rows={4}
                 value={respostaTexto}
                 onChange={e => setRespostaTexto(e.target.value)}
                 placeholder="Digite a resposta oficial da instituição para este feedback..."
+                maxLength={2000}
                 className="w-full border border-slate-300 rounded-lg p-3 outline-none focus:border-blue-600 text-sm resize-y mb-6"
               />
               

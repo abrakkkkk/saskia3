@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
     }
 
-    if (!isRecord(body) || typeof body.pacienteId !== 'string' || !body.pacienteId || !Array.isArray(body.medicamentos) || body.medicamentos.length < 1 || body.medicamentos.length > 100) {
+    if (!isRecord(body) || typeof body.pacienteId !== 'string' || !body.pacienteId.trim() || body.pacienteId.length > 64 || !Array.isArray(body.medicamentos) || body.medicamentos.length < 1 || body.medicamentos.length > 100) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }
     if (body.medicamentos.some((item) => !isRecord(item) || typeof item.viaUso !== 'string' || !item.viaUso.trim() || item.viaUso.length > 80 || typeof item.conteudo !== 'string' || !item.conteudo.trim() || item.conteudo.length > 4000)) {
@@ -87,8 +87,10 @@ export async function POST(request: NextRequest) {
     }
     
     // IDOR protection: Verify the patient belongs to this hospital
+    const pacienteId = body.pacienteId.trim()
     const paciente = await prisma.paciente.findFirst({
-      where: { id: body.pacienteId, hospitalId }
+      where: { id: pacienteId, hospitalId, arquivadoEm: null },
+      select: { id: true },
     })
     
     if (!paciente) {
@@ -102,7 +104,7 @@ export async function POST(request: NextRequest) {
     const receita = await prisma.receita.create({
       data: {
         hospitalId,
-        pacienteId: body.pacienteId,
+        pacienteId,
         medicamentos: medicamentos as Prisma.InputJsonValue,
         observacoes: typeof body.observacoes === 'string' ? body.observacoes : null,
         profissional: session.user.name || 'Médico',
@@ -116,7 +118,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(receita, { status: 201 })
   } catch (error: unknown) {
     console.error('Erro ao criar receita:', error)
-    const message = error instanceof Error ? error.message : 'Erro ao criar receita'
-    return NextResponse.json({ error: message }, { status: 400 })
+    return NextResponse.json({ error: 'Erro ao criar prescrição' }, { status: 500 })
   }
 }

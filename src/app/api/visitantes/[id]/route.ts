@@ -11,15 +11,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const hospitalId = session.user.hospitalId;
     if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
     const atualizado = await prisma.visitante.updateMany({
-      where: { id, hospitalId },
+      where: { id, hospitalId, status: 'DENTRO' },
       data: { status: 'SAIU', saida: new Date() },
     });
-    if (atualizado.count === 0) return NextResponse.json({ error: 'Visitante não encontrado' }, { status: 404 });
+    if (atualizado.count === 0) {
+      const existente = await prisma.visitante.findFirst({ where: { id, hospitalId }, select: { id: true } });
+      return existente
+        ? NextResponse.json({ error: 'A saída deste visitante já foi registrada' }, { status: 409 })
+        : NextResponse.json({ error: 'Visitante não encontrado' }, { status: 404 });
+    }
     const visitante = await prisma.visitante.findFirst({ where: { id, hospitalId } });
 
     return NextResponse.json(visitante);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erro ao atualizar visitante:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao registrar saída do visitante' }, { status: 500 });
   }
 }

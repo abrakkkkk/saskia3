@@ -3,6 +3,12 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isRecord } from '@/lib/request-validation';
 
+function isValidDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const parsed = new Date(`${value}T00:00:00.000Z`)
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}
+
 export async function GET() {
   try {
     const session = await auth();
@@ -18,6 +24,7 @@ export async function GET() {
 
     return NextResponse.json(ordens);
   } catch (error) {
+    console.error('Erro ao buscar ordens de manutenção:', error)
     return NextResponse.json({ error: 'Erro ao buscar ordens de manutenção' }, { status: 500 });
   }
 }
@@ -41,7 +48,7 @@ export async function POST(request: NextRequest) {
       typeof body.setor !== 'string' || !body.setor.trim() || body.setor.length > 100 ||
       typeof body.tipo !== 'string' || !['Preventiva', 'Corretiva', 'Preditiva', 'Calibração', 'Emergencial'].includes(body.tipo) ||
       typeof body.prioridade !== 'string' || !['Normal', 'Urgente', 'Emergência'].includes(body.prioridade) ||
-      (body.data !== undefined && (typeof body.data !== 'string' || Number.isNaN(new Date(body.data).getTime()))) ||
+      (body.data !== undefined && (typeof body.data !== 'string' || !isValidDate(body.data))) ||
       (body.descricao !== undefined && body.descricao !== null && (typeof body.descricao !== 'string' || body.descricao.length > 2000))
     ) return NextResponse.json({ error: 'Dados da ordem de manutenção inválidos' }, { status: 400 });
 
@@ -61,6 +68,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(ordem, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Erro ao criar OS de manutenção:', error)
+    return NextResponse.json({ error: 'Erro ao criar ordem de manutenção' }, { status: 500 });
   }
 }

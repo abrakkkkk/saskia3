@@ -5,6 +5,14 @@ import { useSession } from 'next-auth/react';
 
 import { inter } from '@/app/fonts'
 
+function dataLocalAtual() {
+  const agora = new Date()
+  const ano = agora.getFullYear()
+  const mes = String(agora.getMonth() + 1).padStart(2, '0')
+  const dia = String(agora.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}
+
 interface PacienteData {
   id?: string;
   nome: string;
@@ -36,7 +44,7 @@ export default function AgendaPage() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   
-  const [filtroData, setFiltroData] = useState(new Date().toISOString().split('T')[0]);
+  const [filtroData, setFiltroData] = useState(dataLocalAtual);
   const [filtroEspecialidade, setFiltroEspecialidade] = useState('Todas');
   const [termoBusca, setTermoBusca] = useState('');
   
@@ -113,10 +121,13 @@ export default function AgendaPage() {
         carregarAgendamentos();
         setAgendaSelecionada(null);
       } else {
-        alert("Erro ao alterar o status do agendamento");
+        const result = await res.json().catch(() => ({}));
+        setErro(result.error || 'Erro ao alterar o status do agendamento.');
+        setAgendaSelecionada(null);
       }
     } catch (error) {
-      alert("Erro de conexão");
+      setErro('Falha de conexão ao alterar o status do agendamento.');
+      setAgendaSelecionada(null);
     }
   };
 

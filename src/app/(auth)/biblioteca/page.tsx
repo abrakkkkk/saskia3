@@ -18,6 +18,7 @@ interface Documento {
   titulo: string;
   tipo: 'pdf' | 'imagem';
   driveId?: string; // Para futura integração com API do Google Drive
+  arquivoLocal?: string;
 }
 
 export default function BibliotecaPage() {
@@ -50,16 +51,16 @@ export default function BibliotecaPage() {
     { id: '3', nome: 'protocolo_violencia.pdf', titulo: 'Protocolo de cuidados e enfrentamento da violência contra mulher', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_3' },
     { id: '4', nome: 'recomendacoes.pdf', titulo: 'Recomendações para o Diagnóstico e Tratamento das Vaginites', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_4' },
     { id: '5', nome: 'mapasmentaisinterpexames.pdf', titulo: 'Mapas Mentais - Interpretação de Exames', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_5' },
-    { id: '6', nome: 'examelabcorrelacaoclinica1.pdf', titulo: 'Interpretação de Exames Laboratoriais e Correlação Clínica', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_6' },
-    { id: '7', nome: 'Cuidado_com_a_populacao_de_rua.pdf', titulo: 'Cuidado com a população de rua', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_7' },
+    { id: '6', nome: 'examelabcorrelacaoclinica1.pdf', titulo: 'Interpretação de Exames Laboratoriais e Correlação Clínica', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_6', arquivoLocal: 'examelabcorrelaçãoclinica1.pdf' },
+    { id: '7', nome: 'Cuidado_com_a_populacao_de_rua.pdf', titulo: 'Cuidado com a população de rua', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_7', arquivoLocal: 'Cuidado_com_a_população_de_rua.pdf' },
     { id: '8', nome: 'Diretriz_Brasileira_de_Dislipidemias.pdf', titulo: 'Diretriz Brasileira de Dislipidemias e Prevenção da Aterosclerose 2025', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_8' },
     { id: '9', nome: 'Diretriz_Brasileira_Hipertensao_2025.pdf', titulo: 'Diretriz Brasileira Hipertensão 2025', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_9' },
-    { id: '10', nome: 'Epilepsia_Guia_Pratico.pdf', titulo: 'Epilepsia - Guia Prático', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_10' },
-    { id: '11', nome: 'GUIA_PES_DIABETICOS.pdf', titulo: 'Guia de Cuidado com os Pés para Pacientes Diabéticos', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_11' },
-    { id: '12', nome: 'Infeccoes_Sexualmente_Transmissiveis_PCDT.pdf', titulo: 'Infecções Sexualmente Transmissíveis PCDT', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_12' },
+    { id: '10', nome: 'Epilepsia_Guia_Pratico.pdf', titulo: 'Epilepsia - Guia Prático', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_10', arquivoLocal: 'Epilepsia_-_Guia Prático.pdf' },
+    { id: '11', nome: 'GUIA_PES_DIABETICOS.pdf', titulo: 'Guia de Cuidado com os Pés para Pacientes Diabéticos', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_11', arquivoLocal: 'GUIA_DE_CUIDADO_COM_OS_PÉS_PARA_PACIENTES_DIABÉTICOS_PACIENTE.pdf' },
+    { id: '12', nome: 'Infeccoes_Sexualmente_Transmissiveis_PCDT.pdf', titulo: 'Infecções Sexualmente Transmissíveis PCDT', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_12', arquivoLocal: 'Infecções_Sexualmente_Transmissíveis_PCDT.pdf' },
     { id: '13', nome: 'Manual_Gestacao_Alto_Risco.pdf', titulo: 'Manual Gestação Alto Risco', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_13' },
-    { id: '14', nome: 'Praticas_Cuidado_LGBTQIA+.pdf', titulo: 'Práticas de Cuidado LGBTQIA+', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_14' },
-    { id: '15', nome: 'Protocolo_pessoas_Trans_2023.pdf', titulo: 'Protocolo Atendimento Pessoas Trans 2023', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_15' },
+    { id: '14', nome: 'Praticas_Cuidado_LGBTQIA+.pdf', titulo: 'Práticas de Cuidado LGBTQIA+', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_14', arquivoLocal: 'Práticas_de_Cuidado_LGBTQIA+.pdf' },
+    { id: '15', nome: 'Protocolo_pessoas_Trans_2023.pdf', titulo: 'Protocolo Atendimento Pessoas Trans 2023', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_15', arquivoLocal: 'Protocolo_atendimento_pessoas_Trans_2023.pdf' },
     { id: '16', nome: 'TABELA_KDIGO.png', titulo: 'Tabela KDIGO', tipo: 'imagem', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_16' },
     { id: '17', nome: 'estrategia_antirracista.pdf', titulo: 'Estratégia Antirracista para a Saúde 2025', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_17' },
     { id: '18', nome: 'manual_oncologia.pdf', titulo: 'Manual de Oncologia para não Oncologistas', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_18' },
@@ -81,7 +82,7 @@ export default function BibliotecaPage() {
     // Suporte local seguro (offline-first para ambiente hospitalar)
     const filePath = doc.tipo === 'imagem' 
       ? (doc.nome === 'TABELA_KDIGO.png' || doc.nome === 'tabela_risco_cardiovascular.png' ? `/images/${doc.nome}` : `/docs/${doc.nome}`)
-      : `/docs/${encodeURIComponent(doc.nome)}`;
+      : `/docs/${encodeURIComponent(doc.arquivoLocal ?? doc.nome)}`;
 
     if (action === 'download') {
       const a = document.createElement('a');

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import './ponto.css';
 
@@ -9,11 +9,12 @@ interface RegistroPonto {
   hora: string;
   tipo: string;
   profissional: string;
+  usuarioId: string;
   timestamp: number;
 }
 
 export default function PontoPage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   
   const [registros, setRegistros] = useState<RegistroPonto[]>([]);
   const [horaAtual, setHoraAtual] = useState('');
@@ -26,51 +27,64 @@ export default function PontoPage() {
   const [busca, setBusca] = useState('');
   const [mesFiltro, setMesFiltro] = useState('todos');
 
-  // Load
-  useEffect(() => {
-    fetchRegistros();
-
-    const interval = setInterval(() => {
-      const agora = new Date();
-      setHoraAtual(agora.toLocaleTimeString('pt-BR'));
-      setDataAtual(agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const getNomeProfissional = () => {
     const usuario = session?.user;
     return usuario?.name || 'Profissional Desconhecido';
   };
 
-  const fetchRegistros = async () => {
+  const fetchRegistros = useCallback(async () => {
     try {
       const res = await fetch('/api/pontoregistro');
-      if (!res.ok) throw new Error('Não foi possível carregar os registros de ponto.');
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(typeof payload?.error === 'string' ? payload.error : 'Não foi possível carregar os registros de ponto.');
+      }
       const data = await res.json();
       setErroApi('');
       if (Array.isArray(data)) {
-            // Map db object to UI model
-            const mapped = data.map(r => {
-              const dt = new Date(r.dataHora);
-              return {
-                data: dt.toLocaleDateString('pt-BR'),
-                hora: dt.toLocaleTimeString('pt-BR'),
-                tipo: r.tipo,
-                profissional: r.usuario?.nome || 'Profissional',
-                timestamp: dt.getTime()
-              }
-            });
-      setRegistros(mapped);
+        const mapped = data.flatMap(r => {
+          const dt = new Date(r?.dataHora);
+          if (!r || typeof r.id !== 'string' || typeof r.usuario?.id !== 'string'
+            || typeof r.tipo !== 'string' || Number.isNaN(dt.getTime())) return [];
+          const tipo = r.tipo.toLocaleUpperCase('pt-BR');
+          const tipoNormalizado = tipo === 'SAIDA' ? 'SAÍDA'
+            : tipo === 'INICIO INTERVALO' || tipo === 'ALMOÇO - INÍCIO' || tipo === 'ALMOCO - INICIO' || tipo === 'PAUSA - INÍCIO'
+              ? 'INÍCIO INTERVALO'
+              : tipo === 'ALMOÇO - RETORNO' || tipo === 'ALMOCO - RETORNO' || tipo === 'PAUSA - RETORNO'
+                ? 'FIM INTERVALO' : tipo;
+          return [{
+            id: r.id,
+            data: dt.toLocaleDateString('pt-BR'),
+            hora: dt.toLocaleTimeString('pt-BR'),
+            tipo: tipoNormalizado,
+            profissional: typeof r.usuario.nome === 'string' ? r.usuario.nome : 'Profissional',
+            usuarioId: r.usuario.id,
+            timestamp: dt.getTime()
+          }];
+        });
+        setRegistros(mapped);
       } else {
         setErroApi('A resposta do servidor de ponto é inválida.');
       }
-    } catch {
-      setErroApi('Não foi possível carregar os registros de ponto. Tente novamente.');
+    } catch (error) {
+      setErroApi(error instanceof Error ? error.message : 'Não foi possível carregar os registros de ponto. Tente novamente.');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (sessionStatus === 'authenticated') void fetchRegistros();
+  }, [sessionStatus, fetchRegistros]);
+
+  useEffect(() => {
+    const atualizarRelogio = () => {
+      const agora = new Date();
+      setHoraAtual(agora.toLocaleTimeString('pt-BR'));
+      setDataAtual(agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
+    };
+    atualizarRelogio();
+    const interval = setInterval(atualizarRelogio, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const registrar = async (tipo: string) => {
     setSalvando(true);
@@ -98,13 +112,15 @@ export default function PontoPage() {
   const hojeStr = new Date().toLocaleDateString('pt-BR');
   const profissionalLogado = getNomeProfissional();
   
-  const registrosHoje = registros.filter(r => r.data === hojeStr && r.profissional === profissionalLogado);
+  const usuarioId = session?.user?.id;
+  const registrosHoje = registros.filter(r => r.data === hojeStr && r.usuarioId === usuarioId);
   
   const temEntrada = registrosHoje.some(r => r.tipo === 'ENTRADA');
   const temSaida = registrosHoje.some(r => r.tipo === 'SAÍDA');
   const temInicioIntervalo = registrosHoje.some(r => r.tipo === 'INÍCIO INTERVALO');
   const temFimIntervalo = registrosHoje.some(r => r.tipo === 'FIM INTERVALO');
-  const emIntervalo = temInicioIntervalo && !temFimIntervalo;
+  const ultimoRegistroHoje = [...registrosHoje].sort((a, b) => a.timestamp - b.timestamp).at(-1);
+  const emIntervalo = ultimoRegistroHoje?.tipo === 'INÍCIO INTERVALO';
 
   let btnEntradaDisabled = true;
   let btnSaidaDisabled = true;
@@ -125,7 +141,7 @@ export default function PontoPage() {
   } else {
     // Trabalhando
     btnSaidaDisabled = false;
-    btnInicioIntervaloDisabled = false;
+    btnInicioIntervaloDisabled = temInicioIntervalo;
     statusClasse = 'status-ponto status-trabalhando';
     statusTexto = 'Em jornada';
   }
@@ -140,10 +156,10 @@ export default function PontoPage() {
     horasTrabalhadas = String(Math.floor(diff/3600000)).padStart(2,'0') + ':' + String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
   }
 
-  const diasTrabalhadosMes = [...new Set(registros.filter(r => r.profissional === profissionalLogado && r.tipo === 'ENTRADA').map(r => r.data))].length;
+  const diasTrabalhadosMes = [...new Set(registros.filter(r => r.usuarioId === usuarioId && r.tipo === 'ENTRADA').map(r => r.data))].length;
 
   // Render Histórico
-  let historicoFiltrado = registros.filter(r => r.profissional === profissionalLogado).reverse();
+  let historicoFiltrado = registros.filter(r => r.usuarioId === usuarioId).reverse();
   if (mesFiltro !== 'todos') {
     historicoFiltrado = historicoFiltrado.filter(r => parseInt(r.data.split('/')[1]) === parseInt(mesFiltro));
   }
@@ -157,7 +173,7 @@ export default function PontoPage() {
   const anoAtual = new Date().getFullYear();
   const regMes = registros.filter(r => {
     const p = r.data.split('/');
-    return parseInt(p[1]) === mesAtual && parseInt(p[2]) === anoAtual && r.profissional === profissionalLogado;
+    return parseInt(p[1]) === mesAtual && parseInt(p[2]) === anoAtual && r.usuarioId === usuarioId;
   });
 
   const diasMes = [...new Set(regMes.filter(r => r.tipo === 'ENTRADA').map(r => r.data))];
@@ -185,14 +201,17 @@ export default function PontoPage() {
   const imprimirRelatorioPonto = () => {
     const janela = window.open('','_blank');
     if (!janela) return;
+    const escaparHtml = (valor: string) => valor.replace(/[&<>"']/g, caractere => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[caractere] || caractere);
     janela.document.write(`
       <html><head><title>Relatório de Ponto</title>
       <style>body{font-family:Arial;padding:30px;}table{width:100%;border-collapse:collapse;}th{background:#0f172a;color:white;padding:10px;}td{padding:8px;border-bottom:1px solid #ddd;}h2{color:#0a1f44;}</style>
       </head><body>
       <h2>Relatório de Ponto</h2>
-      <p><strong>Profissional:</strong> ${profissionalLogado}</p>
+      <p><strong>Profissional:</strong> ${escaparHtml(profissionalLogado)}</p>
       <table><thead><tr><th>Data</th><th>Hora</th><th>Tipo</th></tr></thead><tbody>
-      ${registros.filter(r => r.profissional === profissionalLogado).reverse().slice(0,200).map(r => `<tr><td>${r.data}</td><td>${r.hora}</td><td>${r.tipo}</td></tr>`).join('')}
+      ${registros.filter(r => r.usuarioId === usuarioId).reverse().slice(0,200).map(r => `<tr><td>${escaparHtml(r.data)}</td><td>${escaparHtml(r.hora)}</td><td>${escaparHtml(r.tipo)}</td></tr>`).join('')}
       </tbody></table></body></html>
     `);
     janela.document.close();

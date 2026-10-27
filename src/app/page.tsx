@@ -15,6 +15,8 @@ interface HospitalData {
 export default function LoginPage() {
   const router = useRouter()
   const [hospitais, setHospitais] = useState<HospitalData[]>([])
+  const [carregandoHospitais, setCarregandoHospitais] = useState(true)
+  const [erroHospitais, setErroHospitais] = useState('')
   const [hospitalId, setHospitalId] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -22,10 +24,29 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    fetch('/api/hospitais')
-      .then(response => response.json())
-      .then(data => setHospitais(data))
-      .catch(() => setHospitais([]))
+    const controller = new AbortController()
+    fetch('/api/hospitais', { signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error('Não foi possível carregar as unidades hospitalares.')
+        const data: unknown = await response.json()
+        if (!Array.isArray(data) || data.some(item => !item || typeof item.id !== 'string' || typeof item.nome !== 'string')) {
+          throw new Error('A lista de unidades recebida é inválida.')
+        }
+        return data as HospitalData[]
+      })
+      .then(data => {
+        setHospitais(data)
+        setErroHospitais(data.length ? '' : 'Nenhuma unidade hospitalar está disponível para acesso.')
+      })
+      .catch(error => {
+        if (error instanceof Error && error.name === 'AbortError') return
+        setErroHospitais(error instanceof Error ? error.message : 'Não foi possível carregar as unidades hospitalares.')
+        setHospitais([])
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCarregandoHospitais(false)
+      })
+    return () => controller.abort()
   }, [])
 
   const handleLogin = async (event: React.FormEvent) => {
@@ -37,19 +58,29 @@ export default function LoginPage() {
       return
     }
 
-    setLoading(true)
-    const resultado = await signIn('credentials', {
-      email,
-      senha,
-      hospitalId,
-      redirect: false
-    })
+    if (!hospitais.some(hospital => hospital.id === hospitalId)) {
+      setErro('Selecione uma unidade hospitalar válida.')
+      return
+    }
 
-    if (resultado?.error) {
-      setErro(resultado.error)
+    setLoading(true)
+    try {
+      const resultado = await signIn('credentials', {
+        email,
+        senha,
+        hospitalId,
+        redirect: false
+      })
+
+      if (resultado?.error || !resultado?.ok) {
+        setErro('Não foi possível autenticar. Confira a unidade, o e-mail e a senha.')
+        setLoading(false)
+      } else {
+        router.push('/dashboard')
+      }
+    } catch {
+      setErro('Não foi possível conectar ao serviço de autenticação. Tente novamente.')
       setLoading(false)
-    } else {
-      router.push('/dashboard')
     }
   }
 
@@ -75,21 +106,23 @@ export default function LoginPage() {
           {/* Logo Area (Removida temporariamente para visualização) */}
 
           {/* Form Area */}
-          <form onSubmit={handleLogin}>
+          <form onSubmit={handleLogin} aria-busy={loading || carregandoHospitais}>
             
             <div className="flex flex-col" style={{ marginBottom: '20px' }}>
-              <label className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
+              <label htmlFor="hospitalId" className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
                 <Hospital className="w-3.5 h-3.5 text-blue-400" /> Unidade Hospitalar
               </label>
               <div className="relative">
                 <select
+                  id="hospitalId"
                   value={hospitalId}
                   onChange={(e) => setHospitalId(e.target.value)}
                   required
+                  disabled={carregandoHospitais || hospitais.length === 0}
                   className="w-full bg-white border-2 border-transparent focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-lg appearance-none"
                   style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', color: '#0f172a' }}
                 >
-                  <option value="" style={{ color: '#64748b' }}>Selecione a unidade operacional...</option>
+                  <option value="" style={{ color: '#64748b' }}>{carregandoHospitais ? 'Carregando unidades...' : 'Selecione a unidade operacional...'}</option>
                   {hospitais.map((hospital) => (
                     <option key={hospital.id} value={hospital.id}>{hospital.nome}</option>
                   ))}
@@ -100,11 +133,14 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {erroHospitais && <p role="alert" className="text-sm text-red-200" style={{ marginBottom: '20px' }}>{erroHospitais}</p>}
+
             <div className="flex flex-col" style={{ marginBottom: '20px' }}>
-              <label className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
+              <label htmlFor="login-email" className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
                 <Mail className="w-3.5 h-3.5 text-blue-400" /> E-mail Institucional
               </label>
               <input
+                id="login-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -117,10 +153,11 @@ export default function LoginPage() {
             </div>
 
             <div className="flex flex-col" style={{ marginBottom: '24px' }}>
-              <label className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
+              <label htmlFor="login-senha" className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
                 <Lock className="w-3.5 h-3.5 text-blue-400" /> Senha de Acesso
               </label>
               <input
+                id="login-senha"
                 type="password"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
@@ -133,7 +170,7 @@ export default function LoginPage() {
             </div>
 
             {erro && (
-              <div className="flex items-center gap-3 text-red-200 bg-red-500/20 border border-red-500/50 p-3.5 rounded-md text-sm font-medium" style={{ marginBottom: '20px' }}>
+              <div role="alert" className="flex items-center gap-3 text-red-200 bg-red-500/20 border border-red-500/50 p-3.5 rounded-md text-sm font-medium" style={{ marginBottom: '20px' }}>
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <p>{erro}</p>
               </div>
@@ -142,7 +179,7 @@ export default function LoginPage() {
             <div>
               <button 
                 type="submit" 
-                disabled={loading}
+                disabled={loading || carregandoHospitais || hospitais.length === 0}
                 className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold transition-colors flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ minHeight: '50px', padding: '12px 16px', borderRadius: '8px', fontSize: '16px', border: '1px solid rgba(255, 255, 255, 0.15)' }}
               >

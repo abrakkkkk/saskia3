@@ -199,7 +199,7 @@
 }
 
 @media print {
-    .topo, .sidebar, .form-row, .btn-imprimir, .btn-atualizar {
+    .topo, .sidebar, .form-row, .btn-imprimir, .btn-atualizar, .filtros-rapidos, .filtros-periodo {
         display: none !important;
     }
     .rel-card {
@@ -215,8 +215,12 @@
     }
 }
 
+.rel-graficos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr)); gap: 25px; margin-bottom: 25px; }
+.filtros-rapidos button:focus-visible, .filtros-periodo button:focus-visible, .rel-container button:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+
 @media (max-width: 768px) {
-    .rel-grid {
-        grid-template-columns: 1fr;
+    .rel-graficos {
+        grid-template-columns: minmax(0, 1fr);
     }
+    .rel-tabela { min-width: 680px; }
 }

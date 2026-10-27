@@ -92,17 +92,10 @@
     border-radius: 8px;
     padding: 20px;
     text-align: center;
-    cursor: pointer;
+    cursor: default;
     transition: all 0.3s ease;
     border: 2px solid transparent;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-}
-
-.categoria-card:hover {
-    border-color: #1e3a8a;
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(30, 58, 138, 0.1);
-    background: white;
 }
 
 .categoria-card.ativo {
@@ -116,10 +109,6 @@
     color: #1e3a8a;
     margin-bottom: 12px;
     transition: transform 0.3s;
-}
-
-.categoria-card:hover i {
-    transform: scale(1.1);
 }
 
 .categoria-card h4 {
@@ -148,6 +137,8 @@
     z-index: 10000;
     justify-content: center;
     align-items: center;
+    padding: 12px;
+    box-sizing: border-box;
     animation: fadeIn 0.2s;
 }
 
@@ -157,6 +148,9 @@
     padding: 30px;
     max-width: 600px;
     width: 90%;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    box-sizing: border-box;
     box-shadow: 0 20px 50px rgba(0,0,0,0.2);
     animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -205,4 +199,33 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 15px;
+}
+
+.almox-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.almox-filter-row select {
+    min-height: 44px;
+    flex: 0 1 180px;
+}
+
+.btn-almox:focus-visible,
+.tab-btn:focus-visible,
+.modal-almox button:focus-visible,
+.busca-wrapper:focus-within {
+    outline: 3px solid #1d4ed8;
+    outline-offset: 3px;
+}
+
+@media (max-width: 520px) {
+    .banner-almox { padding: 22px; }
+    .almox-filter-row { align-items: stretch; }
+    .almox-filter-row .busca-wrapper,
+    .almox-filter-row select { flex: 1 1 100%; min-width: 0; }
+    .modal-almox-conteudo { padding: 20px; width: 100%; }
 }

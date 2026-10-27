@@ -68,8 +68,18 @@ async function updateAPIStatus(id: string, status: string, dados?: any): Promise
   if (!res.ok) throw new Error(result.error || 'Não foi possível atualizar o evento de CCIH.');
 }
 
-const HOJE = () => new Date().toISOString().split('T')[0];
-const fmtData = (d: string) => { try { return new Date(d).toLocaleDateString('pt-BR'); } catch { return d; } };
+const HOJE = () => {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoje.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+};
+const parseDataLocal = (valor: string) => {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) return new Date(`${valor}T00:00:00`);
+  return new Date(valor);
+};
+const fmtData = (d: string) => { try { return parseDataLocal(d).toLocaleDateString('pt-BR'); } catch { return d; } };
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 // ── componente principal ───────────────────────────────
@@ -140,6 +150,7 @@ export default function CcihPage() {
   const [aviso, setAviso] = useState('');
   const [erroCarga, setErroCarga] = useState('');
   const [irasDetalhe, setIrasDetalhe] = useState<IRAS | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // pacientes para selects (via API)
   const [pacientes, setPacientes] = useState<{id:string; nome:string}[]>([]);
@@ -175,44 +186,76 @@ export default function CcihPage() {
       microorganismo: fMicro, antibiotico: fAtb, obs: fObs,
       status: 'Ativa', dataNotificacao: new Date().toISOString(), notificadoPor: nomeUsuario,
     };
-    await saveToAPI('IRAS', nova);
+    setIsSaving(true);
+    setErroCarga('');
+    try {
+      await saveToAPI('IRAS', nova);
 
-    if (fMaterial !== 'Não coletado') {
-      const novaCultura: any = {
-        paciente: fPaciente, material: fMaterial,
-        microorganismo: fMicro, antibiotico: fAtb,
-        sensibilidade: 'Aguardando', status: 'Pendente', data: fData,
-      };
-      await saveToAPI('CULTURA', novaCultura);
+      if (fMaterial !== 'Não coletado') {
+        const novaCultura: any = {
+          paciente: fPaciente, material: fMaterial,
+          microorganismo: fMicro, antibiotico: fAtb,
+          sensibilidade: 'Aguardando', status: 'Pendente', data: fData,
+        };
+        await saveToAPI('CULTURA', novaCultura);
+      }
+      await reloadAll();
+      setFPaciente(''); setFTipo(''); setFMicro(''); setFAtb(''); setFObs(''); setFData(HOJE());
+      msg('IRAS notificada com sucesso!');
+      setTab('iras');
+    } catch (error) {
+      setErroCarga(error instanceof Error ? error.message : 'Não foi possível notificar a IRAS.');
+    } finally {
+      setIsSaving(false);
     }
-    await reloadAll();
-    setFPaciente(''); setFTipo(''); setFMicro(''); setFAtb(''); setFObs(''); setFData(HOJE());
-    msg('IRAS notificada com sucesso!');
-    setTab('iras');
   };
 
   const tratarIRAS = async (id: number | string) => {
-    await updateAPIStatus(String(id), 'TRATADO', { status: 'Tratada', dataTratamento: new Date().toISOString() });
-    await reloadAll();
-    msg('IRAS marcada como tratada com sucesso!');
+    setIsSaving(true);
+    setErroCarga('');
+    try {
+      await updateAPIStatus(String(id), 'TRATADO', { status: 'Tratada', dataTratamento: new Date().toISOString() });
+      await reloadAll();
+      msg('IRAS marcada como tratada com sucesso!');
+    } catch (error) {
+      setErroCarga(error instanceof Error ? error.message : 'Não foi possível atualizar a IRAS.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const registrarHM = async (e: React.FormEvent) => {
     e.preventDefault();
     const nova: any = { data: new Date().toISOString(), setor: hmSetor, categoria: hmCategoria, momento: hmMomento, realizou: hmRealizou };
-    await saveToAPI('HM', nova);
-    await reloadAll();
-    msg('Observação registrada!');
+    setIsSaving(true);
+    setErroCarga('');
+    try {
+      await saveToAPI('HM', nova);
+      await reloadAll();
+      msg('Observação registrada!');
+    } catch (error) {
+      setErroCarga(error instanceof Error ? error.message : 'Não foi possível registrar a observação.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const prescreverATM = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!atmPaciente || !atmNome) { msg('Preencha paciente e antimicrobiano!'); return; }
     const novo: any = { paciente: atmPaciente, nome: atmNome, dose: atmDose, via: atmVia, frequencia: atmFreq, inicio: atmInicio, duracao: atmDuracao, indicacao: atmIndicacao, status: 'Em uso' };
-    await saveToAPI('ATM', novo);
-    await reloadAll();
-    setAtmNome(''); setAtmDose(''); setAtmFreq('');
-    msg('Antimicrobiano prescrito!');
+    setIsSaving(true);
+    setErroCarga('');
+    try {
+      await saveToAPI('ATM', novo);
+      await reloadAll();
+      setAtmNome(''); setAtmDose(''); setAtmFreq('');
+      msg('Antimicrobiano prescrito!');
+    } catch (error) {
+      setErroCarga(error instanceof Error ? error.message : 'Não foi possível registrar o antimicrobiano.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // ── IRAS filtradas ───────────────────────────────────
@@ -224,9 +267,9 @@ export default function CcihPage() {
   }, [iras, filtroGravidade, buscarIRAS]);
 
   // ── relatório ────────────────────────────────────────
-  const irasMes     = iras.filter(i => { const d = new Date(i.data); return d.getMonth() + 1 === relMes && d.getFullYear() === relAno; });
-  const culturasMes = culturas.filter(c => { const d = new Date(c.data); return d.getMonth() + 1 === relMes && d.getFullYear() === relAno; });
-  const atmMes      = antimicrobianos.filter(a => { const d = new Date(a.inicio); return d.getMonth() + 1 === relMes && d.getFullYear() === relAno; });
+  const irasMes     = iras.filter(i => { const d = parseDataLocal(i.data); return d.getMonth() + 1 === relMes && d.getFullYear() === relAno; });
+  const culturasMes = culturas.filter(c => { const d = parseDataLocal(c.data); return d.getMonth() + 1 === relMes && d.getFullYear() === relAno; });
+  const atmMes      = antimicrobianos.filter(a => { const d = parseDataLocal(a.inicio); return d.getMonth() + 1 === relMes && d.getFullYear() === relAno; });
   const tiposIRAS   = [...new Set(irasMes.map(i => i.tipo))];
 
   const badgeGrav = (g: string) => g === 'Choque Séptico' || g === 'Sepse' ? 'badge-danger' : g === 'Grave' ? 'badge-warning' : 'badge-info';
@@ -260,6 +303,11 @@ export default function CcihPage() {
       {aviso && (
         <div style={{ background:'#dcfce7', border:'1px solid #86efac', borderRadius:12, padding:'12px 18px', marginBottom:20, color:'#15803d', fontWeight:700, display:'flex', alignItems:'center', gap:8 }}>
           <i className="las la-check-circle"></i> {aviso}
+        </div>
+      )}
+      {erroCarga && (
+        <div role="alert" style={{ background:'#fef2f2', border:'1px solid #fecaca', borderRadius:12, padding:'12px 18px', marginBottom:20, color:'#b91c1c', fontWeight:600 }}>
+          <i className="las la-exclamation-circle" aria-hidden="true"></i> {erroCarga}
         </div>
       )}
 
@@ -313,15 +361,15 @@ export default function CcihPage() {
           <form onSubmit={notificarIRAS}>
             <div className="form-grid">
               <div className="form-grupo">
-                <label>Paciente *</label>
-                <select value={fPaciente} onChange={e => setFPaciente(e.target.value)} required>
+                <label htmlFor="ccih-paciente">Paciente *</label>
+                <select id="ccih-paciente" value={fPaciente} onChange={e => setFPaciente(e.target.value)} required>
                   <option value="">Selecione...</option>
                   {pacientes.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Tipo de IRAS *</label>
-                <select value={fTipo} onChange={e => setFTipo(e.target.value)} required>
+                <label htmlFor="ccih-tipo">Tipo de IRAS *</label>
+                <select id="ccih-tipo" value={fTipo} onChange={e => setFTipo(e.target.value)} required>
                   <option value="">Selecione...</option>
                   <option>Pneumonia Associada à Ventilação Mecânica (PAV)</option>
                   <option>Infecção do Trato Urinário (ITU)</option>
@@ -338,12 +386,12 @@ export default function CcihPage() {
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Data do Diagnóstico *</label>
-                <input type="date" value={fData} onChange={e => setFData(e.target.value)} required />
+                <label htmlFor="ccih-data">Data do Diagnóstico *</label>
+                <input id="ccih-data" type="date" value={fData} onChange={e => setFData(e.target.value)} required />
               </div>
               <div className="form-grupo">
-                <label>Local de Aquisição</label>
-                <select value={fLocal} onChange={e => setFLocal(e.target.value)}>
+                <label htmlFor="ccih-local">Local de Aquisição</label>
+                <select id="ccih-local" value={fLocal} onChange={e => setFLocal(e.target.value)}>
                   <option>Hospitalar - UTI</option>
                   <option>Hospitalar - Enfermaria</option>
                   <option>Hospitalar - Centro Cirúrgico</option>
@@ -351,14 +399,14 @@ export default function CcihPage() {
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Gravidade</label>
-                <select value={fGrav} onChange={e => setFGrav(e.target.value as Gravidade)}>
+                <label htmlFor="ccih-gravidade">Gravidade</label>
+                <select id="ccih-gravidade" value={fGrav} onChange={e => setFGrav(e.target.value as Gravidade)}>
                   <option>Leve</option><option>Moderada</option><option>Grave</option><option>Sepse</option><option>Choque Séptico</option>
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Material Biológico Coletado</label>
-                <select value={fMaterial} onChange={e => setFMaterial(e.target.value)}>
+                <label htmlFor="ccih-material">Material Biológico Coletado</label>
+                <select id="ccih-material" value={fMaterial} onChange={e => setFMaterial(e.target.value)}>
                   <option>Não coletado</option>
                   <option>Sangue (Hemocultura)</option>
                   <option>Urina (Urocultura)</option>
@@ -369,20 +417,20 @@ export default function CcihPage() {
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Microrganismo Identificado</label>
-                <input type="text" value={fMicro} onChange={e => setFMicro(e.target.value)} placeholder="Ex: Staphylococcus aureus MRSA" />
+                <label htmlFor="ccih-microrganismo">Microrganismo Identificado</label>
+                <input id="ccih-microrganismo" type="text" value={fMicro} onChange={e => setFMicro(e.target.value)} placeholder="Ex: Staphylococcus aureus MRSA" />
               </div>
               <div className="form-grupo">
-                <label>Antibiótico Iniciado</label>
-                <input type="text" value={fAtb} onChange={e => setFAtb(e.target.value)} placeholder="Ex: Vancomicina 1g IV 12/12h" />
+                <label htmlFor="ccih-antibiotico">Antibiótico Iniciado</label>
+                <input id="ccih-antibiotico" type="text" value={fAtb} onChange={e => setFAtb(e.target.value)} placeholder="Ex: Vancomicina 1g IV 12/12h" />
               </div>
               <div className="form-grupo full">
-                <label>Observações</label>
-                <textarea rows={2} value={fObs} onChange={e => setFObs(e.target.value)} />
+                <label htmlFor="ccih-observacoes">Observações</label>
+                <textarea id="ccih-observacoes" rows={2} value={fObs} onChange={e => setFObs(e.target.value)} />
               </div>
             </div>
-            <button type="submit" className="btn btn-success" style={{ width:'100%', marginTop:15, justifyContent:'center', padding:14 }}>
-              <i className="las la-save"></i> Notificar IRAS
+          <button type="submit" className="btn btn-success" disabled={isSaving} style={{ width:'100%', marginTop:15, justifyContent:'center', padding:14 }}>
+              <i className="las la-save"></i> {isSaving ? 'Salvando...' : 'Notificar IRAS'}
             </button>
           </form>
         </div>
@@ -392,8 +440,8 @@ export default function CcihPage() {
       {tab === 'iras' && (
         <>
           <div className="search-box">
-            <input type="text" value={buscarIRAS} onChange={e => setBuscarIRAS(e.target.value)} placeholder="Buscar por paciente, tipo ou microrganismo..." />
-            <select value={filtroGravidade} onChange={e => setFiltroGravidade(e.target.value)}>
+            <input type="text" aria-label="Buscar IRAS por paciente, tipo ou microrganismo" value={buscarIRAS} onChange={e => setBuscarIRAS(e.target.value)} placeholder="Buscar por paciente, tipo ou microrganismo..." />
+            <select aria-label="Filtrar IRAS por gravidade" value={filtroGravidade} onChange={e => setFiltroGravidade(e.target.value)}>
               <option value="todos">Todas Gravidades</option>
               <option>Leve</option><option>Moderada</option><option>Grave</option><option>Sepse</option><option>Choque Séptico</option>
             </select>
@@ -414,11 +462,11 @@ export default function CcihPage() {
                 <div className="ira-acoes">
                   <span className={`badge ${i.status === 'Ativa' ? 'badge-danger' : 'badge-success'}`}>{i.status}</span>
                   {i.status === 'Ativa' && (
-                    <button className="btn btn-sm btn-success" onClick={() => tratarIRAS(i.id)}>
+                    <button className="btn btn-sm btn-success" disabled={isSaving} onClick={() => tratarIRAS(i.id)}>
                       <i className="las la-check"></i> Tratar
                     </button>
                   )}
-                  <button className="btn btn-sm btn-info" onClick={() => setIrasDetalhe(i)}>
+                  <button className="btn btn-sm btn-info" aria-label={`Ver detalhes da IRAS de ${i.paciente}`} onClick={() => setIrasDetalhe(i)}>
                     <i className="las la-eye"></i>
                   </button>
                   <span style={{ fontSize:12, color:'#94a3b8', marginLeft:'auto' }}>Por: {i.notificadoPor}</span>
@@ -431,7 +479,7 @@ export default function CcihPage() {
 
       {/* ── ABA: CULTURAS ── */}
       {tab === 'culturas' && (
-        <div style={{ background:'white', borderRadius:20, overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)' }}>
+        <div style={{ background:'white', borderRadius:20, overflowX:'auto', boxShadow:'0 4px 15px rgba(0,0,0,0.06)' }}>
           <table className="tabela-ccih">
             <thead>
               <tr><th>Data</th><th>Paciente</th><th>Material</th><th>Microrganismo</th><th>Antibiótico</th><th>Sensibilidade</th><th>Status</th></tr>
@@ -463,20 +511,20 @@ export default function CcihPage() {
             <form onSubmit={registrarHM}>
               <div className="form-grid">
                 <div className="form-grupo">
-                  <label>Setor *</label>
-                  <select value={hmSetor} onChange={e => setHmSetor(e.target.value)}>
+                  <label htmlFor="ccih-hm-setor">Setor *</label>
+                  <select id="ccih-hm-setor" value={hmSetor} onChange={e => setHmSetor(e.target.value)}>
                     <option>UTI</option><option>Enfermaria</option><option>Emergência</option><option>Centro Cirúrgico</option><option>Ambulatório</option>
                   </select>
                 </div>
                 <div className="form-grupo">
-                  <label>Categoria Profissional</label>
-                  <select value={hmCategoria} onChange={e => setHmCategoria(e.target.value)}>
+                  <label htmlFor="ccih-hm-categoria">Categoria Profissional</label>
+                  <select id="ccih-hm-categoria" value={hmCategoria} onChange={e => setHmCategoria(e.target.value)}>
                     <option>Médico</option><option>Enfermeiro</option><option>Técnico de Enfermagem</option><option>Fisioterapeuta</option><option>Outro</option>
                   </select>
                 </div>
                 <div className="form-grupo">
-                  <label>Momento da Observação</label>
-                  <select value={hmMomento} onChange={e => setHmMomento(e.target.value)}>
+                  <label htmlFor="ccih-hm-momento">Momento da Observação</label>
+                  <select id="ccih-hm-momento" value={hmMomento} onChange={e => setHmMomento(e.target.value)}>
                     <option>Antes do contato com paciente</option>
                     <option>Antes de procedimento asséptico</option>
                     <option>Após risco de exposição a fluidos</option>
@@ -485,15 +533,15 @@ export default function CcihPage() {
                   </select>
                 </div>
                 <div className="form-grupo">
-                  <label>Realizou Higiene?</label>
-                  <select value={hmRealizou} onChange={e => setHmRealizou(e.target.value as 'Sim'|'Não')}>
+                  <label htmlFor="ccih-hm-realizou">Realizou Higiene?</label>
+                  <select id="ccih-hm-realizou" value={hmRealizou} onChange={e => setHmRealizou(e.target.value as 'Sim'|'Não')}>
                     <option value="Sim">Sim</option>
                     <option value="Não">Não</option>
                   </select>
                 </div>
               </div>
-              <button type="submit" className="btn btn-primary" style={{ width:'100%', marginTop:15, justifyContent:'center', padding:14 }}>
-                <i className="las la-save"></i> Registrar Observação
+              <button type="submit" className="btn btn-primary" disabled={isSaving} style={{ width:'100%', marginTop:15, justifyContent:'center', padding:14 }}>
+                <i className="las la-save"></i> {isSaving ? 'Salvando...' : 'Registrar Observação'}
               </button>
             </form>
           </div>
@@ -515,51 +563,51 @@ export default function CcihPage() {
             <form onSubmit={prescreverATM}>
               <div className="form-grid">
                 <div className="form-grupo">
-                  <label>Paciente *</label>
-                  <select value={atmPaciente} onChange={e => setAtmPaciente(e.target.value)} required>
+                  <label htmlFor="ccih-atm-paciente">Paciente *</label>
+                  <select id="ccih-atm-paciente" value={atmPaciente} onChange={e => setAtmPaciente(e.target.value)} required>
                     <option value="">Selecione...</option>
                     {pacientes.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
                   </select>
                 </div>
                 <div className="form-grupo">
-                  <label>Antimicrobiano *</label>
-                  <input type="text" value={atmNome} onChange={e => setAtmNome(e.target.value)} placeholder="Nome do antimicrobiano" required />
+                  <label htmlFor="ccih-atm-nome">Antimicrobiano *</label>
+                  <input id="ccih-atm-nome" type="text" value={atmNome} onChange={e => setAtmNome(e.target.value)} placeholder="Nome do antimicrobiano" required />
                 </div>
                 <div className="form-grupo">
-                  <label>Dose</label>
-                  <input type="text" value={atmDose} onChange={e => setAtmDose(e.target.value)} placeholder="Ex: 1g" />
+                  <label htmlFor="ccih-atm-dose">Dose</label>
+                  <input id="ccih-atm-dose" type="text" value={atmDose} onChange={e => setAtmDose(e.target.value)} placeholder="Ex: 1g" />
                 </div>
                 <div className="form-grupo">
-                  <label>Via</label>
-                  <select value={atmVia} onChange={e => setAtmVia(e.target.value)}>
+                  <label htmlFor="ccih-atm-via">Via</label>
+                  <select id="ccih-atm-via" value={atmVia} onChange={e => setAtmVia(e.target.value)}>
                     <option>IV</option><option>IM</option><option>Oral</option>
                   </select>
                 </div>
                 <div className="form-grupo">
-                  <label>Frequência</label>
-                  <input type="text" value={atmFreq} onChange={e => setAtmFreq(e.target.value)} placeholder="Ex: 12/12h" />
+                  <label htmlFor="ccih-atm-frequencia">Frequência</label>
+                  <input id="ccih-atm-frequencia" type="text" value={atmFreq} onChange={e => setAtmFreq(e.target.value)} placeholder="Ex: 12/12h" />
                 </div>
                 <div className="form-grupo">
-                  <label>Data Início</label>
-                  <input type="date" value={atmInicio} onChange={e => setAtmInicio(e.target.value)} />
+                  <label htmlFor="ccih-atm-inicio">Data Início</label>
+                  <input id="ccih-atm-inicio" type="date" value={atmInicio} onChange={e => setAtmInicio(e.target.value)} />
                 </div>
                 <div className="form-grupo">
-                  <label>Duração Prevista (dias)</label>
-                  <input type="number" value={atmDuracao} onChange={e => setAtmDuracao(e.target.value)} min="1" />
+                  <label htmlFor="ccih-atm-duracao">Duração Prevista (dias)</label>
+                  <input id="ccih-atm-duracao" type="number" value={atmDuracao} onChange={e => setAtmDuracao(e.target.value)} min="1" />
                 </div>
                 <div className="form-grupo">
-                  <label>Indicação</label>
-                  <select value={atmIndicacao} onChange={e => setAtmIndicacao(e.target.value)}>
+                  <label htmlFor="ccih-atm-indicacao">Indicação</label>
+                  <select id="ccih-atm-indicacao" value={atmIndicacao} onChange={e => setAtmIndicacao(e.target.value)}>
                     <option>Empírica</option><option>Profilática</option><option>Terapêutica (com cultura)</option>
                   </select>
                 </div>
               </div>
-              <button type="submit" className="btn btn-warning" style={{ width:'100%', marginTop:15, justifyContent:'center', padding:14 }}>
-                <i className="las la-save"></i> Prescrever Antimicrobiano
+              <button type="submit" className="btn btn-warning" disabled={isSaving} style={{ width:'100%', marginTop:15, justifyContent:'center', padding:14 }}>
+                <i className="las la-save"></i> {isSaving ? 'Salvando...' : 'Prescrever Antimicrobiano'}
               </button>
             </form>
           </div>
-          <div style={{ background:'white', borderRadius:20, overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)' }}>
+          <div style={{ background:'white', borderRadius:20, overflowX:'auto', boxShadow:'0 4px 15px rgba(0,0,0,0.06)' }}>
             <table className="tabela-ccih">
               <thead>
                 <tr><th>Paciente</th><th>Antimicrobiano</th><th>Dose/Via</th><th>Início</th><th>Duração</th><th>Indicação</th><th>Status</th></tr>
@@ -591,14 +639,14 @@ export default function CcihPage() {
             <h3><i className="las la-chart-bar"></i> Relatório Mensal CCIH</h3>
             <div className="form-grid">
               <div className="form-grupo">
-                <label>Mês</label>
-                <select value={relMes} onChange={e => setRelMes(Number(e.target.value))}>
+                <label htmlFor="ccih-rel-mes">Mês</label>
+                <select id="ccih-rel-mes" value={relMes} onChange={e => setRelMes(Number(e.target.value))}>
                   {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Ano</label>
-                <input type="number" value={relAno} onChange={e => setRelAno(Number(e.target.value))} min={2020} max={2030} />
+                <label htmlFor="ccih-rel-ano">Ano</label>
+                <input id="ccih-rel-ano" type="number" value={relAno} onChange={e => setRelAno(Number(e.target.value))} min={2020} max={2030} />
               </div>
             </div>
           </div>
@@ -649,7 +697,7 @@ export default function CcihPage() {
             style={{ background:'white', borderRadius:20, padding:30, maxWidth:520, width:'100%', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', position:'relative', maxHeight:'90vh', overflowY:'auto' }}
             onClick={e => e.stopPropagation()}
           >
-            <button onClick={() => setIrasDetalhe(null)} style={{ position:'absolute', top:14, right:14, background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#94a3b8' }}>
+            <button aria-label="Fechar detalhes da IRAS" onClick={() => setIrasDetalhe(null)} style={{ position:'absolute', top:14, right:14, background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#94a3b8' }}>
               <i className="las la-times"></i>
             </button>
             <h3 style={{ color:'#0a1f44', marginBottom:18, display:'flex', alignItems:'center', gap:10 }}>

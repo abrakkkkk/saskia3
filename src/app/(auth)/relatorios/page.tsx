@@ -1,13 +1,19 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import './relatorios.css';
 
 // Cores para gráficos
 const COLORS = ['#f59e0b', '#3b82f6', '#ec4899', '#22c55e', '#64748b'];
 
+function dataLocalKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export default function RelatoriosPage() {
   const [mounted, setMounted] = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const requisicaoAtual = useRef(0);
   const [activeTab, setActiveTab] = useState('geral');
   const [filtroRapido, setFiltroRapido] = useState('mes');
   const [erro, setErro] = useState('');
@@ -44,33 +50,41 @@ export default function RelatoriosPage() {
     const hoje = new Date();
     
     if (periodo === 'hoje') {
-      setInicio(hoje.toISOString().split('T')[0]);
-      setFim(hoje.toISOString().split('T')[0]);
+      setInicio(dataLocalKey(hoje));
+      setFim(dataLocalKey(hoje));
     } else if (periodo === 'semana') {
       const sete = new Date(hoje); sete.setDate(hoje.getDate() - 7);
-      setInicio(sete.toISOString().split('T')[0]);
-      setFim(hoje.toISOString().split('T')[0]);
+      setInicio(dataLocalKey(sete));
+      setFim(dataLocalKey(hoje));
     } else if (periodo === 'mes') {
       const trinta = new Date(hoje); trinta.setDate(hoje.getDate() - 30);
-      setInicio(trinta.toISOString().split('T')[0]);
-      setFim(hoje.toISOString().split('T')[0]);
+      setInicio(dataLocalKey(trinta));
+      setFim(dataLocalKey(hoje));
     } else if (periodo === 'ano') {
-      setInicio(new Date(hoje.getFullYear(), 0, 1).toISOString().split('T')[0]);
-      setFim(hoje.toISOString().split('T')[0]);
+      setInicio(dataLocalKey(new Date(hoje.getFullYear(), 0, 1)));
+      setFim(dataLocalKey(hoje));
     } else {
       setInicio(''); setFim('');
     }
   };
 
   const gerarRelatorios = async () => {
+    const idRequisicao = ++requisicaoAtual.current;
     setErro('');
+    setCarregando(true);
     try {
       const params = new URLSearchParams({ inicio, fim });
       const response = await fetch(`/api/relatorios?${params.toString()}`);
       const report = await response.json();
       if (!response.ok) throw new Error(report.error || 'Não foi possível carregar os dados do relatório.');
-      const agendamentos = Array.isArray(report.agendamentos) ? report.agendamentos : [];
-      const leitos = Array.isArray(report.leitos) ? report.leitos : [];
+      const metricas = ['pacientesNoPeriodo', 'internadosAgora', 'obitosNoPeriodo', 'cirurgiasNoPeriodo'];
+      if (!report || metricas.some(campo => typeof report[campo] !== 'number' || !Number.isFinite(report[campo]))
+        || !Array.isArray(report.agendamentos) || !Array.isArray(report.leitos)) {
+        throw new Error('A resposta do relatório está incompleta.');
+      }
+      if (idRequisicao !== requisicaoAtual.current) return;
+      const agendamentos = report.agendamentos;
+      const leitos = report.leitos;
       setAgendamentosProfissionais(agendamentos);
       setUtiLeitos(leitos.map((leito: any) => ({ tipo: leito.tipo, status: leito.status === 'OCUPADO' ? 'ocupado' : 'livre' })));
       const concluidos = agendamentos.filter((item: any) => item.status === 'CONCLUIDO').reduce((sum: number, item: any) => sum + item.total, 0);
@@ -92,9 +106,17 @@ export default function RelatoriosPage() {
       setChartProd(Array.from(porProfissional, ([name, valor]) => ({ name, valor })));
 
     } catch (error) {
+      if (idRequisicao !== requisicaoAtual.current) return;
       console.error('Erro ao carregar relatórios:', error);
       setErro(error instanceof Error ? error.message : 'Erro ao carregar relatórios.');
       setData({ totalPacientes: 0, atendimentos: 0, internacoes: 0, obitos: 0, taxaUTI: '—', cirurgias: 0 });
+      setAgendamentosProfissionais([]);
+      setUtiLeitos([]);
+      setChartStatus([]);
+      setChartLeitos([]);
+      setChartProd([]);
+    } finally {
+      if (idRequisicao === requisicaoAtual.current) setCarregando(false);
     }
   };
 
@@ -127,23 +149,23 @@ export default function RelatoriosPage() {
           </div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button className="btn btn-success" onClick={handleExportCSV} style={{ padding: '11px 22px', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}><i className="las la-file-excel"></i> Exportar Excel</button>
-            <button className="btn btn-warning" onClick={handlePrint} style={{ padding: '11px 22px', background: '#f59e0b', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}><i className="las la-print"></i> Imprimir PDF</button>
+            <button className="btn btn-warning btn-imprimir" onClick={handlePrint} style={{ padding: '11px 22px', background: '#f59e0b', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}><i className="las la-print"></i> Imprimir PDF</button>
           </div>
         </div>
 
         {/* FILTROS */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
+        <div className="filtros-rapidos" style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
           {['hoje', 'semana', 'mes', 'ano', 'todos'].map(f => (
-            <button key={f} onClick={() => aplicarFiltroRapido(f)} style={{ padding: '8px 16px', border: '2px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', background: filtroRapido === f ? '#1e3a8a' : 'white', color: filtroRapido === f ? 'white' : '#64748b', fontSize: '12px', fontWeight: 600, transition: 'all 0.2s' }}>
+            <button key={f} aria-pressed={filtroRapido === f} onClick={() => aplicarFiltroRapido(f)} style={{ padding: '8px 16px', border: '2px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', background: filtroRapido === f ? '#1e3a8a' : 'white', color: filtroRapido === f ? 'white' : '#64748b', fontSize: '12px', fontWeight: 600, transition: 'all 0.2s' }}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div><label style={{display:'block', fontSize:'12px', fontWeight:600, color:'#64748b', marginBottom:'4px'}}>Data Inicial</label><input type="date" value={inicio} onChange={e => setInicio(e.target.value)} style={{ padding: '10px 14px', border: '2px solid #e2e8f0', borderRadius: '8px' }} /></div>
-          <div><label style={{display:'block', fontSize:'12px', fontWeight:600, color:'#64748b', marginBottom:'4px'}}>Data Final</label><input type="date" value={fim} onChange={e => setFim(e.target.value)} style={{ padding: '10px 14px', border: '2px solid #e2e8f0', borderRadius: '8px' }} /></div>
-          <button onClick={gerarRelatorios} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', height: '42px' }}><i className="las la-sync-alt"></i> Atualizar</button>
+        <div className="filtros-periodo" style={{ display: 'flex', gap: '10px', marginBottom: '25px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div><label htmlFor="relatorio-inicio" style={{display:'block', fontSize:'12px', fontWeight:600, color:'#64748b', marginBottom:'4px'}}>Data Inicial</label><input id="relatorio-inicio" type="date" value={inicio} onChange={e => setInicio(e.target.value)} style={{ padding: '10px 14px', border: '2px solid #e2e8f0', borderRadius: '8px' }} /></div>
+          <div><label htmlFor="relatorio-fim" style={{display:'block', fontSize:'12px', fontWeight:600, color:'#64748b', marginBottom:'4px'}}>Data Final</label><input id="relatorio-fim" type="date" value={fim} onChange={e => setFim(e.target.value)} style={{ padding: '10px 14px', border: '2px solid #e2e8f0', borderRadius: '8px' }} /></div>
+          <button className="btn-atualizar" onClick={gerarRelatorios} disabled={carregando} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: carregando ? 'wait' : 'pointer', height: '42px', opacity: carregando ? 0.7 : 1 }}><i className="las la-sync-alt"></i> {carregando ? 'Atualizando...' : 'Atualizar'}</button>
         </div>
         {erro && <p role="alert" style={{ margin: '0 0 16px', padding: '12px 16px', background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: 8 }}>{erro}</p>}
 
@@ -164,7 +186,7 @@ export default function RelatoriosPage() {
             { id: 'producao', icon: 'la-user-md', label: 'Produção Médica' },
             { id: 'leitos', icon: 'la-bed', label: 'Ocupação Leitos' },
           ].map(t => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)} style={{ padding: '13px 26px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: activeTab === t.id ? '#1e3a8a' : '#64748b', borderBottom: `3px solid ${activeTab === t.id ? '#1e3a8a' : 'transparent'}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button key={t.id} aria-pressed={activeTab === t.id} onClick={() => setActiveTab(t.id)} style={{ padding: '13px 26px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: activeTab === t.id ? '#1e3a8a' : '#64748b', borderBottom: `3px solid ${activeTab === t.id ? '#1e3a8a' : 'transparent'}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <i className={`las ${t.icon}`}></i> {t.label}
             </button>
           ))}
@@ -174,7 +196,7 @@ export default function RelatoriosPage() {
         {activeTab === 'geral' && (
           <div className="animate-in fade-in duration-300">
             {/* GRÁFICOS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '25px', marginBottom: '25px' }}>
+            <div className="rel-graficos">
               <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
                 <h3 style={{ color: '#0a1f44', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-chart-bar"></i> Agendamentos por profissional</h3>
                 <div style={{ height: '300px' }}>
@@ -234,8 +256,8 @@ export default function RelatoriosPage() {
         {/* TAB PRODUCAO MEDICA */}
         {activeTab === 'producao' && (
           <div className="animate-in fade-in duration-300">
-            <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="rel-tabela-wrap" style={{ background: 'white', borderRadius: '8px', overflowX: 'auto', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+              <table className="rel-tabela" style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ background: '#0f172a' }}>
                   <tr>
                     {['Profissional', 'Agendamentos no período'].map(th => <th key={th} style={{ padding: '14px 16px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>{th}</th>)}
@@ -260,8 +282,8 @@ export default function RelatoriosPage() {
         {/* TAB LEITOS */}
         {activeTab === 'leitos' && (
           <div className="animate-in fade-in duration-300">
-            <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="rel-tabela-wrap" style={{ background: 'white', borderRadius: '8px', overflowX: 'auto', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+              <table className="rel-tabela" style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ background: '#0f172a' }}>
                   <tr>
                     {['Tipo de leito UTI', 'Leitos ocupados / total', 'Taxa de ocupação atual'].map(th => <th key={th} style={{ padding: '14px 16px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>{th}</th>)}

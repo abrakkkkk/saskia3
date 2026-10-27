@@ -212,8 +212,8 @@
 }
 
 .toggle-item .toggle-info .toggle-desc {
-    font-size: 11px;
-    color: #94a3b8;
+    font-size: 12px;
+    color: #64748b;
     display: block;
 }
 
@@ -230,6 +230,11 @@
     opacity: 0;
     width: 0;
     height: 0;
+}
+
+.switch input:focus-visible + .slider {
+    outline: 3px solid #1d4ed8;
+    outline-offset: 3px;
 }
 
 .slider {
@@ -273,6 +278,11 @@ input:checked + .slider:before {
 
 @media (max-width: 768px) {
     .config-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .config-section {
+        min-width: 0;
+        padding: 20px;
     }
 }

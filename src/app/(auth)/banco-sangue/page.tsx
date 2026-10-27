@@ -31,9 +31,10 @@ export default function BancoSanguePage() {
 
   const adicionar = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setSalvando(true);
     setErro('');
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     try {
       const response = await fetch('/api/banco-sangue', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -41,7 +42,7 @@ export default function BancoSanguePage() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Não foi possível registrar o estoque.');
-      event.currentTarget.reset();
+      formElement.reset();
       await carregar();
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Falha ao registrar estoque.');

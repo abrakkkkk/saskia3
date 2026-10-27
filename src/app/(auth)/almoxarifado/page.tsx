@@ -8,6 +8,7 @@ interface EstoqueItem {
   categoria: string;
   nome: string;
   codigo?: string;
+  subcategoria?: string;
   quantidade: number;
   unidade?: string;
   minimo: number;
@@ -95,6 +96,18 @@ export default function AlmoxarifadoPage() {
   useEffect(() => {
     carregarDados();
   }, []);
+
+  useEffect(() => {
+    if (!modalEntrada && !modalSaida && !modalNovoItem) return;
+    const fecharComEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || isSaving) return;
+      setModalEntrada(false);
+      setModalSaida(false);
+      setModalNovoItem(false);
+    };
+    window.addEventListener('keydown', fecharComEscape);
+    return () => window.removeEventListener('keydown', fecharComEscape);
+  }, [modalEntrada, modalSaida, modalNovoItem, isSaving]);
 
   const getResponsavel = () => {
     try {
@@ -188,31 +201,18 @@ export default function AlmoxarifadoPage() {
           categoria: 'ALMOXARIFADO', // Forçando a categoria master
           nome: novoNome,
           codigo: finalCodigo,
+          subcategoria: novoCategoria,
           validade: null,
           quantidade: novoQtd,
+          registrarMovimentacaoInicial: true,
           minimo: novoMinimo,
-          unidade: novoUnidade,
-          observacao: `Sub-categoria: ${novoCategoria}`
+          unidade: novoUnidade
         })
       });
 
-      if (!resNovo.ok) throw new Error("Erro ao criar item");
-      
-      const itemCriado = await resNovo.json();
-
-      // Se tiver qtd inicial > 0, cria a movimentação de entrada inicial
-      if (novoQtd > 0) {
-        await fetch('/api/estoque/movimentacao', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tipo: 'ENTRADA',
-            itemId: itemCriado.id,
-            quantidade: novoQtd,
-            fornecedor: 'Estoque Inicial',
-            responsavel: getResponsavel()
-          })
-        });
+      if (!resNovo.ok) {
+        const erro = await resNovo.json().catch(() => null);
+        throw new Error(erro?.error || "Erro ao criar item");
       }
 
       setModalNovoItem(false);
@@ -307,8 +307,8 @@ export default function AlmoxarifadoPage() {
         {activeTab === 'estoque' && (
           <div className="card">
             <div className="busca-wrapper" style={{marginBottom: '20px'}}>
-              <i className="las la-search"></i>
-              <input type="text" placeholder="Buscar por nome ou código..." value={buscarItem} onChange={e => setBuscarItem(e.target.value)} />
+              <i className="las la-search" aria-hidden="true"></i>
+              <input type="text" aria-label="Buscar itens por nome ou código" placeholder="Buscar por nome ou código..." value={buscarItem} onChange={e => setBuscarItem(e.target.value)} />
             </div>
             <div style={{overflowX:'auto'}}>
               <table className="tabela-almox">
@@ -328,7 +328,10 @@ export default function AlmoxarifadoPage() {
                       return (
                         <tr key={i.id}>
                           <td><strong>{i.codigo || '-'}</strong></td>
-                          <td>{i.nome}</td>
+                          <td>
+                            <div>{i.nome}</div>
+                            {i.subcategoria && <small style={{ color: '#64748b' }}>{i.subcategoria}</small>}
+                          </td>
                           <td>{i.unidade || '-'}</td>
                           <td style={{color: baixo ? '#dc2626' : '#16a34a', fontWeight: 'bold'}}>{i.quantidade}</td>
                           <td>{i.minimo}</td>
@@ -345,12 +348,12 @@ export default function AlmoxarifadoPage() {
 
         {activeTab === 'movimentacoes' && (
           <div className="card">
-            <div style={{display:'flex', gap:'10px', marginBottom:'20px'}}>
+            <div className="almox-filter-row">
               <div className="busca-wrapper" style={{flex: 1}}>
-                <i className="las la-search"></i>
-                <input type="text" placeholder="Buscar por item..." value={buscarMov} onChange={e => setBuscarMov(e.target.value)} />
+                <i className="las la-search" aria-hidden="true"></i>
+                <input type="text" aria-label="Buscar movimentações por item" placeholder="Buscar por item..." value={buscarMov} onChange={e => setBuscarMov(e.target.value)} />
               </div>
-              <select value={filtroTipoMov} onChange={e => setFiltroTipoMov(e.target.value)} style={{padding:'13px', borderRadius: '8px', border:'1px solid #cbd5e1', outline:'none'}}>
+              <select aria-label="Filtrar movimentações pelo tipo" value={filtroTipoMov} onChange={e => setFiltroTipoMov(e.target.value)} style={{padding:'13px', borderRadius: '8px', border:'1px solid #cbd5e1'}}>
                 <option value="todos">Todos</option><option value="ENTRADA">Entradas</option><option value="SAIDA">Saídas</option>
               </select>
             </div>
@@ -380,13 +383,13 @@ export default function AlmoxarifadoPage() {
       </div>
 
       {modalEntrada && (
-        <div className="modal-almox" onClick={e => { if (e.target === e.currentTarget) setModalEntrada(false); }}>
-          <div className="modal-almox-conteudo">
-            <h3 style={{color:'#0a1f44', marginBottom:'20px', borderBottom:'2px solid #f1f5f9', paddingBottom:'10px'}}><i className="las la-arrow-down"></i> Registrar Entrada</h3>
+        <div className="modal-almox" onClick={e => { if (e.target === e.currentTarget && !isSaving) setModalEntrada(false); }}>
+          <div className="modal-almox-conteudo" role="dialog" aria-modal="true" aria-labelledby="almox-entrada-title">
+            <h3 id="almox-entrada-title" style={{color:'#0a1f44', marginBottom:'20px', borderBottom:'2px solid #f1f5f9', paddingBottom:'10px'}}><i className="las la-arrow-down" aria-hidden="true"></i> Registrar Entrada</h3>
             <div className="form-grid">
-              <div className="form-group"><label>Item *</label><select value={entradaItemId} onChange={e => setEntradaItemId(e.target.value)}><option value="">Selecione...</option>{itens.map(i => <option key={i.id} value={i.id}>{i.nome}</option>)}</select></div>
-              <div className="form-group"><label>Quantidade *</label><input type="number" min="1" value={entradaQtd} onChange={e => setEntradaQtd(parseInt(e.target.value))} /></div>
-              <div className="form-group"><label>Fornecedor</label><input type="text" value={entradaFornecedor} onChange={e => setEntradaFornecedor(e.target.value)} /></div>
+              <div className="form-group"><label htmlFor="almox-entrada-item">Item *</label><select id="almox-entrada-item" value={entradaItemId} onChange={e => setEntradaItemId(e.target.value)}><option value="">Selecione...</option>{itens.map(i => <option key={i.id} value={i.id}>{i.nome}</option>)}</select></div>
+              <div className="form-group"><label htmlFor="almox-entrada-quantidade">Quantidade *</label><input id="almox-entrada-quantidade" type="number" min="1" value={entradaQtd} onChange={e => setEntradaQtd(parseInt(e.target.value))} /></div>
+              <div className="form-group"><label htmlFor="almox-entrada-fornecedor">Fornecedor</label><input id="almox-entrada-fornecedor" type="text" value={entradaFornecedor} onChange={e => setEntradaFornecedor(e.target.value)} /></div>
             </div>
             <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'20px'}}>
               <button className="btn btn-danger" onClick={() => setModalEntrada(false)} disabled={isSaving}>Cancelar</button>
@@ -397,13 +400,13 @@ export default function AlmoxarifadoPage() {
       )}
 
       {modalSaida && (
-        <div className="modal-almox" onClick={e => { if (e.target === e.currentTarget) setModalSaida(false); }}>
-          <div className="modal-almox-conteudo">
-            <h3 style={{color:'#0a1f44', marginBottom:'20px', borderBottom:'2px solid #f1f5f9', paddingBottom:'10px'}}><i className="las la-arrow-up"></i> Registrar Saída</h3>
+        <div className="modal-almox" onClick={e => { if (e.target === e.currentTarget && !isSaving) setModalSaida(false); }}>
+          <div className="modal-almox-conteudo" role="dialog" aria-modal="true" aria-labelledby="almox-saida-title">
+            <h3 id="almox-saida-title" style={{color:'#0a1f44', marginBottom:'20px', borderBottom:'2px solid #f1f5f9', paddingBottom:'10px'}}><i className="las la-arrow-up" aria-hidden="true"></i> Registrar Saída</h3>
             <div className="form-grid">
-              <div className="form-group"><label>Item *</label><select value={saidaItemId} onChange={e => setSaidaItemId(e.target.value)}><option value="">Selecione...</option>{itens.filter(i => i.quantidade > 0).map(i => <option key={i.id} value={i.id}>{i.nome} ({i.quantidade})</option>)}</select></div>
-              <div className="form-group"><label>Quantidade *</label><input type="number" min="1" value={saidaQtd} onChange={e => setSaidaQtd(parseInt(e.target.value))} /></div>
-              <div className="form-group"><label>Setor Destino</label><select value={saidaSetor} onChange={e => setSaidaSetor(e.target.value)}><option>Farmácia</option><option>UTI</option><option>Emergência</option><option>Enfermaria</option><option>Centro Cirúrgico</option><option>Outro</option></select></div>
+              <div className="form-group"><label htmlFor="almox-saida-item">Item *</label><select id="almox-saida-item" value={saidaItemId} onChange={e => setSaidaItemId(e.target.value)}><option value="">Selecione...</option>{itens.filter(i => i.quantidade > 0).map(i => <option key={i.id} value={i.id}>{i.nome} ({i.quantidade})</option>)}</select></div>
+              <div className="form-group"><label htmlFor="almox-saida-quantidade">Quantidade *</label><input id="almox-saida-quantidade" type="number" min="1" value={saidaQtd} onChange={e => setSaidaQtd(parseInt(e.target.value))} /></div>
+              <div className="form-group"><label htmlFor="almox-saida-setor">Setor Destino</label><select id="almox-saida-setor" value={saidaSetor} onChange={e => setSaidaSetor(e.target.value)}><option>Farmácia</option><option>UTI</option><option>Emergência</option><option>Enfermaria</option><option>Centro Cirúrgico</option><option>Outro</option></select></div>
             </div>
             <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'20px'}}>
               <button className="btn btn-danger" onClick={() => setModalSaida(false)} disabled={isSaving}>Cancelar</button>
@@ -414,16 +417,16 @@ export default function AlmoxarifadoPage() {
       )}
 
       {modalNovoItem && (
-        <div className="modal-almox" onClick={e => { if (e.target === e.currentTarget) setModalNovoItem(false); }}>
-          <div className="modal-almox-conteudo">
-            <h3 style={{color:'#0a1f44', marginBottom:'20px', borderBottom:'2px solid #f1f5f9', paddingBottom:'10px'}}><i className="las la-plus-circle"></i> Cadastrar Novo Item</h3>
+        <div className="modal-almox" onClick={e => { if (e.target === e.currentTarget && !isSaving) setModalNovoItem(false); }}>
+          <div className="modal-almox-conteudo" role="dialog" aria-modal="true" aria-labelledby="almox-novo-title">
+            <h3 id="almox-novo-title" style={{color:'#0a1f44', marginBottom:'20px', borderBottom:'2px solid #f1f5f9', paddingBottom:'10px'}}><i className="las la-plus-circle" aria-hidden="true"></i> Cadastrar Novo Item</h3>
             <div className="form-grid">
-              <div className="form-group"><label>Nome *</label><input type="text" placeholder="Nome do item" value={novoNome} onChange={e => setNovoNome(e.target.value)} /></div>
-              <div className="form-group"><label>Código</label><input type="text" placeholder="Automático se vazio" value={novoCodigo} onChange={e => setNovoCodigo(e.target.value)} /></div>
-              <div className="form-group"><label>Categoria *</label><select value={novoCategoria} onChange={e => setNovoCategoria(e.target.value)}><option>Material Hospitalar</option><option>Equipamentos</option><option>Higiene e Limpeza</option><option>EPIs</option><option>Escritório</option></select></div>
-              <div className="form-group"><label>Unidade</label><select value={novoUnidade} onChange={e => setNovoUnidade(e.target.value)}><option>Unidade</option><option>Caixa</option><option>Pacote</option><option>Frasco</option><option>Par</option><option>Metro</option><option>Litro</option><option>Kg</option></select></div>
-              <div className="form-group"><label>Qtd. Inicial</label><input type="number" min="0" value={novoQtd} onChange={e => setNovoQtd(parseInt(e.target.value))} /></div>
-              <div className="form-group"><label>Estoque Mínimo</label><input type="number" min="1" value={novoMinimo} onChange={e => setNovoMinimo(parseInt(e.target.value))} /></div>
+              <div className="form-group"><label htmlFor="almox-novo-nome">Nome *</label><input id="almox-novo-nome" type="text" placeholder="Nome do item" value={novoNome} onChange={e => setNovoNome(e.target.value)} /></div>
+              <div className="form-group"><label htmlFor="almox-novo-codigo">Código</label><input id="almox-novo-codigo" type="text" placeholder="Automático se vazio" value={novoCodigo} onChange={e => setNovoCodigo(e.target.value)} /></div>
+              <div className="form-group"><label htmlFor="almox-novo-categoria">Categoria *</label><select id="almox-novo-categoria" value={novoCategoria} onChange={e => setNovoCategoria(e.target.value)}><option>Material Hospitalar</option><option>Equipamentos</option><option>Higiene e Limpeza</option><option>EPIs</option><option>Escritório</option></select></div>
+              <div className="form-group"><label htmlFor="almox-novo-unidade">Unidade</label><select id="almox-novo-unidade" value={novoUnidade} onChange={e => setNovoUnidade(e.target.value)}><option>Unidade</option><option>Caixa</option><option>Pacote</option><option>Frasco</option><option>Par</option><option>Metro</option><option>Litro</option><option>Kg</option></select></div>
+              <div className="form-group"><label htmlFor="almox-novo-quantidade">Qtd. Inicial</label><input id="almox-novo-quantidade" type="number" min="0" value={novoQtd} onChange={e => setNovoQtd(parseInt(e.target.value))} /></div>
+              <div className="form-group"><label htmlFor="almox-novo-minimo">Estoque Mínimo</label><input id="almox-novo-minimo" type="number" min="1" value={novoMinimo} onChange={e => setNovoMinimo(parseInt(e.target.value))} /></div>
             </div>
             <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'20px'}}>
               <button className="btn btn-danger" onClick={() => setModalNovoItem(false)} disabled={isSaving}>Cancelar</button>

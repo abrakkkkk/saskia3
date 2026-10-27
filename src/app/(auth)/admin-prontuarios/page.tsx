@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import './prontuarios.css';
 
@@ -17,7 +17,7 @@ interface ModeloProntuario {
 }
 
 export default function AdminProntuariosPage() {
-  const { data: session } = useSession();
+  const { data: session, status: statusSessao } = useSession();
   const isAdmin = (session?.user as any)?.cargo === 'ADMIN';
   const [modelos, setModelos] = useState<ModeloProntuario[]>([]);
   const [erro, setErro] = useState('');
@@ -32,7 +32,7 @@ export default function AdminProntuariosPage() {
   const [formDescricao, setFormDescricao] = useState('');
   const [formCampos, setFormCampos] = useState<CampoProntuario[]>([]);
 
-  const carregarModelos = async () => {
+  const carregarModelos = useCallback(async () => {
     setCarregando(true);
     try {
       const response = await fetch('/api/prontuarios-modelos');
@@ -45,11 +45,30 @@ export default function AdminProntuariosPage() {
     } finally {
       setCarregando(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    carregarModelos();
-  }, []);
+    if (statusSessao === 'loading') return;
+    if (!isAdmin) {
+      setModelos([]);
+      setErro('');
+      setCarregando(false);
+      return;
+    }
+    void carregarModelos();
+  }, [statusSessao, isAdmin, carregarModelos]);
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const fecharComEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !salvando) {
+        setIsModalOpen(false);
+        setEditIndex(null);
+      }
+    };
+    window.addEventListener('keydown', fecharComEscape);
+    return () => window.removeEventListener('keydown', fecharComEscape);
+  }, [isModalOpen, salvando]);
 
   const abrirModal = (index: number | null = null) => {
     if (index !== null) {
@@ -184,13 +203,13 @@ export default function AdminProntuariosPage() {
           <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#94a3b8', padding: '40px' }}>Nenhum modelo de prontuário cadastrado.</p>
         ) : (
           modelos.map((m, idx) => (
-            <div className="modelo-item" key={idx}>
+            <div className="modelo-item" key={m.id}>
               <div>
                 <div className="modelo-header">
                   <h4><i className="las la-file-medical"></i> {m.titulo}</h4>
                   {isAdmin && <div className="modelo-acoes">
-                    <button className="btn-editar" onClick={() => abrirModal(idx)} title="Editar Modelo"><i className="las la-edit"></i></button>
-                    <button className="btn-excluir" onClick={() => excluirModelo(idx)} title="Excluir Modelo"><i className="las la-trash"></i></button>
+                    <button className="btn-editar" onClick={() => abrirModal(idx)} title="Editar Modelo" aria-label={`Editar ${m.titulo}`}><i className="las la-edit" aria-hidden="true"></i></button>
+                    <button className="btn-excluir" onClick={() => excluirModelo(idx)} title="Excluir Modelo" aria-label={`Excluir ${m.titulo}`}><i className="las la-trash" aria-hidden="true"></i></button>
                   </div>}
                 </div>
                 <div className="modelo-descricao">
@@ -221,30 +240,36 @@ export default function AdminProntuariosPage() {
       </div>
 
       {isModalOpen && (
-        <div className="modal-overlay" onClick={fecharModal}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget && !salvando) fecharModal(); }}>
+          <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="modelo-modal-title" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3><i className={editIndex !== null ? "las la-edit" : "las la-file-medical"}></i> {editIndex !== null ? "Editar Modelo de Prontuário" : "Novo Modelo de Prontuário"}</h3>
-              <button style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }} onClick={fecharModal}>&times;</button>
+              <h3 id="modelo-modal-title"><i className={editIndex !== null ? "las la-edit" : "las la-file-medical"} aria-hidden="true"></i> {editIndex !== null ? "Editar Modelo de Prontuário" : "Novo Modelo de Prontuário"}</h3>
+              <button type="button" aria-label="Fechar formulário de modelo" style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }} onClick={fecharModal}>&times;</button>
             </div>
             
             <div className="modal-body">
               <div className="form-group">
-                <label>Título do Modelo *</label>
+                <label htmlFor="modelo-titulo">Título do Modelo *</label>
                 <input 
+                  id="modelo-titulo"
                   type="text" 
                   value={formTitulo} 
                   onChange={e => setFormTitulo(e.target.value)} 
                   placeholder="Ex: Anamnese Pediátrica, Avaliação Cardiológica..." 
+                  maxLength={160}
+                  required
+                  autoFocus
                 />
               </div>
               <div className="form-group">
-                <label>Descrição e Orientação de Uso</label>
+                <label htmlFor="modelo-descricao">Descrição e Orientação de Uso</label>
                 <textarea 
+                  id="modelo-descricao"
                   rows={2} 
                   value={formDescricao} 
                   onChange={e => setFormDescricao(e.target.value)} 
                   placeholder="Instruções breves sobre quando este modelo deve ser utilizado."
+                  maxLength={2000}
                 />
               </div>
 
@@ -266,12 +291,16 @@ export default function AdminProntuariosPage() {
                     <div className="campo-dinamico-item" key={campo.id || index}>
                       <div style={{ flex: '0 0 auto', color: '#94a3b8', fontWeight: 'bold' }}>{index + 1}.</div>
                       <input 
+                        aria-label={`Nome do campo ${index + 1}`}
                         type="text" 
                         value={campo.nome} 
                         onChange={e => atualizarCampo(index, 'nome', e.target.value)} 
                         placeholder="Nome da pergunta / campo"
+                        maxLength={120}
+                        required
                       />
                       <select 
+                        aria-label={`Tipo do campo ${index + 1}`}
                         value={campo.tipo} 
                         onChange={e => atualizarCampo(index, 'tipo', e.target.value)}
                       >
@@ -281,7 +310,7 @@ export default function AdminProntuariosPage() {
                         <option value="textarea">Texto Longo</option>
                         <option value="select">Seleção (Dropdown)</option>
                       </select>
-                      <button className="btn-remover-campo" onClick={() => removerCampo(index)} title="Remover Campo">
+                      <button className="btn-remover-campo" onClick={() => removerCampo(index)} title="Remover Campo" aria-label={`Remover campo ${index + 1}`}>
                         <i className="las la-trash"></i>
                       </button>
                     </div>

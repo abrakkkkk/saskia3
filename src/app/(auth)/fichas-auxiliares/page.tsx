@@ -227,6 +227,15 @@ export default function FichasAuxiliaresPage() {
     ficha: null
   });
 
+  useEffect(() => {
+    if (!modalPreview.aberto) return;
+    const fecharComEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setModalPreview({ aberto: false, ficha: null });
+    };
+    window.addEventListener('keydown', fecharComEscape);
+    return () => window.removeEventListener('keydown', fecharComEscape);
+  }, [modalPreview.aberto]);
+
   const categoriasMenu = [
     { nome: 'Todas', label: 'Todas as Fichas', icone: List },
     { nome: 'MS', label: 'Ministério da Saúde', icone: Landmark },
@@ -307,13 +316,17 @@ export default function FichasAuxiliaresPage() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
           <input 
             type="text" 
+            aria-label="Buscar fichas clínicas"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar por nome da ficha, instituição (ex: MS, UFRGS) ou palavra-chave..." 
+            maxLength={120}
             className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
           />
           {busca && (
             <button 
+              type="button"
+              aria-label="Limpar busca"
               onClick={() => setBusca('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
             >
@@ -332,7 +345,9 @@ export default function FichasAuxiliaresPage() {
               
               return (
                 <button 
+                  type="button"
                   key={cat.nome}
+                  aria-pressed={ativo}
                   onClick={() => setCategoriaAtiva(cat.nome)}
                   className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
                     ativo 
@@ -367,6 +382,7 @@ export default function FichasAuxiliaresPage() {
             Nenhum formulário corresponde aos termos pesquisados ou aos filtros aplicados.
           </p>
           <button 
+            type="button"
             onClick={() => { setBusca(''); setCategoriaAtiva('Todas'); }}
             className="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
           >
@@ -418,6 +434,7 @@ export default function FichasAuxiliaresPage() {
                 {/* Ações */}
                 <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
                   <button 
+                    type="button"
                     onClick={() => handleAbrirPreview(ficha)}
                     className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 transition-colors"
                   >
@@ -426,6 +443,8 @@ export default function FichasAuxiliaresPage() {
                   </button>
 
                   <button 
+                    type="button"
+                    aria-label={`Baixar ${ficha.titulo}`}
                     onClick={() => handleDownload(ficha)}
                     title="Baixar PDF"
                     className="inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 hover:border-emerald-600 transition-colors shadow-sm"
@@ -443,7 +462,12 @@ export default function FichasAuxiliaresPage() {
       {/* MODAL DE PREVIEW CLÍNICO */}
       {modalPreview.aberto && modalPreview.ficha && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ficha-preview-title"
+            className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          >
             {/* Modal Header */}
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-3">
@@ -451,7 +475,7 @@ export default function FichasAuxiliaresPage() {
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white line-clamp-1">
+                  <h3 id="ficha-preview-title" className="text-base font-bold text-white line-clamp-1">
                     {modalPreview.ficha.titulo}
                   </h3>
                   <div className="text-xs text-slate-400">
@@ -478,6 +502,8 @@ export default function FichasAuxiliaresPage() {
                   Baixar PDF
                 </button>
                 <button
+                  type="button"
+                  aria-label="Fechar prévia"
                   onClick={() => setModalPreview({ aberto: false, ficha: null })}
                   className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-colors ml-2"
                 >
@@ -506,6 +532,8 @@ export default function FichasAuxiliaresPage() {
                 ))}
               </div>
               <button
+                type="button"
+                aria-label="Fechar visualização"
                 onClick={() => setModalPreview({ aberto: false, ficha: null })}
                 className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-semibold transition-colors"
               >

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import './transporte.css';
 
 interface Transporte {
@@ -14,8 +15,10 @@ interface Transporte {
 }
 
 export default function TransportePage() {
+  const { data: session, status: statusSessao } = useSession();
   const [activeTab, setActiveTab] = useState<'solicitar'|'lista'>('solicitar');
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
   
   const [transportes, setTransportes] = useState<Transporte[]>([]);
   const [pacientes, setPacientes] = useState<any[]>([]);
@@ -25,32 +28,46 @@ export default function TransportePage() {
   const [transpOrigem, setTranspOrigem] = useState('Enfermaria');
   const [transpDestino, setTranspDestino] = useState('Centro de Imagem');
   const [transpTipo, setTranspTipo] = useState('Interno (Cadeira de Rodas)');
-  const [transpSolicitante, setTranspSolicitante] = useState('');
   const [transpData, setTranspData] = useState('');
+
+  const dataHoraLocal = (data: Date) => {
+    const local = new Date(data.getTime() - data.getTimezoneOffset() * 60_000);
+    return local.toISOString().slice(0, 16);
+  };
 
   const carregarDados = async () => {
     setLoading(true);
     try {
       const resT = await fetch('/api/transporte');
-      if (resT.ok) {
-        setTransportes(await resT.json());
-      }
+      if (!resT.ok) throw new Error((await resT.json().catch(() => null))?.error || 'Não foi possível carregar os transportes.');
+      const dadosTransporte: unknown = await resT.json();
+      if (!Array.isArray(dadosTransporte)) throw new Error('Resposta inválida ao carregar transportes.');
+      setTransportes(dadosTransporte);
       
       const resP = await fetch('/api/pacientes');
-      if (resP.ok) {
-        setPacientes(await resP.json());
-      }
+      if (!resP.ok) throw new Error((await resP.json().catch(() => null))?.error || 'Não foi possível carregar pacientes.');
+      const dadosPacientes: unknown = await resP.json();
+      if (!Array.isArray(dadosPacientes)) throw new Error('Resposta inválida ao carregar pacientes.');
+      setPacientes(dadosPacientes);
+      setErroCarga('');
     } catch (e) {
-      console.error(e);
+      setErroCarga(e instanceof Error ? e.message : 'Erro ao carregar a página.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    carregarDados();
-    setTranspData(new Date().toISOString().slice(0, 16));
-  }, []);
+    if (statusSessao === 'loading') return;
+    if (statusSessao !== 'authenticated') {
+      setTransportes([]);
+      setPacientes([]);
+      setLoading(false);
+      return;
+    }
+    void carregarDados();
+    setTranspData(dataHoraLocal(new Date()));
+  }, [statusSessao]);
 
   const solicitarTransporte = async () => {
     if (!transpPaciente) {
@@ -59,12 +76,11 @@ export default function TransportePage() {
     }
 
     const payload = {
-      paciente: transpPaciente,
+      pacienteId: transpPaciente,
       origem: transpOrigem,
       destino: transpDestino,
       tipo: transpTipo,
-      solicitante: transpSolicitante.trim(),
-      data: transpData || new Date().toISOString().slice(0, 16),
+      data: transpData || dataHoraLocal(new Date()),
       status: "Pendente"
     };
 
@@ -74,12 +90,13 @@ export default function TransportePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error('Erro ao solicitar transporte');
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(resposta?.error || 'Erro ao solicitar transporte');
       
-      setTranspSolicitante('');
+      setErroCarga('');
       alert(" Transporte solicitado!");
       setActiveTab('lista');
-      carregarDados();
+      await carregarDados();
     } catch (error: any) {
       alert(error.message);
     }
@@ -93,15 +110,17 @@ export default function TransportePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'Concluído' })
         });
-        if (!res.ok) throw new Error('Erro ao concluir transporte');
-        carregarDados();
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(data?.error || 'Erro ao concluir transporte');
+        await carregarDados();
       } catch (error: any) {
         alert(error.message);
       }
     }
   };
 
-  const hojeStr = new Date().toISOString().split('T')[0];
+  const agora = new Date();
+  const hojeStr = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
   const statTotal = transportes.filter(t => t.data.startsWith(hojeStr)).length;
   const statPendentes = transportes.filter(t => t.status === "Pendente").length;
 
@@ -110,6 +129,8 @@ export default function TransportePage() {
   return (
     <div className="conteudo">
       <div className="transp-container">
+
+        {erroCarga && <p role="alert" style={{ color: '#b91c1c', background: '#fef2f2', padding: 12, borderRadius: 8 }}>{erroCarga}</p>}
 
         <div className="banner-transp">
           <div>
@@ -146,15 +167,15 @@ export default function TransportePage() {
             <h3><i className="las la-ambulance"></i> Solicitar Transporte</h3>
             <div className="form-grid">
               <div className="form-grupo">
-                <label>Paciente *</label>
-                <select value={transpPaciente} onChange={e => setTranspPaciente(e.target.value)}>
+                <label htmlFor="transporte-paciente">Paciente *</label>
+                <select id="transporte-paciente" value={transpPaciente} onChange={e => setTranspPaciente(e.target.value)}>
                   <option value="">Selecione...</option>
-                  {pacientes.map(p => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+                  {pacientes.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Origem *</label>
-                <select value={transpOrigem} onChange={e => setTranspOrigem(e.target.value)}>
+                <label htmlFor="transporte-origem">Origem *</label>
+                <select id="transporte-origem" value={transpOrigem} onChange={e => setTranspOrigem(e.target.value)}>
                   <option>Enfermaria</option>
                   <option>UTI</option>
                   <option>Emergência</option>
@@ -162,8 +183,8 @@ export default function TransportePage() {
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Destino *</label>
-                <select value={transpDestino} onChange={e => setTranspDestino(e.target.value)}>
+                <label htmlFor="transporte-destino">Destino *</label>
+                <select id="transporte-destino" value={transpDestino} onChange={e => setTranspDestino(e.target.value)}>
                   <option>Centro de Imagem</option>
                   <option>Laboratório</option>
                   <option>UTI</option>
@@ -173,8 +194,8 @@ export default function TransportePage() {
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Tipo *</label>
-                <select value={transpTipo} onChange={e => setTranspTipo(e.target.value)}>
+                <label htmlFor="transporte-tipo">Tipo *</label>
+                <select id="transporte-tipo" value={transpTipo} onChange={e => setTranspTipo(e.target.value)}>
                   <option>Interno (Cadeira de Rodas)</option>
                   <option>Interno (Maca)</option>
                   <option>Externo (Ambulância)</option>
@@ -182,12 +203,12 @@ export default function TransportePage() {
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Solicitante</label>
-                <input type="text" value={transpSolicitante} onChange={e => setTranspSolicitante(e.target.value)} />
+                <label htmlFor="transporte-solicitante">Solicitante</label>
+                <input id="transporte-solicitante" type="text" value={session?.user?.name || session?.user?.email || ''} readOnly />
               </div>
               <div className="form-grupo">
-                <label>Data/Hora</label>
-                <input type="datetime-local" value={transpData} onChange={e => setTranspData(e.target.value)} />
+                <label htmlFor="transporte-data">Data/Hora</label>
+                <input id="transporte-data" type="datetime-local" value={transpData} onChange={e => setTranspData(e.target.value)} />
               </div>
             </div>
             <button className="btn btn-success" onClick={solicitarTransporte} style={{width:'100%', marginTop:'15px', padding:'14px', justifyContent:'center'}}>

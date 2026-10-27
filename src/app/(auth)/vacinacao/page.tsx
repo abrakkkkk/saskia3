@@ -31,33 +31,55 @@ const documentosVacinas: VacinaDoc[] = [
 ];
 
 export default function VacinacaoPage() {
-  const [driveFiles, setDriveFiles] = useState<any[]>([]);
+  const [driveFiles, setDriveFiles] = useState<Array<{
+    name: string;
+    webViewLink?: string;
+    webContentLink?: string;
+  }>>([]);
+  const [driveIndisponivel, setDriveIndisponivel] = useState(false);
 
   useEffect(() => {
     const fetchDriveFiles = async () => {
       try {
         const res = await fetch('/api/drive');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.files) {
-            setDriveFiles(data.files);
-          }
+        if (!res.ok) throw new Error('Drive indisponível');
+        const data: unknown = await res.json();
+        if (!data || typeof data !== 'object' || !('files' in data) || !Array.isArray(data.files)) {
+          throw new Error('Resposta inválida do Drive');
         }
-      } catch (err) {
-        console.error("Erro ao buscar arquivos do Drive", err);
+        setDriveFiles(data.files.filter((file): file is { name: string; webViewLink?: string; webContentLink?: string } => (
+          Boolean(file) && typeof file === 'object' && 'name' in file && typeof file.name === 'string'
+        )).map(file => ({
+          name: file.name,
+          webViewLink: 'webViewLink' in file && typeof file.webViewLink === 'string' ? file.webViewLink : undefined,
+          webContentLink: 'webContentLink' in file && typeof file.webContentLink === 'string' ? file.webContentLink : undefined,
+        })));
+        setDriveIndisponivel(false);
+      } catch {
+        setDriveFiles([]);
+        setDriveIndisponivel(true);
       }
     };
     fetchDriveFiles();
   }, []);
   const handleDriveAction = (doc: VacinaDoc, action: 'view' | 'download') => {
     const driveFile = driveFiles.find(f => f.name === doc.nome);
-
-    if (driveFile) {
-      if (action === 'download' && driveFile.webContentLink) {
-        window.open(driveFile.webContentLink, '_blank');
-      } else {
-        window.open(driveFile.webViewLink, '_blank');
+    const remoteLink = driveFile && (action === 'download' ? driveFile.webContentLink : driveFile.webViewLink);
+    let remoteUrl: URL | null = null;
+    if (remoteLink) {
+      try {
+        const parsed = new URL(remoteLink);
+        if (parsed.protocol === 'https:' && (parsed.hostname === 'drive.google.com'
+          || parsed.hostname === 'docs.google.com' || parsed.hostname.endsWith('.googleusercontent.com'))) {
+          remoteUrl = parsed;
+        }
+      } catch {
+        remoteUrl = null;
       }
+    }
+
+    if (remoteUrl) {
+      window.open(remoteUrl.href, '_blank', 'noopener,noreferrer');
       return;
     }
 
@@ -88,6 +110,12 @@ export default function VacinacaoPage() {
         </div>
       </div>
 
+      {driveIndisponivel && (
+        <p role="status" className="text-sm text-slate-600">
+          O catálogo remoto não está disponível agora. Os documentos locais continuam acessíveis.
+        </p>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {documentosVacinas.map((doc) => (
           <div key={doc.id} className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.04)] border border-slate-100 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 flex flex-col">
@@ -100,17 +128,21 @@ export default function VacinacaoPage() {
               </h4>
               <div className="mt-auto pt-4 flex gap-2">
                 <button
+                  type="button"
                   onClick={() => handleDriveAction(doc, 'view')}
+                  aria-label={`Visualizar ${doc.titulo}`}
                   className="flex-1 flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 font-semibold py-2.5 rounded-xl hover:bg-emerald-600 hover:text-white transition-colors text-sm"
                 >
-                  <Eye className="w-4 h-4" />
+                  <Eye className="w-4 h-4" aria-hidden="true" />
                   Ver
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleDriveAction(doc, 'download')}
+                  aria-label={`Baixar ${doc.titulo}`}
                   className="flex-1 flex items-center justify-center gap-2 bg-slate-50 text-slate-700 font-semibold py-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition-colors text-sm"
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="w-4 h-4" aria-hidden="true" />
                   Baixar
                 </button>
               </div>

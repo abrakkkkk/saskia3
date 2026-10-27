@@ -9,12 +9,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (session.user.cargo !== 'MEDICO') return NextResponse.json({ error: 'Apenas médicos podem registrar avaliações médicas' }, { status: 403 })
 
     const { id } = await params
+    const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
     let body: unknown
     try { body = await request.json() } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }) }
     if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
     const input = body as Record<string, unknown>
     const paciente = await prisma.paciente.findFirst({
-      where: { id, hospitalId: session.user.hospitalId },
+      where: { id, hospitalId, arquivadoEm: null },
       select: { id: true },
     })
     if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })

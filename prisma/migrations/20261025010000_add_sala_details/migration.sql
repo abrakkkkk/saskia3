@@ -1,0 +1,4 @@
+ALTER TABLE "Sala"
+ADD COLUMN "capacidade" INTEGER NOT NULL DEFAULT 1,
+ADD COLUMN "equipamentos" TEXT,
+ADD COLUMN "obs" TEXT;

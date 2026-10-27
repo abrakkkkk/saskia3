@@ -1,5 +1,4 @@
 'use client';
-import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
 import './farmacia.css';
 
@@ -112,18 +111,12 @@ export default function FarmaciaPage() {
     carregarDados();
   }, []);
 
-  const getResponsavel = () => {
-    try {
-      const u = JSON.stringify(getSessionUser());
-      return (u ? JSON.parse(u) : null)?.nome || "Sistema";
-    } catch {
-      return "Sistema";
-    }
-  };
-
   const confirmarEntrada = async () => {
-    if (!entMed) {
-      alert("Preencha o nome do medicamento!");
+    const quantidade = Number(entQtd);
+    const minimo = Number(entMinima);
+    if (!entMed.trim() || !Number.isSafeInteger(quantidade) || quantidade <= 0 || quantidade > 2147483647 ||
+      !Number.isSafeInteger(minimo) || minimo < 0 || minimo > 2147483647) {
+      alert("Informe o medicamento, uma quantidade inteira positiva e um mínimo válido.");
       return;
     }
     setIsSaving(true);
@@ -136,34 +129,40 @@ export default function FarmaciaPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             categoria: 'FARMACIA',
-            nome: entMed,
-            codigo: entPrincipio,
+            nome: entMed.trim(),
+            codigo: entPrincipio.trim(),
             lote: entLote,
             validade: entValidade || null,
-            quantidade: 0, // Movimentação que vai somar
-            minimo: entMinima,
+            quantidade,
+            registrarMovimentacaoInicial: true,
+            minimo,
             unidade: entUnidade,
             fornecedor: entFornecedor
           })
         });
-        if (!resNovo.ok) throw new Error("Erro ao criar item");
+        if (!resNovo.ok) {
+          const erro = await resNovo.json().catch(() => null);
+          throw new Error(erro?.error || "Erro ao criar medicamento e registrar a entrada");
+        }
         item = await resNovo.json();
+      } else {
+        const resMov = await fetch('/api/estoque/movimentacao', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipo: 'ENTRADA',
+            categoria: 'FARMACIA',
+            itemId: item.id,
+            quantidade,
+            fornecedor: entFornecedor,
+          })
+        });
+
+        if (!resMov.ok) {
+          const erro = await resMov.json().catch(() => null);
+          throw new Error(erro?.error || "Erro ao registrar entrada");
+        }
       }
-
-      // 2. Add Entrada
-      const resMov = await fetch('/api/estoque/movimentacao', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: 'ENTRADA',
-          itemId: item!.id,
-          quantidade: entQtd,
-          fornecedor: entFornecedor,
-          responsavel: getResponsavel()
-        })
-      });
-
-      if (!resMov.ok) throw new Error("Erro ao registrar entrada");
 
       setModalEntrada(false);
       setEntMed(''); setEntPrincipio(''); setEntLote(''); setEntValidade('');
@@ -178,8 +177,8 @@ export default function FarmaciaPage() {
   };
 
   const confirmarDispensacao = async () => {
-    if (!dispPaciente || !dispMedicamentoId) {
-      alert("Selecione paciente e medicamento!");
+    if (!dispPaciente || !dispMedicamentoId || !Number.isSafeInteger(dispQtd) || dispQtd <= 0 || dispQtd > 2147483647) {
+      alert("Selecione paciente e medicamento e informe uma quantidade inteira positiva.");
       return;
     }
     setIsSaving(true);
@@ -189,12 +188,12 @@ export default function FarmaciaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tipo: 'SAIDA',
+          categoria: 'FARMACIA',
           itemId: dispMedicamentoId,
           quantidade: dispQtd,
           pacienteId: dispPaciente,
           setor: dispLeito || 'Farmácia',
           observacao: `Via: ${dispVia}`,
-          responsavel: getResponsavel()
         })
       });
 
@@ -373,7 +372,7 @@ export default function FarmaciaPage() {
             <div className="form-grid">
               <div className="form-grupo"><label>Paciente *</label><select value={dispPaciente} onChange={e => setDispPaciente(e.target.value)}><option value="">Selecione...</option>{pacientes.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></div>
               <div className="form-grupo"><label>Medicamento *</label><select value={dispMedicamentoId} onChange={e => setDispMedicamentoId(e.target.value)}><option value="">Selecione...</option>{estoque.filter(m => m.quantidade > 0).map(m => <option key={m.id} value={m.id}>{m.nome} ({m.quantidade})</option>)}</select></div>
-              <div className="form-grupo"><label>Quantidade *</label><input type="number" min="1" value={dispQtd} onChange={e => setDispQtd(parseInt(e.target.value))} /></div>
+              <div className="form-grupo"><label>Quantidade *</label><input type="number" min="1" step="1" value={dispQtd} onChange={e => setDispQtd(e.target.value === '' ? 0 : Number(e.target.value))} /></div>
               <div className="form-grupo"><label>Via</label><select value={dispVia} onChange={e => setDispVia(e.target.value)}><option>Oral</option><option>Intravenosa</option><option>Intramuscular</option><option>Subcutânea</option><option>Tópica</option></select></div>
               <div className="form-grupo"><label>Leito/Setor</label><input type="text" placeholder="Ex: Leito 12" value={dispLeito} onChange={e => setDispLeito(e.target.value)} /></div>
             </div>
@@ -394,8 +393,8 @@ export default function FarmaciaPage() {
               <div className="form-grupo"><label>Princípio Ativo</label><input type="text" value={entPrincipio} onChange={e => setEntPrincipio(e.target.value)} /></div>
               <div className="form-grupo"><label>Lote</label><input type="text" value={entLote} onChange={e => setEntLote(e.target.value)} /></div>
               <div className="form-grupo"><label>Validade</label><input type="date" value={entValidade} onChange={e => setEntValidade(e.target.value)} /></div>
-              <div className="form-grupo"><label>Quantidade Adicionada *</label><input type="number" min="1" value={entQtd} onChange={e => setEntQtd(parseInt(e.target.value))} /></div>
-              <div className="form-grupo"><label>Qtd. Mínima Alerta</label><input type="number" min="1" value={entMinima} onChange={e => setEntMinima(parseInt(e.target.value))} /></div>
+              <div className="form-grupo"><label>Quantidade Adicionada *</label><input type="number" min="1" step="1" value={entQtd} onChange={e => setEntQtd(e.target.value === '' ? 0 : Number(e.target.value))} /></div>
+              <div className="form-grupo"><label>Qtd. Mínima Alerta</label><input type="number" min="0" step="1" value={entMinima} onChange={e => setEntMinima(e.target.value === '' ? 0 : Number(e.target.value))} /></div>
               <div className="form-grupo"><label>Fornecedor</label><input type="text" value={entFornecedor} onChange={e => setEntFornecedor(e.target.value)} /></div>
               <div className="form-grupo"><label>Unidade</label><select value={entUnidade} onChange={e => setEntUnidade(e.target.value)}><option>Comprimido</option><option>Ampola</option><option>Frasco</option><option>Seringa</option><option>Bisnaga</option><option>Caixa</option></select></div>
             </div>

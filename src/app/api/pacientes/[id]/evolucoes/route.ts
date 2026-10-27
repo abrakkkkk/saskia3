@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { findPatientInHospital } from '@/lib/pacientes'
+import { isRecord } from '@/lib/request-validation'
 
 export async function POST (request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -11,18 +13,16 @@ export async function POST (request: NextRequest, { params }: { params: Promise<
     }
 
     const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
     const { id } = await params
-    const body = await request.json()
-    if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.descricao !== 'string' || !body.descricao.trim()) {
+    let body: unknown
+    try { body = await request.json() } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }) }
+    if (!isRecord(body) || typeof body.descricao !== 'string' || !body.descricao.trim() || body.descricao.length > 5000) {
       return NextResponse.json({ error: 'Descrição da evolução é obrigatória' }, { status: 400 })
     }
     
     // Security: Check if patient exists and belongs to the user's hospital
-    const pacienteExistente = await prisma.paciente.findFirst({
-      where: { id, hospitalId }
-    })
-    
-    if (!pacienteExistente) {
+    if (!await findPatientInHospital(id, hospitalId)) {
       return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
     }
     
@@ -33,7 +33,7 @@ export async function POST (request: NextRequest, { params }: { params: Promise<
       data: {
         pacienteId: id,
         tipo: tipoEvolucao,
-        descricao: body.descricao,
+        descricao: body.descricao.trim(),
         profissional: session.user?.name || 'Sistema',
         usuarioId: session.user?.id || null
       }

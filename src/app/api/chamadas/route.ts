@@ -5,18 +5,21 @@ import { prisma } from '@/lib/db'
 export async function GET() {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json([], { status: 401 })
+    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
     const chamadas = await prisma.chamada.findMany({
       where: { hospitalId, status: 'ATIVA' },
       orderBy: { createdAt: 'desc' },
-      take: 10
+      take: 10,
+      select: { id: true, pacienteId: true, pacienteNome: true, status: true, consultorio: true, createdAt: true },
     })
 
     return NextResponse.json(chamadas)
   } catch (error) {
-    return NextResponse.json([])
+    console.error('Erro ao buscar chamadas:', error)
+    return NextResponse.json({ error: 'Erro ao buscar chamadas' }, { status: 500 })
   }
 }
 

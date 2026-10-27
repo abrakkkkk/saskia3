@@ -1,17 +1,29 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { calcularIdade, MANCHESTER_CORES, STATUS_CORES } from '@/lib/utils'
 import { AlertCircle, AlertTriangle, Frown, Meh, Pill, Smile } from 'lucide-react'
 
+async function mensagemErroDaApi(response: Response, fallback: string) {
+  const body = await response.json().catch(() => null)
+  return typeof body?.error === 'string' ? body.error : fallback
+}
+
 export default function FichaPacientePage() {
   const params = useParams()
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
+  const pacienteId = typeof params.id === 'string' ? params.id : ''
+  const cargo = (session?.user as any)?.cargo as string | undefined
+  const podeTriagem = ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'TECNICO_ENFERMAGEM'].includes(cargo || '')
+  const podeMedico = cargo === 'MEDICO'
+  const podeEnfermagem = cargo === 'ENFERMEIRO_ASSISTENCIAL' || cargo === 'TECNICO_ENFERMAGEM'
+  const podeNutricao = cargo === 'OUTROS'
   const [paciente, setPaciente] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [erroCarga, setErroCarga] = useState('')
   const [tab, setTab] = useState('dados')
   const [pepSubTab, setPepSubTab] = useState('soap')
 
@@ -47,10 +59,19 @@ export default function FichaPacientePage() {
   const [timelineEvents, setTimelineEvents] = useState<any[]>([])
   const [novoTimeline, setNovoTimeline] = useState({ tipo: 'Anotação Geral', descricao: '' })
 
-  const carregarPaciente = () => {
-    fetch(`/api/pacientes/${params.id}`)
-      .then(response => response.json())
-      .then(data => {
+  const carregarPaciente = useCallback(async (signal?: AbortSignal) => {
+    if (!pacienteId) {
+      setPaciente(null)
+      setErroCarga('Identificador de paciente inválido.')
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}`, { signal })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Não foi possível carregar o prontuário.')
+      if (!data || typeof data.id !== 'string') throw new Error('Resposta inválida ao carregar o prontuário.')
         setPaciente(data);
         setFormData({
           nome: data.nome || '', cpf: data.cpf || '', rg: data.rg || '',
@@ -74,14 +95,28 @@ export default function FichaPacientePage() {
           if (e.braden) setBraden(e.braden);
         }
 
-        setLoading(false);
-      })
-      .catch(() => setLoading(false))
-  }
+      setErroCarga('')
+    } catch (error) {
+      if (signal?.aborted) return
+      setPaciente(null)
+      setErroCarga(error instanceof Error ? error.message : 'Não foi possível carregar o prontuário.')
+    } finally {
+      if (!signal?.aborted) setLoading(false)
+    }
+  }, [pacienteId])
 
   useEffect(() => {
-    carregarPaciente()
-  }, [params.id])
+    if (sessionStatus === 'loading') return
+    if (sessionStatus !== 'authenticated') {
+      setPaciente(null)
+      setErroCarga('Faça login para consultar este prontuário.')
+      setLoading(false)
+      return
+    }
+    const controller = new AbortController()
+    void carregarPaciente(controller.signal)
+    return () => controller.abort()
+  }, [sessionStatus, carregarPaciente])
 
   // =================== HANDLERS ===================
   const salvarEdicao = async (e: React.FormEvent) => {
@@ -99,8 +134,8 @@ export default function FichaPacientePage() {
       if (res.ok) {
         setIsEditing(false)
         carregarPaciente()
-      } else alert('Erro ao atualizar paciente')
-    } catch { alert('Erro de conexão ao salvar') }
+      } else alert(await mensagemErroDaApi(res, 'Erro ao atualizar paciente'))
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro de conexão ao salvar') }
     finally { setIsSaving(false) }
   }
 
@@ -112,7 +147,8 @@ export default function FichaPacientePage() {
         body: JSON.stringify({ status: novoStatus })
       })
       if (res.ok) carregarPaciente()
-    } catch { }
+      else alert(await mensagemErroDaApi(res, 'Erro ao atualizar o status do paciente'))
+    } catch { alert('Erro de conexão ao atualizar o paciente') }
   }
 
   // MEWS Calculation
@@ -167,8 +203,8 @@ export default function FichaPacientePage() {
         setTriagem({ classificacao: '', fluxograma: '', pressao: '', frequenciaC: '', frequenciaR: '', temperatura: '', saturacao: '', glicemia: '', avpu: 'A', queixa: '', observacoes: '' })
         registrarTimeline('Triagem', 'Nova triagem registrada')
         carregarPaciente()
-      } else alert('Erro ao salvar triagem')
-    } catch { } finally { setIsSaving(false) }
+      } else alert(await mensagemErroDaApi(res, 'Erro ao salvar triagem'))
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro de conexão ao salvar triagem') } finally { setIsSaving(false) }
   }
 
   const salvarEscores = async () => {
@@ -180,8 +216,8 @@ export default function FichaPacientePage() {
       if (res.ok) {
         registrarTimeline('Escores', 'Escores clínicos atualizados')
         alert('Escores salvos!')
-      }
-    } catch { alert('Erro ao salvar escores') }
+      } else alert(await mensagemErroDaApi(res, 'Erro ao salvar escores'))
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro ao salvar escores') }
   }
 
   const salvarNutricao = async () => {
@@ -193,8 +229,8 @@ export default function FichaPacientePage() {
       if (res.ok) {
         registrarTimeline('Nutrição', 'Avaliação nutricional salva')
         alert('Avaliação nutricional salva!')
-      }
-    } catch { alert('Erro ao salvar nutricao') }
+      } else alert(await mensagemErroDaApi(res, 'Erro ao salvar nutrição'))
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro ao salvar nutrição') }
   }
 
   const salvarMedico = async () => {
@@ -206,8 +242,8 @@ export default function FichaPacientePage() {
       if (res.ok) {
         registrarTimeline('Médico', 'Avaliação médica atualizada')
         alert('Avaliação médica salva!')
-      }
-    } catch { alert('Erro ao salvar médico') }
+      } else alert(await mensagemErroDaApi(res, 'Erro ao salvar avaliação médica'))
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro ao salvar médico') }
   }
 
   const salvarEnfermagem = async () => {
@@ -219,8 +255,8 @@ export default function FichaPacientePage() {
       if (res.ok) {
         registrarTimeline('Enfermagem', 'Anotação de enfermagem atualizada')
         alert('Anotação de enfermagem salva!')
-      }
-    } catch { alert('Erro ao salvar enfermagem') }
+      } else alert(await mensagemErroDaApi(res, 'Erro ao salvar anotação de enfermagem'))
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro ao salvar enfermagem') }
   }
 
   const registrarTimeline = async (tipo: string, desc: string) => {
@@ -231,8 +267,8 @@ export default function FichaPacientePage() {
       })
       if (res.ok) {
         carregarPaciente()
-      }
-    } catch { }
+      } else alert(await mensagemErroDaApi(res, 'Erro ao registrar evento na timeline'))
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro ao registrar evento na timeline') }
   }
 
   const addTimelinePost = () => {
@@ -250,8 +286,8 @@ export default function FichaPacientePage() {
       if (res.ok) {
         registrarTimeline('Sinais Vitais', `PA: ${novoSinal.pressao || '-'} | FC: ${novoSinal.fc || '-'}`)
         setNovoSinal({ pressao: '', fc: '', fr: '', temp: '', satO2: '', glicemia: '' })
-      }
-    } catch { alert('Erro ao registrar sinal vital') }
+      } else alert(await mensagemErroDaApi(res, 'Erro ao registrar sinal vital'))
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro ao registrar sinal vital') }
   }
 
   const registrarEvolucao = async () => {
@@ -267,8 +303,8 @@ export default function FichaPacientePage() {
         setNovaEvolucao({ s: '', o: '', a: '', p: '' })
         registrarTimeline('Evolução', 'Evolução SOAP registrada')
         carregarPaciente()
-      }
-    } catch { } finally { setIsSaving(false) }
+      } else alert(await mensagemErroDaApi(res, 'Erro ao registrar evolução'))
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro ao registrar evolução') } finally { setIsSaving(false) }
   }
 
   const registrarPrescricao = async () => {
@@ -283,8 +319,8 @@ export default function FichaPacientePage() {
         setNovoMed({ medicamento: '', dose: '', via: '', frequencia: '' })
         registrarTimeline('Prescrição', `Adicionado: ${novoMed.medicamento}`)
         carregarPaciente()
-      }
-    } catch { } finally { setIsSaving(false) }
+      } else alert(await mensagemErroDaApi(res, 'Erro ao registrar prescrição'))
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro ao registrar prescrição') } finally { setIsSaving(false) }
   }
 
   const solicitarExame = async () => {
@@ -299,12 +335,12 @@ export default function FichaPacientePage() {
         setNovoExame({ nome: '', resultado: '' })
         registrarTimeline('Exame', `Solicitado: ${novoExame.nome}`)
         carregarPaciente()
-      }
-    } catch { } finally { setIsSaving(false) }
+      } else alert(await mensagemErroDaApi(res, 'Erro ao solicitar exame'))
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro ao solicitar exame') } finally { setIsSaving(false) }
   }
 
   if (loading) return <div className="module-placeholder"><i className="las la-spinner la-spin" style={{ fontSize: 40 }}></i><h2>Carregando...</h2></div>
-  if (!paciente) return <div className="module-placeholder"><i className="las la-exclamation-triangle"></i><h2>Paciente não encontrado</h2></div>
+  if (!paciente) return <div className="module-placeholder" role="alert"><i className="las la-exclamation-triangle"></i><h2>{erroCarga || 'Paciente não encontrado'}</h2></div>
 
   const idade = calcularIdade(paciente.nascimento)
   const statusCor = STATUS_CORES[paciente.status] || { bg: '#f1f5f9', text: '#475569' }
@@ -545,7 +581,7 @@ export default function FichaPacientePage() {
               </div>
             </div>
 
-            <button className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '15px', fontWeight: 700 }} onClick={registrarTriagem} disabled={isSaving}>
+            <button className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '15px', fontWeight: 700 }} onClick={registrarTriagem} disabled={isSaving || !podeTriagem} title={!podeTriagem ? 'Seu cargo não pode registrar triagens.' : undefined}>
               {isSaving ? 'Registrando Triagem...' : 'Salvar e Registrar Triagem'}
             </button>
 
@@ -603,7 +639,7 @@ export default function FichaPacientePage() {
                 </div>
               </div>
             </div>
-            <div style={{ marginTop: 20 }}><button className="btn btn-primary" style={{ width: '100%' }} onClick={salvarEscores}>Salvar Escores Clínicos</button></div>
+            <div style={{ marginTop: 20 }}><button className="btn btn-primary" style={{ width: '100%' }} onClick={salvarEscores} disabled={!podeTriagem} title={!podeTriagem ? 'Seu cargo não pode registrar escores clínicos.' : undefined}>Salvar Escores Clínicos</button></div>
           </div>
         )}
 
@@ -622,7 +658,7 @@ export default function FichaPacientePage() {
                 <textarea className="input-field" rows={2} placeholder="O - Objetivo (O que o médico observa/exame físico)" value={novaEvolucao.o} onChange={e => setNovaEvolucao({ ...novaEvolucao, o: e.target.value })} style={{ marginBottom: 10 }}></textarea>
                 <textarea className="input-field" rows={2} placeholder="A - Avaliação (Impressão diagnóstica)" value={novaEvolucao.a} onChange={e => setNovaEvolucao({ ...novaEvolucao, a: e.target.value })} style={{ marginBottom: 10 }}></textarea>
                 <textarea className="input-field" rows={2} placeholder="P - Plano (Conduta, exames, medicação)" value={novaEvolucao.p} onChange={e => setNovaEvolucao({ ...novaEvolucao, p: e.target.value })} style={{ marginBottom: 10 }}></textarea>
-                <button className="btn btn-primary" style={{ width: '100%', marginBottom: 20 }} onClick={registrarEvolucao} disabled={isSaving}>{isSaving ? 'Salvando...' : 'Salvar Evolução SOAP'}</button>
+                <button className="btn btn-primary" style={{ width: '100%', marginBottom: 20 }} onClick={registrarEvolucao} disabled={isSaving || !podeTriagem} title={!podeTriagem ? 'Seu cargo não pode registrar evoluções clínicas.' : undefined}>{isSaving ? 'Salvando...' : 'Salvar Evolução SOAP'}</button>
 
                 {paciente.evolucoes?.length > 0 ? paciente.evolucoes.map((ev: any, i: number) => (
                   <div key={i} style={{ background: '#f8fafc', padding: 15, marginBottom: 10, borderTop: '3px solid #1e3a8a', borderRadius: 8 }}>
@@ -643,7 +679,7 @@ export default function FichaPacientePage() {
                   <input type="number" className="input-field" placeholder="SpO2" value={novoSinal.satO2} onChange={e => setNovoSinal({ ...novoSinal, satO2: e.target.value })} />
                   <input type="number" className="input-field" placeholder="Glicemia" value={novoSinal.glicemia} onChange={e => setNovoSinal({ ...novoSinal, glicemia: e.target.value })} />
                 </div>
-                <button className="btn btn-primary" style={{ width: '100%', marginBottom: 20 }} onClick={registrarSinalVital}>Registrar Sinais Vitais</button>
+                <button className="btn btn-primary" style={{ width: '100%', marginBottom: 20 }} onClick={registrarSinalVital} disabled={!podeTriagem} title={!podeTriagem ? 'Seu cargo não pode registrar sinais vitais.' : undefined}>Registrar Sinais Vitais</button>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
                     <thead><tr style={{ background: '#1e3a8a', color: 'white' }}><th style={{ padding: 10 }}>Data/Hora</th><th style={{ padding: 10 }}>PA</th><th style={{ padding: 10 }}>FC</th><th style={{ padding: 10 }}>FR</th><th style={{ padding: 10 }}>Temp</th><th style={{ padding: 10 }}>SpO2</th><th style={{ padding: 10 }}>HGT</th></tr></thead>
@@ -665,7 +701,7 @@ export default function FichaPacientePage() {
                   <input type="text" className="input-field" placeholder="Via" value={novoMed.via} onChange={e => setNovoMed({ ...novoMed, via: e.target.value })} />
                   <input type="text" className="input-field" placeholder="Frequência" value={novoMed.frequencia} onChange={e => setNovoMed({ ...novoMed, frequencia: e.target.value })} />
                 </div>
-                <button className="btn btn-primary" style={{ width: '100%', marginBottom: 20 }} onClick={registrarPrescricao} disabled={isSaving}>{isSaving ? 'Registrando...' : 'Adicionar à Prescrição'}</button>
+                <button className="btn btn-primary" style={{ width: '100%', marginBottom: 20 }} onClick={registrarPrescricao} disabled={isSaving || !podeMedico} title={!podeMedico ? 'Somente médicos podem registrar prescrições.' : undefined}>{isSaving ? 'Registrando...' : 'Adicionar à Prescrição'}</button>
                 <ul style={{ listStyle: 'none', padding: 0 }}>
                   {paciente.prescricoes?.length > 0 ? paciente.prescricoes.map((m: any, i: number) => (
                     <li key={i} style={{ background: '#f8fafc', padding: '12px', marginBottom: '8px', borderRadius: '8px', borderTop: '3px solid #1e3a8a', display: 'flex', justifyContent: 'space-between' }}>
@@ -713,7 +749,7 @@ export default function FichaPacientePage() {
             )}
             <div style={{ marginBottom: 20 }}><label className="form-label">Prescrição de Dieta</label><select className="input-field" value={nutricao.dieta} onChange={e => setNutricao({ ...nutricao, dieta: e.target.value })}><option>Via Oral</option><option>Branda</option><option>Pastosa</option><option>Líquida</option><option>Enteral</option><option>Jejum Absoluto</option></select></div>
             <div style={{ marginBottom: 20 }}><label className="form-label">Restrições</label><input type="text" className="input-field" value={nutricao.restricoes} onChange={e => setNutricao({ ...nutricao, restricoes: e.target.value })} /></div>
-            <div><button className="btn btn-primary" style={{ width: '100%' }} onClick={salvarNutricao}>Registrar Avaliação Nutricional</button></div>
+            <div><button className="btn btn-primary" style={{ width: '100%' }} onClick={salvarNutricao} disabled={!podeNutricao} title={!podeNutricao ? 'Seu cargo não pode registrar avaliações nutricionais.' : undefined}>Registrar Avaliação Nutricional</button></div>
           </div>
         )}
 
@@ -728,7 +764,7 @@ export default function FichaPacientePage() {
             <input className="input-field" placeholder="Especialidade" value={medico.especialidade} onChange={e => setMedico({ ...medico, especialidade: e.target.value })} style={{ marginBottom: 15 }} />
             <textarea className="input-field" rows={3} placeholder="Hipótese Diagnóstica / CID-10" value={medico.diagnostico} onChange={e => setMedico({ ...medico, diagnostico: e.target.value })} style={{ marginBottom: 15 }}></textarea>
             <textarea className="input-field" rows={4} placeholder="Conduta Médica" value={medico.conduta} onChange={e => setMedico({ ...medico, conduta: e.target.value })} style={{ marginBottom: 15 }}></textarea>
-            <button className="btn btn-primary" style={{ width: '100%' }} onClick={salvarMedico}>Salvar Avaliação Médica</button>
+            <button className="btn btn-primary" style={{ width: '100%' }} onClick={salvarMedico} disabled={!podeMedico} title={!podeMedico ? 'Somente médicos podem registrar avaliações médicas.' : undefined}>Salvar Avaliação Médica</button>
           </div>
         )}
 
@@ -742,7 +778,7 @@ export default function FichaPacientePage() {
             </div>
             <textarea className="input-field" rows={4} placeholder="Evolução de Enfermagem (Anotações)" value={enfermagem.evolucao} onChange={e => setEnfermagem({ ...enfermagem, evolucao: e.target.value })} style={{ marginBottom: 15 }}></textarea>
             <textarea className="input-field" rows={4} placeholder="Prescrição de Enfermagem (Cuidados)" value={enfermagem.prescricao} onChange={e => setEnfermagem({ ...enfermagem, prescricao: e.target.value })} style={{ marginBottom: 15 }}></textarea>
-            <button className="btn btn-primary" style={{ width: '100%' }} onClick={salvarEnfermagem}>Salvar Registro</button>
+            <button className="btn btn-primary" style={{ width: '100%' }} onClick={salvarEnfermagem} disabled={!podeEnfermagem} title={!podeEnfermagem ? 'Seu cargo não pode registrar anotações de enfermagem.' : undefined}>Salvar Registro</button>
           </div>
         )}
 

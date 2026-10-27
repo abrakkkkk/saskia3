@@ -15,26 +15,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
     }
 
-    // Se for admin, pode ver de todos do hospital; caso contrário, vê os próprios registros
-    const isGestor = session.user.cargo === 'ADMIN';
-
     const data = await prisma.pontoRegistro.findMany({
       where: {
         hospitalId,
-        ...(isGestor ? {} : { usuarioId: session.user.id })
+        usuarioId: session.user.id,
       },
       include: {
         usuario: {
           select: {
             id: true,
             nome: true,
-            email: true,
-            cargo: true
           }
         }
       },
       orderBy: { dataHora: 'desc' },
-      take: 100
     });
 
     return NextResponse.json(data);
@@ -63,7 +57,7 @@ export async function POST(request: NextRequest) {
     const tipo = body.tipo;
     const localizacao = body.localizacao;
 
-    const tiposValidos = ['ENTRADA', 'SAÍDA', 'SAIDA', 'ALMOÇO - INÍCIO', 'ALMOCO - INICIO', 'ALMOÇO - RETORNO', 'ALMOCO - RETORNO', 'PAUSA - INÍCIO', 'PAUSA - RETORNO'];
+    const tiposValidos = ['ENTRADA', 'SAÍDA', 'SAIDA', 'INÍCIO INTERVALO', 'INICIO INTERVALO', 'FIM INTERVALO'];
     if (typeof tipo !== 'string' || !tiposValidos.includes(tipo.toUpperCase()) || (localizacao !== undefined && localizacao !== null && (typeof localizacao !== 'string' || localizacao.length > 200))) {
       return NextResponse.json({ error: 'Tipo de ponto inválido' }, { status: 400 });
     }

@@ -225,7 +225,8 @@ async function main() {
       hospitalId: hospital.id,
       numero: j,
       tipo: TipoLeito.PEDIATRICO,
-      status: j === 201 ? StatusOcupacao.LIMPEZA : StatusOcupacao.LIVRE
+      status: j === 201 ? StatusOcupacao.LIMPEZA : StatusOcupacao.LIVRE,
+      pacienteNome: null
     });
   }
   await prisma.utiLeito.createMany({ data: leitosDados });

@@ -21,6 +21,18 @@ interface Exame {
   updatedAt: string;
 }
 
+async function mensagemErro(res: Response, fallback: string) {
+  const body = await res.json().catch(() => null);
+  return typeof body?.error === 'string' ? body.error : fallback;
+}
+
+function tipoNormalizado(tipo: string) {
+  const valor = tipo.trim().toLocaleLowerCase('pt-BR');
+  if (valor === 'laboratorio' || valor === 'laboratorial') return 'laboratorio';
+  if (valor === 'imagem' || valor === 'imagens') return 'imagem';
+  return valor;
+}
+
 const examesDisponiveis: Record<string, string[]> = {
   laboratorio: ["Hemograma Completo","Glicemia de Jejum","HbA1c","Colesterol Total e Frações","Triglicerídeos","TGO/AST","TGP/ALT","Creatinina","Ureia","Ácido Úrico","TSH","T4 Livre","PSA Total","VHS","PCR","TAP/INR","KPTT","Gasometria Arterial","Eletrólitos (Na/K/Ca/Mg)","Sumário de Urina (EAS)","Urocultura com Antibiograma","Hemocultura","Sorologia COVID-19","Sorologia Dengue","Teste Rápido HIV/Sífilis","Marcadores Cardíacos (Troponina/CK-MB)"],
   imagem: ["Raio-X de Tórax (PA e Perfil)","Raio-X de Abdome","Raio-X de Crânio","Raio-X de Coluna Cervical","Raio-X de Coluna Lombar","Raio-X de Seios da Face","Raio-X de Membros","Tomografia de Crânio","Tomografia de Tórax","Tomografia de Abdome","Tomografia de Coluna","Ressonância de Crânio","Ressonância de Coluna","Ressonância de Joelho","Ultrassonografia Abdominal","Ultrassonografia Pélvica","Ultrassonografia Obstétrica","Doppler Venoso de MMII","Ecocardiograma","Eletrocardiograma (ECG)","Mamografia","Densitometria Óssea"]
@@ -29,6 +41,7 @@ const examesDisponiveis: Record<string, string[]> = {
 export default function ExamesPage() {
   const [activeTab, setActiveTab] = useState<'solicitacao' | 'listagem' | 'resultados'>('solicitacao');
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
 
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [exames, setExames] = useState<Exame[]>([]);
@@ -60,10 +73,15 @@ export default function ExamesPage() {
         fetch('/api/exames'),
         fetch('/api/pacientes')
       ]);
-      if (resExames.ok) setExames(await resExames.json());
-      if (resPacientes.ok) setPacientes(await resPacientes.json());
+      if (!resExames.ok) throw new Error(await mensagemErro(resExames, 'Não foi possível carregar os exames.'));
+      if (!resPacientes.ok) throw new Error(await mensagemErro(resPacientes, 'Não foi possível carregar os pacientes.'));
+      const [dadosExames, dadosPacientes] = await Promise.all([resExames.json(), resPacientes.json()]);
+      if (!Array.isArray(dadosExames) || !Array.isArray(dadosPacientes)) throw new Error('Resposta inválida ao carregar os dados.');
+      setExames(dadosExames);
+      setPacientes(dadosPacientes);
+      setErroCarga('');
     } catch (err) {
-      console.error(err);
+      setErroCarga(err instanceof Error ? err.message : 'Não foi possível carregar exames.');
     } finally {
       setLoading(false);
     }
@@ -102,7 +120,7 @@ export default function ExamesPage() {
         })
       });
 
-      if (!res.ok) throw new Error("Erro ao solicitar exame");
+      if (!res.ok) throw new Error(await mensagemErro(res, "Erro ao solicitar exame"));
 
       setSolPacienteId('');
       setSolExame('');
@@ -121,7 +139,7 @@ export default function ExamesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: novoStatus })
       });
-      if (!res.ok) throw new Error("Erro ao atualizar status");
+      if (!res.ok) throw new Error(await mensagemErro(res, "Erro ao atualizar status"));
       
       alert(" Status do exame atualizado!");
       carregarDados();
@@ -147,7 +165,7 @@ export default function ExamesPage() {
         })
       });
 
-      if (!res.ok) throw new Error("Erro ao lançar resultado");
+      if (!res.ok) throw new Error(await mensagemErro(res, "Erro ao lançar resultado"));
 
       setResExameId('');
       setResValor('');
@@ -166,17 +184,18 @@ export default function ExamesPage() {
   const examesPendentes = exames.filter(e => e.status !== "SOLICITADO" && !e.resultado);
   const resultadosRecentes = exames.filter(e => e.resultado).slice(0, 10);
 
-  const hoje = new Date().toISOString().split('T')[0];
+  const dataLocal = new Date();
+  const hoje = `${dataLocal.getFullYear()}-${String(dataLocal.getMonth() + 1).padStart(2, '0')}-${String(dataLocal.getDate()).padStart(2, '0')}`;
   const stats = {
-    lab: exames.filter(e => e.tipo === "laboratorio").length,
-    img: exames.filter(e => e.tipo === "imagem").length,
+    lab: exames.filter(e => tipoNormalizado(e.tipo) === "laboratorio").length,
+    img: exames.filter(e => tipoNormalizado(e.tipo) === "imagem").length,
     pendentes: exames.filter(e => !e.resultado).length,
     concluidos: exames.filter(e => e.status === 'CONCLUIDO' && e.updatedAt.startsWith(hoje)).length,
     alterados: exames.filter(e => e.status === "ALTERADO_CRITICO").length
   };
 
   let listaExames = [...exames];
-  if (filtroTipo !== 'todos') listaExames = listaExames.filter(e => e.tipo === filtroTipo);
+  if (filtroTipo !== 'todos') listaExames = listaExames.filter(e => tipoNormalizado(e.tipo) === filtroTipo);
   if (filtroStatus !== 'todos') listaExames = listaExames.filter(e => e.status === filtroStatus);
   if (buscarExame) {
     const t = buscarExame.toLowerCase();
@@ -211,6 +230,8 @@ export default function ExamesPage() {
             <button className="btn btn-info" onClick={() => abrirSolicitacao('imagem')}><i className="las la-x-ray"></i> Solicitar Imagem</button>
           </div>
         </div>
+
+        {erroCarga && <p role="alert" className="form-panel" style={{ color: '#b91c1c' }}>{erroCarga}</p>}
 
         <div className="stats-grid">
           <div className="stat-card"><div className="stat-icon" style={{color:'#1e3a8a'}}><i className="las la-flask"></i></div><div className="stat-numero">{stats.lab}</div><div className="stat-label">Exames Laboratoriais</div></div>
@@ -252,7 +273,7 @@ export default function ExamesPage() {
                 </select>
               </div>
               <div className="form-grupo"><label>Prioridade</label><select value={solPrioridade} onChange={e => setSolPrioridade(e.target.value)}><option>Normal</option><option>Urgente</option><option>Emergência</option></select></div>
-              <div className="form-grupo full"><label>Observações Clínicas</label><textarea rows={2} placeholder="Informações clínicas relevantes..." value={solObs} onChange={e => setSolObs(e.target.value)}></textarea></div>
+              <div className="form-grupo full"><label htmlFor="exame-observacoes">Observações Clínicas</label><textarea id="exame-observacoes" rows={2} maxLength={1800} placeholder="Informações clínicas relevantes..." value={solObs} onChange={e => setSolObs(e.target.value)}></textarea></div>
             </div>
             <button className="btn btn-success" onClick={solicitarExame} style={{width:'100%', marginTop:'15px', justifyContent:'center', padding:'14px'}}><i className="las la-paper-plane"></i> Solicitar Exame</button>
           </div>
@@ -277,7 +298,7 @@ export default function ExamesPage() {
                       return (
                         <tr key={e.id}>
                           <td>{new Date(e.createdAt).toLocaleDateString('pt-BR')}</td>
-                          <td><span className={`badge ${e.tipo === 'laboratorio' ? 'badge-laboratorio' : 'badge-imagem'}`}>{e.tipo === 'laboratorio' ? ' Lab' : ' Imagem'}</span></td>
+                          <td><span className={`badge ${tipoNormalizado(e.tipo) === 'laboratorio' ? 'badge-laboratorio' : 'badge-imagem'}`}>{tipoNormalizado(e.tipo) === 'laboratorio' ? ' Lab' : ' Imagem'}</span></td>
                           <td><strong>{e.paciente.nome}</strong></td>
                           <td>{e.nome}</td>
                           <td>{e.profissional || '-'}</td>
@@ -306,12 +327,12 @@ export default function ExamesPage() {
                   <label>Exame *</label>
                   <select value={resExameId} onChange={e => setResExameId(e.target.value)}>
                     <option value="">Selecione o exame solicitado...</option>
-                    {examesPendentes.map(e => <option key={e.id} value={e.id}>{e.tipo === 'imagem' ? '' : ''} {e.paciente.nome} - {e.nome} ({getStatusName(e.status)})</option>)}
+                    {examesPendentes.map(e => <option key={e.id} value={e.id}>{e.paciente.nome} - {e.nome} ({getStatusName(e.status)})</option>)}
                   </select>
                 </div>
-                <div className="form-grupo"><label>Resultado *</label><input type="text" placeholder="Valor ou descrição do resultado" value={resValor} onChange={e => setResValor(e.target.value)} /></div>
+                <div className="form-grupo"><label htmlFor="resultado-exame">Resultado *</label><input id="resultado-exame" type="text" maxLength={5000} placeholder="Valor ou descrição do resultado" value={resValor} onChange={e => setResValor(e.target.value)} /></div>
                 <div className="form-grupo"><label>Status do Resultado</label><select value={resStatus} onChange={e => setResStatus(e.target.value)}><option value="CONCLUIDO"> Normal / Concluído</option><option value="ALTERADO_CRITICO"> Alterado / Crítico</option></select></div>
-                <div className="form-grupo full"><label>Laudo / Observações</label><textarea rows={3} placeholder="Laudo completo do exame..." value={resLaudo} onChange={e => setResLaudo(e.target.value)}></textarea></div>
+                <div className="form-grupo full"><label htmlFor="laudo-exame">Laudo / Observações</label><textarea id="laudo-exame" rows={3} maxLength={2000} placeholder="Laudo completo do exame..." value={resLaudo} onChange={e => setResLaudo(e.target.value)}></textarea></div>
               </div>
               <button className="btn btn-primary" onClick={lancarResultado} style={{width:'100%', marginTop:'15px', justifyContent:'center', padding:'14px'}}><i className="las la-save"></i> Lançar Resultado</button>
             </div>
@@ -326,7 +347,7 @@ export default function ExamesPage() {
                     <div key={e.id} className={`resultado-card ${e.status === 'ALTERADO_CRITICO' ? 'critico' : ''}`}>
                       <div className="resultado-header">
                         <strong>{e.paciente.nome} - {e.nome}</strong>
-                        <span className={`badge ${e.tipo === 'laboratorio' ? 'badge-laboratorio' : 'badge-imagem'}`}>{e.tipo === 'laboratorio' ? ' Lab' : ' Imagem'}</span>
+                        <span className={`badge ${tipoNormalizado(e.tipo) === 'laboratorio' ? 'badge-laboratorio' : 'badge-imagem'}`}>{tipoNormalizado(e.tipo) === 'laboratorio' ? ' Lab' : ' Imagem'}</span>
                       </div>
                       <div className="resultado-valor">{e.resultado}</div>
                       <small style={{color:'#94a3b8'}}>{new Date(e.updatedAt).toLocaleString('pt-BR')} | Liberado por: {e.profissional || '-'}</small>
@@ -352,7 +373,7 @@ export default function ExamesPage() {
                 <div style={{borderBottom:'2px solid #e2e8f0', paddingBottom:'15px', marginBottom:'15px'}}>
                   <p><strong>Paciente:</strong> {modalLaudoData.exame.paciente.nome}</p>
                   <p><strong>Exame:</strong> {modalLaudoData.exame.nome}</p>
-                  <p><strong>Tipo:</strong> {modalLaudoData.exame.tipo === 'laboratorio' ? ' Laboratorial' : ' Imagem'}</p>
+                  <p><strong>Tipo:</strong> {tipoNormalizado(modalLaudoData.exame.tipo) === 'laboratorio' ? ' Laboratorial' : ' Imagem'}</p>
                   <p><strong>Solicitante:</strong> {modalLaudoData.exame.profissional || '-'}</p>
                   <p><strong>Data Solicitação:</strong> {new Date(modalLaudoData.exame.createdAt).toLocaleString('pt-BR')}</p>
                 </div>

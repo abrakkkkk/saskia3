@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getIniciais, calcularIdade } from '@/lib/utils';
-import { useCallSystem } from '@/contexts/CallContext';
 
 interface Paciente {
   id: string;
@@ -31,36 +29,46 @@ interface Visitante {
 export default function RecepcaoPage() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erroPacientes, setErroPacientes] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
   const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', rg: '', nascimento: '', telefone: '', tipoSanguineo: '', alergias: '' });
   const [busca, setBusca] = useState('');
   const [resultadoBusca, setResultadoBusca] = useState<Paciente | null>(null);
   const [buscou, setBuscou] = useState(false);
-  const { chamarPaciente } = useCallSystem();
 
   // Visitantes
   const [visitantes, setVisitantes] = useState<Visitante[]>([]);
+  const [erroVisitantes, setErroVisitantes] = useState('');
   const [modalVisitante, setModalVisitante] = useState(false);
   const [formVisitante, setFormVisitante] = useState({ nome: '', documento: '', destino: '' });
   const [abaAtiva, setAbaAtiva] = useState<'pacientes' | 'visitantes'>('pacientes');
 
-  const fetchPacientes = () => {
-    fetch('/api/pacientes')
-      .then(res => res.json())
-      .then(data => {
-        setPacientes(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+  const fetchPacientes = async () => {
+    try {
+      const res = await fetch('/api/pacientes');
+      const data: unknown = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : 'Não foi possível carregar os pacientes.');
+      if (!Array.isArray(data)) throw new Error('A resposta de pacientes é inválida.');
+      setPacientes(data);
+      setErroPacientes('');
+    } catch (error) {
+      setErroPacientes(error instanceof Error ? error.message : 'Não foi possível carregar os pacientes.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const fetchVisitantes = () => {
-    fetch('/api/visitantes')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setVisitantes(data);
-      })
-      .catch(() => {});
+  const fetchVisitantes = async () => {
+    try {
+      const res = await fetch('/api/visitantes');
+      const data: unknown = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : 'Não foi possível carregar os visitantes.');
+      if (!Array.isArray(data)) throw new Error('A resposta de visitantes é inválida.');
+      setVisitantes(data);
+      setErroVisitantes('');
+    } catch (error) {
+      setErroVisitantes(error instanceof Error ? error.message : 'Não foi possível carregar os visitantes.');
+    }
   };
 
   useEffect(() => {
@@ -155,7 +163,8 @@ export default function RecepcaoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'SAIU' })
       });
-      if (!res.ok) throw new Error('Erro ao registrar saída.');
+      const data: unknown = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : 'Erro ao registrar saída.');
       fetchVisitantes();
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Erro ao registrar saída.');
@@ -361,6 +370,7 @@ export default function RecepcaoPage() {
         {abaAtiva === 'pacientes' && (
           <>
             <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0a1f44' }}><i className="las la-history"></i> Últimos Pacientes na Recepção</h3>
+            {erroPacientes && <p role="alert" style={{ color: '#b91c1c' }}>{erroPacientes}</p>}
             {loading ? (
               <p style={{ textAlign: 'center', padding: '20px' }}>Carregando...</p>
             ) : (
@@ -436,6 +446,7 @@ export default function RecepcaoPage() {
                 <i className="las la-plus-circle"></i> Novo Visitante
               </button>
             </div>
+            {erroVisitantes && <p role="alert" style={{ color: '#b91c1c' }}>{erroVisitantes}</p>}
 
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -520,17 +531,17 @@ export default function RecepcaoPage() {
             </div>
             <div style={{ padding: '25px' }}>
               <form onSubmit={criarPaciente}>
-                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-user"></i> Nome completo *</label>
-                <input required type="text" placeholder="Nome completo" value={formPaciente.nome} onChange={e => setFormPaciente({...formPaciente, nome: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }} />
+                <label htmlFor="recepcao-paciente-nome" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-user" aria-hidden="true"></i> Nome completo *</label>
+                <input id="recepcao-paciente-nome" required type="text" maxLength={160} placeholder="Nome completo" value={formPaciente.nome} onChange={e => setFormPaciente({...formPaciente, nome: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }} />
 
-                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-id-card"></i> CPF *</label>
-                <input required type="text" placeholder="000.000.000-00" value={formPaciente.cpf} onChange={e => setFormPaciente({...formPaciente, cpf: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
+                <label htmlFor="recepcao-paciente-cpf" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-id-card" aria-hidden="true"></i> CPF *</label>
+                <input id="recepcao-paciente-cpf" required type="text" maxLength={20} placeholder="000.000.000-00" value={formPaciente.cpf} onChange={e => setFormPaciente({...formPaciente, cpf: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
 
-                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-id-card"></i> RG *</label>
-                <input required type="text" placeholder="00.000.000-0" value={formPaciente.rg} onChange={e => setFormPaciente({...formPaciente, rg: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
+                <label htmlFor="recepcao-paciente-rg" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-id-card" aria-hidden="true"></i> RG *</label>
+                <input id="recepcao-paciente-rg" required type="text" maxLength={30} placeholder="00.000.000-0" value={formPaciente.rg} onChange={e => setFormPaciente({...formPaciente, rg: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
 
-                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-tint"></i> Tipo Sanguíneo *</label>
-                <select required value={formPaciente.tipoSanguineo} onChange={e => setFormPaciente({...formPaciente, tipoSanguineo: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none', background: 'white' }}>
+                <label htmlFor="recepcao-paciente-tipo-sanguineo" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-tint" aria-hidden="true"></i> Tipo Sanguíneo *</label>
+                <select id="recepcao-paciente-tipo-sanguineo" required value={formPaciente.tipoSanguineo} onChange={e => setFormPaciente({...formPaciente, tipoSanguineo: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none', background: 'white' }}>
                   <option value="">Selecione...</option>
                   <option value="A+">A+</option><option value="A-">A-</option>
                   <option value="B+">B+</option><option value="B-">B-</option>
@@ -538,14 +549,14 @@ export default function RecepcaoPage() {
                   <option value="O+">O+</option><option value="O-">O-</option>
                 </select>
 
-                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-allergies"></i> Alergias *</label>
-                <input required type="text" placeholder="Ex: Penicilina, Frutos do mar, ou 'Nenhuma'" value={formPaciente.alergias} onChange={e => setFormPaciente({...formPaciente, alergias: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
+                <label htmlFor="recepcao-paciente-alergias" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-allergies" aria-hidden="true"></i> Alergias *</label>
+                <input id="recepcao-paciente-alergias" required type="text" maxLength={2000} placeholder="Ex: Penicilina, Frutos do mar, ou 'Nenhuma'" value={formPaciente.alergias} onChange={e => setFormPaciente({...formPaciente, alergias: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
 
-                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-calendar"></i> Data de Nascimento</label>
-                <input type="date" value={formPaciente.nascimento} onChange={e => setFormPaciente({...formPaciente, nascimento: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
+                <label htmlFor="recepcao-paciente-nascimento" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-calendar" aria-hidden="true"></i> Data de Nascimento *</label>
+                <input id="recepcao-paciente-nascimento" required type="date" value={formPaciente.nascimento} onChange={e => setFormPaciente({...formPaciente, nascimento: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
 
-                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-phone"></i> Telefone</label>
-                <input type="text" placeholder="(00) 00000-0000" value={formPaciente.telefone} onChange={e => setFormPaciente({...formPaciente, telefone: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '20px', boxSizing: 'border-box', outline: 'none' }} />
+                <label htmlFor="recepcao-paciente-telefone" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-phone" aria-hidden="true"></i> Telefone</label>
+                <input id="recepcao-paciente-telefone" type="text" maxLength={40} placeholder="(00) 00000-0000" value={formPaciente.telefone} onChange={e => setFormPaciente({...formPaciente, telefone: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '20px', boxSizing: 'border-box', outline: 'none' }} />
 
                 <button type="submit" style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: 'white', border: 'none', padding: '13px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(22,163,74,0.3)' }}>
                   <i className="las la-save"></i> Cadastrar e Iniciar Atendimento
@@ -566,14 +577,14 @@ export default function RecepcaoPage() {
             </div>
             <div style={{ padding: '25px' }}>
               <form onSubmit={criarVisitante}>
-                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-user"></i> Nome completo *</label>
-                <input required type="text" placeholder="Nome do visitante" value={formVisitante.nome} onChange={e => setFormVisitante({...formVisitante, nome: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
+                <label htmlFor="recepcao-visitante-nome" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-user" aria-hidden="true"></i> Nome completo *</label>
+                <input id="recepcao-visitante-nome" required type="text" maxLength={160} placeholder="Nome do visitante" value={formVisitante.nome} onChange={e => setFormVisitante({...formVisitante, nome: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
 
-                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-id-card"></i> Documento (RG/CPF)</label>
-                <input type="text" placeholder="Documento (opcional)" value={formVisitante.documento} onChange={e => setFormVisitante({...formVisitante, documento: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
+                <label htmlFor="recepcao-visitante-documento" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-id-card" aria-hidden="true"></i> Documento (RG/CPF)</label>
+                <input id="recepcao-visitante-documento" type="text" maxLength={40} placeholder="Documento (opcional)" value={formVisitante.documento} onChange={e => setFormVisitante({...formVisitante, documento: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
 
-                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-map-marker"></i> Destino</label>
-                <input type="text" placeholder="Ex: Leito 104, UTI, Diretoria" value={formVisitante.destino} onChange={e => setFormVisitante({...formVisitante, destino: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '20px', boxSizing: 'border-box', outline: 'none' }} />
+                <label htmlFor="recepcao-visitante-destino" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-map-marker" aria-hidden="true"></i> Destino</label>
+                <input id="recepcao-visitante-destino" type="text" maxLength={160} placeholder="Ex: Leito 104, UTI, Diretoria" value={formVisitante.destino} onChange={e => setFormVisitante({...formVisitante, destino: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '20px', boxSizing: 'border-box', outline: 'none' }} />
 
                 <button type="submit" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', border: 'none', padding: '13px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}>
                   <i className="las la-door-open"></i> Registrar Entrada

@@ -16,7 +16,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
     }
     const input = body as Record<string, unknown>
-    const allowedFields = new Set(['nome', 'categoria', 'quantidade', 'unidade', 'minimo', 'lote', 'validade', 'fornecedor', 'localizacao'])
+    const allowedFields = new Set(['nome', 'categoria', 'subcategoria', 'quantidade', 'unidade', 'minimo', 'lote', 'validade', 'fornecedor', 'localizacao'])
     if (Object.keys(input).some(field => !allowedFields.has(field))) {
       return NextResponse.json({ error: 'Campo não permitido' }, { status: 400 })
     }
@@ -27,7 +27,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         return NextResponse.json({ error: `Campo ${field} inválido` }, { status: 400 })
       }
     }
-    for (const field of ['unidade', 'lote', 'fornecedor', 'localizacao'] as const) {
+    for (const field of ['unidade', 'lote', 'fornecedor', 'localizacao', 'subcategoria'] as const) {
       const value = input[field]
       if (value !== undefined && value !== null && (typeof value !== 'string' || value.length > 200)) {
         return NextResponse.json({ error: `Campo ${field} inválido` }, { status: 400 })
@@ -59,6 +59,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const data: Prisma.EstoqueItemUncheckedUpdateManyInput = {}
     if (input.nome !== undefined) data.nome = (input.nome as string).trim()
     if (input.categoria !== undefined) data.categoria = (input.categoria as string).trim()
+    if (input.subcategoria !== undefined) data.subcategoria = input.subcategoria as string | null
     if (input.quantidade !== undefined) data.quantidade = input.quantidade as number
     if (input.unidade !== undefined) data.unidade = input.unidade as string | null
     if (input.minimo !== undefined) data.minimo = input.minimo as number

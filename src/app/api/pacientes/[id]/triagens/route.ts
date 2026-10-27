@@ -11,6 +11,7 @@ export async function POST (request: NextRequest, { params }: { params: Promise<
     }
 
     const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
     const { id } = await params
     let body: unknown
     try { body = await request.json() } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }) }

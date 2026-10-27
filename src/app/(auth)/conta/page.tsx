@@ -33,28 +33,40 @@ export default function ContaPage() {
   const [sucesso, setSucesso] = useState('');
   const [erro, setErro] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
   useEffect(() => {
     if (status === 'unauthenticated') { router.replace('/'); return; }
     if (status === 'authenticated') {
-      fetch('/api/me')
-        .then(r => r.ok ? r.json() : null)
+      const controller = new AbortController();
+      setIsLoadingProfile(true);
+      fetch('/api/me', { signal: controller.signal })
+        .then(async response => {
+          const data = await response.json().catch(() => null);
+          if (!response.ok) throw new Error(data?.error || 'Não foi possível carregar os dados da conta.');
+          return data;
+        })
         .then(data => {
-          if (data) {
-            setDadosBanco(data);
-            setNome(data.nome || '');
-            if (data.avatar) setFotoSrc(data.avatar);
+          setDadosBanco(data);
+          setNome(data.nome || '');
+          setFotoSrc(data.avatar || null);
+          setErro('');
+        })
+        .catch(error => {
+          if (!(error instanceof Error && error.name === 'AbortError')) {
+            setErro(error instanceof Error ? error.message : 'Não foi possível carregar os dados da conta.');
           }
         })
-        .catch(() => {});
+        .finally(() => { if (!controller.signal.aborted) setIsLoadingProfile(false); });
+      return () => controller.abort();
     }
   }, [status, router]);
 
   const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setErro('Selecione um arquivo de imagem válido.');
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
+      setErro('Selecione uma imagem PNG, JPEG, WebP ou GIF.');
       e.target.value = '';
       return;
     }
@@ -153,7 +165,7 @@ export default function ContaPage() {
             <label htmlFor="uploadFoto" className="btn-salvar-conta" style={{ background: '#64748b', padding: '8px 14px', fontSize: 13, marginTop: 12, cursor: 'pointer' }}>
               <i className="las la-camera"></i> Trocar Foto
             </label>
-            <input id="uploadFoto" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFoto} />
+            <input id="uploadFoto" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={handleFoto} />
           </div>
 
           <div className="info-perfil">
@@ -172,22 +184,25 @@ export default function ContaPage() {
         {/* FORMULÁRIO */}
         <form onSubmit={handleSubmit}>
           <div className="form-grupo">
-            <label><i className="las la-user"></i> Nome completo</label>
+            <label htmlFor="conta-nome"><i className="las la-user"></i> Nome completo</label>
             <input
+              id="conta-nome"
               type="text"
               value={nome}
               onChange={e => setNome(e.target.value)}
               placeholder="Nome completo"
+              maxLength={160}
               required
             />
           </div>
 
           <div className="form-grupo">
-            <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>
+            <label htmlFor="conta-email" style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>
               <i className="las la-envelope"></i> E-mail
               <span style={{ marginLeft: 8, background: '#f1f5f9', padding: '2px 8px', borderRadius: 6, color: '#64748b' }}>Não editável</span>
             </label>
             <input
+              id="conta-email"
               type="email"
               value={dadosBanco?.email || session?.user?.email || ''}
               disabled
@@ -203,8 +218,9 @@ export default function ContaPage() {
 
           <div className="form-linha">
             <div className="form-grupo">
-              <label>Nova Senha</label>
+              <label htmlFor="conta-nova-senha">Nova Senha</label>
               <input
+                id="conta-nova-senha"
                 type="password"
                 value={novaSenha}
                 onChange={e => setNovaSenha(e.target.value)}
@@ -212,8 +228,9 @@ export default function ContaPage() {
               />
             </div>
             <div className="form-grupo">
-              <label>Confirmar Nova Senha</label>
+              <label htmlFor="conta-confirmar-senha">Confirmar Nova Senha</label>
               <input
+                id="conta-confirmar-senha"
                 type="password"
                 value={confirmarSenha}
                 onChange={e => setConfirmarSenha(e.target.value)}
@@ -223,13 +240,14 @@ export default function ContaPage() {
           </div>
 
           <div className="form-grupo">
-            <label>
+            <label htmlFor="conta-senha-atual">
               Senha Atual{' '}
               <span style={{ color: '#dc2626', fontWeight: 400, fontSize: 12 }}>
                 (obrigatória para alterar a senha)
               </span>
             </label>
             <input
+              id="conta-senha-atual"
               type="password"
               value={senhaAtual}
               onChange={e => setSenhaAtual(e.target.value)}
@@ -237,7 +255,7 @@ export default function ContaPage() {
             />
           </div>
 
-          <button type="submit" className="btn-salvar-conta" disabled={isSaving}>
+          <button type="submit" className="btn-salvar-conta" disabled={isSaving || isLoadingProfile}>
             <i className={`las ${isSaving ? 'la-spinner la-spin' : 'la-save'}`}></i>
             {isSaving ? 'Salvando...' : 'Salvar Alterações'}
           </button>

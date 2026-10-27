@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isRecord } from '@/lib/request-validation';
 
-const TIPOS_FEEDBACK = new Set(['SUGESTAO', 'ELOGIO', 'RECLAMACAO']);
+const TIPOS_FEEDBACK = new Set(['SUGESTAO', 'ELOGIO', 'RECLAMACAO', 'BUG']);
 
 export async function GET() {
   try {
@@ -25,8 +25,6 @@ export async function GET() {
           select: {
             id: true,
             nome: true,
-            email: true,
-            cargo: true
           }
         }
       },
@@ -72,8 +70,6 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             nome: true,
-            email: true,
-            cargo: true
           }
         }
       }

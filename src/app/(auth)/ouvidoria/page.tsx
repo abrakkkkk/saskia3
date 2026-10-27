@@ -1,14 +1,15 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import './ouvidoria.css';
 
 export default function OuvidoriaPage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const isAdmin = (session?.user as any)?.cargo === 'ADMIN';
   const [tabAtiva, setTabAtiva] = useState('registrar');
   const [loading, setLoading] = useState(true);
   const [erroCarga, setErroCarga] = useState('');
+  const [salvando, setSalvando] = useState(false);
   
   // Dados
   const [manifestacoes, setManifestacoes] = useState<any[]>([]);
@@ -21,26 +22,34 @@ export default function OuvidoriaPage() {
     descricao: ''
   });
 
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/ouvidoria');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Não foi possível carregar as manifestações.');
-      setManifestacoes(Array.isArray(data) ? data : []);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Não foi possível carregar as manifestações.');
+      if (!Array.isArray(data)) throw new Error('A resposta da ouvidoria está inválida.');
+      setManifestacoes(data);
       setErroCarga('');
     } catch (e) {
       setErroCarga(e instanceof Error ? e.message : 'Não foi possível carregar as manifestações.');
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    carregarDados();
   }, []);
 
+  useEffect(() => {
+    if (sessionStatus === 'loading') return;
+    if (sessionStatus !== 'authenticated') {
+      setLoading(false);
+      setErroCarga('É necessário entrar novamente para acessar a ouvidoria.');
+      return;
+    }
+    void carregarDados();
+  }, [sessionStatus, carregarDados]);
+
   const registrarManifestacao = async () => {
+    if (salvando) return;
     if (!form.descricao.trim()) {
       alert(" Descreva a manifestação!");
       return;
@@ -53,15 +62,16 @@ export default function OuvidoriaPage() {
       mensagem: form.descricao.trim()
     };
 
+    setSalvando(true);
     try {
       const res = await fetch('/api/ouvidoria', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error('Erro ao registrar');
-      
-      const nova = await res.json();
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(typeof resposta?.error === 'string' ? resposta.error : 'Erro ao registrar manifestação');
+      const nova = resposta;
       
       setForm({
         tipo: 'Elogio',
@@ -70,10 +80,12 @@ export default function OuvidoriaPage() {
         descricao: ''
       });
       alert(` Manifestação registrada com sucesso! Protocolo: ${nova.protocolo}`);
-      carregarDados();
+      void carregarDados();
       setTabAtiva('lista');
     } catch (error: any) {
       alert(error.message);
+    } finally {
+      setSalvando(false);
     }
   };
 
@@ -86,20 +98,20 @@ export default function OuvidoriaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: "Respondida" })
       });
-      if (!res.ok) throw new Error('Erro ao responder');
-      
-      carregarDados();
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(typeof resposta?.error === 'string' ? resposta.error : 'Erro ao responder manifestação');
+      void carregarDados();
     } catch (error: any) {
       alert(error.message);
     }
   };
 
   // Estatísticas
-  const estaRespondida = (status: string) => ['RESPONDIDA', 'RESPONDIDO', 'CONCLUIDA', 'CONCLUÍDA'].includes(status.toUpperCase());
+  const estaRespondida = (status: string) => ['RESPONDIDA', 'RESPONDIDO', 'CONCLUIDA', 'CONCLUÍDA', 'ENCERRADA'].includes(status.toUpperCase());
   const pendentes = manifestacoes.filter(m => !estaRespondida(m.status || '')).length;
   const respondidas = manifestacoes.filter(m => estaRespondida(m.status || '')).length;
 
-  if (loading && manifestacoes.length === 0) return <div>Carregando...</div>;
+  if (sessionStatus === 'loading' || (loading && manifestacoes.length === 0)) return <div role="status">Carregando manifestações...</div>;
 
   return (
     <div className="conteudo">
@@ -146,8 +158,8 @@ export default function OuvidoriaPage() {
             <h3><i className="las la-headset"></i> Registrar Manifestação</h3>
             <div className="form-grid">
               <div className="form-grupo">
-                <label>Tipo *</label>
-                <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
+                <label htmlFor="ouv-tipo">Tipo *</label>
+                <select id="ouv-tipo" value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
                   <option>Elogio</option>
                   <option>Sugestão</option>
                   <option>Reclamação</option>
@@ -155,12 +167,12 @@ export default function OuvidoriaPage() {
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Nome (opcional)</label>
-                <input type="text" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} placeholder="Anônimo se não preencher" />
+                <label htmlFor="ouv-nome">Nome (opcional)</label>
+                <input id="ouv-nome" type="text" maxLength={200} value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} placeholder="Anônimo se não preencher" />
               </div>
               <div className="form-grupo">
-                <label>Setor Relacionado</label>
-                <select value={form.setor} onChange={e => setForm({...form, setor: e.target.value})}>
+                <label htmlFor="ouv-setor">Setor Relacionado</label>
+                <select id="ouv-setor" value={form.setor} onChange={e => setForm({...form, setor: e.target.value})}>
                   <option>Geral</option>
                   <option>Emergência</option>
                   <option>UTI</option>
@@ -170,12 +182,12 @@ export default function OuvidoriaPage() {
                 </select>
               </div>
               <div className="form-grupo full">
-                <label>Descrição *</label>
-                <textarea rows={4} value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} placeholder="Descreva sua manifestação..."></textarea>
+                <label htmlFor="ouv-descricao">Descrição *</label>
+                <textarea id="ouv-descricao" rows={4} maxLength={5000} value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} placeholder="Descreva sua manifestação..."></textarea>
               </div>
             </div>
-            <button className="btn btn-success" onClick={registrarManifestacao} style={{ width: '100%', marginTop: '15px' }}>
-              <i className="las la-save"></i> Enviar Manifestação
+            <button className="btn btn-success" onClick={registrarManifestacao} disabled={salvando} style={{ width: '100%', marginTop: '15px' }}>
+              <i className="las la-save" aria-hidden="true"></i> {salvando ? 'Enviando...' : 'Enviar Manifestação'}
             </button>
           </div>
         )}

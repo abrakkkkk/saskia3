@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import './usuario.css';
 
 interface Usuario {
@@ -12,32 +13,46 @@ interface Usuario {
 }
 
 export default function UsuarioPage() {
+  const { data: session, status: statusSessao } = useSession();
+  const isAdmin = (session?.user as { cargo?: string } | undefined)?.cargo === 'ADMIN';
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [filtroAtual, setFiltroAtual] = useState('todos');
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState('');
+  const [acaoId, setAcaoId] = useState('');
 
   // Modal State
   const [modalAberto, setModalAberto] = useState(false);
   const [formUsuario, setFormUsuario] = useState({ id: '', nome: '', email: '', senha: '', cargo: 'MEDICO' });
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    carregarUsuarios();
-  }, []);
-
-  const carregarUsuarios = async () => {
+  const carregarUsuarios = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch('/api/usuarios');
-      if (res.ok) {
-        const data = await res.json();
-        setUsuarios(data);
-      }
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Não foi possível carregar usuários.');
+      if (!Array.isArray(data)) throw new Error('A resposta de usuários é inválida.');
+      setUsuarios(data);
+      setErro('');
     } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
+      setUsuarios([]);
+      setErro(error instanceof Error ? error.message : 'Não foi possível carregar usuários.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (statusSessao === 'loading') return;
+    if (!isAdmin) {
+      setUsuarios([]);
+      setErro('');
+      setLoading(false);
+      return;
+    }
+    void carregarUsuarios();
+  }, [statusSessao, isAdmin, carregarUsuarios]);
 
   // Funções Auxiliares para traduzir o Cargo do Prisma para Nível/Cargo da UI Antiga
   const getNivel = (cargo: string) => {
@@ -66,9 +81,10 @@ export default function UsuarioPage() {
   };
 
   // Stats
-  const adminCount = usuarios.filter(u => getNivel(u.cargo) === 'admin').length;
-  const profissionalCount = usuarios.filter(u => getNivel(u.cargo) === 'profissional').length;
-  const recepcaoCount = usuarios.filter(u => getNivel(u.cargo) === 'recepcao').length;
+  const usuariosAtivos = usuarios.filter(u => u.ativo);
+  const adminCount = usuariosAtivos.filter(u => getNivel(u.cargo) === 'admin').length;
+  const profissionalCount = usuariosAtivos.filter(u => getNivel(u.cargo) === 'profissional').length;
+  const recepcaoCount = usuariosAtivos.filter(u => getNivel(u.cargo) === 'recepcao').length;
 
   // Filtro
   const usuariosFiltrados = usuarios.filter(u => {
@@ -86,12 +102,16 @@ export default function UsuarioPage() {
   };
 
   const salvarUsuario = async () => {
-    if (!formUsuario.nome || !formUsuario.email) {
+    if (!formUsuario.nome.trim() || !formUsuario.email.trim()) {
       alert("Preencha nome e e-mail!");
       return;
     }
     if (!formUsuario.id && !formUsuario.senha) {
       alert("Informe uma senha para o novo usuário!");
+      return;
+    }
+    if (formUsuario.senha && new TextEncoder().encode(formUsuario.senha).length > 72) {
+      alert('A senha pode ter no máximo 72 bytes.');
       return;
     }
 
@@ -111,8 +131,8 @@ export default function UsuarioPage() {
         setModalAberto(false);
         carregarUsuarios();
       } else {
-        const errorData = await res.json();
-        alert(errorData.error || "Erro ao salvar usuário");
+        const errorData = await res.json().catch(() => null);
+        alert(errorData?.error || "Erro ao salvar usuário");
       }
     } catch (error) {
       alert("Erro de conexão");
@@ -122,26 +142,51 @@ export default function UsuarioPage() {
   };
 
   const excluirUsuario = async (id: string) => {
-    if (await confirm("Tem certeza que deseja excluir este usuário?")) {
+    if (await confirm("Desativar este usuário? Ele permanecerá no histórico e poderá ser reativado.")) {
       try {
+        setAcaoId(id);
         const res = await fetch(`/api/usuarios/${id}`, { method: 'DELETE' });
         if (res.ok) {
-          alert("Usuário excluído!");
-          carregarUsuarios();
+          alert("Usuário desativado!");
+          await carregarUsuarios();
         } else {
-          alert("Erro ao excluir usuário");
+          const data = await res.json().catch(() => null);
+          alert(data?.error || "Erro ao desativar usuário");
         }
       } catch (error) {
         alert("Erro de conexão");
+      } finally {
+        setAcaoId('');
       }
+    }
+  };
+
+  const ativarUsuario = async (id: string) => {
+    try {
+      setAcaoId(id);
+      const res = await fetch(`/api/usuarios/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ativo: true }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || 'Erro ao reativar usuário');
+      await carregarUsuarios();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro de conexão');
+    } finally {
+      setAcaoId('');
     }
   };
 
   return (
     <div className="conteudo">
+      {statusSessao !== 'loading' && !isAdmin ? (
+        <p role="alert">Acesso restrito a administradores.</p>
+      ) : <>
       <div className="header-usuarios">
         <h2><i className="las la-users"></i> Usuários do Sistema</h2>
-        <button className="btn-novo" onClick={() => abrirModal()}>
+        <button className="btn-novo" onClick={() => abrirModal()} disabled={statusSessao === 'loading' || !isAdmin}>
           <i className="las la-user-plus"></i> Novo Usuário
         </button>
       </div>
@@ -161,8 +206,8 @@ export default function UsuarioPage() {
           <div className="numero">{recepcaoCount}</div>
         </div>
         <div className="stat-card-user">
-          <h4><i className="las la-users"></i> Total</h4>
-          <div className="numero">{usuarios.length}</div>
+          <h4><i className="las la-users"></i> Usuários ativos</h4>
+          <div className="numero">{usuariosAtivos.length}</div>
         </div>
       </div>
 
@@ -184,14 +229,17 @@ export default function UsuarioPage() {
               <th>Nível</th>
               <th>Cargo</th>
               <th>Cadastro</th>
+              <th>Status</th>
               <th>Ações</th>
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr><td colSpan={6} className="sem-dados">Carregando usuários...</td></tr>
+            {erro ? (
+              <tr><td colSpan={7} className="sem-dados" role="alert">{erro}</td></tr>
+            ) : loading || statusSessao === 'loading' ? (
+              <tr><td colSpan={7} className="sem-dados">Carregando usuários...</td></tr>
             ) : usuariosFiltrados.length === 0 ? (
-              <tr><td colSpan={6} className="sem-dados">Nenhum usuário encontrado</td></tr>
+              <tr><td colSpan={7} className="sem-dados">Nenhum usuário encontrado</td></tr>
             ) : (
               usuariosFiltrados.map(u => {
                 const nivel = getNivel(u.cargo);
@@ -202,9 +250,14 @@ export default function UsuarioPage() {
                     <td><span className={`badge-nivel nivel-${nivel}`}>{getNivelNome(nivel)}</span></td>
                     <td>{getCargoLabel(u.cargo)}</td>
                     <td>{new Date(u.createdAt).toLocaleDateString('pt-BR')}</td>
+                    <td>{u.ativo ? 'Ativo' : 'Inativo'}</td>
                     <td>
-                      <button className="btn-editar" onClick={() => abrirModal(u)}><i className="las la-edit"></i></button>
-                      <button className="btn-excluir" onClick={() => excluirUsuario(u.id)}><i className="las la-trash"></i></button>
+                      <button className="btn-editar" aria-label={`Editar ${u.nome}`} onClick={() => abrirModal(u)} disabled={!isAdmin || Boolean(acaoId)}><i className="las la-edit" aria-hidden="true"></i></button>
+                      {u.ativo ? (
+                        <button className="btn-excluir" aria-label={`Desativar ${u.nome}`} onClick={() => excluirUsuario(u.id)} disabled={!isAdmin || Boolean(acaoId)}><i className="las la-user-slash" aria-hidden="true"></i></button>
+                      ) : (
+                        <button className="btn-editar" aria-label={`Reativar ${u.nome}`} onClick={() => ativarUsuario(u.id)} disabled={!isAdmin || Boolean(acaoId)}><i className="las la-user-check" aria-hidden="true"></i></button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -223,17 +276,17 @@ export default function UsuarioPage() {
               <button onClick={() => setModalAberto(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>×</button>
             </div>
             <div className="modal-body">
-              <label>Nome completo</label>
-              <input type="text" value={formUsuario.nome} onChange={e => setFormUsuario({...formUsuario, nome: e.target.value})} placeholder="Nome completo" />
+              <label htmlFor="usuario-nome">Nome completo</label>
+              <input id="usuario-nome" name="nome" type="text" maxLength={160} required value={formUsuario.nome} onChange={e => setFormUsuario({...formUsuario, nome: e.target.value})} placeholder="Nome completo" />
               
-              <label>E-mail</label>
-              <input type="email" value={formUsuario.email} onChange={e => setFormUsuario({...formUsuario, email: e.target.value})} placeholder="E-mail" />
+              <label htmlFor="usuario-email">E-mail</label>
+              <input id="usuario-email" name="email" type="email" maxLength={254} required value={formUsuario.email} onChange={e => setFormUsuario({...formUsuario, email: e.target.value})} placeholder="E-mail" />
               
-              <label>Senha {formUsuario.id && '(Deixe em branco para manter a atual)'}</label>
-              <input type="password" value={formUsuario.senha} onChange={e => setFormUsuario({...formUsuario, senha: e.target.value})} placeholder="Senha" />
+              <label htmlFor="usuario-senha">Senha {formUsuario.id && '(Deixe em branco para manter a atual)'}</label>
+              <input id="usuario-senha" name="senha" type="password" maxLength={72} minLength={formUsuario.id ? undefined : 12} autoComplete="new-password" value={formUsuario.senha} onChange={e => setFormUsuario({...formUsuario, senha: e.target.value})} placeholder="Senha" />
               
-              <label>Cargo do Sistema</label>
-              <select value={formUsuario.cargo} onChange={e => setFormUsuario({...formUsuario, cargo: e.target.value})}>
+              <label htmlFor="usuario-cargo">Cargo do Sistema</label>
+              <select id="usuario-cargo" name="cargo" value={formUsuario.cargo} onChange={e => setFormUsuario({...formUsuario, cargo: e.target.value})}>
                 <option value="ADMIN">Gestor / Administrador</option>
                 <option value="MEDICO">Médico(a)</option>
                 <option value="ENFERMEIRO_ASSISTENCIAL">Enfermeiro(a)</option>
@@ -250,6 +303,7 @@ export default function UsuarioPage() {
           </div>
         </div>
       )}
+      </>}
     </div>
   );
 }

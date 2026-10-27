@@ -1,13 +1,17 @@
 'use client';
-import { getSessionUser } from '@/lib/session';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import './obitos.css';
 
+function dataLocalISO(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export default function ObitosPage() {
-  const { data: session } = useSession();
+  const { status: statusSessao } = useSession();
   const [tabAtiva, setTabAtiva] = useState('registro');
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
   
   // Dados
   const [obitos, setObitos] = useState<any[]>([]);
@@ -18,16 +22,13 @@ export default function ObitosPage() {
     nascimento: '',
     cpf: '',
     sexo: '',
-    data: '',
+    data: dataLocalISO(),
     hora: '',
     local: 'Hospitalar - Enfermaria',
     causa: '',
     causaSec: '',
     medico: '',
     prontuario: '',
-    declaracaoObito: '',
-    documentoAnexo: '',
-    documentoBase64: '',
     responsavel: '',
     telefone: '',
     observacoes: ''
@@ -40,25 +41,31 @@ export default function ObitosPage() {
   // Modal
   const [modalVisualizar, setModalVisualizar] = useState<any>(null);
 
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/obitos');
-      if (res.ok) {
-        setObitos(await res.json());
-      }
-    } catch (e) {
-      console.error(e);
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(resposta?.error || 'Não foi possível carregar os registros de óbito.');
+      if (!Array.isArray(resposta)) throw new Error('A resposta dos registros de óbito é inválida.');
+      setObitos(resposta);
+      setErroCarga('');
+    } catch (error) {
+      setErroCarga(error instanceof Error ? error.message : 'Não foi possível carregar os registros de óbito.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    carregarDados();
-    const hoje = new Date().toISOString().split('T')[0];
-    setForm(prev => ({ ...prev, data: hoje }));
-  }, []);
+    if (statusSessao === 'loading') return;
+    if (statusSessao !== 'authenticated') {
+      setErroCarga('Entre na sua conta para acessar os registros de óbito.');
+      setLoading(false);
+      return;
+    }
+    void carregarDados();
+  }, [statusSessao, carregarDados]);
 
   const registrarObito = async () => {
     if (!form.nome || !form.data || !form.hora || !form.causa || !form.medico) {
@@ -66,14 +73,8 @@ export default function ObitosPage() {
       return;
     }
 
-    const u = JSON.stringify(getSessionUser());
-    const usuario = session?.user || (u ? JSON.parse(u) : null);
-
     const payload = {
       ...form,
-      registradoPor: usuario?.name || usuario?.nome || "Sistema",
-      dataRegistro: new Date().toLocaleString('pt-BR'),
-      certidaoEmitida: false
     };
 
     try {
@@ -83,30 +84,15 @@ export default function ObitosPage() {
         body: JSON.stringify(payload)
       });
       
-      if (!res.ok) throw new Error('Erro ao registrar óbito');
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(resposta?.error || 'Erro ao registrar óbito');
 
       limparFormulario();
       alert(" Óbito registrado com sucesso!");
-      carregarDados();
+      await carregarDados();
     } catch (error: any) {
       alert(error.message);
     }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      if (ev.target?.result) {
-        setForm(prev => ({
-          ...prev,
-          documentoAnexo: file.name,
-          documentoBase64: ev.target?.result as string
-        }));
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   const limparFormulario = () => {
@@ -115,16 +101,13 @@ export default function ObitosPage() {
       nascimento: '',
       cpf: '',
       sexo: '',
-      data: new Date().toISOString().split('T')[0],
+      data: dataLocalISO(),
       hora: '',
       local: 'Hospitalar - Enfermaria',
       causa: '',
       causaSec: '',
       medico: '',
       prontuario: '',
-      declaracaoObito: '',
-      documentoAnexo: '',
-      documentoBase64: '',
       responsavel: '',
       telefone: '',
       observacoes: ''
@@ -140,10 +123,11 @@ export default function ObitosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ certidaoEmitida: true })
       });
-      if (!res.ok) throw new Error('Erro ao emitir certidão');
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(resposta?.error || 'Erro ao emitir certidão');
       
       alert(" Certidão emitida com sucesso!");
-      carregarDados();
+      await carregarDados();
     } catch (error: any) {
       alert(error.message);
     }
@@ -203,6 +187,8 @@ export default function ObitosPage() {
             </button>
           </div>
         </div>
+
+        {erroCarga && <p role="alert" className="form-obitos" style={{ color: '#b91c1c' }}>{erroCarga}</p>}
 
         <div className="status-cards">
           <div className="status-card">
@@ -300,13 +286,8 @@ export default function ObitosPage() {
                 <input type="text" value={form.prontuario} onChange={e => setForm({...form, prontuario: e.target.value})} />
               </div>
               <div className="form-grupo">
-                <label><i className="las la-certificate"></i> Nº Declaração de Óbito (D.O.)</label>
-                <input type="text" value={form.declaracaoObito} onChange={e => setForm({...form, declaracaoObito: e.target.value})} placeholder="Ex: DO-12345678-9" />
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-file-upload"></i> Documento Assinado pelo Médico (PDF / Foto)</label>
-                <input type="file" accept=".pdf,image/*" onChange={handleFileChange} />
-                {form.documentoAnexo && <small style={{ color: '#16a34a', display: 'block', marginTop: 4 }}> Anexado: {form.documentoAnexo}</small>}
+                <label><i className="las la-file-upload" aria-hidden="true"></i> Documento Assinado pelo Médico</label>
+                <p role="status" style={{ color: '#64748b', margin: '8px 0' }}>O armazenamento de documentos e o cadastro do número da Declaração de Óbito ainda não estão persistidos e estão indisponíveis nesta tela.</p>
               </div>
               <div className="form-grupo">
                 <label><i className="las la-user-friends"></i> Responsável Familiar</label>
@@ -431,19 +412,8 @@ export default function ObitosPage() {
               <p style={{ gridColumn: '1/-1' }}><strong>Causas Secundárias:</strong> {modalVisualizar.causaSec || 'N/A'}</p>
               <p><strong>Médico:</strong> {modalVisualizar.medico}</p>
               <p><strong>Prontuário:</strong> {modalVisualizar.prontuario || 'N/I'}</p>
-              <p><strong>Nº Declaração Óbito (D.O.):</strong> {modalVisualizar.declaracaoObito || 'N/I'}</p>
               <p><strong>Responsável:</strong> {modalVisualizar.responsavel || 'N/I'}</p>
               <p><strong>Telefone Resp.:</strong> {modalVisualizar.telefone || 'N/I'}</p>
-              {modalVisualizar.documentoBase64 && (
-                <div style={{ gridColumn: '1/-1', background: '#ecfdf5', padding: '12px', borderRadius: '8px', border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '13px', color: '#065f46', fontWeight: 600 }}>
-                    <i className="las la-file-signature" style={{ fontSize: '18px', marginRight: '6px' }}></i> Documento Assinado pelo Médico Anexado
-                  </span>
-                  <a href={modalVisualizar.documentoBase64} download={modalVisualizar.documentoAnexo || 'declaracao_obito_assinada.pdf'} className="btn-obitos btn-success" style={{ padding: '6px 14px', fontSize: '12px', textDecoration: 'none' }}>
-                    <i className="las la-download"></i> Baixar Arquivo ({modalVisualizar.documentoAnexo || 'Documento'})
-                  </a>
-                </div>
-              )}
               <p style={{ gridColumn: '1/-1' }}><strong>Observações:</strong> {modalVisualizar.observacoes || 'Nenhuma'}</p>
             </div>
 

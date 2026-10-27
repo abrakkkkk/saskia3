@@ -19,6 +19,7 @@ export default function AdminConfiguracaoPage() {
   const [endereco, setEndereco] = useState('');
   const [telefone, setTelefone] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
+  const [logoPreviewErro, setLogoPreviewErro] = useState(false);
 
   useEffect(() => {
     if (!canManageHospital) return;
@@ -50,6 +51,10 @@ export default function AdminConfiguracaoPage() {
     }
     if (!nome.trim()) {
       setFeedback('O nome da instituição é obrigatório.');
+      return;
+    }
+    if (!cnpj.trim()) {
+      setFeedback('O CNPJ da instituição é obrigatório.');
       return;
     }
 
@@ -96,56 +101,73 @@ export default function AdminConfiguracaoPage() {
           
           <div className="form-grid">
             <div className="form-grupo full">
-              <label>Nome da Instituição *</label>
+              <label htmlFor="instituicao-nome">Nome da Instituição *</label>
               <input 
+                id="instituicao-nome"
+                name="nome"
                 type="text" 
                 value={nome} 
                 onChange={(e) => setNome(e.target.value)} 
                 placeholder="Ex: Saskia Saúde"
+                maxLength={160}
+                required
               />
             </div>
             
             <div className="form-grupo">
-              <label>CNPJ *</label>
+              <label htmlFor="instituicao-cnpj">CNPJ *</label>
               <input 
+                id="instituicao-cnpj"
+                name="cnpj"
                 type="text" 
                 value={cnpj} 
                 onChange={(e) => setCnpj(e.target.value)} 
                 placeholder="00.000.000/0001-00"
+                maxLength={20}
+                required
               />
             </div>
 
             <div className="form-grupo">
-              <label>Telefone Principal</label>
+              <label htmlFor="instituicao-telefone">Telefone Principal</label>
               <input 
+                id="instituicao-telefone"
+                name="telefone"
                 type="text" 
                 value={telefone} 
                 onChange={(e) => setTelefone(e.target.value)} 
                 placeholder="(00) 0000-0000"
+                maxLength={40}
               />
             </div>
 
             <div className="form-grupo full">
-              <label>Endereço Completo</label>
+              <label htmlFor="instituicao-endereco">Endereço Completo</label>
               <input 
+                id="instituicao-endereco"
+                name="endereco"
                 type="text" 
                 value={endereco} 
                 onChange={(e) => setEndereco(e.target.value)} 
                 placeholder="Rua, Número, Bairro, Cidade - UF"
+                maxLength={300}
               />
             </div>
 
             <div className="form-grupo full" style={{ marginTop: '10px' }}>
-              <label>Logotipo (URL da Imagem)</label>
+              <label htmlFor="instituicao-logo">Logotipo (URL da Imagem)</label>
               <input 
+                id="instituicao-logo"
+                name="logoUrl"
                 type="text" 
                 value={logoUrl} 
-                onChange={(e) => setLogoUrl(e.target.value)} 
+                onChange={(e) => { setLogoUrl(e.target.value); setLogoPreviewErro(false); }}
                 placeholder="https://exemplo.com/logo.png"
+                maxLength={2048}
               />
               <div className="logo-preview-box">
-                {logoUrl ? (
-                  <img src={logoUrl} alt="Logo preview" onError={(e) => { e.currentTarget.style.display='none'; }} />
+                {logoUrl && !logoPreviewErro ? (
+                  <img src={logoUrl} alt="Prévia do logotipo" onError={() => setLogoPreviewErro(true)} />
                 ) : (
                   <>
                     <ImagePlus aria-hidden="true" />

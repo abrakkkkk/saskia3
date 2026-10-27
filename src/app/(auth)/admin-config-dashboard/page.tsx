@@ -257,14 +257,15 @@ export default function AdminConfigDashboardPage() {
                             <span className="toggle-desc">{m.desc}</span>
                           </div>
                         </div>
-                        <label className="switch">
+                        <span className="switch">
                           <input 
                             type="checkbox" 
                             checked={isChecked}
+                            aria-label={`Ativar ${m.nome}`}
                             onChange={() => toggleModule(m.id)}
                           />
                           <span className="slider"></span>
-                        </label>
+                        </span>
                       </label>
                     );
                   })}

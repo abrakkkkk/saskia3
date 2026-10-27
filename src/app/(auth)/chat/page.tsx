@@ -31,9 +31,10 @@ function formatHora(iso: string) {
 }
 
 export default function ChatPage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const hospitalId = (session?.user as any)?.hospitalId;
   const usuario = session?.user as any;
+  const usuarioEmail = usuario?.email;
 
   const [contatos, setContatos] = useState<Contato[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
@@ -41,13 +42,23 @@ export default function ChatPage() {
   const [busca, setBusca] = useState('');
   const [texto, setTexto] = useState('');
   const [erroContatos, setErroContatos] = useState('');
+  const [carregandoContatos, setCarregandoContatos] = useState(false);
   const [erroMensagens, setErroMensagens] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [carregandoMensagens, setCarregandoMensagens] = useState(false);
   const msgContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!hospitalId || !usuario) return;
+    if (sessionStatus === 'loading') return;
+    let active = true;
+    setContatos([]);
+    setAtivo(null);
+    setErroContatos('');
+    if (!hospitalId || !usuarioEmail) {
+      setCarregandoContatos(false);
+      return () => { active = false; };
+    }
+    setCarregandoContatos(true);
     fetch('/api/chat/contatos')
       .then(async r => {
         const data = await r.json();
@@ -55,7 +66,8 @@ export default function ChatPage() {
         return data;
       })
       .then(data => {
-        const filtrados: any[] = Array.isArray(data) ? data.filter(u => u.email !== usuario.email) : [];
+        if (!active) return;
+        const filtrados: any[] = Array.isArray(data) ? data.filter(u => u.email !== usuarioEmail) : [];
         setContatos(filtrados.map((u, i) => ({
           id: u.id,
           nome: u.nome || u.email,
@@ -64,8 +76,12 @@ export default function ChatPage() {
           cor: CORES[i % CORES.length]
         })));
       })
-      .catch(error => setErroContatos(error instanceof Error ? error.message : 'Erro ao carregar profissionais.'));
-  }, [hospitalId, usuario]);
+      .catch(error => {
+        if (active) setErroContatos(error instanceof Error ? error.message : 'Erro ao carregar profissionais.');
+      })
+      .finally(() => { if (active) setCarregandoContatos(false); });
+    return () => { active = false; };
+  }, [hospitalId, usuarioEmail, sessionStatus]);
 
   useEffect(() => {
     if (!hospitalId || !ativo?.email) {
@@ -171,6 +187,7 @@ export default function ChatPage() {
             <Search size={16} aria-hidden="true" style={{ color: '#94a3b8' }} />
             <input
               type="text"
+              aria-label="Pesquisar profissionais"
               placeholder="Pesquisar contatos..."
               value={busca}
               onChange={e => setBusca(e.target.value)}
@@ -186,7 +203,9 @@ export default function ChatPage() {
 
         {/* Contatos */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {erroContatos ? (
+          {sessionStatus === 'loading' || carregandoContatos ? (
+            <div role="status" style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>Carregando profissionais...</div>
+          ) : erroContatos ? (
             <div role="alert" style={{ padding: '20px', color: '#b91c1c', fontSize: '13px' }}>{erroContatos}</div>
           ) : contatosFiltrados.length === 0 ? (
             <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>Nenhum outro profissional ativo disponível.</div>
@@ -195,13 +214,24 @@ export default function ChatPage() {
             return (
               <div
                 key={c.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setAtivo(c)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setAtivo(c);
+                  }
+                }}
+                aria-pressed={isAtivo}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
                   padding: '12px 16px', cursor: 'pointer',
                   background: isAtivo ? '#eff6ff' : 'transparent',
                   borderLeft: `3px solid ${isAtivo ? '#1e3a8a' : 'transparent'}`,
-                  transition: 'all 0.15s'
+                  transition: 'all 0.15s',
+                  width: '100%', borderTop: 0, borderRight: 0, borderBottom: 0,
+                  textAlign: 'left', font: 'inherit'
                 }}
                 onMouseEnter={e => { if (!isAtivo) (e.currentTarget as HTMLElement).style.background = '#f1f5f9'; }}
                 onMouseLeave={e => { if (!isAtivo) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
@@ -293,14 +323,17 @@ export default function ChatPage() {
               <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', padding: '8px 16px' }}>
                 <input
                   type="text"
+                  aria-label="Mensagem"
                   placeholder="Digite sua mensagem..."
                   value={texto}
                   onChange={e => setTexto(e.target.value)}
+                  maxLength={4000}
                   style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '14px', color: '#334155' }}
                 />
               </div>
               <button
                 type="submit"
+                aria-label="Enviar mensagem"
                 disabled={!texto.trim() || enviando || carregandoMensagens}
                 style={{
                   width: '42px', height: '42px', borderRadius: '50%', border: 'none',

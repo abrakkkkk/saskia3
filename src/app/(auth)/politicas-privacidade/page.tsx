@@ -1,27 +1,9 @@
-'use client';
-import { useEffect, useRef } from 'react';
 import './politicas-privacidade.css';
 
 export default function PoliticasPrivacidadePage() {
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        // Execute original JS logic
-        const scriptEl = document.createElement('script');
-        scriptEl.innerHTML = ``;
-        document.body.appendChild(scriptEl);
-
-        return () => {
-            if (scriptEl.parentNode) {
-                scriptEl.parentNode.removeChild(scriptEl);
-            }
-        };
-    }, []);
-
     return (
         <div 
             className="migrated-page-container" 
-            ref={containerRef}
             dangerouslySetInnerHTML={{ __html: `<div class="conteudo">
 
 <div class="politica-container">

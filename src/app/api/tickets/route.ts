@@ -54,7 +54,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(ticket, { status: 201 })
   } catch (error: unknown) {
     console.error('Erro ao criar ticket:', error)
-    const message = error instanceof Error ? error.message : 'Erro interno'
-    return NextResponse.json({ error: message }, { status: 400 })
+    return NextResponse.json({ error: 'Erro ao criar ticket' }, { status: 500 })
   }
 }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
+class StockMovementError extends Error {}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
@@ -43,16 +45,23 @@ export async function POST(request: NextRequest) {
     
     const usuarioId = session.user.id
 
-    const body: unknown = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    }
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
     }
     const input = body as Record<string, unknown>
-    const { tipo, itemId, quantidade, pacienteId, setor, fornecedor, responsavel, observacao } = input
+    const { tipo, itemId, quantidade, pacienteId, setor, fornecedor, observacao } = input
+    const categoria = input.categoria
+    const responsavel = session.user.name?.trim() || session.user.email || 'Sistema'
 
     if ((tipo !== 'ENTRADA' && tipo !== 'SAIDA') || typeof itemId !== 'string' || !itemId ||
       typeof quantidade !== 'number' || !Number.isSafeInteger(quantidade) || quantidade <= 0 || quantidade > 2_147_483_647 ||
-      typeof responsavel !== 'string' || !responsavel.trim()) {
+      (categoria !== undefined && categoria !== 'FARMACIA' && categoria !== 'ALMOXARIFADO')) {
       return NextResponse.json({ error: 'Dados obrigatórios faltando' }, { status: 400 })
     }
     for (const [field, value] of Object.entries({ pacienteId, setor, fornecedor, observacao })) {
@@ -74,15 +83,16 @@ export async function POST(request: NextRequest) {
         where: {
           id: itemId,
           hospitalId,
+          ...(categoria ? { categoria } : {}),
           ...(tipo === 'SAIDA' ? { quantidade: { gte: quantidade } } : { quantidade: { lte: 2_147_483_647 - quantidade } }),
         },
         data: { quantidade: { [tipo === 'ENTRADA' ? 'increment' : 'decrement']: quantidade } },
       })
       if (atualizado.count === 0) {
-        const item = await tx.estoqueItem.findFirst({ where: { id: itemId, hospitalId }, select: { quantidade: true } })
-        if (!item) throw new Error('Item não encontrado no estoque')
-        if (tipo === 'SAIDA') throw new Error(`Estoque insuficiente. Disponível: ${item.quantidade}`)
-        throw new Error('A quantidade final excede o limite permitido')
+        const item = await tx.estoqueItem.findFirst({ where: { id: itemId, hospitalId, ...(categoria ? { categoria } : {}) }, select: { quantidade: true } })
+        if (!item) throw new StockMovementError('Item não encontrado no estoque')
+        if (tipo === 'SAIDA') throw new StockMovementError(`Estoque insuficiente. Disponível: ${item.quantidade}`)
+        throw new StockMovementError('A quantidade final excede o limite permitido')
       }
 
       return tx.movimentacaoEstoque.create({
@@ -104,7 +114,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result, { status: 201 })
   } catch (error: unknown) {
     console.error('Erro ao registrar movimentação:', error)
-    const message = error instanceof Error ? error.message : 'Erro ao registrar movimentação'
-    return NextResponse.json({ error: message }, { status: message === 'Erro ao registrar movimentação' ? 500 : 400 })
+    if (error instanceof StockMovementError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    return NextResponse.json({ error: 'Erro ao registrar movimentação' }, { status: 500 })
   }
 }

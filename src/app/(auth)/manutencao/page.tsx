@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import './manutencao.css';
 
 export default function ManutencaoPage() {
-  const { data: session } = useSession();
+  const { data: session, status: statusSessao } = useSession();
   const [tabAtiva, setTabAtiva] = useState('nova');
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
   
   // Dados
   const [ordens, setOrdens] = useState<any[]>([]);
@@ -23,31 +24,38 @@ export default function ManutencaoPage() {
     descricao: ''
   });
 
-  const carregarOrdens = async () => {
+  const carregarOrdens = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/manutencao');
-      if (res.ok) {
-        const data = await res.json();
-        setOrdens(data);
-      }
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Erro ao carregar ordens de manutenção.');
+      if (!Array.isArray(data)) throw new Error('Resposta inválida ao carregar ordens de manutenção.');
+      setOrdens(data);
+      setErroCarga('');
     } catch (e) {
-      console.error(e);
+      setErroCarga(e instanceof Error ? e.message : 'Erro ao carregar ordens de manutenção.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    carregarOrdens();
-    
-    const hoje = new Date().toISOString().split('T')[0];
-    setForm(prev => ({ ...prev, data: hoje }));
+    const agora = new Date();
+    const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
+    setForm(prev => ({ ...prev, data: prev.data || hoje }));
+  }, []);
 
-    if (session?.user?.name) {
-      setForm(prev => ({ ...prev, solicitante: session.user.name as string }));
+  useEffect(() => {
+    if (statusSessao === 'loading') return;
+    if (statusSessao !== 'authenticated') {
+      setLoading(false);
+      setErroCarga('Sua sessão expirou. Entre novamente para acessar as ordens.');
+      return;
     }
-  }, [session]);
+    setForm(prev => ({ ...prev, solicitante: session?.user?.name || session?.user?.email || 'Usuário autenticado' }));
+    void carregarOrdens();
+  }, [statusSessao, session?.user?.name, session?.user?.email, carregarOrdens]);
 
   const criarOS = async () => {
     if (!form.equipamento || !form.solicitante) {
@@ -62,12 +70,13 @@ export default function ManutencaoPage() {
         body: JSON.stringify(form)
       });
 
-      if (!res.ok) throw new Error('Erro ao criar OS');
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(typeof resposta?.error === 'string' ? resposta.error : 'Erro ao criar OS');
 
       setForm(prev => ({ ...prev, equipamento: '', descricao: '' }));
       alert(` OS criada com sucesso!`);
       setTabAtiva('lista');
-      carregarOrdens();
+      await carregarOrdens();
     } catch (error: any) {
       alert(error.message);
     }
@@ -83,9 +92,10 @@ export default function ManutencaoPage() {
         body: JSON.stringify({ status: 'Concluída' })
       });
 
-      if (!res.ok) throw new Error('Erro ao concluir OS');
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(typeof resposta?.error === 'string' ? resposta.error : 'Erro ao concluir OS');
       
-      carregarOrdens();
+      await carregarOrdens();
     } catch (error: any) {
       alert(error.message);
     }
@@ -94,8 +104,6 @@ export default function ManutencaoPage() {
   // Estatísticas
   const abertas = ordens.filter(o => o.status !== "Concluída").length;
   const concluidas = ordens.filter(o => o.status === "Concluída").length;
-
-  if (loading && ordens.length === 0) return <div>Carregando...</div>;
 
   return (
     <div className="conteudo">
@@ -135,17 +143,20 @@ export default function ManutencaoPage() {
           </button>
         </div>
 
+        {loading && ordens.length === 0 && <p role="status">Carregando ordens…</p>}
+        {erroCarga && <p role="alert" style={{ color: '#b91c1c', marginBottom: 16 }}>{erroCarga}</p>}
+
         {tabAtiva === 'nova' && (
           <div className="form-panel">
             <h3><i className="las la-tools"></i> Nova Ordem de Serviço</h3>
             <div className="form-grid">
               <div className="form-grupo">
-                <label>Equipamento/Local *</label>
-                <input type="text" value={form.equipamento} onChange={e => setForm({...form, equipamento: e.target.value})} placeholder="Ex: Ar-condicionado, Elevador, Maca..." />
+                <label htmlFor="mnt-equipamento">Equipamento/Local *</label>
+                <input id="mnt-equipamento" type="text" maxLength={200} required value={form.equipamento} onChange={e => setForm({...form, equipamento: e.target.value})} placeholder="Ex: Ar-condicionado, Elevador, Maca..." />
               </div>
               <div className="form-grupo">
-                <label>Setor *</label>
-                <select value={form.setor} onChange={e => setForm({...form, setor: e.target.value})}>
+                <label htmlFor="mnt-setor">Setor *</label>
+                <select id="mnt-setor" value={form.setor} onChange={e => setForm({...form, setor: e.target.value})}>
                   <option>UTI</option>
                   <option>Centro Cirúrgico</option>
                   <option>Emergência</option>
@@ -155,8 +166,8 @@ export default function ManutencaoPage() {
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Tipo *</label>
-                <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
+                <label htmlFor="mnt-tipo">Tipo *</label>
+                <select id="mnt-tipo" value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
                   <option>Corretiva</option>
                   <option>Preventiva</option>
                   <option>Preditiva</option>
@@ -165,24 +176,24 @@ export default function ManutencaoPage() {
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Prioridade</label>
-                <select value={form.prioridade} onChange={e => setForm({...form, prioridade: e.target.value})}>
+                <label htmlFor="mnt-prioridade">Prioridade</label>
+                <select id="mnt-prioridade" value={form.prioridade} onChange={e => setForm({...form, prioridade: e.target.value})}>
                   <option>Normal</option>
                   <option>Urgente</option>
                   <option>Emergência</option>
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Solicitante *</label>
-                <input type="text" value={form.solicitante} onChange={e => setForm({...form, solicitante: e.target.value})} />
+                <label htmlFor="mnt-solicitante">Solicitante (usuário autenticado)</label>
+                <input id="mnt-solicitante" type="text" value={form.solicitante} readOnly />
               </div>
               <div className="form-grupo">
-                <label>Data</label>
-                <input type="date" value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
+                <label htmlFor="mnt-data">Data</label>
+                <input id="mnt-data" type="date" value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
               </div>
               <div className="form-grupo full">
-                <label>Descrição do Problema</label>
-                <textarea rows={3} value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} placeholder="Detalhe o defeito ou o serviço necessário..."></textarea>
+                <label htmlFor="mnt-descricao">Descrição do Problema</label>
+                <textarea id="mnt-descricao" rows={3} maxLength={2000} value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} placeholder="Detalhe o defeito ou o serviço necessário..."></textarea>
               </div>
             </div>
             <button className="btn btn-success" onClick={criarOS} style={{ width: '100%', marginTop: '15px' }}>

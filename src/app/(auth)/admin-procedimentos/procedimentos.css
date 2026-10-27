@@ -2,7 +2,7 @@
 
 .lista-procedimentos {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
     gap: 20px;
     margin-top: 25px;
 }
@@ -200,4 +200,31 @@
     flex: 1;
     padding: 12px;
     font-size: 14px;
+}
+
+.modal-header h3 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.modal-header button:focus-visible,
+.procedimento-acoes button:focus-visible,
+.modal-footer button:focus-visible {
+    outline: 3px solid #1d4ed8;
+    outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+    .modal-content {
+        max-height: calc(100dvh - 24px);
+    }
+
+    .modal-header,
+    .modal-footer {
+        flex-wrap: wrap;
+    }
+
+    .modal-body {
+        padding: 18px;
+    }
 }

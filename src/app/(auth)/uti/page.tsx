@@ -24,6 +24,7 @@ export default function UtiPage() {
   const [leitosUTI, setLeitosUTI] = useState<UtiLeito[]>([]);
   const [pacientesGerais, setPacientesGerais] = useState<Paciente[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
 
   // Admission form state
   const [formAdmissao, setFormAdmissao] = useState({ pacienteId: '', leitoId: '' });
@@ -36,11 +37,16 @@ export default function UtiPage() {
         fetch('/api/uti'),
         fetch('/api/pacientes')
       ]);
-      
-      if(resLeitos.ok) setLeitosUTI(await resLeitos.json());
-      if(resPacientes.ok) setPacientesGerais(await resPacientes.json());
+      const dadosLeitos = await resLeitos.json().catch(() => null);
+      const dadosPacientes = await resPacientes.json().catch(() => null);
+      if (!resLeitos.ok) throw new Error(dadosLeitos?.error || 'Não foi possível carregar os leitos.');
+      if (!resPacientes.ok) throw new Error(dadosPacientes?.error || 'Não foi possível carregar os pacientes.');
+      if (!Array.isArray(dadosLeitos) || !Array.isArray(dadosPacientes)) throw new Error('A resposta da UTI está inválida.');
+      setLeitosUTI(dadosLeitos);
+      setPacientesGerais(dadosPacientes);
+      setErroCarga('');
     } catch(e) {
-      console.error(e);
+      setErroCarga(e instanceof Error ? e.message : 'Não foi possível carregar os dados da UTI.');
     } finally {
       setLoading(false);
     }
@@ -68,7 +74,8 @@ export default function UtiPage() {
         })
       });
 
-      if(!res.ok) throw new Error("Erro ao admitir paciente no leito");
+      const resposta = await res.json().catch(() => null);
+      if(!res.ok) throw new Error(resposta?.error || "Erro ao admitir paciente no leito");
 
       setFormAdmissao({ pacienteId: '', leitoId: '' });
 
@@ -87,12 +94,11 @@ export default function UtiPage() {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            status: 'LIVRE',
-            pacienteNome: null,
-            pacienteCpf: null
+            status: 'LIVRE'
           })
         });
-        if(!res.ok) throw new Error("Erro ao dar alta do leito");
+        const resposta = await res.json().catch(() => null);
+        if(!res.ok) throw new Error(resposta?.error || "Erro ao dar alta do leito");
 
         alert('Leito liberado. O paciente permanece internado no hospital.');
         carregarDados();
@@ -132,6 +138,8 @@ export default function UtiPage() {
             <button className="btn btn-success" onClick={() => setActiveTab('admissao')}><i className="las la-plus-circle"></i> Vincular paciente ao leito</button>
           </div>
         </div>
+
+        {erroCarga && <p role="alert" style={{ color: '#b91c1c', background: '#fef2f2', padding: 12, borderRadius: 8 }}>{erroCarga}</p>}
 
         <div className="indicadores-grid">
           <div className="indicador-card bom"><div className="ind-icon"><i className="las la-bed"></i></div><div className="ind-valor">{totalLeitos}</div><div className="ind-label">Total de Leitos</div></div>

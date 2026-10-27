@@ -31,6 +31,7 @@ export default function PacientesPage() {
   const [busca, setBusca] = useState('');
   const [pagina, setPagina] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [mostrarArquivados, setMostrarArquivados] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
@@ -44,11 +45,21 @@ export default function PacientesPage() {
     status: string; classificacao: string; queixaPrincipal?: string;
   }>(INITIAL_FORM_PACIENTE);
 
-  const fetchPacientes = () => {
-    fetch(`/api/pacientes${mostrarArquivados ? '?arquivados=1' : ''}`)
-      .then(r => r.json())
-      .then(data => { setPacientes(Array.isArray(data) ? data : []); setLoading(false); })
-      .catch(() => setLoading(false));
+  const fetchPacientes = async () => {
+    setLoading(true);
+    setErroCarga('');
+    try {
+      const response = await fetch(`/api/pacientes${mostrarArquivados ? '?arquivados=1' : ''}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Não foi possível carregar os pacientes.');
+      if (!Array.isArray(data)) throw new Error('A resposta de pacientes é inválida.');
+      setPacientes(data);
+    } catch (error) {
+      setPacientes([]);
+      setErroCarga(error instanceof Error ? error.message : 'Não foi possível carregar os pacientes.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -63,8 +74,7 @@ export default function PacientesPage() {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    fetchPacientes();
+    void fetchPacientes();
   }, [mostrarArquivados]);
 
   const criarPaciente = async (e: React.FormEvent) => {
@@ -81,11 +91,11 @@ export default function PacientesPage() {
       if (res.ok) {
         setModalAberto(false);
         setFormPaciente(INITIAL_FORM_PACIENTE);
-        fetchPacientes();
+        void fetchPacientes();
         alert('Paciente cadastrado com sucesso!');
       } else {
-        const errorData = await res.json();
-        alert(errorData.error || 'Erro ao cadastrar paciente.');
+        const errorData = await res.json().catch(() => null);
+        alert(errorData?.error || 'Erro ao cadastrar paciente.');
       }
     } catch (error) {
       alert('Falha na conexão com o servidor.');
@@ -146,6 +156,8 @@ export default function PacientesPage() {
           <Link href="/gestao-salas" className="btn btn-purple" style={{ borderRadius: '8px', padding: '8px 16px', fontSize: '14px' }}><i className="las la-door-open"></i> Gerenciar Salas</Link>
         </div>
       </div>
+
+      {erroCarga && <p role="alert" style={{ color: '#b91c1c', background: '#fef2f2', borderRadius: 8, padding: 12, margin: '0 0 16px' }}>{erroCarga}</p>}
 
       {/* Stats - Compact Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>

@@ -1,8 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import './cssd.css';
 
 export default function CSSDPage() {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<'lotes'|'novo'|'itens'|'historico'>('lotes');
   const [loading, setLoading] = useState(true);
   
@@ -15,7 +17,6 @@ export default function CSSDPage() {
   // Form Novo Lote
   const [loteNumero, setLoteNumero] = useState('');
   const [loteSetor, setLoteSetor] = useState('');
-  const [loteOperador, setLoteOperador] = useState('');
   const [loteData, setLoteData] = useState('');
   const [loteEquipamento, setLoteEquipamento] = useState('Autoclave 01');
   const [loteCiclo, setLoteCiclo] = useState('134°C - 7 min (Padrão)');
@@ -31,6 +32,9 @@ export default function CSSDPage() {
   const [itemQuantidade, setItemQuantidade] = useState(1);
   const [itemEmbalagem, setItemEmbalagem] = useState('Grau Cirúrgico (SMS)');
   const [itemIntegridade, setItemIntegridade] = useState('Íntegra');
+
+  const operadorAtual = session?.user?.name?.trim() || 'Profissional autenticado';
+  const dataLocalKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
   const carregarDados = async () => {
     setLoading(true);
@@ -55,20 +59,19 @@ export default function CSSDPage() {
 
   useEffect(() => {
     carregarDados();
-    const today = new Date().toISOString().split('T')[0];
+    const today = dataLocalKey(new Date());
     setLoteData(today);
   }, []);
 
   const criarLote = async () => {
-    if(!loteNumero || !loteSetor || !loteOperador){
-      alert(" Preencha lote, setor e operador!");
+    if(!loteNumero || !loteSetor){
+      alert(" Preencha lote e setor!");
       return;
     }
     
     const payload = {
       numero: loteNumero.trim(),
       setor: loteSetor,
-      operador: loteOperador.trim(),
       data: loteData,
       equipamento: loteEquipamento,
       ciclo: loteCiclo,
@@ -85,9 +88,9 @@ export default function CSSDPage() {
         body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error('Erro ao criar lote');
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(resposta?.error || 'Erro ao criar lote');
       
-      setLoteOperador('');
       setLoteObs('');
       alert(" Lote criado com sucesso!");
       setActiveTab('lotes');
@@ -108,7 +111,8 @@ export default function CSSDPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: proximoStatus })
         });
-        if (!res.ok) throw new Error('Erro ao atualizar status');
+        const resposta = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(resposta?.error || 'Erro ao atualizar status');
         carregarDados();
       } catch (error: any) {
         alert(error.message);
@@ -126,7 +130,8 @@ export default function CSSDPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'Rejeitado' })
         });
-        if (!res.ok) throw new Error('Erro ao rejeitar lote');
+        const resposta = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(resposta?.error || 'Erro ao rejeitar lote');
         carregarDados();
       } catch (error: any) {
         alert(error.message);
@@ -156,7 +161,8 @@ export default function CSSDPage() {
         body: JSON.stringify(payload)
       });
       
-      if (!res.ok) throw new Error('Erro ao adicionar item');
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(resposta?.error || 'Erro ao adicionar item');
       
       setItemNome('');
       setItemQuantidade(1);
@@ -222,16 +228,16 @@ export default function CSSDPage() {
         </div>
 
         <div className="tabs-cssd">
-          <button className={`tab-btn ${activeTab === 'lotes' ? 'ativo' : ''}`} onClick={() => setActiveTab('lotes')}>
+          <button aria-pressed={activeTab === 'lotes'} className={`tab-btn ${activeTab === 'lotes' ? 'ativo' : ''}`} onClick={() => setActiveTab('lotes')}>
             <i className="las la-list"></i> Painel de Lotes
           </button>
-          <button className={`tab-btn ${activeTab === 'novo' ? 'ativo' : ''}`} onClick={() => setActiveTab('novo')}>
+          <button aria-pressed={activeTab === 'novo'} className={`tab-btn ${activeTab === 'novo' ? 'ativo' : ''}`} onClick={() => setActiveTab('novo')}>
             <i className="las la-plus"></i> Registrar Lote
           </button>
-          <button className={`tab-btn ${activeTab === 'itens' ? 'ativo' : ''}`} onClick={() => setActiveTab('itens')}>
+          <button aria-pressed={activeTab === 'itens'} className={`tab-btn ${activeTab === 'itens' ? 'ativo' : ''}`} onClick={() => setActiveTab('itens')}>
             <i className="las la-tools"></i> Adicionar Itens ao Lote
           </button>
-          <button className={`tab-btn ${activeTab === 'historico' ? 'ativo' : ''}`} onClick={() => setActiveTab('historico')}>
+          <button aria-pressed={activeTab === 'historico'} className={`tab-btn ${activeTab === 'historico' ? 'ativo' : ''}`} onClick={() => setActiveTab('historico')}>
             <i className="las la-history"></i> Histórico Completo
           </button>
         </div>
@@ -260,8 +266,8 @@ export default function CSSDPage() {
                 <input type="date" value={loteData} onChange={e=>setLoteData(e.target.value)} />
               </div>
               <div className="form-grupo">
-                <label>Operador (Técnico CME) *</label>
-                <input type="text" value={loteOperador} onChange={e=>setLoteOperador(e.target.value)} placeholder="Nome do responsável" />
+                <label>Operador autenticado</label>
+                <input type="text" value={operadorAtual} readOnly aria-readonly="true" />
               </div>
               <div className="form-grupo">
                 <label>Equipamento (Autoclave/Estufa)</label>
@@ -416,8 +422,8 @@ export default function CSSDPage() {
                     <button className="btn btn-primary btn-sm" onClick={() => avancarStatus(l.id, l.status)}>
                       Avançar Passo <i className="las la-arrow-right"></i>
                     </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => rejeitarLote(l.id, l.numero)} title="Reprovar Lote">
-                      <i className="las la-times-circle"></i>
+                    <button className="btn btn-danger btn-sm" onClick={() => rejeitarLote(l.id, l.numero)} title="Reprovar Lote" aria-label={`Reprovar lote ${l.numero}`}>
+                      <i className="las la-times-circle" aria-hidden="true"></i>
                     </button>
                   </div>
                 </div>
@@ -453,7 +459,7 @@ export default function CSSDPage() {
                   lotes.map(l => (
                     <tr key={l.id}>
                       <td><strong>{l.numero}</strong></td>
-                      <td>{new Date(l.data).toLocaleDateString('pt-BR')}</td>
+                      <td>{typeof l.data === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(l.data) ? new Date(`${l.data}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</td>
                       <td>{l.setor}</td>
                       <td>{l.operador}</td>
                       <td>{l.equipamento}</td>

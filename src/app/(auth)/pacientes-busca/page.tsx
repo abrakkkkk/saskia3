@@ -6,21 +6,22 @@ import Link from 'next/link';
 interface Paciente {
   id: string;
   nome: string;
-  cpf: string;
+  cpf: string | null;
   status: string;
-  classificacao: string;
+  classificacao: string | null;
   leitoTipo?: string;
-  leitoNumero?: string;
+  leitoNumero?: number | null;
   nascimento?: string;
-  telefone?: string;
-  sexo?: string;
-  endereco?: string;
-  mae?: string;
+  telefone?: string | null;
+  sexo?: string | null;
+  endereco?: string | null;
+  mae?: string | null;
 }
 
 export default function BuscarPacientesPage() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
   
   // Filtros
   const [filtros, setFiltros] = useState({
@@ -37,12 +38,31 @@ export default function BuscarPacientesPage() {
   const [ordenacao, setOrdenacao] = useState<{ campo: keyof Paciente, direcao: 'asc'|'desc' }>({ campo: 'nome', direcao: 'asc' });
 
   useEffect(() => {
-    fetch('/api/pacientes')
-      .then(r => r.json())
-      .then(data => {
-        setPacientes(data);
-        setCarregando(false);
-      });
+    const controller = new AbortController();
+    const carregar = async () => {
+      setCarregando(true);
+      setErroCarga('');
+      try {
+        const response = await fetch('/api/pacientes', { signal: controller.signal });
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          throw new Error(typeof body?.error === 'string' ? body.error : 'Não foi possível carregar os pacientes.');
+        }
+        const data: unknown = await response.json();
+        if (!Array.isArray(data)) throw new Error('A resposta de pacientes está inválida.');
+        setPacientes(data.filter((item): item is Paciente => Boolean(item)
+          && typeof item.id === 'string' && typeof item.nome === 'string'
+          && typeof item.status === 'string'));
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setErroCarga(error instanceof Error ? error.message : 'Não foi possível carregar os pacientes.');
+        setPacientes([]);
+      } finally {
+        if (!controller.signal.aborted) setCarregando(false);
+      }
+    };
+    void carregar();
+    return () => controller.abort();
   }, []);
 
   const limparFiltros = () => {
@@ -53,11 +73,11 @@ export default function BuscarPacientesPage() {
 
   const pacientesFiltrados = pacientes.filter(p => {
     if (filtros.nome && !p.nome.toLowerCase().includes(filtros.nome.toLowerCase())) return false;
-    if (filtros.cpf && !p.cpf.replace(/\D/g, '').includes(filtros.cpf.replace(/\D/g, ''))) return false;
-    if (filtros.mae && p.mae && !p.mae.toLowerCase().includes(filtros.mae.toLowerCase())) return false;
-    if (filtros.telefone && p.telefone && !p.telefone.replace(/\D/g, '').includes(filtros.telefone.replace(/\D/g, ''))) return false;
+    if (filtros.cpf && !(p.cpf || '').replace(/\D/g, '').includes(filtros.cpf.replace(/\D/g, ''))) return false;
+    if (filtros.mae && !(p.mae || '').toLowerCase().includes(filtros.mae.toLowerCase())) return false;
+    if (filtros.telefone && !(p.telefone || '').replace(/\D/g, '').includes(filtros.telefone.replace(/\D/g, ''))) return false;
     if (filtros.sexo && p.sexo !== filtros.sexo) return false;
-    if (filtros.endereco && p.endereco && !p.endereco.toLowerCase().includes(filtros.endereco.toLowerCase())) return false;
+    if (filtros.endereco && !(p.endereco || '').toLowerCase().includes(filtros.endereco.toLowerCase())) return false;
     if (filtros.status && p.status !== filtros.status) return false;
     if (filtros.nascimento) {
       const dataFiltro = filtros.nascimento.split('T')[0];
@@ -81,9 +101,14 @@ export default function BuscarPacientesPage() {
   };
 
   const exportarCSV = () => {
-    const cabecalho = "Nome,CPF,Nascimento,Sexo,Status,Classificação\n";
+    const csvCell = (value: string) => {
+      const neutralizado = /^[\t\r=+@-]/.test(value) ? `'${value}` : value;
+      return `"${neutralizado.replace(/"/g, '""')}"`;
+    };
+    const cabecalho = ['Nome', 'CPF', 'Nascimento', 'Sexo', 'Status', 'Classificação'].map(csvCell).join(',') + '\n';
     const linhas = pacientesFiltrados.map(p => 
-      `"${p.nome}","${p.cpf}","${p.nascimento ? new Date(p.nascimento).toLocaleDateString() : ''}","${p.sexo || ''}","${p.status}","${p.classificacao}"`
+      [p.nome, p.cpf || '', p.nascimento ? new Date(p.nascimento).toLocaleDateString() : '', p.sexo || '', p.status, p.classificacao || '']
+        .map(csvCell).join(',')
     ).join("\n");
     const blob = new Blob([cabecalho + linhas], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -91,8 +116,10 @@ export default function BuscarPacientesPage() {
     a.href = url;
     a.download = "busca_pacientes.csv";
     a.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
+
+  const statusDisponiveis = Array.from(new Set(pacientes.map(p => p.status).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
   const STATUS_CORES: Record<string, string> = {
     'Recepção': 'bg-slate-100 text-slate-700',
@@ -163,13 +190,7 @@ export default function BuscarPacientesPage() {
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '5px', textTransform: 'uppercase' }}><i className="las la-flag"></i> Status</label>
             <select className="input-field" value={filtros.status} onChange={e => setFiltros({...filtros, status: e.target.value})} style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #e2e8f0' }}>
               <option value="">Todos os Status</option>
-              <option value="Recepção">Recepção</option>
-              <option value="Aguardando Triagem">Aguardando Triagem</option>
-              <option value="Em Triagem">Em Triagem</option>
-              <option value="Internado">Internado</option>
-              <option value="Alta Médica">Alta Médica</option>
-              <option value="Óbito">Óbito</option>
-              <option value="Evasão">Evasão</option>
+              {statusDisponiveis.map(status => <option key={status} value={status}>{status}</option>)}
             </select>
           </div>
         </div>
@@ -188,6 +209,8 @@ export default function BuscarPacientesPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div style={{ fontSize: '14px', color: '#64748b' }}><i className="las la-users"></i> <strong style={{ color: '#0a1f44' }}>{pacientesFiltrados.length}</strong> paciente(s) encontrado(s)</div>
       </div>
+
+      {erroCarga && <p role="alert" style={{ color: '#b91c1c', marginBottom: 16 }}>{erroCarga}</p>}
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {carregando ? (

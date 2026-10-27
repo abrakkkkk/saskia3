@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { 
   Bell, 
@@ -38,6 +38,17 @@ function dateForInput(value: string | Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+function formatDate(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return value;
+  return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
+}
+
+async function getErrorMessage(response: Response, fallback: string) {
+  const body = await response.json().catch(() => null);
+  return typeof body?.error === 'string' ? body.error : fallback;
+}
+
 function timeForInput(value: string | Date) {
   const date = new Date(value);
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -58,11 +69,12 @@ const TIPO_INFO = {
 };
 
 export default function LembretesPage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const hospitalId = (session?.user as any)?.hospitalId;
-  const usuario = session?.user as any;
   
   const [lembretes, setLembretes] = useState<Lembrete[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
   const [filtro, setFiltro] = useState<'todos' | 'pendente' | 'concluido' | 'hoje'>('todos');
   const [dataAtual, setDataAtual] = useState(new Date());
   
@@ -79,26 +91,47 @@ export default function LembretesPage() {
     relacionado: ''
   });
 
-  const carregarLembretes = () => {
-    if (!hospitalId) return;
-    fetch(`/api/lembretes`)
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          const mapData = data.map(d => ({
-            ...d,
-            data: d.dataHora ? dateForInput(d.dataHora) : (d.data || ''),
-            hora: d.dataHora ? timeForInput(d.dataHora) : (d.hora || '')
-          }));
-          setLembretes(mapData);
-        }
-      })
-      .catch(console.error);
-  };
+  const carregarLembretes = useCallback(async (signal?: AbortSignal) => {
+    if (!hospitalId) {
+      setLembretes([]);
+      return;
+    }
+    setCarregando(true);
+    try {
+      const res = await fetch('/api/lembretes', { signal });
+      if (!res.ok) throw new Error(await getErrorMessage(res, 'Não foi possível carregar os lembretes.'));
+      const data: unknown = await res.json();
+      if (!Array.isArray(data)) throw new Error('A resposta de lembretes está inválida.');
+      const mapData = data.map((d: any) => ({
+        ...d,
+        data: d.dataHora ? dateForInput(d.dataHora) : (d.data || ''),
+        hora: d.dataHora ? timeForInput(d.dataHora) : (d.hora || '')
+      }));
+      if (!signal?.aborted) {
+        setLembretes(mapData);
+        setErroCarga('');
+      }
+    } catch (error) {
+      if (!signal?.aborted) setErroCarga(error instanceof Error ? error.message : 'Não foi possível carregar os lembretes.');
+    } finally {
+      if (!signal?.aborted) setCarregando(false);
+    }
+  }, [hospitalId]);
 
   useEffect(() => {
-    carregarLembretes();
-  }, [hospitalId]);
+    if (sessionStatus === 'loading') return;
+    if (!hospitalId) {
+      setLembretes([]);
+      setCarregando(false);
+      setErroCarga(sessionStatus === 'unauthenticated'
+        ? 'Sua sessão expirou. Entre novamente para ver seus lembretes.'
+        : 'Hospital da sessão não identificado.');
+      return;
+    }
+    const controller = new AbortController();
+    void carregarLembretes(controller.signal);
+    return () => controller.abort();
+  }, [hospitalId, sessionStatus, carregarLembretes]);
 
   const abrirModal = (l?: Lembrete) => {
     if (l) {
@@ -150,7 +183,6 @@ export default function LembretesPage() {
           body: JSON.stringify({
             ...form,
             dataHora,
-            criadoPor: usuario?.nome || "Usuário"
           })
         });
       }
@@ -173,7 +205,7 @@ export default function LembretesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ concluido: true })
       });
-      if (!res.ok) throw new Error((await res.json()).error || 'Não foi possível concluir o lembrete.');
+      if (!res.ok) throw new Error(await getErrorMessage(res, 'Não foi possível concluir o lembrete.'));
       carregarLembretes();
     } catch (e) {
       console.error(e);
@@ -187,7 +219,7 @@ export default function LembretesPage() {
         const res = await fetch(`/api/lembretes/${id}`, {
           method: 'DELETE'
         });
-        if (!res.ok) throw new Error((await res.json()).error || 'Não foi possível excluir o lembrete.');
+        if (!res.ok) throw new Error(await getErrorMessage(res, 'Não foi possível excluir o lembrete.'));
         carregarLembretes();
     } catch (e) {
       console.error(e);
@@ -278,15 +310,17 @@ export default function LembretesPage() {
         ))}
       </div>
 
+      {erroCarga && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{erroCarga}</p>}
+
       {/* Main Content */}
       <div className="grid lg:grid-cols-3 gap-6">
         
         {/* Calendário */}
         <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-200 self-start">
           <div className="flex items-center justify-between mb-6">
-            <button onClick={() => mudarMes(-1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600"><ChevronLeft className="w-5 h-5" /></button>
+            <button onClick={() => mudarMes(-1)} aria-label="Mês anterior" className="p-2 hover:bg-slate-100 rounded-lg text-slate-600"><ChevronLeft className="w-5 h-5" /></button>
             <h3 className="font-bold text-slate-800 text-lg">{meses[mes]} {ano}</h3>
-            <button onClick={() => mudarMes(1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600"><ChevronRight className="w-5 h-5" /></button>
+            <button onClick={() => mudarMes(1)} aria-label="Próximo mês" className="p-2 hover:bg-slate-100 rounded-lg text-slate-600"><ChevronRight className="w-5 h-5" /></button>
           </div>
           
           <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400">
@@ -304,6 +338,7 @@ export default function LembretesPage() {
                 <button 
                   key={dia}
                   onClick={() => selecionarData(dataStr)}
+                  aria-label={`Criar lembrete em ${formatDate(dataStr)}`}
                   className={`
                     aspect-square rounded-full flex items-center justify-center text-sm font-medium transition-colors relative
                     ${isHoje ? 'bg-blue-900 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100'}
@@ -330,6 +365,7 @@ export default function LembretesPage() {
                 <button
                   key={f}
                   onClick={() => setFiltro(f)}
+                  aria-pressed={filtro === f}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filtro === f ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                 >
                   {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -339,7 +375,9 @@ export default function LembretesPage() {
           </div>
           
           <div className="flex-1 overflow-y-auto p-4">
-            {listaFiltrada.length === 0 ? (
+            {carregando ? (
+              <div role="status" className="flex h-full items-center justify-center text-slate-500">Carregando lembretes...</div>
+            ) : listaFiltrada.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4">
                 <Bell className="w-16 h-16 opacity-30" />
                 <p>Nenhum lembrete encontrado</p>
@@ -361,7 +399,7 @@ export default function LembretesPage() {
                             </span>
                           </div>
                           <div className="text-xs text-slate-500 flex items-center gap-3">
-                            <span className="flex items-center gap-1.5"><CalendarIcon className="w-3.5 h-3.5" /> {new Date(l.data).toLocaleDateString('pt-BR')} às {l.hora}</span>
+                            <span className="flex items-center gap-1.5"><CalendarIcon className="w-3.5 h-3.5" /> {formatDate(l.data)} às {l.hora}</span>
                             {l.relacionado && <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> {l.relacionado}</span>}
                           </div>
                           {l.descricao && <p className="text-sm text-slate-600 mt-2">{l.descricao}</p>}
@@ -369,14 +407,14 @@ export default function LembretesPage() {
                         
                         <div className="flex items-center gap-2">
                           {!l.concluido && (
-                            <button onClick={() => concluirLembrete(l.id)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Concluir">
+                            <button onClick={() => concluirLembrete(l.id)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Concluir" aria-label={`Concluir ${l.titulo}`}>
                               <CheckCircle className="w-5 h-5" />
                             </button>
                           )}
-                          <button onClick={() => abrirModal(l)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
+                          <button onClick={() => abrirModal(l)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar" aria-label={`Editar ${l.titulo}`}>
                             <Edit className="w-5 h-5" />
                           </button>
-                          <button onClick={() => excluirLembrete(l.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
+                          <button onClick={() => excluirLembrete(l.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Excluir" aria-label={`Excluir ${l.titulo}`}>
                             <Trash2 className="w-5 h-5" />
                           </button>
                         </div>
@@ -393,27 +431,31 @@ export default function LembretesPage() {
       {/* Modal Lembrete */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
+          <div role="dialog" aria-modal="true" aria-labelledby="lembrete-modal-titulo" className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
             <div className="bg-blue-900 p-4 px-6 flex justify-between items-center text-white">
-              <h3 className="font-bold flex items-center gap-2"><Bell className="w-5 h-5" /> {lembreteEditando ? 'Editar Lembrete' : 'Novo Lembrete'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-white/70 hover:text-white transition-colors text-2xl leading-none">&times;</button>
+              <h3 id="lembrete-modal-titulo" className="font-bold flex items-center gap-2"><Bell className="w-5 h-5" /> {lembreteEditando ? 'Editar Lembrete' : 'Novo Lembrete'}</h3>
+              <button onClick={() => setIsModalOpen(false)} aria-label="Fechar formulário" className="text-white/70 hover:text-white transition-colors text-2xl leading-none">&times;</button>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Título</label>
+                <label htmlFor="lembrete-titulo" className="block text-sm font-bold text-slate-700 mb-1">Título</label>
                 <input 
+                  id="lembrete-titulo"
                   type="text" 
                   value={form.titulo}
                   onChange={e => setForm({...form, titulo: e.target.value})}
                   className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm"
                   placeholder="Ex: Reunião Equipe"
+                  maxLength={200}
+                  required
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Tipo</label>
+                <label htmlFor="lembrete-tipo" className="block text-sm font-bold text-slate-700 mb-1">Tipo</label>
                 <select 
+                  id="lembrete-tipo"
                   value={form.tipo}
                   onChange={e => setForm({...form, tipo: e.target.value as any})}
                   className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm bg-white"
@@ -428,8 +470,9 @@ export default function LembretesPage() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Data</label>
+                  <label htmlFor="lembrete-data" className="block text-sm font-bold text-slate-700 mb-1">Data</label>
                   <input 
+                    id="lembrete-data"
                     type="date" 
                     value={form.data}
                     onChange={e => setForm({...form, data: e.target.value})}
@@ -437,8 +480,9 @@ export default function LembretesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Horário</label>
+                  <label htmlFor="lembrete-hora" className="block text-sm font-bold text-slate-700 mb-1">Horário</label>
                   <input 
+                    id="lembrete-hora"
                     type="time" 
                     value={form.hora}
                     onChange={e => setForm({...form, hora: e.target.value})}
@@ -448,23 +492,27 @@ export default function LembretesPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Relacionado a (Opcional)</label>
+                <label htmlFor="lembrete-relacionado" className="block text-sm font-bold text-slate-700 mb-1">Relacionado a (Opcional)</label>
                 <input 
+                  id="lembrete-relacionado"
                   type="text" 
                   value={form.relacionado}
                   onChange={e => setForm({...form, relacionado: e.target.value})}
                   className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm"
                   placeholder="Ex: João da Silva (Paciente)"
+                  maxLength={200}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Descrição</label>
+                <label htmlFor="lembrete-descricao" className="block text-sm font-bold text-slate-700 mb-1">Descrição</label>
                 <textarea 
+                  id="lembrete-descricao"
                   value={form.descricao}
                   onChange={e => setForm({...form, descricao: e.target.value})}
                   className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm resize-y"
                   rows={3}
+                  maxLength={4000}
                 />
               </div>
             </div>

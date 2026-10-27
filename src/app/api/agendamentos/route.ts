@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { isRecord } from '@/lib/request-validation'
 
 export async function GET() {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
     const agendamentos = await prisma.agendamento.findMany({
       where: { hospitalId },
       include: {
@@ -28,17 +30,26 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
     const usuarioId = session.user.id
-    const body: unknown = await request.json()
-    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
     }
-    const input = body as Record<string, unknown>
+    if (!isRecord(body)) {
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    }
+    const input = body
 
-    if (typeof input.pacienteId !== 'string' || !input.pacienteId || typeof input.dataHora !== 'string' || typeof input.especialidade !== 'string' || !input.especialidade.trim()) {
+    if (typeof input.pacienteId !== 'string' || !input.pacienteId.trim()
+      || typeof input.dataHora !== 'string' || input.dataHora.length > 40
+      || typeof input.especialidade !== 'string' || !input.especialidade.trim() || input.especialidade.length > 100
+      || (input.tipo !== undefined && (typeof input.tipo !== 'string' || input.tipo.length > 80))) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }
 
@@ -68,11 +79,11 @@ export async function POST(request: NextRequest) {
     const agendamento = await prisma.agendamento.create({
       data: {
         hospitalId,
-        pacienteId: input.pacienteId,
+        pacienteId: input.pacienteId.trim(),
         usuarioId,
         dataHora,
         tipo: tipo || 'Consulta',
-        especialidade: input.especialidade.trim().slice(0, 100),
+        especialidade: input.especialidade.trim(),
         profissional,
         sala,
         status: 'AGENDADO',
@@ -86,7 +97,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(agendamento, { status: 201 })
   } catch (error: unknown) {
     console.error('Erro ao criar agendamento:', error)
-    const message = error instanceof Error ? error.message : 'Erro ao criar agendamento'
-    return NextResponse.json({ error: message }, { status: 400 })
+    return NextResponse.json({ error: 'Erro ao criar agendamento' }, { status: 500 })
   }
 }

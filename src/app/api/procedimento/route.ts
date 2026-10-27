@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     body.nome.length > 120 ||
     (body.codigo !== undefined && body.codigo !== null && (typeof body.codigo !== 'string' || body.codigo.length > 60)) ||
     (body.descricao !== undefined && body.descricao !== null && (typeof body.descricao !== 'string' || body.descricao.length > 2000)) ||
-    (body.valorBase !== undefined && body.valorBase !== null && (typeof body.valorBase !== 'number' || !Number.isFinite(body.valorBase) || body.valorBase < 0)) ||
+    (body.valorBase !== undefined && body.valorBase !== null && (typeof body.valorBase !== 'number' || !Number.isFinite(body.valorBase) || body.valorBase < 0 || body.valorBase > 100000000)) ||
     (body.ativo !== undefined && typeof body.ativo !== 'boolean')
   ) {
     return NextResponse.json({ error: 'Procedimento inválido' }, { status: 400 });

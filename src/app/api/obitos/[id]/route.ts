@@ -12,7 +12,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
     let body: unknown;
     try { body = await request.json(); } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }); }
-    if (!body || typeof body !== 'object' || Array.isArray(body) || typeof (body as { certidaoEmitida?: unknown }).certidaoEmitida !== 'boolean') {
+    if (!body || typeof body !== 'object' || Array.isArray(body)
+      || Object.keys(body).length !== 1
+      || (body as { certidaoEmitida?: unknown }).certidaoEmitida !== true) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     }
 
@@ -25,13 +27,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const atualizado = await prisma.obito.updateMany({
-      where: { id, hospitalId },
-      data: {
-        certidaoEmitida: (body as { certidaoEmitida: boolean }).certidaoEmitida
-      }
+      where: { id, hospitalId, certidaoEmitida: false },
+      data: { certidaoEmitida: true }
     });
 
-    if (atualizado.count === 0) return NextResponse.json({ error: 'Óbito não encontrado' }, { status: 404 });
+    if (atualizado.count === 0) return NextResponse.json({ error: 'A certidão já foi emitida' }, { status: 409 });
     return NextResponse.json(await prisma.obito.findFirst({ where: { id, hospitalId } }));
   } catch {
     return NextResponse.json({ error: 'Erro ao atualizar óbito' }, { status: 500 });

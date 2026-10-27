@@ -64,14 +64,26 @@ export default function AdminProcedimentosPage() {
     setEditIndex(null);
   };
 
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const fecharComEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !salvando) {
+        setIsModalOpen(false);
+        setEditIndex(null);
+      }
+    };
+    window.addEventListener('keydown', fecharComEscape);
+    return () => window.removeEventListener('keydown', fecharComEscape);
+  }, [isModalOpen, salvando]);
+
   const salvarProcedimento = async () => {
     if (!formNome.trim()) {
       alert("Informe o nome do procedimento!");
       return;
     }
     const valorBase = formValor.trim() ? Number(formValor.replace(',', '.')) : null;
-    if (valorBase !== null && (!Number.isFinite(valorBase) || valorBase < 0)) {
-      alert('Informe um valor base válido.');
+    if (valorBase !== null && (!Number.isFinite(valorBase) || valorBase < 0 || valorBase > 100000000)) {
+      alert('Informe um valor base entre R$ 0,00 e R$ 100.000.000,00.');
       return;
     }
     setSalvando(true);
@@ -171,37 +183,44 @@ export default function AdminProcedimentosPage() {
       </div>
 
       {isModalOpen && (
-        <div className="modal-overlay" onClick={fecharModal}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget && !salvando) fecharModal(); }}>
+          <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="procedimento-modal-title" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3><i className={editIndex !== null ? "las la-edit" : "las la-plus-circle"}></i> {editIndex !== null ? "Editar Procedimento" : "Novo Procedimento"}</h3>
-              <button style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }} onClick={fecharModal}>&times;</button>
+              <h3 id="procedimento-modal-title"><i className={editIndex !== null ? "las la-edit" : "las la-plus-circle"} aria-hidden="true"></i> {editIndex !== null ? "Editar Procedimento" : "Novo Procedimento"}</h3>
+              <button type="button" aria-label="Fechar formulário de procedimento" style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }} onClick={fecharModal}>&times;</button>
             </div>
 
             <div className="modal-body">
               <div className="form-group">
-                <label>Nome do procedimento *</label>
+                <label htmlFor="procedimento-nome">Nome do procedimento *</label>
                 <input
+                  id="procedimento-nome"
                   type="text"
                   value={formNome}
                   onChange={e => setFormNome(e.target.value)}
                   placeholder="Ex: Curativo Simples"
+                  maxLength={120}
+                  autoFocus
                 />
               </div>
               <div className="form-group">
-                <label>Descrição</label>
+                <label htmlFor="procedimento-descricao">Descrição</label>
                 <textarea
+                  id="procedimento-descricao"
                   rows={3}
                   value={formDescricao}
                   onChange={e => setFormDescricao(e.target.value)}
                   placeholder="Detalhes e observações sobre o procedimento"
+                  maxLength={2000}
                 />
               </div>
               <div className="form-group">
-                <label>Valor base (opcional)</label>
+                <label htmlFor="procedimento-valor">Valor base (opcional)</label>
                 <input
+                  id="procedimento-valor"
                   type="number"
                   min="0"
+                  max="100000000"
                   step="0.01"
                   value={formValor}
                   onChange={e => setFormValor(e.target.value)}

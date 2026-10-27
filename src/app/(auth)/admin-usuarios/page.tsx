@@ -98,8 +98,8 @@ export default function AdminUsuariosPage() {
       <div><p className="usuarios-eyebrow">{session.user.hospitalNome}</p><h1>Usuários</h1><p>Gerencie os profissionais e o acesso ao sistema deste hospital.</p></div>
       <button className="usuarios-primary" onClick={openCreate}><Plus size={18} /> Novo usuário</button>
     </header>
-    {(error || notice) && <div className={error ? 'usuarios-alert' : 'usuarios-notice'} role="status">{error ? <AlertCircle size={18} /> : <Check size={18} />}{error || notice}</div>}
-    <label className="usuarios-search"><Search size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar por nome, e-mail ou cargo" /></label>
+    {(error || notice) && <div className={error ? 'usuarios-alert' : 'usuarios-notice'} role={error ? 'alert' : 'status'}>{error ? <AlertCircle size={18} /> : <Check size={18} />}{error || notice}</div>}
+    <label className="usuarios-search"><Search size={18} aria-hidden="true" /><input aria-label="Buscar usuários por nome, e-mail ou cargo" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar por nome, e-mail ou cargo" /></label>
     {filtered.length === 0 ? <section className="usuarios-empty"><UserRound size={24} /><strong>{usuarios.length ? 'Nenhum resultado' : 'Nenhum usuário cadastrado'}</strong><span>{usuarios.length ? 'Tente outra busca.' : 'Cadastre os profissionais autorizados deste hospital.'}</span></section> : <section className="usuarios-list" aria-label="Lista de usuários">
       {filtered.map(user => <article className={`usuarios-card ${user.ativo ? '' : 'is-inactive'}`} key={user.id}>
         <div className="usuarios-avatar"><UserRound size={20} /></div><div className="usuarios-details"><strong>{user.nome}</strong><span>{user.email}</span><div className="usuarios-tags"><span>{cargos.find(item => item.value === user.cargo)?.label ?? user.cargo}</span><span className={user.ativo ? 'status-active' : 'status-inactive'}>{user.ativo ? 'Ativo' : 'Inativo'}</span></div></div>

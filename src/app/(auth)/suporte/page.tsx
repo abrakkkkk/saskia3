@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { 
   Headset, 
@@ -8,7 +8,6 @@ import {
   Loader2 as Spinner, 
   Archive, 
   Ticket as TicketIcon, 
-  Paperclip, 
   Eye, 
   User, 
   Calendar, 
@@ -17,17 +16,9 @@ import {
   AlertTriangle,
   Inbox,
   CloudUpload,
-  MessageSquare,
   MessageSquareOff,
   Trash2
 } from 'lucide-react';
-
-interface Anexo {
-  nome: string;
-  tamanho: number;
-  tipo: string;
-  base64: string;
-}
 
 interface Resposta {
   respondente: string;
@@ -36,7 +27,7 @@ interface Resposta {
 }
 
 interface Ticket {
-  id: number;
+  id: string;
   numero: string;
   titulo: string;
   descricao: string;
@@ -44,17 +35,19 @@ interface Ticket {
   prioridade: 'Baixa' | 'Média' | 'Alta' | 'Urgente';
   data: string;
   solicitante: string;
-  anexos: Anexo[];
   respostas: Resposta[];
   arquivado: boolean;
 }
 
 export default function SuportePage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const hospitalId = (session?.user as any)?.hospitalId;
   const usuario = session?.user as any;
+  const isAdmin = usuario?.cargo === 'ADMIN';
   
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
   const [filtroAtual, setFiltroAtual] = useState<'andamento' | 'arquivados'>('andamento');
   
   // Modals
@@ -65,36 +58,38 @@ export default function SuportePage() {
   const [novoTitulo, setNovoTitulo] = useState('');
   const [novaDescricao, setNovaDescricao] = useState('');
   const [novaPrioridade, setNovaPrioridade] = useState<Ticket['prioridade']>('Média');
-  const [novosAnexos, setNovosAnexos] = useState<Anexo[]>([]);
   
   // Alerts
   const [alertMsg, setAlertMsg] = useState<{ texto: string, tipo: 'sucesso' | 'erro' } | null>(null);
 
   // Carregar Tickets
-  const carregarTickets = () => {
-    fetch('/api/tickets')
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          // Mapear do formato DB para o formato local
-          const mapped = data.map((t: any) => ({
-            id: t.id,
-            numero: `SUP-${t.numero || t.id.slice(0,6)}`,
-            titulo: t.titulo,
-            descricao: t.descricao,
-            status: mapStatus(t.status),
-            prioridade: mapPrioridade(t.prioridade),
-            data: t.createdAt,
-            solicitante: t.solicitante,
-            anexos: [],
-            respostas: t.respostas || [],
-            arquivado: t.status === 'FECHADO'
-          }));
-          setTickets(mapped);
-        }
-      })
-      .catch(console.error);
-  };
+  const carregarTickets = useCallback(async () => {
+    setCarregando(true);
+    try {
+      const response = await fetch('/api/tickets');
+      const data: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw new Error((data as any)?.error || 'Não foi possível carregar os tickets.');
+      if (!Array.isArray(data)) throw new Error('A resposta dos tickets é inválida.');
+      const mapped = data.map((t: any) => ({
+        id: String(t.id),
+        numero: `SUP-${t.numero || String(t.id).slice(0, 6)}`,
+        titulo: t.titulo,
+        descricao: t.descricao,
+        status: mapStatus(t.status),
+        prioridade: mapPrioridade(t.prioridade),
+        data: t.createdAt,
+        solicitante: t.solicitante,
+        respostas: Array.isArray(t.respostas) ? t.respostas : [],
+        arquivado: t.status === 'FECHADO'
+      }));
+      setTickets(mapped);
+      setErroCarga('');
+    } catch (error) {
+      setErroCarga(error instanceof Error ? error.message : 'Não foi possível carregar os tickets.');
+    } finally {
+      setCarregando(false);
+    }
+  }, []);
 
   const mapStatus = (s: string) => {
     const m: Record<string, string> = { 'ENVIADO': 'Enviado', 'EM_ANALISE': 'Em Análise', 'RESOLVIDO': 'Concluído', 'FECHADO': 'Finalizado' };
@@ -110,45 +105,18 @@ export default function SuportePage() {
   };
 
   useEffect(() => {
-    if (!hospitalId) return;
-    carregarTickets();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hospitalId]);
+    if (sessionStatus === 'loading') return;
+    if (!hospitalId) {
+      setTickets([]);
+      setCarregando(false);
+      return;
+    }
+    void carregarTickets();
+  }, [hospitalId, sessionStatus, carregarTickets]);
 
   const showAlert = (texto: string, tipo: 'sucesso' | 'erro') => {
     setAlertMsg({ texto, tipo });
     setTimeout(() => setAlertMsg(null), 3000);
-  };
-
-  const gerarProtocolo = () => {
-    const ano = new Date().getFullYear();
-    const mes = String(new Date().getMonth() + 1).padStart(2, '0');
-    const ultimo = tickets.length > 0 ? Math.max(...tickets.map(t => parseInt(t.numero.split('-')[1] || '0'))) : 0;
-    return `SUP-${ano}${mes}-${String(ultimo + 1).padStart(3, '0')}`;
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    
-    const temp: Anexo[] = [];
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (ev.target?.result) {
-          temp.push({
-            nome: file.name,
-            tamanho: file.size,
-            tipo: file.type,
-            base64: ev.target.result as string
-          });
-          if (temp.length === files.length) {
-            setNovosAnexos(prev => [...prev, ...temp]);
-          }
-        }
-      };
-      reader.readAsDataURL(file);
-    });
   };
 
   const criarTicket = async () => {
@@ -174,7 +142,6 @@ export default function SuportePage() {
         setNovoTitulo('');
         setNovaDescricao('');
         setNovaPrioridade('Média');
-        setNovosAnexos([]);
         showAlert(`Solicitação enviada com sucesso! Protocolo: SUP-${novo.numero || novo.id.slice(0,6)}`, 'sucesso');
       } else {
         showAlert('Erro ao criar ticket.', 'erro');
@@ -184,34 +151,39 @@ export default function SuportePage() {
     }
   };
 
-  const excluirTicket = async (id: number | string) => {
+  const excluirTicket = async (id: string) => {
     const senha = prompt("Ação destrutiva! Digite sua senha para confirmar a exclusão deste ticket:");
-    if (senha === usuario?.senha) {
-      try {
-        await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
-        carregarTickets();
-        setTicketDetalhe(null);
-        showAlert('Ticket excluído com sucesso.', 'sucesso');
-      } catch {
-        showAlert('Erro ao excluir.', 'erro');
-      }
-    } else if (senha !== null) {
-      showAlert('Senha incorreta!', 'erro');
+    if (senha === null) return;
+    try {
+      const response = await fetch(`/api/tickets/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senha }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || 'Não foi possível excluir o ticket.');
+      await carregarTickets();
+      setTicketDetalhe(null);
+      showAlert('Ticket excluído com sucesso.', 'sucesso');
+    } catch (error) {
+      showAlert(error instanceof Error ? error.message : 'Erro ao excluir.', 'erro');
     }
   };
 
   const arquivarTicket = async (id: number | string) => {
     try {
-      await fetch(`/api/tickets/${id}`, {
+      const response = await fetch(`/api/tickets/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'FECHADO' })
       });
-      carregarTickets();
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || 'Não foi possível arquivar o ticket.');
+      await carregarTickets();
       setTicketDetalhe(null);
       showAlert('Ticket arquivado com sucesso.', 'sucesso');
-    } catch {
-      showAlert('Erro ao arquivar.', 'erro');
+    } catch (error) {
+      showAlert(error instanceof Error ? error.message : 'Erro ao arquivar.', 'erro');
     }
   };
 
@@ -291,7 +263,10 @@ export default function SuportePage() {
 
       {/* Lista Tickets */}
       <div className="min-h-[400px] space-y-4">
-        {ticketsFiltrados.length === 0 ? (
+        {erroCarga && <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-800">{erroCarga}</p>}
+        {carregando ? (
+          <div role="status" className="flex items-center justify-center gap-2 py-20 text-slate-500"><Spinner className="h-5 w-5 animate-spin" /> Carregando tickets...</div>
+        ) : ticketsFiltrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-4">
             <Inbox className="w-16 h-16 opacity-30" />
             <p className="text-lg">Nenhum ticket encontrado</p>
@@ -323,12 +298,6 @@ export default function SuportePage() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  {ticket.anexos.length > 0 && (
-                    <div className="flex items-center gap-1 mr-4">
-                      <Paperclip className="w-4 h-4 text-slate-400" />
-                      <span className="text-xs text-slate-500">{ticket.anexos.length} anexo(s)</span>
-                    </div>
-                  )}
                   <button 
                     onClick={() => setTicketDetalhe(ticket)}
                     className="flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
@@ -360,6 +329,7 @@ export default function SuportePage() {
                   onChange={e => setNovoTitulo(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm"
                   placeholder="Ex: Problema com acesso ao sistema"
+                  maxLength={160}
                 />
               </div>
               
@@ -371,6 +341,7 @@ export default function SuportePage() {
                   onChange={e => setNovaDescricao(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm resize-y"
                   placeholder="Descreva detalhadamente o problema ou solicitação..."
+                  maxLength={4000}
                 />
               </div>
               
@@ -388,27 +359,7 @@ export default function SuportePage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Anexar Arquivos</label>
-                <label className="border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-blue-600 hover:bg-slate-50 transition-colors">
-                  <CloudUpload className="w-10 h-10 text-slate-400" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-slate-700">Clique para anexar arquivos</p>
-                    <p className="text-xs text-slate-500">Fotos, documentos, prints (máx 5MB)</p>
-                  </div>
-                  <input type="file" multiple className="hidden" onChange={handleFileChange} />
-                </label>
-                
-                {novosAnexos.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {novosAnexos.map((anexo, i) => (
-                      <span key={i} className="bg-slate-100 text-slate-600 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                        <Paperclip className="w-3.5 h-3.5" /> {anexo.nome}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <p role="status" className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">Anexos não estão disponíveis para persistência neste módulo.</p>
             </div>
             
             <div className="p-4 border-t border-slate-100 bg-slate-50">
@@ -467,18 +418,6 @@ export default function SuportePage() {
                 </div>
               </div>
               
-              {ticketDetalhe.anexos.length > 0 && (
-                <div className="mb-6">
-                  <span className="block font-bold text-slate-900 mb-2 text-sm">Anexos</span>
-                  <div className="flex flex-wrap gap-2">
-                    {ticketDetalhe.anexos.map((a, i) => (
-                      <span key={i} className="bg-blue-50 text-blue-700 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium border border-blue-100">
-                        <Paperclip className="w-3.5 h-3.5" /> {a.nome}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
               
               <div className="border-t border-slate-200 pt-6">
                 <span className="block font-bold text-slate-900 mb-4 text-sm">Histórico de Respostas</span>
@@ -502,7 +441,7 @@ export default function SuportePage() {
             </div>
             
             <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-              {!ticketDetalhe.arquivado && (
+              {!ticketDetalhe.arquivado && isAdmin && (
                 <button 
                   onClick={() => arquivarTicket(ticketDetalhe.id)}
                   className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-2"

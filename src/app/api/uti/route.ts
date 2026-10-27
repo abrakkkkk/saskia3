@@ -5,9 +5,10 @@ import { prisma } from '@/lib/db'
 export async function GET() {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json([], { status: 401 })
+    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const hospitalId = session.user.hospitalId
+    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
     const leitos = await prisma.utiLeito.findMany({
       where: { hospitalId },
       orderBy: { numero: 'asc' },
@@ -16,48 +17,42 @@ export async function GET() {
     return NextResponse.json(leitos)
   } catch (error) {
     console.error('Erro ao buscar leitos:', error)
-    return NextResponse.json([])
+    return NextResponse.json({ error: 'Erro ao buscar leitos' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-    if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     const hospitalId = session.user.hospitalId
     if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    }
+    const input = body as Record<string, unknown>
 
-    const numero = Number(body.numero)
-    if (!Number.isInteger(numero) || numero < 1 || typeof body.tipo !== 'string' || !body.tipo) {
+    const numero = Number(input.numero)
+    if (!Number.isSafeInteger(numero) || numero < 1 || numero > 2_147_483_647
+      || !['ADULTO', 'PEDIATRICO', 'NEONATAL'].includes(String(input.tipo))) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }
 
-    if (body.pacienteId) {
-      const paciente = await prisma.paciente.findFirst({
-        where: { id: body.pacienteId, hospitalId },
-        select: { id: true },
-      })
-      if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
-    }
+    const leitoExistente = await prisma.utiLeito.findFirst({ where: { hospitalId, numero }, select: { id: true } })
+    if (leitoExistente) return NextResponse.json({ error: 'Já existe um leito com este número neste hospital' }, { status: 409 })
 
-    const leito = await prisma.utiLeito.create({
-      data: {
-        hospitalId,
-        numero,
-        tipo: body.tipo,
-        status: 'LIVRE',
-        pacienteId: null,
-        pacienteNome: null,
-        pacienteCpf: null,
-      }
-    })
+    const leito = await prisma.utiLeito.create({ data: { hospitalId, numero, tipo: input.tipo as 'ADULTO' | 'PEDIATRICO' | 'NEONATAL', status: 'LIVRE' } })
 
     return NextResponse.json(leito, { status: 201 })
   } catch (error: unknown) {
     console.error('Erro ao criar leito:', error)
-    const message = error instanceof Error ? error.message : 'Erro ao criar leito'
-    return NextResponse.json({ error: message }, { status: 400 })
+    return NextResponse.json({ error: 'Erro ao criar leito' }, { status: 500 })
   }
 }

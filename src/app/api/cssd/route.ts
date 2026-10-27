@@ -3,6 +3,12 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isRecord } from '@/lib/request-validation';
 
+function isValidDateKey(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
 export async function GET() {
   try {
     const session = await auth();
@@ -40,7 +46,9 @@ export async function POST(request: NextRequest) {
     }
     if (!isRecord(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     const required = ['numero', 'setor', 'data', 'equipamento', 'ciclo', 'indicadorQuimico', 'indicadorBiologico', 'bowieDick'];
-    if (required.some((key) => typeof body[key] !== 'string' || !(body[key] as string).trim() || (body[key] as string).length > 200)) {
+    if (required.some((key) => typeof body[key] !== 'string' || !(body[key] as string).trim() || (body[key] as string).length > 200)
+      || !isValidDateKey(body.data as string)
+      || (body.obs !== undefined && body.obs !== null && (typeof body.obs !== 'string' || body.obs.length > 2000))) {
       return NextResponse.json({ error: 'Preencha corretamente os campos obrigatórios do lote' }, { status: 400 });
     }
 
@@ -56,7 +64,7 @@ export async function POST(request: NextRequest) {
         indicadorQuimico: (body.indicadorQuimico as string).trim(),
         indicadorBiologico: (body.indicadorBiologico as string).trim(),
         bowieDick: (body.bowieDick as string).trim(),
-        obs: typeof body.obs === 'string' ? body.obs.slice(0, 2000) : null,
+        obs: typeof body.obs === 'string' && body.obs.trim() ? body.obs.trim() : null,
         status: 'Recepção'
       },
       include: {

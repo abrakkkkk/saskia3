@@ -1,13 +1,14 @@
 'use client';
-import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import './servico-social.css';
 
 export default function ServicoSocialPage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const [tabAtiva, setTabAtiva] = useState('atendimento');
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
+  const [salvando, setSalvando] = useState(false);
   
   // Dados
   const [pacientes, setPacientes] = useState<any[]>([]);
@@ -15,7 +16,7 @@ export default function ServicoSocialPage() {
 
   // Form State
   const [form, setForm] = useState({
-    paciente: '',
+    pacienteId: '',
     tipo: 'Orientação Social',
     demanda: 'Vulnerabilidade Social',
     profissional: '',
@@ -32,47 +33,49 @@ export default function ServicoSocialPage() {
     setLoading(true);
     try {
       const resP = await fetch('/api/pacientes');
-      if (resP.ok) setPacientes(await resP.json());
-
       const resA = await fetch('/api/servico-social');
-      if (resA.ok) setAtendimentos(await resA.json());
+      if (!resP.ok || !resA.ok) throw new Error('Não foi possível carregar os dados do Serviço Social. Atualize a página.');
+      const [dadosPacientes, dadosAtendimentos] = await Promise.all([resP.json(), resA.json()]);
+      if (!Array.isArray(dadosPacientes) || !Array.isArray(dadosAtendimentos)) throw new Error('A resposta do servidor está inválida.');
+      setPacientes(dadosPacientes);
+      setAtendimentos(dadosAtendimentos);
+      setErroCarga('');
     } catch (e) {
-      console.error(e);
+      setErroCarga(e instanceof Error ? e.message : 'Erro ao carregar os dados do Serviço Social.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    carregarDados();
-    
-    const hoje = new Date().toISOString().split('T')[0];
-    setForm(prev => ({ ...prev, data: hoje }));
-
-    const u = JSON.stringify(getSessionUser());
-    const usuario = session?.user || (u ? JSON.parse(u) : null);
-    if (usuario?.name || usuario?.nome) {
-      setForm(prev => ({ ...prev, profissional: usuario.name || usuario.nome }));
-    }
-  }, [session]);
-
-  const registrarAtendimento = async () => {
-    if (!form.paciente || !form.profissional) {
-      alert(" Preencha paciente e assistente social!");
+    if (sessionStatus === 'loading') return;
+    if (sessionStatus !== 'authenticated' || !session?.user) {
+      setPacientes([]);
+      setAtendimentos([]);
+      setLoading(false);
       return;
     }
+    void carregarDados();
+    const hoje = new Date();
+    const hojeLocal = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+    setForm(prev => ({ ...prev, data: prev.data || hojeLocal, profissional: session.user.name || '' }));
+  }, [sessionStatus, session?.user]);
 
+  const registrarAtendimento = async () => {
+    if (!form.pacienteId || !form.data || !form.relato.trim()) {
+      alert(" Selecione o paciente e preencha a data e o relato do atendimento.");
+      return;
+    }
+    if (salvando) return;
+    setSalvando(true);
     const payload = {
-      pacienteNome: form.paciente,
+      pacienteId: form.pacienteId,
       situacao: form.demanda,
+      tipo: form.tipo,
       status: form.status,
-      detalhe: [
-        `Tipo de atendimento: ${form.tipo}`,
-        `Profissional: ${form.profissional}`,
-        `Data do atendimento: ${form.data}`,
-        form.relato.trim() ? `Relato / evolução: ${form.relato.trim()}` : '',
-        form.encaminhamentos.trim() ? `Encaminhamentos: ${form.encaminhamentos.trim()}` : ''
-      ].filter(Boolean).join('\n')
+      data: form.data,
+      relato: form.relato.trim(),
+      encaminhamentos: form.encaminhamentos.trim(),
     };
 
     try {
@@ -81,14 +84,17 @@ export default function ServicoSocialPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error('Erro ao registrar atendimento');
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(resposta?.error || 'Erro ao registrar atendimento');
       
-      setForm(prev => ({ ...prev, relato: '', encaminhamentos: '', paciente: '' }));
+      setForm(prev => ({ ...prev, relato: '', encaminhamentos: '', pacienteId: '' }));
       alert(" Atendimento registrado com sucesso!");
-      carregarDados();
+      await carregarDados();
       setTabAtiva('lista');
     } catch (error: any) {
       alert(error.message);
+    } finally {
+      setSalvando(false);
     }
   };
 
@@ -97,14 +103,15 @@ export default function ServicoSocialPage() {
   if (buscaLista) {
     const t = buscaLista.toLowerCase();
     listaFiltrada = listaFiltrada.filter(a => 
-      a.pacienteNome.toLowerCase().includes(t) || 
-      a.situacao.toLowerCase().includes(t)
+      (a.pacienteNome || '').toLowerCase().includes(t) ||
+      (a.situacao || '').toLowerCase().includes(t)
     );
   }
 
   // Estatísticas
-  const mesAtual = new Date().getMonth() + 1;
-  const anoAtual = new Date().getFullYear();
+  const agora = new Date();
+  const mesAtual = agora.getMonth() + 1;
+  const anoAtual = agora.getFullYear();
   const atendimentosMes = atendimentos.filter(a => {
     const d = new Date(a.createdAt);
     return (d.getMonth() + 1) === mesAtual && d.getFullYear() === anoAtual;
@@ -134,6 +141,8 @@ export default function ServicoSocialPage() {
   return (
     <div className="conteudo">
       <div className="ss-container">
+
+        {erroCarga && <p role="alert" style={{ color: '#b91c1c', background: '#fff', padding: 12, borderRadius: 8 }}>{erroCarga}</p>}
 
         <div className="banner-ss">
           <div>
@@ -185,15 +194,15 @@ export default function ServicoSocialPage() {
             <h3><i className="las la-hands-helping"></i> Registrar Atendimento Social</h3>
             <div className="form-grid">
               <div className="form-grupo">
-                <label>Paciente *</label>
-                <select value={form.paciente} onChange={e => setForm({...form, paciente: e.target.value})}>
+                <label htmlFor="social-paciente">Paciente *</label>
+                <select id="social-paciente" required value={form.pacienteId} onChange={e => setForm({...form, pacienteId: e.target.value})}>
                   <option value="">Selecione um paciente...</option>
-                  {pacientes.map((p, i) => <option key={p.id} value={p.nome}>{p.nome}</option>)}
+                  {pacientes.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Tipo de Atendimento *</label>
-                <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
+                <label htmlFor="social-tipo">Tipo de Atendimento *</label>
+                <select id="social-tipo" value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
                   <option>Orientação Social</option>
                   <option>Acolhimento</option>
                   <option>Visita Domiciliar</option>
@@ -202,8 +211,8 @@ export default function ServicoSocialPage() {
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Demanda Principal *</label>
-                <select value={form.demanda} onChange={e => setForm({...form, demanda: e.target.value})}>
+                <label htmlFor="social-demanda">Demanda Principal *</label>
+                <select id="social-demanda" value={form.demanda} onChange={e => setForm({...form, demanda: e.target.value})}>
                   <option>Vulnerabilidade Social</option>
                   <option>Violência Doméstica</option>
                   <option>Abandono Familiar</option>
@@ -217,32 +226,32 @@ export default function ServicoSocialPage() {
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Assistente Social *</label>
-                <input type="text" value={form.profissional} onChange={e => setForm({...form, profissional: e.target.value})} placeholder="Nome do profissional" />
+                <label htmlFor="social-profissional">Profissional responsável</label>
+                <input id="social-profissional" type="text" value={form.profissional} readOnly aria-readonly="true" />
               </div>
               <div className="form-grupo">
-                <label>Data</label>
-                <input type="date" value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
+                <label htmlFor="social-data">Data *</label>
+                <input id="social-data" type="date" required value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
               </div>
               <div className="form-grupo">
-                <label>Status</label>
-                <select value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
+                <label htmlFor="social-status">Status</label>
+                <select id="social-status" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
                   <option>Em Andamento</option>
                   <option>Aguardando Retorno</option>
                   <option>Concluído</option>
                 </select>
               </div>
               <div className="form-grupo full">
-                <label>Relato / Evolução</label>
-                <textarea rows={3} value={form.relato} onChange={e => setForm({...form, relato: e.target.value})} placeholder="Descreva o atendimento ou evolução do caso..."></textarea>
+                <label htmlFor="social-relato">Relato / Evolução *</label>
+                <textarea id="social-relato" rows={3} required maxLength={4000} value={form.relato} onChange={e => setForm({...form, relato: e.target.value})} placeholder="Descreva o atendimento ou evolução do caso..."></textarea>
               </div>
               <div className="form-grupo full">
-                <label>Encaminhamentos Realizados</label>
-                <textarea rows={2} value={form.encaminhamentos} onChange={e => setForm({...form, encaminhamentos: e.target.value})} placeholder="Ex: Encaminhado ao CRAS para benefício eventual."></textarea>
+                <label htmlFor="social-encaminhamentos">Encaminhamentos Realizados</label>
+                <textarea id="social-encaminhamentos" rows={2} maxLength={1000} value={form.encaminhamentos} onChange={e => setForm({...form, encaminhamentos: e.target.value})} placeholder="Ex: Encaminhado ao CRAS para benefício eventual."></textarea>
               </div>
             </div>
-            <button className="btn btn-success" onClick={registrarAtendimento} style={{ width: '100%', marginTop: '15px' }}>
-              <i className="las la-save"></i> Salvar Atendimento
+            <button className="btn btn-success" onClick={registrarAtendimento} disabled={salvando || loading || sessionStatus !== 'authenticated'} style={{ width: '100%', marginTop: '15px' }}>
+              <i className="las la-save"></i> {salvando ? 'Salvando...' : 'Salvar Atendimento'}
             </button>
           </div>
         )}
@@ -250,7 +259,7 @@ export default function ServicoSocialPage() {
         {tabAtiva === 'lista' && (
           <div>
             <div className="search-box">
-              <input type="text" placeholder="Buscar por paciente ou demanda..." value={buscaLista} onChange={e => setBuscaLista(e.target.value)} />
+              <input aria-label="Buscar por paciente ou demanda" type="text" placeholder="Buscar por paciente ou demanda..." value={buscaLista} onChange={e => setBuscaLista(e.target.value)} />
             </div>
             <div style={{ background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
               <table className="tabela-ss">

@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     const [pacientesNoPeriodo, internadosAgora, obitosNoPeriodo, agendamentos, cirurgiasNoPeriodo, leitos] = await Promise.all([
       prisma.paciente.count({ where: { hospitalId, ...(janela ? { createdAt: janela } : {}) } }),
-      prisma.paciente.count({ where: { hospitalId, status: { in: ['Internado', 'Internado - UTI'] } } }),
+      prisma.paciente.count({ where: { hospitalId, arquivadoEm: null, status: { in: ['Internado', 'Internado - UTI'] } } }),
       prisma.obito.count({ where: { hospitalId, ...(inicioValue || fimValue ? { data: { gte: inicioValue ?? undefined, lte: fimValue ?? undefined } } : {}) } }),
       prisma.agendamento.groupBy({
         by: ['status', 'profissional'],

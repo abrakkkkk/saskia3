@@ -36,6 +36,7 @@ enum StatusExame {
   COLETADO
   EM_ANALISE
   CONCLUIDO
+  ALTERADO_CRITICO
   CANCELADO
 }
 
@@ -395,6 +396,9 @@ model Sala {
   tipo       String?
   setor      String?
   andar      String?
+  capacidade Int            @default(1)
+  equipamentos String?
+  obs        String?
   status     StatusOcupacao @default(LIVRE)
   pacienteId String?
   paciente   Paciente?      @relation(fields: [pacienteId], references: [id])
@@ -458,6 +462,7 @@ model EstoqueItem {
   hospitalId  String
   hospital    Hospital  @relation(fields: [hospitalId], references: [id])
   categoria   String
+  subcategoria String?
   nome        String
   codigo      String?
   quantidade  Int       @default(0)

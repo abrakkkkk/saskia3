@@ -129,10 +129,10 @@
 }
 
 
-    footer a:hover {
+.politica-container footer a:hover {
         color: white !important;
         transition: all 0.3s ease;
     }
-    footer i {
+.politica-container footer i {
         margin-right: 5px;
     }
