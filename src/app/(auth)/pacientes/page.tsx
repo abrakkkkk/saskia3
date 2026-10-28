@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { calcularIdade, getIniciais, STATUS_CORES, MANCHESTER_CORES } from '@/lib/utils';
 import { useCallSystem } from '@/contexts/CallContext';
+import './pacientes.css';
 
 interface Paciente {
   id: string;
@@ -35,6 +36,7 @@ export default function PacientesPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [mostrarArquivados, setMostrarArquivados] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
+  const [salvandoPaciente, setSalvandoPaciente] = useState(false);
   const { chamarPaciente } = useCallSystem();
   const [modalChamada, setModalChamada] = useState<{ aberto: boolean, paciente: Paciente | null, consultorio: string }>({ aberto: false, paciente: null, consultorio: 'Consultório 1' });
   const [salasCadastradas, setSalasCadastradas] = useState<any[]>([]);
@@ -79,13 +81,15 @@ export default function PacientesPage() {
 
   const criarPaciente = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (salvandoPaciente) return;
+    setSalvandoPaciente(true);
     try {
       const res = await fetch('/api/pacientes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formPaciente,
-          nascimento: new Date(formPaciente.nascimento).toISOString()
+          nascimento: formPaciente.nascimento
         })
       });
       if (res.ok) {
@@ -99,20 +103,31 @@ export default function PacientesPage() {
       }
     } catch (error) {
       alert('Falha na conexão com o servidor.');
+    } finally {
+      setSalvandoPaciente(false);
     }
   };
 
+  const termoBusca = busca.trim().toLocaleLowerCase('pt-BR');
+  const cpfBusca = termoBusca.replace(/\D/g, '');
   const filtrados = pacientes.filter(p => {
     const matchStatus = filtroStatus === 'todos' || p.status === filtroStatus;
-    const matchBusca = !busca || p.nome?.toLowerCase().includes(busca.toLowerCase()) || p.cpf?.includes(busca);
+    const matchBusca = !termoBusca ||
+      p.nome?.toLocaleLowerCase('pt-BR').includes(termoBusca) ||
+      (cpfBusca.length > 0 && (p.cpf || '').replace(/\D/g, '').includes(cpfBusca));
     const matchManchester = filtroManchester === 'todos' || (p.classificacao && p.classificacao.toLowerCase() === filtroManchester.toLowerCase());
     return matchStatus && matchBusca && matchManchester;
   });
 
   const exportarCSV = () => {
-    const cabecalho = "Nome,CPF,Status,Classificacao,Idade\n";
-    const linhas = filtrados.map(p => `${p.nome},${p.cpf || ''},${p.status},${p.classificacao || ''},${calcularIdade(p.nascimento)}`).join('\n');
-    const blob = new Blob([cabecalho + linhas], { type: 'text/csv;charset=utf-8;' });
+    const csvCell = (value: unknown) => {
+      let texto = String(value ?? '');
+      if (/^[\t\r\n ]*[=+\-@]/.test(texto)) texto = `'${texto}`;
+      return `"${texto.replace(/"/g, '""')}"`;
+    };
+    const cabecalho = ['Nome', 'CPF', 'Status', 'Classificação', 'Idade'].map(csvCell).join(',');
+    const linhas = filtrados.map(p => [p.nome, p.cpf, p.status, p.classificacao, calcularIdade(p.nascimento)].map(csvCell).join(','));
+    const blob = new Blob(['\uFEFF', cabecalho, '\n', linhas.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -121,7 +136,8 @@ export default function PacientesPage() {
   };
 
   const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
-  const paginados = filtrados.slice((pagina - 1) * ITENS_POR_PAGINA, pagina * ITENS_POR_PAGINA);
+  const paginaAtual = Math.min(pagina, totalPaginas);
+  const paginados = filtrados.slice((paginaAtual - 1) * ITENS_POR_PAGINA, paginaAtual * ITENS_POR_PAGINA);
 
   const statusList = ['todos', 'Recepção', 'Aguardando Triagem', 'Em Triagem', 'Aguardando Médico', 'Em Atendimento Médico', 'Internado', 'Alta Médica', 'Evasão'];
   const statusLabels: Record<string, string> = {
@@ -183,7 +199,8 @@ export default function PacientesPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ position: 'relative', flex: '1 1 250px', maxWidth: '350px' }}>
           <i className="las la-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '18px' }}></i>
-          <input 
+          <input
+            aria-label="Buscar paciente por nome ou CPF"
             value={busca} 
             onChange={(e) => { setBusca(e.target.value); setPagina(1); }} 
             placeholder="Buscar por nome ou CPF..." 
@@ -195,6 +212,8 @@ export default function PacientesPage() {
           {statusList.map(s => (
             <button
               key={s}
+              type="button"
+              aria-pressed={filtroStatus === s}
               onClick={() => { setFiltroStatus(s); setPagina(1); }}
               style={{ 
                 padding: '6px 12px', borderRadius: '8px', border: filtroStatus === s ? '1px solid #1e3a8a' : '1px solid #cbd5e1', 
@@ -224,6 +243,8 @@ export default function PacientesPage() {
           Prioridade Manchester:
         </span>
         <button
+          type="button"
+          aria-pressed={filtroManchester === 'todos'}
           onClick={() => { setFiltroManchester('todos'); setPagina(1); }}
           style={{
             padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
@@ -242,6 +263,8 @@ export default function PacientesPage() {
           return (
             <button
               key={cor}
+              type="button"
+              aria-pressed={isSelected}
               onClick={() => { setFiltroManchester(isSelected ? 'todos' : cor); setPagina(1); }}
               style={{
                 padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
@@ -328,13 +351,13 @@ export default function PacientesPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <button className="btn btn-xs" style={{ background: '#10b981', color: 'white' }} title="Chamar no Painel" onClick={() => setModalChamada({ aberto: true, paciente: p, consultorio: 'Consultório 1' })}>
+                        <button type="button" className="btn btn-xs" style={{ background: '#10b981', color: 'white' }} title="Chamar no Painel" aria-label={`Chamar ${p.nome} no painel`} onClick={() => setModalChamada({ aberto: true, paciente: p, consultorio: 'Consultório 1' })}>
                           <i className="las la-bullhorn"></i>
                         </button>
-                        {!mostrarArquivados && <Link href={`/pacientes/${p.id}`} className="btn btn-primary btn-xs">
+                        {!mostrarArquivados && <Link href={`/pacientes/${p.id}`} className="btn btn-primary btn-xs" aria-label={`Abrir ficha de ${p.nome}`}>
                           <i className="las la-eye"></i>
                         </Link>}
-                        {isAdmin && (mostrarArquivados ? <button className="btn btn-primary btn-xs" title="Restaurar paciente" onClick={async () => {
+                        {isAdmin && (mostrarArquivados ? <button type="button" className="btn btn-primary btn-xs" title="Restaurar paciente" onClick={async () => {
                           const response = await fetch(`/api/pacientes/${p.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ arquivadoEm: null }) });
                           if (!response.ok) {
                             const result = await response.json().catch(() => ({}));
@@ -342,7 +365,7 @@ export default function PacientesPage() {
                             return;
                           }
                           setPacientes(prev => prev.filter(x => x.id !== p.id));
-                        }}><i className="las la-undo" aria-hidden="true"></i> Restaurar</button> : <button className="btn btn-danger btn-xs" title="Arquivar paciente" onClick={async () => {
+                        }}><i className="las la-undo" aria-hidden="true"></i> Restaurar</button> : <button type="button" className="btn btn-danger btn-xs" title="Arquivar paciente" aria-label={`Arquivar ${p.nome}`} onClick={async () => {
                           const confirmado = await confirm(`Arquivar ${p.nome}? O paciente sairá desta lista, mas o prontuário e os registros clínicos serão preservados.`);
                           if (!confirmado) return;
                           const response = await fetch(`/api/pacientes/${p.id}`, { method: 'DELETE' });
@@ -367,15 +390,15 @@ export default function PacientesPage() {
         {/* Paginação */}
         {totalPaginas > 1 && (
           <div className="paginacao">
-            <button className="pag-btn" onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}>
+            <button type="button" className="pag-btn" aria-label="Página anterior" onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={paginaAtual === 1}>
               <i className="las la-angle-left"></i>
             </button>
             {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(n => (
-              <button key={n} className={`pag-btn ${pagina === n ? 'ativo' : ''}`} onClick={() => setPagina(n)}>
+              <button type="button" key={n} className={`pag-btn ${paginaAtual === n ? 'ativo' : ''}`} aria-current={paginaAtual === n ? 'page' : undefined} onClick={() => setPagina(n)}>
                 {n}
               </button>
             ))}
-            <button className="pag-btn" onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas}>
+            <button type="button" className="pag-btn" aria-label="Próxima página" onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={paginaAtual === totalPaginas}>
               <i className="las la-angle-right"></i>
             </button>
           </div>
@@ -388,7 +411,7 @@ export default function PacientesPage() {
           <div className="card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', margin: '20px', animation: 'fadeIn 0.2s ease-out', border: '1px solid #334155', borderRadius: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
               <h3 style={{ fontSize: '20px', color: '#1e293b', margin: 0 }}><i className="las la-user-plus text-blue-600"></i> Ficha Completa de Cadastro</h3>
-              <button onClick={() => setModalAberto(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', color: '#64748b', cursor: 'pointer' }}><i className="las la-times"></i></button>
+              <button type="button" aria-label="Fechar cadastro" onClick={() => setModalAberto(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', color: '#64748b', cursor: 'pointer' }}><i className="las la-times" aria-hidden="true"></i></button>
             </div>
             
             <form onSubmit={criarPaciente} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -512,7 +535,7 @@ export default function PacientesPage() {
               
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '15px' }}>
                 <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" >Salvar Ficha Completa</button>
+                <button type="submit" className="btn btn-primary" disabled={salvandoPaciente}>{salvandoPaciente ? 'Salvando...' : 'Salvar Ficha Completa'}</button>
               </div>
             </form>
           </div>
@@ -543,17 +566,19 @@ export default function PacientesPage() {
                   Nenhuma sala cadastrada. Use o campo acima para digitar o consultório.
                 </div>
               ) : (
-                salasCadastradas.map((s, idx) => {
-                  const isLivre = s.status === 'livre';
+                salasCadastradas.map((s) => {
+                  const isLivre = String(s.status).toUpperCase() === 'LIVRE';
                   const isSelected = modalChamada.consultorio === s.nome;
                   return (
-                    <div 
-                      key={idx}
+                    <button
+                      type="button"
+                      aria-pressed={isSelected}
+                      key={s.id}
                       onClick={() => setModalChamada({ ...modalChamada, consultorio: s.nome })}
                       style={{ 
                         display: 'flex', alignItems: 'center', padding: '12px', borderRadius: '8px', 
                         border: isSelected ? '2px solid #1e3a8a' : '1px solid #e2e8f0', 
-                        background: isSelected ? '#eff6ff' : 'white', cursor: 'pointer', transition: 'all 0.2s'
+                        background: isSelected ? '#eff6ff' : 'white', color: '#0f172a', cursor: 'pointer', transition: 'all 0.2s', width: '100%', textAlign: 'left'
                       }}
                     >
                       <div style={{ 
@@ -571,7 +596,7 @@ export default function PacientesPage() {
                         </div>
                       </div>
                       <i className="las la-chevron-right" style={{ color: isSelected ? '#1e3a8a' : '#94a3b8' }}></i>
-                    </div>
+                    </button>
                   )
                 })
               )}

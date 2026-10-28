@@ -358,7 +358,7 @@ export default function FichaPacientePage() {
   }
 
   return (
-    <div>
+    <main className="prontuario-page">
       {/* ALERTA ALERGIA */}
       {paciente.alergias && paciente.alergias.trim() !== '' && (
         <div style={{ background: 'linear-gradient(135deg, #dc2626, #991b1b)', color: 'white', padding: '15px 25px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600, fontSize: '16px', animation: 'pulsarAlergia 2s infinite', boxShadow: '0 4px 20px rgba(220,38,38,0.4)' }}>
@@ -475,7 +475,7 @@ export default function FichaPacientePage() {
                   <button type="button" onClick={() => setIsEditing(false)} className="btn btn-outline">Cancelar</button>
                   <button type="submit" className="btn btn-primary" disabled={isSaving}>{isSaving ? 'Salvando...' : 'Salvar'}</button>
                 </div>
-                <style>{`.form-label { display: block; font-size: 13px; color: #64748b; margin-bottom: 5px; font-weight: 600; } .input-field { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; } .input-field:focus { border-color: #1e3a8a; }`}</style>
+                <style>{`.prontuario-page .form-label { display: block; font-size: 13px; color: #64748b; margin-bottom: 5px; font-weight: 600; } .prontuario-page .input-field { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; } .prontuario-page .input-field:focus { border-color: #1e3a8a; }`}</style>
               </form>
             )}
           </div>
@@ -829,6 +829,6 @@ export default function FichaPacientePage() {
         )}
 
       </div>
-    </div>
+    </main>
   )
 }

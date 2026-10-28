@@ -21,12 +21,16 @@ export default function AdminPage() {
   const isAdmin = (session?.user as any)?.cargo === 'ADMIN';
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [erroTickets, setErroTickets] = useState('');
+  const [carregandoTickets, setCarregandoTickets] = useState(true);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [ticketSelecionado, setTicketSelecionado] = useState<Ticket | null>(null);
   const [respostaTexto, setRespostaTexto] = useState('');
   const [respostaStatus, setRespostaStatus] = useState('Enviado');
+  const [salvandoResposta, setSalvandoResposta] = useState(false);
+  const [mensagemResposta, setMensagemResposta] = useState('');
+  const [erroResposta, setErroResposta] = useState('');
 
   const mapStatus = (s: string) => {
     const m: Record<string, string> = { 'ENVIADO': 'Enviado', 'EM_ANALISE': 'Em Análise', 'RESOLVIDO': 'Concluído', 'FECHADO': 'Finalizado' };
@@ -41,30 +45,31 @@ export default function AdminPage() {
     return m[p] || p;
   };
 
-  const fetchTickets = () => {
+  const fetchTickets = async () => {
     if (!isAdmin) return;
-    fetch('/api/tickets')
-      .then(async response => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Não foi possível carregar os tickets.');
-        return data;
-      })
-      .then(data => {
-        if (!Array.isArray(data)) throw new Error('Resposta de tickets inválida.');
-        setTickets(data.map((t: any) => ({
-          id: t.id,
-          numero: `SUP-${t.numero || t.id.slice(0,6)}`,
-          titulo: t.titulo,
-          descricao: t.descricao,
-          status: mapStatus(t.status),
-          prioridade: mapPrioridade(t.prioridade),
-          data: t.createdAt,
-          solicitante: t.solicitante,
-          respostas: Array.isArray(t.respostas) ? t.respostas : []
-        })));
-        setErroTickets('');
-      })
-      .catch(error => setErroTickets(error instanceof Error ? error.message : 'Erro ao carregar tickets.'));
+    setCarregandoTickets(true);
+    try {
+      const response = await fetch('/api/tickets', { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Não foi possível carregar os tickets.');
+      if (!Array.isArray(data)) throw new Error('Resposta de tickets inválida.');
+      setTickets(data.map((t: any) => ({
+        id: t.id,
+        numero: `SUP-${t.numero || t.id.slice(0,6)}`,
+        titulo: t.titulo,
+        descricao: t.descricao,
+        status: mapStatus(t.status),
+        prioridade: mapPrioridade(t.prioridade),
+        data: t.createdAt,
+        solicitante: t.solicitante,
+        respostas: Array.isArray(t.respostas) ? t.respostas : []
+      })));
+      setErroTickets('');
+    } catch (error) {
+      setErroTickets(error instanceof Error ? error.message : 'Erro ao carregar tickets.');
+    } finally {
+      setCarregandoTickets(false);
+    }
   };
 
   useEffect(() => {
@@ -80,6 +85,8 @@ export default function AdminPage() {
   }
 
   const abrirModal = (ticket: Ticket) => {
+    setErroResposta('');
+    setMensagemResposta('');
     setTicketSelecionado(ticket);
     setRespostaStatus(ticket.status);
     setRespostaTexto('');
@@ -92,9 +99,9 @@ export default function AdminPage() {
   };
 
   const enviarResposta = async () => {
-    if(!ticketSelecionado) return;
-    if(!respostaTexto.trim()){
-      alert("Digite uma resposta!");
+    if (!ticketSelecionado || salvandoResposta) return;
+    if (!respostaTexto.trim()) {
+      setErroResposta('Digite uma resposta antes de enviar.');
       return;
     }
 
@@ -104,6 +111,8 @@ export default function AdminPage() {
       { data: new Date().toISOString(), resposta: respostaTexto, respondente: "Administrador" }
     ];
 
+    setSalvandoResposta(true);
+    setErroResposta('');
     try {
       const response = await fetch(`/api/tickets/${ticketSelecionado.id}`, {
         method: 'PUT',
@@ -117,9 +126,11 @@ export default function AdminPage() {
       if (!response.ok) throw new Error(result.error || 'Erro ao enviar resposta.');
       await fetchTickets();
       fecharModal();
-      alert(`Resposta enviada! Ticket atualizado para: ${respostaStatus}`);
+      setMensagemResposta(`Resposta enviada. Ticket atualizado para: ${respostaStatus}.`);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro ao enviar resposta.');
+      setErroResposta(error instanceof Error ? error.message : 'Erro ao enviar resposta.');
+    } finally {
+      setSalvandoResposta(false);
     }
   };
 
@@ -142,7 +153,7 @@ export default function AdminPage() {
   const concluido = tickets.filter(t => t.status === "Concluído" || t.status === "Finalizado").length;
 
   return (
-    <div className="conteudo">
+    <div className="conteudo admin-page">
       <h2><i className="las la-hospital"></i> Painel Administrativo</h2>
       <p>Gerencie toda a plataforma da Saskia Saúde Integrada.</p>
 
@@ -182,7 +193,8 @@ export default function AdminPage() {
       <div className="secao-tickets">
         <h2><i className="las la-headset"></i> Tickets de Suporte</h2>
         <p>Gerencie as solicitações de suporte dos usuários do sistema.</p>
-          {erroTickets && <div role="alert" className="alert-erro">{erroTickets}</div>}
+          {erroTickets && <div role="alert" className="alert-erro">{erroTickets}<button type="button" onClick={fetchTickets} disabled={carregandoTickets}>Tentar novamente</button></div>}
+          {mensagemResposta && <p role="status" className="admin-feedback-success">{mensagemResposta}</p>}
 
         <div className="tickets-resumo">
           <div className="card-resumo-ticket pendente">
@@ -217,8 +229,10 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {tickets.length === 0 ? (
-                <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhum ticket encontrado</td></tr>
+              {carregandoTickets && tickets.length === 0 ? (
+                <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Carregando tickets…</td></tr>
+              ) : tickets.length === 0 ? (
+                <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>{erroTickets ? 'Não foi possível mostrar os tickets.' : 'Nenhum ticket encontrado.'}</td></tr>
               ) : (
                 tickets.map(t => {
                   const statusClass = t.status === "Enviado" ? "status-Enviado" :
@@ -235,10 +249,10 @@ export default function AdminPage() {
                       <td><span className={`status-ticket ${statusClass}`}>{t.status}</span></td>
                       <td>{new Date(t.data).toLocaleDateString('pt-BR')}</td>
                       <td>
-                        <button className="btn-ver-ticket" onClick={() => verTicket(t)} title="Ver Detalhes">
+                        <button className="btn-ver-ticket" onClick={() => verTicket(t)} title="Ver Detalhes" aria-label={`Ver detalhes do ticket ${t.numero}`}>
                           <i className="las la-eye"></i>
                         </button>
-                        <button className="btn-responder" onClick={() => abrirModal(t)} title="Responder">
+                        <button className="btn-responder" onClick={() => abrirModal(t)} title="Responder" aria-label={`Responder ao ticket ${t.numero}`}>
                           <i className="las la-reply"></i>
                         </button>
                       </td>
@@ -252,11 +266,11 @@ export default function AdminPage() {
       </div>
 
       {isModalOpen && ticketSelecionado && (
-        <div className="modal-overlay" onClick={fecharModal}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => !salvandoResposta && fecharModal()}>
+          <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="admin-ticket-modal-title" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3><i className="las la-reply"></i> Responder Ticket</h3>
-              <button className="modal-close" onClick={fecharModal}>&times;</button>
+              <h3 id="admin-ticket-modal-title"><i className="las la-reply" aria-hidden="true"></i> Responder Ticket</h3>
+              <button className="modal-close" onClick={fecharModal} disabled={salvandoResposta} aria-label="Fechar janela">&times;</button>
             </div>
             <div className="modal-body">
               <label>Protocolo: <span>{ticketSelecionado.numero}</span></label>
@@ -267,24 +281,26 @@ export default function AdminPage() {
                 <p style={{marginTop:'5px', fontSize:'13px', color:'#475569'}}>{ticketSelecionado.descricao}</p>
               </div>
               
-              <label>Resposta / Atualização</label>
+              <label htmlFor="admin-ticket-reply">Resposta / Atualização</label>
               <textarea 
+                id="admin-ticket-reply"
                 rows={4} 
                 placeholder="Digite sua resposta..." 
                 value={respostaTexto} 
                 onChange={e => setRespostaTexto(e.target.value)}
               />
               
-              <label>Atualizar Status</label>
-              <select value={respostaStatus} onChange={e => setRespostaStatus(e.target.value)}>
+              <label htmlFor="admin-ticket-status">Atualizar Status</label>
+              <select id="admin-ticket-status" value={respostaStatus} onChange={e => setRespostaStatus(e.target.value)}>
                 <option value="Enviado">Enviado</option>
                 <option value="Em Análise">Em Análise</option>
                 <option value="Concluído">Concluído</option>
                 <option value="Finalizado">Finalizado</option>
               </select>
               
-              <button className="btn btn-success" onClick={enviarResposta} style={{width:'100%', justifyContent:'center', marginTop:'10px'}}>
-                <i className="las la-paper-plane"></i> Enviar Resposta
+              {erroResposta && <p role="alert" className="admin-feedback-error">{erroResposta}</p>}
+              <button className="btn btn-success" onClick={enviarResposta} disabled={salvandoResposta} style={{width:'100%', justifyContent:'center', marginTop:'10px'}}>
+                <i className="las la-paper-plane" aria-hidden="true"></i> {salvandoResposta ? 'Enviando…' : 'Enviar Resposta'}
               </button>
             </div>
           </div>

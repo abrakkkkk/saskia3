@@ -229,3 +229,103 @@
     .almox-filter-row select { flex: 1 1 100%; min-width: 0; }
     .modal-almox-conteudo { padding: 20px; width: 100%; }
 }
+
+.banner-almox {
+    border-radius: 12px;
+    padding: clamp(22px, 3vw, 36px);
+}
+
+.banner-almox h1 {
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.banner-almox > div:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.banner-almox > div:last-child button {
+    min-height: 44px;
+}
+
+.tabs-almox {
+    gap: 8px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: thin;
+}
+
+.tabs-almox .tab-btn {
+    min-height: 46px;
+    padding: 10px 18px;
+    border-radius: 8px 8px 0 0;
+    white-space: nowrap;
+}
+
+.tabs-almox .tab-btn:focus-visible,
+.btn-almox:focus-visible,
+.modal-almox button:focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 2px;
+}
+
+.tabela-almox {
+    min-width: 650px;
+}
+
+.tabela-almox th {
+    background: #0a1f44;
+    color: #f8fafc;
+    white-space: nowrap;
+}
+
+.tabela-almox tbody tr:hover {
+    background: #eff6ff;
+}
+
+.modal-almox-conteudo {
+    border: 1px solid #dbe4ef;
+    border-radius: 12px;
+}
+
+.modal-almox-conteudo input,
+.modal-almox-conteudo select {
+    min-height: 44px;
+}
+
+.almox-load-error {
+    margin: 0 0 20px;
+    padding: 12px 16px;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    background: #fef2f2;
+    color: #991b1b;
+    font-size: 14px;
+}
+
+@media (max-width: 520px) {
+    .banner-almox {
+        padding: 20px;
+    }
+
+    .banner-almox h1 {
+        font-size: 23px;
+    }
+
+    .banner-almox > div:last-child button {
+        flex: 1 1 100%;
+        justify-content: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .almox-container,
+    .btn-almox,
+    .tab-btn,
+    .tabela-almox tbody tr {
+        animation: none;
+        transition: none;
+    }
+}

@@ -21,6 +21,8 @@ export default function AdminProntuariosPage() {
   const isAdmin = (session?.user as any)?.cargo === 'ADMIN';
   const [modelos, setModelos] = useState<ModeloProntuario[]>([]);
   const [erro, setErro] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [erroFormulario, setErroFormulario] = useState('');
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
 
@@ -35,10 +37,11 @@ export default function AdminProntuariosPage() {
   const carregarModelos = useCallback(async () => {
     setCarregando(true);
     try {
-      const response = await fetch('/api/prontuarios-modelos');
+      const response = await fetch('/api/prontuarios-modelos', { cache: 'no-store' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Não foi possível carregar os modelos.');
-      setModelos(Array.isArray(data) ? data : []);
+      if (!Array.isArray(data)) throw new Error('A resposta dos modelos está em formato inválido.');
+      setModelos(data);
       setErro('');
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Não foi possível carregar os modelos.');
@@ -71,6 +74,7 @@ export default function AdminProntuariosPage() {
   }, [isModalOpen, salvando]);
 
   const abrirModal = (index: number | null = null) => {
+    setErroFormulario('');
     if (index !== null) {
       const m = modelos[index];
       setEditIndex(index);
@@ -112,11 +116,15 @@ export default function AdminProntuariosPage() {
 
   const salvarModelo = async () => {
     if (!formTitulo.trim()) {
-      alert("Informe o título do modelo!");
+      setErroFormulario('Informe o título do modelo.');
       return;
     }
     if (formCampos.length === 0) {
-      alert("Adicione pelo menos um campo ao modelo!");
+      setErroFormulario('Adicione pelo menos um campo ao modelo.');
+      return;
+    }
+    if (formCampos.some(campo => !campo.nome.trim())) {
+      setErroFormulario('Preencha o nome de todos os campos antes de salvar.');
       return;
     }
 
@@ -127,6 +135,7 @@ export default function AdminProntuariosPage() {
     };
 
     setSalvando(true);
+    setErroFormulario('');
     try {
       let response: Response;
       if (editIndex !== null) {
@@ -147,9 +156,9 @@ export default function AdminProntuariosPage() {
       if (!response.ok) throw new Error(result.error || 'Não foi possível salvar o modelo.');
       await carregarModelos();
       fecharModal();
-      alert(" Modelo salvo com sucesso!");
+      setFeedback('Modelo salvo com sucesso.');
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro ao salvar modelo.');
+      setErroFormulario(error instanceof Error ? error.message : 'Erro ao salvar modelo.');
     } finally {
       setSalvando(false);
     }
@@ -182,8 +191,8 @@ export default function AdminProntuariosPage() {
   };
 
   return (
-    <div className="conteudo">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+    <div className="conteudo prontuarios-page">
+      <div className="prontuarios-page-header">
         <div>
           <h2><i className="las la-file-alt"></i> Modelos de Prontuários</h2>
           <p>Crie e gerencie formulários customizados para os registros clínicos da sua unidade.</p>
@@ -196,11 +205,11 @@ export default function AdminProntuariosPage() {
       {!isAdmin && <p role="alert" style={{ color: '#b91c1c', marginBottom: 16 }}>Acesso restrito a administradores do hospital.</p>}
 
       <div className="lista-modelos">
-        {erro && <p role="alert" style={{ gridColumn: '1 / -1', color: '#b91c1c' }}>{erro}</p>}
+        {erro && <div className="prontuarios-load-error" role="alert"><span>{erro}</span><button className="btn btn-secondary" onClick={() => void carregarModelos()} disabled={carregando}>Tentar novamente</button></div>}
         {carregando ? (
           <p role="status" style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#64748b', padding: '40px' }}>Carregando modelos…</p>
-        ) : modelos.length === 0 ? (
-          <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#94a3b8', padding: '40px' }}>Nenhum modelo de prontuário cadastrado.</p>
+        ) : erro ? null : modelos.length === 0 ? (
+          <p className="prontuarios-empty">Nenhum modelo de prontuário cadastrado.</p>
         ) : (
           modelos.map((m, idx) => (
             <div className="modelo-item" key={m.id}>
@@ -239,12 +248,14 @@ export default function AdminProntuariosPage() {
         )}
       </div>
 
+      {feedback && <p className="prontuarios-feedback" role="status">{feedback}</p>}
+
       {isModalOpen && (
         <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget && !salvando) fecharModal(); }}>
-          <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="modelo-modal-title" onClick={e => e.stopPropagation()}>
+          <form className="modal-content" role="dialog" aria-modal="true" aria-labelledby="modelo-modal-title" onSubmit={e => { e.preventDefault(); void salvarModelo(); }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 id="modelo-modal-title"><i className={editIndex !== null ? "las la-edit" : "las la-file-medical"} aria-hidden="true"></i> {editIndex !== null ? "Editar Modelo de Prontuário" : "Novo Modelo de Prontuário"}</h3>
-              <button type="button" aria-label="Fechar formulário de modelo" style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }} onClick={fecharModal}>&times;</button>
+              <button type="button" aria-label="Fechar formulário de modelo" disabled={salvando} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: salvando ? 'not-allowed' : 'pointer' }} onClick={fecharModal}>&times;</button>
             </div>
             
             <div className="modal-body">
@@ -273,10 +284,12 @@ export default function AdminProntuariosPage() {
                 />
               </div>
 
+              {erroFormulario && <p role="alert" className="prontuarios-form-error">{erroFormulario}</p>}
+
               <div className="campos-builder">
                 <div className="campos-builder-header">
                   <h4><i className="las la-layer-group"></i> Estrutura de Campos</h4>
-                  <button className="btn btn-primary" onClick={adicionarCampo} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '12px' }}>
+                  <button type="button" className="btn btn-primary" onClick={adicionarCampo} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '12px' }}>
                     <i className="las la-plus"></i> Adicionar Campo
                   </button>
                 </div>
@@ -310,7 +323,7 @@ export default function AdminProntuariosPage() {
                         <option value="textarea">Texto Longo</option>
                         <option value="select">Seleção (Dropdown)</option>
                       </select>
-                      <button className="btn-remover-campo" onClick={() => removerCampo(index)} title="Remover Campo" aria-label={`Remover campo ${index + 1}`}>
+                      <button type="button" className="btn-remover-campo" onClick={() => removerCampo(index)} title="Remover Campo" aria-label={`Remover campo ${index + 1}`}>
                         <i className="las la-trash"></i>
                       </button>
                     </div>
@@ -320,10 +333,10 @@ export default function AdminProntuariosPage() {
             </div>
 
             <div className="modal-footer">
-              <button className="btn btn-danger" onClick={fecharModal}>Cancelar</button>
-              <button className="btn btn-success" onClick={salvarModelo} disabled={salvando}><i className="las la-save"></i> {salvando ? 'Salvando…' : 'Salvar Modelo'}</button>
+              <button type="button" className="btn btn-danger" onClick={fecharModal} disabled={salvando}>Cancelar</button>
+              <button type="submit" className="btn btn-success" disabled={salvando}><i className="las la-save" aria-hidden="true"></i> {salvando ? 'Salvando…' : 'Salvar Modelo'}</button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

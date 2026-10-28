@@ -124,6 +124,194 @@ input:checked + .slider:before { transform: translateX(26px); }
     .modal-content { width: 95%; }
 }
 
+/* Refinamento de hierarquia, foco e adaptação do receituário. */
+.container-receituario {
+  gap: 24px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.sidebar-receita {
+  flex: 0 0 300px;
+  width: 300px;
+  height: auto;
+  max-height: calc(100vh - 120px);
+  top: 96px;
+  border-color: #dbe4ef;
+  border-radius: 12px;
+}
+
+.main-receita {
+  min-width: 0;
+  padding: 12px 0;
+}
+
+/* Estado de acesso restrito: não reserve a coluna de ferramentas clínicas vazia. */
+.container-receituario.receituario-restrito {
+  display: block;
+  min-height: 0;
+}
+
+.receituario-restrito .sidebar-receita {
+  display: none;
+}
+
+.receituario-restrito .main-receita {
+  width: min(100%, 1100px);
+  margin-inline: auto;
+  padding: 12px 0;
+}
+
+.main-receita > .aviso-permissao {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #b91c1c;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #7f1d1d;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.tabs-receita {
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #f1f5f9;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabs-receita .tab-btn {
+  min-height: 46px;
+  border-radius: 8px;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.tabs-receita .tab-btn:hover {
+  color: #0a1f44;
+  background: #e2e8f0;
+}
+
+.tabs-receita .tab-btn.ativo {
+  color: #0a1f44;
+  background: #fff;
+  border-bottom: 0;
+  margin-bottom: 0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+}
+
+.toolbar-receita,
+.papel-receita,
+.professional-switcher {
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(15, 35, 72, 0.06);
+}
+
+.tool-btn,
+.cta-button,
+.btn-remove-card,
+.icon-btn {
+  min-height: 40px;
+}
+
+.tool-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+.papel-receita {
+  padding: clamp(18px, 3vw, 30px);
+}
+
+.form-campo input,
+.form-campo select {
+  min-height: 44px;
+  border-color: #cbd5e1;
+  border-radius: 9px;
+}
+
+.editor-custom {
+  min-height: 144px;
+  border-color: #cbd5e1;
+  border-radius: 10px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.editor-custom:focus-visible {
+  border-color: #1e3a8a;
+  outline: 3px solid rgba(96, 165, 250, 0.42);
+  outline-offset: 2px;
+}
+
+.medicamento-card {
+  border-radius: 12px;
+  border-left-width: 4px;
+}
+
+.tabs-receita :focus-visible,
+.container-receituario :where(button, input, select, [contenteditable="true"]):focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.tabs-receita .tab-btn:focus-visible {
+  outline-color: #1e3a8a;
+}
+
+@media (max-width: 768px) {
+  .sidebar-receita {
+    flex: 0 0 auto;
+    max-height: none;
+    border-radius: 12px;
+  }
+
+  .main-receita {
+    width: 100%;
+    padding: 0;
+  }
+
+  .assinatura-area {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .assinatura-area {
+    flex-direction: column;
+  }
+
+  .assinatura-item {
+    width: 100%;
+  }
+
+  .card-header {
+    flex-wrap: wrap;
+  }
+
+  .card-header select {
+    max-width: 42%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .container-receituario *,
+  .container-receituario *::before,
+  .container-receituario *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* force-hmr-reload-5 */
 
 /* force-hmr-reload-6 */

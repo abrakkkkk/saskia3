@@ -36,7 +36,7 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     });
 
-    return NextResponse.json(modelos);
+    return NextResponse.json(modelos, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     console.error('Erro ao buscar modelos:', error);
     return NextResponse.json({ error: 'Erro ao buscar modelos' }, { status: 500 });
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(modelo, { status: 201 });
+    return NextResponse.json(modelo, { status: 201, headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error: any) {
     console.error('Erro ao criar modelo:', error);
     return NextResponse.json({ error: 'Erro ao criar modelo' }, { status: 500 });

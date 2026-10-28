@@ -25,6 +25,8 @@ export default function UsuarioPage() {
   const [modalAberto, setModalAberto] = useState(false);
   const [formUsuario, setFormUsuario] = useState({ id: '', nome: '', email: '', senha: '', cargo: 'MEDICO' });
   const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [erroSalvar, setErroSalvar] = useState('');
 
   const carregarUsuarios = useCallback(async () => {
     setLoading(true);
@@ -93,6 +95,8 @@ export default function UsuarioPage() {
   });
 
   const abrirModal = (u?: Usuario) => {
+    setFeedback('');
+    setErroSalvar('');
     if (u) {
       setFormUsuario({ id: u.id, nome: u.nome, email: u.email, senha: '', cargo: u.cargo });
     } else {
@@ -103,19 +107,20 @@ export default function UsuarioPage() {
 
   const salvarUsuario = async () => {
     if (!formUsuario.nome.trim() || !formUsuario.email.trim()) {
-      alert("Preencha nome e e-mail!");
+      setErroSalvar('Preencha nome e e-mail.');
       return;
     }
     if (!formUsuario.id && !formUsuario.senha) {
-      alert("Informe uma senha para o novo usuário!");
+      setErroSalvar('Informe uma senha para o novo usuário.');
       return;
     }
     if (formUsuario.senha && new TextEncoder().encode(formUsuario.senha).length > 72) {
-      alert('A senha pode ter no máximo 72 bytes.');
+      setErroSalvar('A senha pode ter no máximo 72 bytes.');
       return;
     }
 
     setIsSaving(true);
+    setErroSalvar('');
     try {
       const url = formUsuario.id ? `/api/usuarios/${formUsuario.id}` : '/api/usuarios';
       const method = formUsuario.id ? 'PUT' : 'POST';
@@ -127,15 +132,15 @@ export default function UsuarioPage() {
       });
 
       if (res.ok) {
-        alert("Usuário salvo com sucesso!");
         setModalAberto(false);
-        carregarUsuarios();
+        setFeedback('Usuário salvo com sucesso.');
+        await carregarUsuarios();
       } else {
         const errorData = await res.json().catch(() => null);
-        alert(errorData?.error || "Erro ao salvar usuário");
+        setErroSalvar(errorData?.error || 'Erro ao salvar usuário.');
       }
     } catch (error) {
-      alert("Erro de conexão");
+      setErroSalvar('Erro de conexão. Tente novamente.');
     } finally {
       setIsSaving(false);
     }
@@ -190,6 +195,7 @@ export default function UsuarioPage() {
           <i className="las la-user-plus"></i> Novo Usuário
         </button>
       </div>
+      {feedback && <p className="usuario-feedback" role="status" aria-live="polite">{feedback}</p>}
 
       {/* CARDS ESTATÍSTICOS */}
       <div className="stats-usuarios">
@@ -213,10 +219,10 @@ export default function UsuarioPage() {
 
       {/* FILTROS */}
       <div className="filtros-usuarios">
-        <button className={`filtro-btn ${filtroAtual === 'todos' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('todos')}><i className="las la-list-ul"></i> Todos</button>
-        <button className={`filtro-btn ${filtroAtual === 'admin' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('admin')}><i className="las la-crown"></i> Administradores</button>
-        <button className={`filtro-btn ${filtroAtual === 'profissional' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('profissional')}><i className="las la-stethoscope"></i> Profissionais</button>
-        <button className={`filtro-btn ${filtroAtual === 'recepcao' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('recepcao')}><i className="las la-headset"></i> Recepção</button>
+        <button aria-pressed={filtroAtual === 'todos'} className={`filtro-btn ${filtroAtual === 'todos' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('todos')}><i aria-hidden="true" className="las la-list-ul"></i> Todos</button>
+        <button aria-pressed={filtroAtual === 'admin'} className={`filtro-btn ${filtroAtual === 'admin' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('admin')}><i aria-hidden="true" className="las la-crown"></i> Administradores</button>
+        <button aria-pressed={filtroAtual === 'profissional'} className={`filtro-btn ${filtroAtual === 'profissional' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('profissional')}><i aria-hidden="true" className="las la-stethoscope"></i> Profissionais</button>
+        <button aria-pressed={filtroAtual === 'recepcao'} className={`filtro-btn ${filtroAtual === 'recepcao' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('recepcao')}><i aria-hidden="true" className="las la-headset"></i> Recepção</button>
       </div>
 
       {/* TABELA DE USUÁRIOS */}
@@ -269,11 +275,11 @@ export default function UsuarioPage() {
 
       {/* MODAL */}
       {modalAberto && (
-        <div className="modal-usuario" style={{ display: 'flex' }}>
-          <div className="modal-content">
+        <div className="modal-usuario">
+          <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="usuario-modal-title">
             <div className="modal-header">
-              <span><i className="las la-user-plus"></i> {formUsuario.id ? 'Editar Usuário' : 'Novo Usuário'}</span>
-              <button onClick={() => setModalAberto(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>×</button>
+              <span id="usuario-modal-title"><i aria-hidden="true" className="las la-user-plus"></i> {formUsuario.id ? 'Editar Usuário' : 'Novo Usuário'}</span>
+              <button type="button" aria-label="Fechar janela" onClick={() => !isSaving && setModalAberto(false)} disabled={isSaving} className="usuario-modal-close">×</button>
             </div>
             <div className="modal-body">
               <label htmlFor="usuario-nome">Nome completo</label>
@@ -296,7 +302,8 @@ export default function UsuarioPage() {
                 <option value="OUTROS">Outros</option>
               </select>
               
-              <button className="btn-salvar" onClick={salvarUsuario} disabled={isSaving}>
+              {erroSalvar && <p className="usuario-form-error" role="alert" aria-live="assertive">{erroSalvar}</p>}
+              <button type="button" className="btn-salvar" onClick={() => void salvarUsuario()} disabled={isSaving}>
                 {isSaving ? 'Salvando...' : 'Salvar Usuário'}
               </button>
             </div>

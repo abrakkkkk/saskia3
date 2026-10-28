@@ -19,10 +19,10 @@ interface MovimentacaoEstoque {
   id: string;
   tipo: string;
   itemId: string;
-  item?: EstoqueItem;
+  item?: EstoqueItem | null;
   quantidade: number;
   pacienteId?: string;
-  paciente?: any;
+  paciente?: { id: string; nome: string } | null;
   setor?: string;
   fornecedor?: string;
   responsavel: string;
@@ -38,6 +38,7 @@ interface Paciente {
 export default function FarmaciaPage() {
   const [activeTab, setActiveTab] = useState<'pacientes' | 'estoque' | 'entradas' | 'saidas'>('pacientes');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   const [estoque, setEstoque] = useState<EstoqueItem[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoEstoque[]>([]);
@@ -70,6 +71,7 @@ export default function FarmaciaPage() {
 
   const carregarDados = async () => {
     setLoading(true);
+    const erros: string[] = [];
     try {
       const [resEstoque, resMov, resPacientes] = await Promise.all([
         fetch('/api/estoque?categoria=FARMACIA'),
@@ -82,6 +84,7 @@ export default function FarmaciaPage() {
         setEstoque(Array.isArray(dataEst) ? dataEst : []);
       } else {
         setEstoque([]);
+        erros.push('estoque');
       }
 
       if (resMov.ok) {
@@ -89,6 +92,7 @@ export default function FarmaciaPage() {
         setMovimentacoes(Array.isArray(dataMov) ? dataMov : []);
       } else {
         setMovimentacoes([]);
+        erros.push('movimentações');
       }
 
       if (resPacientes.ok) {
@@ -96,12 +100,15 @@ export default function FarmaciaPage() {
         setPacientes(Array.isArray(dataPac) ? dataPac : []);
       } else {
         setPacientes([]);
+        erros.push('pacientes');
       }
+      setLoadError(erros.length ? `Não foi possível carregar: ${erros.join(', ')}.` : '');
     } catch (e) {
       console.error('Erro ao carregar dados da farmácia:', e);
       setEstoque([]);
       setMovimentacoes([]);
       setPacientes([]);
+      setLoadError('Não foi possível conectar aos dados da farmácia. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -227,7 +234,7 @@ export default function FarmaciaPage() {
   const entradas = movimentacoes.filter(m => m.tipo === 'ENTRADA');
   const saidas = movimentacoes.filter(m => m.tipo === 'SAIDA');
 
-  let listaPacientes = saidas.slice().reverse();
+  let listaPacientes = saidas;
   if (buscarPaciente) {
     listaPacientes = listaPacientes.filter(s => s.paciente?.nome?.toLowerCase().includes(buscarPaciente.toLowerCase()));
   }
@@ -261,6 +268,8 @@ export default function FarmaciaPage() {
           </div>
         </div>
 
+        {loadError && <div className="alerta-farmacia" role="alert">{loadError}</div>}
+
         <div className="status-cards">
           <div className="status-card entrada"><div className="card-icon"><i className="las la-box"></i></div><div className="card-numero">{stats.entradas}</div><div className="card-label">Entradas Hoje</div></div>
           <div className="status-card saida"><div className="card-icon"><i className="las la-truck"></i></div><div className="card-numero">{stats.saidas}</div><div className="card-label">Dispensações Hoje</div></div>
@@ -268,24 +277,24 @@ export default function FarmaciaPage() {
         </div>
 
         <div className="tabs-farmacia">
-          <button className={`tab-btn ${activeTab === 'pacientes' ? 'ativo' : ''}`} onClick={() => setActiveTab('pacientes')}><i className="las la-user-injured"></i> Pacientes</button>
-          <button className={`tab-btn ${activeTab === 'estoque' ? 'ativo' : ''}`} onClick={() => setActiveTab('estoque')}><i className="las la-boxes"></i> Estoque</button>
-          <button className={`tab-btn ${activeTab === 'entradas' ? 'ativo' : ''}`} onClick={() => setActiveTab('entradas')}><i className="las la-arrow-down"></i> Entradas</button>
-          <button className={`tab-btn ${activeTab === 'saidas' ? 'ativo' : ''}`} onClick={() => setActiveTab('saidas')}><i className="las la-arrow-up"></i> Dispensações</button>
+          <button type="button" aria-pressed={activeTab === 'pacientes'} className={`tab-btn ${activeTab === 'pacientes' ? 'ativo' : ''}`} onClick={() => setActiveTab('pacientes')}><i className="las la-user-injured" aria-hidden="true"></i> Pacientes</button>
+          <button type="button" aria-pressed={activeTab === 'estoque'} className={`tab-btn ${activeTab === 'estoque' ? 'ativo' : ''}`} onClick={() => setActiveTab('estoque')}><i className="las la-boxes" aria-hidden="true"></i> Estoque</button>
+          <button type="button" aria-pressed={activeTab === 'entradas'} className={`tab-btn ${activeTab === 'entradas' ? 'ativo' : ''}`} onClick={() => setActiveTab('entradas')}><i className="las la-arrow-down" aria-hidden="true"></i> Entradas</button>
+          <button type="button" aria-pressed={activeTab === 'saidas'} className={`tab-btn ${activeTab === 'saidas' ? 'ativo' : ''}`} onClick={() => setActiveTab('saidas')}><i className="las la-arrow-up" aria-hidden="true"></i> Dispensações</button>
         </div>
 
         {activeTab === 'pacientes' && (
           <div>
             <div className="search-box">
-              <input type="text" placeholder="Buscar paciente dispensado..." value={buscarPaciente} onChange={e => setBuscarPaciente(e.target.value)} />
+              <input type="text" aria-label="Buscar paciente dispensado" placeholder="Buscar paciente dispensado..." value={buscarPaciente} onChange={e => setBuscarPaciente(e.target.value)} />
             </div>
             <div>
               {listaPacientes.length === 0 ? (
                 <div style={{textAlign:'center',padding:'40px',color:'#94a3b8'}}>Nenhum registro</div>
               ) : (
-                listaPacientes.map((s, idx) => {
+                listaPacientes.map((s) => {
                   return (
-                    <div className="paciente-card dispensado" key={idx}>
+                    <div className="paciente-card dispensado" key={s.id}>
                       <div className="paciente-info">
                         <h4><i className="las la-user"></i> {s.paciente?.nome || 'Desconhecido'}</h4>
                         <p><i className="las la-map-marker"></i> {s.setor || 'N/I'} | {new Date(s.createdAt).toLocaleString('pt-BR')}</p>
@@ -304,11 +313,11 @@ export default function FarmaciaPage() {
 
         {activeTab === 'estoque' && (
           <div>
-            <div className="search-box"><input type="text" placeholder="Buscar medicamento..." value={buscarMedicamento} onChange={e => setBuscarMedicamento(e.target.value)} /></div>
-            <table className="tabela-farmacia">
+            <div className="search-box"><input type="text" aria-label="Buscar medicamento no estoque" placeholder="Buscar medicamento..." value={buscarMedicamento} onChange={e => setBuscarMedicamento(e.target.value)} /></div>
+            <div className="tabela-farmacia-wrapper"><table className="tabela-farmacia">
               <thead><tr><th>Medicamento</th><th>Princípio Ativo</th><th>Lote</th><th>Validade</th><th>Qtd.</th><th>Mín.</th><th>Status</th></tr></thead>
               <tbody>
-                {listaEstoque.map((m, idx) => {
+                {listaEstoque.map((m) => {
                   const baixo = m.quantidade <= m.minimo;
                   return (
                     <tr key={m.id}>
@@ -323,15 +332,15 @@ export default function FarmaciaPage() {
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           </div>
         )}
 
         {activeTab === 'entradas' && (
-          <table className="tabela-farmacia">
+          <div className="tabela-farmacia-wrapper"><table className="tabela-farmacia">
             <thead><tr><th>Data/Hora</th><th>Medicamento</th><th>Fornecedor</th><th>Qtd.</th><th>Responsável</th></tr></thead>
             <tbody>
-              {entradas.slice().reverse().slice(0, 50).map((e, idx) => (
+              {entradas.slice(0, 50).map((e) => (
                 <tr key={e.id}>
                   <td>{new Date(e.createdAt).toLocaleString('pt-BR')}</td>
                   <td>{e.item?.nome}</td>
@@ -342,14 +351,14 @@ export default function FarmaciaPage() {
               ))}
               {entradas.length === 0 && <tr><td colSpan={5} style={{textAlign:'center',padding:'30px'}}>Nenhuma entrada</td></tr>}
             </tbody>
-          </table>
+          </table></div>
         )}
 
         {activeTab === 'saidas' && (
-          <table className="tabela-farmacia">
+          <div className="tabela-farmacia-wrapper"><table className="tabela-farmacia">
             <thead><tr><th>Data/Hora</th><th>Paciente</th><th>Medicamento</th><th>Qtd.</th><th>Responsável</th></tr></thead>
             <tbody>
-              {saidas.slice().reverse().slice(0, 50).map((s, idx) => (
+              {saidas.slice(0, 50).map((s) => (
                 <tr key={s.id}>
                   <td>{new Date(s.createdAt).toLocaleString('pt-BR')}</td>
                   <td>{s.paciente?.nome || s.setor || '-'}</td>
@@ -360,7 +369,7 @@ export default function FarmaciaPage() {
               ))}
               {saidas.length === 0 && <tr><td colSpan={5} style={{textAlign:'center',padding:'30px'}}>Nenhuma dispensação</td></tr>}
             </tbody>
-          </table>
+          </table></div>
         )}
 
       </div>

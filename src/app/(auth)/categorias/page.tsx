@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Tags, Plus, Trash2, Tag } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import './categorias.css';
 
 interface Categoria {
   id: string;
@@ -83,20 +84,20 @@ export default function CategoriasPage() {
   };
 
   return (
-    <main className="p-4 sm:p-8 max-w-4xl mx-auto space-y-8 animate-fade-in">
-      <div className="flex flex-col md:flex-row md:items-center justify-between bg-gradient-to-br from-slate-900 to-blue-900 rounded-3xl p-8 shadow-xl text-white gap-6">
+    <main className="categorias-page p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-6 animate-fade-in">
+      <div className="flex flex-col md:flex-row md:items-center justify-between bg-gradient-to-br from-slate-900 to-blue-900 rounded-2xl p-6 sm:p-7 shadow-lg text-white gap-5">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Tags aria-hidden="true" className="w-8 h-8 text-blue-300" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+            <Tags aria-hidden="true" className="w-7 h-7 sm:w-8 sm:h-8 text-blue-300" />
             Gestão de Categorias
           </h1>
           <p className="text-slate-300 mt-2 font-medium">Organize e cadastre as categorias utilizadas no sistema</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+      <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200">
         {erro && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-red-700">{erro}</p>}
-        {isAdmin && <form onSubmit={handleAddCategoria} className="flex flex-col sm:flex-row gap-4 mb-8">
+        {isAdmin && <form onSubmit={handleAddCategoria} className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="flex-1 relative">
             <Tag aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input 
@@ -107,12 +108,12 @@ export default function CategoriasPage() {
               placeholder="Ex: Cardiologia, Psiquiatria, Dermatologia..." 
               maxLength={100}
               required
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
+              className="w-full min-h-12 pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-700 transition-all"
             />
           </div>
           <button 
             type="submit"
-            className="bg-blue-700 hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 text-white font-bold px-8 py-4 rounded-2xl transition-colors flex items-center gap-2 shadow-lg shadow-blue-200"
+            className="min-h-12 justify-center bg-blue-700 hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-colors flex items-center gap-2 shadow-md shadow-blue-200"
           >
             <Plus aria-hidden="true" className="w-5 h-5" />
             Adicionar
@@ -121,12 +122,12 @@ export default function CategoriasPage() {
 
         <div className="space-y-3">
           {!carregando && categorias.map(cat => (
-            <div key={cat.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-md transition-all group">
-              <div className="flex items-center gap-3 font-medium text-slate-700">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+            <div key={cat.id} className="categoria-item flex items-center justify-between gap-3 p-3 sm:p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:shadow-sm transition-all group">
+              <div className="flex min-w-0 items-center gap-3 font-medium text-slate-700">
+                <div aria-hidden="true" className="w-10 h-10 shrink-0 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
                   <Tag aria-hidden="true" className="w-5 h-5" />
                 </div>
-                {cat.nome}
+                <span className="min-w-0 break-words">{cat.nome}</span>
               </div>
               {isAdmin && <button
                 onClick={() => handleRemoveCategoria(cat.id)}

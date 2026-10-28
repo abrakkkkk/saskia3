@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import styles from './lembretes.module.css';
 import { 
   Bell, 
   PlusCircle, 
@@ -271,36 +272,36 @@ export default function LembretesPage() {
   const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
   return (
-    <div className="max-w-[1500px] mx-auto p-6 space-y-6">
+    <div className="lembretes-page max-w-[1500px] mx-auto p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
       
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Bell className="w-8 h-8 text-blue-900" />
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <Bell aria-hidden="true" className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-blue-900" />
             Lembretes e Notificações
           </h2>
           <p className="text-slate-500 mt-1">Gerencie seus compromissos, tarefas e alertas.</p>
         </div>
         <button 
           onClick={() => abrirModal()}
-          className="bg-blue-900 hover:bg-blue-950 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm"
+          className="min-h-11 w-full sm:w-auto justify-center bg-blue-900 hover:bg-blue-950 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
         >
-          <PlusCircle className="w-5 h-5" /> Novo Lembrete
+          <PlusCircle aria-hidden="true" className="w-5 h-5" /> Novo Lembrete
         </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Pendentes', value: stats.pendentes, icon: Clock, color: 'text-orange-600', bg: 'bg-orange-100 border-orange-500' },
-          { label: 'Para Hoje', value: stats.hoje, icon: CalendarIcon, color: 'text-blue-600', bg: 'bg-blue-100 border-blue-500' },
-          { label: 'Concluídos', value: stats.concluidos, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100 border-green-500' },
+          { label: 'Pendentes', value: stats.pendentes, icon: Clock, color: 'text-orange-700', bg: 'bg-orange-100 border-orange-500' },
+          { label: 'Para Hoje', value: stats.hoje, icon: CalendarIcon, color: 'text-blue-700', bg: 'bg-blue-100 border-blue-500' },
+          { label: 'Concluídos', value: stats.concluidos, icon: CheckCircle, color: 'text-green-700', bg: 'bg-green-100 border-green-500' },
           { label: 'Total', value: stats.total, icon: BarChart, color: 'text-slate-600', bg: 'bg-slate-100 border-slate-500' }
         ].map((s, i) => (
-          <div key={i} className={`bg-white p-5 rounded-xl shadow-sm border-l-4 ${s.bg} flex items-center gap-4`}>
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-sm ${s.color}`}>
-              <s.icon className="w-6 h-6" />
+          <div key={i} className={`min-w-0 bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 border-l-4 ${s.bg} flex items-center gap-3 sm:gap-4`}>
+            <div className={`w-12 h-12 shrink-0 rounded-full flex items-center justify-center bg-white shadow-sm ${s.color}`}>
+              <s.icon aria-hidden="true" className="w-6 h-6" />
             </div>
             <div>
               <div className="text-sm font-medium text-slate-500">{s.label}</div>
@@ -316,18 +317,18 @@ export default function LembretesPage() {
       <div className="grid lg:grid-cols-3 gap-6">
         
         {/* Calendário */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-200 self-start">
+        <div className="lg:col-span-1 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200 self-start">
           <div className="flex items-center justify-between mb-6">
-            <button onClick={() => mudarMes(-1)} aria-label="Mês anterior" className="p-2 hover:bg-slate-100 rounded-lg text-slate-600"><ChevronLeft className="w-5 h-5" /></button>
+            <button type="button" onClick={() => mudarMes(-1)} aria-label="Mês anterior" className="min-h-11 min-w-11 p-2 hover:bg-slate-100 rounded-lg text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"><ChevronLeft aria-hidden="true" className="w-5 h-5 mx-auto" /></button>
             <h3 className="font-bold text-slate-800 text-lg">{meses[mes]} {ano}</h3>
-            <button onClick={() => mudarMes(1)} aria-label="Próximo mês" className="p-2 hover:bg-slate-100 rounded-lg text-slate-600"><ChevronRight className="w-5 h-5" /></button>
+            <button type="button" onClick={() => mudarMes(1)} aria-label="Próximo mês" className="min-h-11 min-w-11 p-2 hover:bg-slate-100 rounded-lg text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"><ChevronRight aria-hidden="true" className="w-5 h-5 mx-auto" /></button>
           </div>
           
-          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400">
-            <div>D</div><div>S</div><div>T</div><div>Q</div><div>Q</div><div>S</div><div>S</div>
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-[10px] sm:text-xs font-bold text-slate-600" aria-hidden="true">
+            <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
           </div>
           
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {diasBrancos.map((_, i) => <div key={`b-${i}`} className="aspect-square"></div>)}
             {dias.map(dia => {
               const dataStr = `${ano}-${String(mes+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
@@ -337,16 +338,18 @@ export default function LembretesPage() {
               return (
                 <button 
                   key={dia}
+                  type="button"
                   onClick={() => selecionarData(dataStr)}
                   aria-label={`Criar lembrete em ${formatDate(dataStr)}`}
+                  aria-current={isHoje ? 'date' : undefined}
                   className={`
-                    aspect-square rounded-full flex items-center justify-center text-sm font-medium transition-colors relative
+                    aspect-square min-w-0 rounded-full flex items-center justify-center text-sm font-medium transition-colors relative focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-700
                     ${isHoje ? 'bg-blue-900 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100'}
                   `}
                 >
                   {dia}
                   {temLembrete && (
-                    <span className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${isHoje ? 'bg-white' : 'bg-red-500'}`}></span>
+                    <span aria-hidden="true" className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${isHoje ? 'bg-white' : 'bg-red-500'}`}></span>
                   )}
                 </button>
               );
@@ -355,20 +358,20 @@ export default function LembretesPage() {
         </div>
 
         {/* Lista */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-[600px]">
-          <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
+        <div className={`${styles.lembretesListPanel} lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[360px] max-h-[75vh]`}>
+          <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 sm:gap-4">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <List className="w-5 h-5 text-blue-900" /> Meus Lembretes
+              <List aria-hidden="true" className="w-5 h-5 text-blue-900" /> Meus Lembretes
             </h3>
-            <div className="flex gap-2">
+            <div className="flex w-full sm:w-auto flex-wrap gap-2" role="group" aria-label="Filtrar lembretes">
               {(['todos', 'pendente', 'concluido', 'hoje'] as const).map(f => (
                 <button
                   key={f}
                   onClick={() => setFiltro(f)}
                   aria-pressed={filtro === f}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filtro === f ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                  className={`min-h-10 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${filtro === f ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
                 >
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f === 'todos' ? 'Todos' : f === 'pendente' ? 'Pendentes' : f === 'concluido' ? 'Concluídos' : 'Hoje'}
                 </button>
               ))}
             </div>
@@ -379,7 +382,7 @@ export default function LembretesPage() {
               <div role="status" className="flex h-full items-center justify-center text-slate-500">Carregando lembretes...</div>
             ) : listaFiltrada.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4">
-                <Bell className="w-16 h-16 opacity-30" />
+                <Bell aria-hidden="true" className="w-16 h-16 opacity-30" />
                 <p>Nenhum lembrete encontrado</p>
               </div>
             ) : (
@@ -389,33 +392,33 @@ export default function LembretesPage() {
                   const Icon = info.icon;
                   
                   return (
-                    <div key={l.id} className={`p-4 rounded-xl border transition-all ${l.concluido ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-white border-slate-200 shadow-sm hover:shadow-md border-l-4 border-l-blue-900'}`}>
+                    <div key={l.id} className={`p-4 rounded-xl border transition-all ${l.concluido ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-200 shadow-sm hover:shadow-md border-l-4 border-l-blue-900'}`}>
                       <div className="flex flex-wrap justify-between items-start gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-1">
-                            <h4 className={`font-bold ${l.concluido ? 'line-through text-slate-500' : 'text-slate-800'}`}>{l.titulo}</h4>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
+                            <h4 className={`min-w-0 break-words font-bold ${l.concluido ? 'line-through text-slate-600' : 'text-slate-800'}`}>{l.titulo}</h4>
                             <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 ${info.color}`}>
-                              <Icon className="w-3 h-3" /> {info.label}
+                              <Icon aria-hidden="true" className="w-3 h-3" /> {info.label}
                             </span>
                           </div>
-                          <div className="text-xs text-slate-500 flex items-center gap-3">
-                            <span className="flex items-center gap-1.5"><CalendarIcon className="w-3.5 h-3.5" /> {formatDate(l.data)} às {l.hora}</span>
-                            {l.relacionado && <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> {l.relacionado}</span>}
+                          <div className="text-xs text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="flex items-center gap-1.5"><CalendarIcon aria-hidden="true" className="w-3.5 h-3.5" /> {formatDate(l.data)} às {l.hora}</span>
+                            {l.relacionado && <span className="min-w-0 flex items-center gap-1.5 break-words"><User aria-hidden="true" className="w-3.5 h-3.5 shrink-0" /> {l.relacionado}</span>}
                           </div>
-                          {l.descricao && <p className="text-sm text-slate-600 mt-2">{l.descricao}</p>}
+                          {l.descricao && <p className="text-sm text-slate-700 leading-relaxed mt-2 break-words">{l.descricao}</p>}
                         </div>
                         
-                        <div className="flex items-center gap-2">
+                        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                           {!l.concluido && (
-                            <button onClick={() => concluirLembrete(l.id)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Concluir" aria-label={`Concluir ${l.titulo}`}>
-                              <CheckCircle className="w-5 h-5" />
+                            <button type="button" onClick={() => concluirLembrete(l.id)} className="min-h-11 min-w-11 p-2 text-green-700 hover:bg-green-50 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700" title="Concluir" aria-label={`Concluir ${l.titulo}`}>
+                              <CheckCircle aria-hidden="true" className="w-5 h-5" />
                             </button>
                           )}
-                          <button onClick={() => abrirModal(l)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar" aria-label={`Editar ${l.titulo}`}>
-                            <Edit className="w-5 h-5" />
+                          <button type="button" onClick={() => abrirModal(l)} className="min-h-11 min-w-11 p-2 text-blue-700 hover:bg-blue-50 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700" title="Editar" aria-label={`Editar ${l.titulo}`}>
+                            <Edit aria-hidden="true" className="w-5 h-5" />
                           </button>
-                          <button onClick={() => excluirLembrete(l.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Excluir" aria-label={`Excluir ${l.titulo}`}>
-                            <Trash2 className="w-5 h-5" />
+                          <button type="button" onClick={() => excluirLembrete(l.id)} className="min-h-11 min-w-11 p-2 text-red-700 hover:bg-red-50 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700" title="Excluir" aria-label={`Excluir ${l.titulo}`}>
+                            <Trash2 aria-hidden="true" className="w-5 h-5" />
                           </button>
                         </div>
                       </div>
@@ -431,10 +434,10 @@ export default function LembretesPage() {
       {/* Modal Lembrete */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div role="dialog" aria-modal="true" aria-labelledby="lembrete-modal-titulo" className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
+          <div role="dialog" aria-modal="true" aria-labelledby="lembrete-modal-titulo" className="bg-white rounded-2xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-xl">
             <div className="bg-blue-900 p-4 px-6 flex justify-between items-center text-white">
-              <h3 id="lembrete-modal-titulo" className="font-bold flex items-center gap-2"><Bell className="w-5 h-5" /> {lembreteEditando ? 'Editar Lembrete' : 'Novo Lembrete'}</h3>
-              <button onClick={() => setIsModalOpen(false)} aria-label="Fechar formulário" className="text-white/70 hover:text-white transition-colors text-2xl leading-none">&times;</button>
+              <h3 id="lembrete-modal-titulo" className="font-bold flex items-center gap-2"><Bell aria-hidden="true" className="w-5 h-5" /> {lembreteEditando ? 'Editar Lembrete' : 'Novo Lembrete'}</h3>
+              <button type="button" onClick={() => setIsModalOpen(false)} aria-label="Fechar formulário" className="min-h-11 min-w-11 rounded-lg text-white/90 hover:bg-white/10 transition-colors text-2xl leading-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">&times;</button>
             </div>
             
             <div className="p-6 space-y-4">
@@ -445,7 +448,7 @@ export default function LembretesPage() {
                   type="text" 
                   value={form.titulo}
                   onChange={e => setForm({...form, titulo: e.target.value})}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm"
+                  className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm"
                   placeholder="Ex: Reunião Equipe"
                   maxLength={200}
                   required
@@ -458,7 +461,7 @@ export default function LembretesPage() {
                   id="lembrete-tipo"
                   value={form.tipo}
                   onChange={e => setForm({...form, tipo: e.target.value as any})}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm bg-white"
+                  className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm bg-white"
                 >
                   <option value="consulta"> Consulta</option>
                   <option value="medicacao"> Medicação</option>
@@ -476,7 +479,7 @@ export default function LembretesPage() {
                     type="date" 
                     value={form.data}
                     onChange={e => setForm({...form, data: e.target.value})}
-                    className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm"
+                    className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm"
                   />
                 </div>
                 <div>
@@ -486,7 +489,7 @@ export default function LembretesPage() {
                     type="time" 
                     value={form.hora}
                     onChange={e => setForm({...form, hora: e.target.value})}
-                    className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm"
+                    className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm"
                   />
                 </div>
               </div>
@@ -498,7 +501,7 @@ export default function LembretesPage() {
                   type="text" 
                   value={form.relacionado}
                   onChange={e => setForm({...form, relacionado: e.target.value})}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm"
+                  className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm"
                   placeholder="Ex: João da Silva (Paciente)"
                   maxLength={200}
                 />
@@ -510,7 +513,7 @@ export default function LembretesPage() {
                   id="lembrete-descricao"
                   value={form.descricao}
                   onChange={e => setForm({...form, descricao: e.target.value})}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm resize-y"
+                  className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm resize-y"
                   rows={3}
                   maxLength={4000}
                 />
@@ -520,7 +523,7 @@ export default function LembretesPage() {
             <div className="p-4 border-t border-slate-100 bg-slate-50">
               <button 
                 onClick={salvarLembrete}
-                className="w-full bg-blue-900 hover:bg-blue-950 text-white font-bold py-3 rounded-xl transition-colors"
+                className="min-h-11 w-full bg-blue-900 hover:bg-blue-950 text-white font-bold py-3 rounded-xl transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
               >
                 Salvar Lembrete
               </button>

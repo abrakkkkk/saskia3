@@ -154,15 +154,24 @@ export default function CcihPage() {
 
   // pacientes para selects (via API)
   const [pacientes, setPacientes] = useState<{id:string; nome:string}[]>([]);
+  const [erroPacientes, setErroPacientes] = useState('');
 
   useEffect(() => {
     if (!hospitalId) return;
     reloadAll().catch(error => setErroCarga(error instanceof Error ? error.message : 'Não foi possível carregar os dados de CCIH.'));
     // buscar pacientes
     fetch('/api/pacientes?limit=200')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.pacientes) setPacientes(d.pacientes.map((p:any) => ({ id: p.id, nome: p.nome }))); else if (Array.isArray(d)) setPacientes(d.map((p:any) => ({ id: p.id, nome: p.nome }))); })
-      .catch(() => {});
+      .then(async r => {
+        if (!r.ok) throw new Error('Não foi possível carregar a lista de pacientes.');
+        return r.json();
+      })
+      .then(d => {
+        const lista = Array.isArray(d) ? d : d?.pacientes;
+        if (!Array.isArray(lista)) throw new Error('Resposta da lista de pacientes inválida.');
+        setPacientes(lista.map((p: any) => ({ id: p.id, nome: p.nome })));
+        setErroPacientes('');
+      })
+      .catch(error => setErroPacientes(error instanceof Error ? error.message : 'Não foi possível carregar a lista de pacientes.'));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hospitalId]);
 
@@ -308,6 +317,11 @@ export default function CcihPage() {
       {erroCarga && (
         <div role="alert" style={{ background:'#fef2f2', border:'1px solid #fecaca', borderRadius:12, padding:'12px 18px', marginBottom:20, color:'#b91c1c', fontWeight:600 }}>
           <i className="las la-exclamation-circle" aria-hidden="true"></i> {erroCarga}
+        </div>
+      )}
+      {erroPacientes && (
+        <div role="alert" style={{ background:'#fff7ed', border:'1px solid #fed7aa', borderRadius:12, padding:'12px 18px', marginBottom:20, color:'#9a3412', fontWeight:600 }}>
+          <i className="las la-exclamation-triangle" aria-hidden="true"></i> {erroPacientes} Os campos de paciente podem ficar indisponíveis até que a lista seja carregada.
         </div>
       )}
 

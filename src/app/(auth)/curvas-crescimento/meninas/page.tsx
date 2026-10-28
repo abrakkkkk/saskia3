@@ -33,7 +33,7 @@ export default function CurvasMeninasPage() {
   const caminhoDocumento = (nome: string) => `/docs/${encodeURIComponent(nome)}`;
 
   return (
-    <div className="migrated-page-container">
+    <div className="migrated-page-container curvas-meninas-page">
       <div className="conteudo">
         <a className="btn-voltar" href="/curvas-crescimento">
           <i className="las la-arrow-left" aria-hidden="true" /> Voltar
@@ -45,7 +45,7 @@ export default function CurvasMeninasPage() {
               <div className="doc-preview" aria-hidden="true"><i className="las la-file-pdf" /></div>
               <div className="doc-info">
                 <div className="doc-titulo"><strong>{documento.titulo}</strong></div>
-                <div style={{ marginTop: 12 }}>
+                <div className="doc-actions">
                   <button className="btn-doc btn-ver" type="button" onClick={() => setDocumentoSelecionado(documento)}>
                     <i className="las la-eye" aria-hidden="true" /> Ver
                   </button>
@@ -60,7 +60,7 @@ export default function CurvasMeninasPage() {
       </div>
 
       {documentoSelecionado && (
-        <div className="modal-pdf" style={{ display: 'flex' }} onClick={() => setDocumentoSelecionado(null)}>
+        <div className="modal-pdf" onClick={() => setDocumentoSelecionado(null)}>
           <section
             className="modal-pdf-conteudo"
             role="dialog"
@@ -74,7 +74,7 @@ export default function CurvasMeninasPage() {
                 type="button"
                 onClick={() => setDocumentoSelecionado(null)}
                 aria-label="Fechar visualização do documento"
-                style={{ background: 'none', border: 'none', color: 'white', fontSize: 24, cursor: 'pointer' }}
+                className="modal-pdf-close"
               >×</button>
             </header>
             <div className="modal-pdf-body">

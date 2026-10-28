@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       agendamentos: agendamentos.map(({ status, profissional, _count }) => ({ status, profissional, total: _count._all })),
       cirurgiasNoPeriodo,
       leitos: leitos.map(({ tipo, status }) => ({ tipo, status })),
-    })
+    }, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } })
   } catch (error) {
     console.error('Erro ao carregar dados gerenciais:', error)
     return NextResponse.json({ error: 'Erro ao carregar dados gerenciais' }, { status: 500 })

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import './chamados-ti.css';
 
 interface Ticket {
   id: string;
@@ -22,6 +23,8 @@ export default function ChamadosTiPage() {
   const [showForm, setShowForm] = useState(false);
   const [erro, setErro] = useState('');
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const carregarDados = async () => {
     setLoading(true);
@@ -50,10 +53,12 @@ export default function ChamadosTiPage() {
 
   const abrirChamado = async () => {
     if (!titulo.trim() || !descricao.trim()) {
-      alert('Preencha título e descrição.');
+      setFormError('Preencha o título e a descrição do chamado.');
       return;
     }
 
+    setFormError('');
+    setSuccess('');
     setSaving(true);
     try {
       const res = await fetch('/api/tickets', {
@@ -67,11 +72,12 @@ export default function ChamadosTiPage() {
         setTitulo(''); setDescricao(''); setPrioridade('MEDIA');
         setShowForm(false);
         await carregarDados();
+        setSuccess('Chamado enviado com sucesso.');
       } else {
         throw new Error(data?.error || 'Erro ao abrir chamado.');
       }
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro de conexão.');
+      setFormError(error instanceof Error ? error.message : 'Erro de conexão.');
     } finally {
       setSaving(false);
     }
@@ -105,31 +111,33 @@ export default function ChamadosTiPage() {
   };
 
   return (
-    <div>
+    <div className="chamados-ti-page">
       <div className="page-header">
         <div className="header-left">
           <h2><i className="las la-headset"></i> HelpDesk / Chamados TI</h2>
           <p>Suporte técnico e manutenção predial do hospital</p>
         </div>
         <div className="header-actions">
-          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-            <i className="las la-plus"></i> Abrir Chamado
+          <button type="button" className="btn btn-primary" onClick={() => setShowForm(!showForm)} disabled={saving} aria-expanded={showForm}>
+            <i className="las la-plus" aria-hidden="true"></i> {showForm ? 'Fechar formulário' : 'Abrir Chamado'}
           </button>
         </div>
       </div>
 
+      {success && <p className="ticket-feedback ticket-feedback-success" role="status">{success}</p>}
+
       {showForm && (
-        <div className="card" style={{ marginBottom: '20px', padding: '20px', background: '#f8fafc' }}>
+        <form id="ticket-form" className="card ticket-form" onSubmit={(event) => { event.preventDefault(); void abrirChamado(); }}>
           <h3 style={{ marginBottom: '15px', fontSize: '16px' }}>Novo Chamado de Suporte</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            <div style={{ gridColumn: 'span 2' }}>
-              <label htmlFor="ticket-titulo" style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>Problema (Título Resumido)</label>
-              <input id="ticket-titulo" name="titulo" type="text" maxLength={160} required className="input-field" placeholder="Ex: Impressora da Recepção não funciona" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+          <div className="ticket-form-grid">
+            <div className="ticket-field ticket-field-full">
+              <label htmlFor="ticket-titulo">Problema (Título resumido) *</label>
+              <input id="ticket-titulo" name="titulo" type="text" maxLength={160} required aria-required="true" className="input-field" placeholder="Ex: Impressora da Recepção não funciona" value={titulo} onChange={(e) => { setTitulo(e.target.value); setFormError(''); }} />
             </div>
             
-            <div>
-              <label htmlFor="ticket-prioridade" style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>Prioridade</label>
-              <select id="ticket-prioridade" name="prioridade" className="input-field" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} value={prioridade} onChange={(e) => setPrioridade(e.target.value)}>
+            <div className="ticket-field">
+              <label htmlFor="ticket-prioridade">Prioridade</label>
+              <select id="ticket-prioridade" name="prioridade" className="input-field" value={prioridade} onChange={(e) => setPrioridade(e.target.value)}>
                 <option value="BAIXA">Baixa - Pode esperar</option>
                 <option value="MEDIA">Média - Atrapalha a rotina</option>
                 <option value="ALTA">Alta - Urgente</option>
@@ -137,27 +145,29 @@ export default function ChamadosTiPage() {
               </select>
             </div>
 
-            <div style={{ gridColumn: 'span 2' }}>
-              <label htmlFor="ticket-descricao" style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>Descrição Detalhada</label>
-              <textarea id="ticket-descricao" name="descricao" rows={3} maxLength={4000} required className="input-field" placeholder="Descreva o que está acontecendo..." style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} value={descricao} onChange={(e) => setDescricao(e.target.value)} />
+            <div className="ticket-field ticket-field-full">
+              <label htmlFor="ticket-descricao">Descrição detalhada *</label>
+              <textarea id="ticket-descricao" name="descricao" rows={4} maxLength={4000} required aria-required="true" className="input-field" placeholder="Descreva o que está acontecendo..." value={descricao} onChange={(e) => { setDescricao(e.target.value); setFormError(''); }} />
             </div>
           </div>
+
+          {formError && <p className="ticket-feedback ticket-feedback-error" role="alert">{formError}</p>}
           
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '15px' }}>
-            <button className="btn btn-primary" onClick={abrirChamado} disabled={saving}>
+          <div className="ticket-form-actions">
+            <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? 'Enviando...' : 'Enviar Solicitação'}
             </button>
           </div>
-        </div>
+        </form>
       )}
 
       <div className="card">
         <h3 style={{ marginBottom: '20px', fontSize: '18px', color: '#1e293b' }}>Painel de Tickets</h3>
         
         {loading ? (
-          <p>Carregando chamados...</p>
+          <p role="status" aria-live="polite">Carregando chamados...</p>
         ) : erro ? (
-          <div role="alert" style={{ color: '#b91c1c', padding: '20px' }}>{erro}</div>
+          <div className="ticket-load-error" role="alert"><span>{erro}</span><button type="button" className="btn btn-primary" onClick={() => void carregarDados()}>Tentar novamente</button></div>
         ) : tickets.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
             <i className="las la-smile" style={{ fontSize: '48px', marginBottom: '10px', color: '#10b981' }}></i>
@@ -165,13 +175,13 @@ export default function ChamadosTiPage() {
           </div>
         ) : (
           <div className="tabela-wrapper">
-            <table className="tabela">
+            <table className="tabela" aria-label="Chamados de suporte técnico">
               <thead>
                 <tr>
-                  <th>Ticket</th>
-                  <th>Solicitante</th>
-                  <th>Prioridade</th>
-                  <th>Status</th>
+                  <th scope="col">Ticket</th>
+                  <th scope="col">Solicitante</th>
+                  <th scope="col">Prioridade</th>
+                  <th scope="col">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -182,12 +192,12 @@ export default function ChamadosTiPage() {
                         <i className="las la-headset text-blue-500" aria-hidden="true" style={{ fontSize: '18px' }}></i>
                         {ticket.titulo}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div className="ticket-description">
                         {ticket.descricao}
                       </div>
                     </td>
                     <td>
-                      <div style={{ fontSize: '13px', color: '#475569' }}><i className="las la-user"></i> {ticket.solicitante}</div>
+                      <div style={{ fontSize: '13px', color: '#475569' }}><i className="las la-user" aria-hidden="true"></i> {ticket.solicitante}</div>
                       <div style={{ fontSize: '11px', color: '#94a3b8' }}>{new Date(ticket.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</div>
                     </td>
                     <td>

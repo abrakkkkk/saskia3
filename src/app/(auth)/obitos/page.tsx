@@ -11,8 +11,9 @@ export default function ObitosPage() {
   const { status: statusSessao } = useSession();
   const [tabAtiva, setTabAtiva] = useState('registro');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [erroCarga, setErroCarga] = useState('');
-  
+
   // Dados
   const [obitos, setObitos] = useState<any[]>([]);
 
@@ -68,6 +69,7 @@ export default function ObitosPage() {
   }, [statusSessao, carregarDados]);
 
   const registrarObito = async () => {
+    if (saving) return;
     if (!form.nome || !form.data || !form.hora || !form.causa || !form.medico) {
       alert(" Preencha os campos obrigatórios (*): Nome, Data, Hora, Causa Principal e Médico!");
       return;
@@ -77,13 +79,14 @@ export default function ObitosPage() {
       ...form,
     };
 
+    setSaving(true);
     try {
       const res = await fetch('/api/obitos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      
+
       const resposta = await res.json().catch(() => null);
       if (!res.ok) throw new Error(resposta?.error || 'Erro ao registrar óbito');
 
@@ -92,6 +95,8 @@ export default function ObitosPage() {
       await carregarDados();
     } catch (error: any) {
       alert(error.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -116,7 +121,7 @@ export default function ObitosPage() {
 
   const emitirCertidao = async (id: string) => {
     if(!await confirm("Deseja emitir a certidão para este óbito?")) return;
-    
+
     try {
       const res = await fetch(`/api/obitos/${id}`, {
         method: 'PUT',
@@ -125,7 +130,7 @@ export default function ObitosPage() {
       });
       const resposta = await res.json().catch(() => null);
       if (!res.ok) throw new Error(resposta?.error || 'Erro ao emitir certidão');
-      
+
       alert(" Certidão emitida com sucesso!");
       await carregarDados();
     } catch (error: any) {
@@ -150,8 +155,8 @@ export default function ObitosPage() {
   }
   if (buscaLista) {
     const t = buscaLista.toLowerCase();
-    listaFiltrada = listaFiltrada.filter(o => 
-      o.nome.toLowerCase().includes(t) || 
+    listaFiltrada = listaFiltrada.filter(o =>
+      o.nome.toLowerCase().includes(t) ||
       o.causa.toLowerCase().includes(t) ||
       o.medico.toLowerCase().includes(t)
     );
@@ -166,14 +171,14 @@ export default function ObitosPage() {
     const d = new Date(o.data + 'T00:00:00');
     return (d.getMonth() + 1) === mesAtual && d.getFullYear() === anoAtual;
   }).length;
-  
+
   const pendentes = obitos.filter(o => !o.certidaoEmitida).length;
   const emitidasCount = obitos.filter(o => o.certidaoEmitida).length;
 
   if (loading && obitos.length === 0) return <div>Carregando...</div>;
 
   return (
-    <div className="conteudo">
+    <div className="conteudo obitos-page">
       <div className="obitos-container">
 
         <div className="banner-obitos">
@@ -188,7 +193,7 @@ export default function ObitosPage() {
           </div>
         </div>
 
-        {erroCarga && <p role="alert" className="form-obitos" style={{ color: '#b91c1c' }}>{erroCarga}</p>}
+        {erroCarga && <div role="alert" className="erro-obitos"><span>{erroCarga}</span><button className="btn-obitos btn-primary" onClick={() => void carregarDados()} disabled={loading || statusSessao !== 'authenticated'}>Tentar novamente</button></div>}
 
         <div className="status-cards">
           <div className="status-card">
@@ -213,14 +218,14 @@ export default function ObitosPage() {
           </div>
         </div>
 
-        <div className="tabs-obitos" id="ignorePrint">
-          <button className={`tab-btn ${tabAtiva === 'registro' ? 'ativo' : ''}`} onClick={() => setTabAtiva('registro')}>
+        <div className="tabs-obitos" id="ignorePrint" role="tablist" aria-label="Seções de registros de óbito">
+          <button type="button" aria-pressed={tabAtiva === 'registro'} className={`tab-btn ${tabAtiva === 'registro' ? 'ativo' : ''}`} onClick={() => setTabAtiva('registro')}>
             <i className="las la-plus-circle"></i> Registrar
           </button>
-          <button className={`tab-btn ${tabAtiva === 'listagem' ? 'ativo' : ''}`} onClick={() => setTabAtiva('listagem')}>
+          <button type="button" aria-pressed={tabAtiva === 'listagem'} className={`tab-btn ${tabAtiva === 'listagem' ? 'ativo' : ''}`} onClick={() => setTabAtiva('listagem')}>
             <i className="las la-list"></i> Listagem
           </button>
-          <button className={`tab-btn ${tabAtiva === 'certidoes' ? 'ativo' : ''}`} onClick={() => setTabAtiva('certidoes')}>
+          <button type="button" aria-pressed={tabAtiva === 'certidoes'} className={`tab-btn ${tabAtiva === 'certidoes' ? 'ativo' : ''}`} onClick={() => setTabAtiva('certidoes')}>
             <i className="las la-file-alt"></i> Certidões
           </button>
         </div>
@@ -230,8 +235,8 @@ export default function ObitosPage() {
             <h3><i className="las la-cross"></i> Registrar Novo Óbito</h3>
             <div className="form-grid">
               <div className="form-grupo">
-                <label><i className="las la-user"></i> Nome Completo *</label>
-                <input type="text" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} placeholder="Nome do falecido" />
+                <label htmlFor="obito-nome"><i className="las la-user" aria-hidden="true"></i> Nome Completo *</label>
+                <input id="obito-nome" type="text" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} placeholder="Nome do falecido" />
               </div>
               <div className="form-grupo">
                 <label><i className="las la-calendar"></i> Data Nascimento</label>
@@ -303,8 +308,8 @@ export default function ObitosPage() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button className="btn-obitos btn-success" onClick={registrarObito}>
-                <i className="las la-save"></i> Salvar Registro
+              <button className="btn-obitos btn-success" onClick={registrarObito} disabled={saving}>
+                <i className="las la-save"></i> {saving ? 'Salvando...' : 'Salvar Registro'}
               </button>
               <button className="btn-obitos btn-warning" onClick={limparFormulario}>
                 <i className="las la-eraser"></i> Limpar Formulário
@@ -315,8 +320,8 @@ export default function ObitosPage() {
 
         {tabAtiva === 'listagem' && (
           <div>
-            <div className="search-box">
-              <input type="text" placeholder="Buscar por nome, causa, médico..." value={buscaLista} onChange={e => setBuscaLista(e.target.value)} />
+            <div className="search-box" id="painel-listagem" role="tabpanel">
+              <input type="text" aria-label="Buscar por nome, causa ou médico" placeholder="Buscar por nome, causa, médico..." value={buscaLista} onChange={e => setBuscaLista(e.target.value)} />
               <select value={filtroMes} onChange={e => setFiltroMes(e.target.value)}>
                 <option value="todos">Todos os Meses</option>
                 <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
@@ -325,12 +330,12 @@ export default function ObitosPage() {
                 <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
               </select>
             </div>
-            
+
             <div>
               {listaFiltrada.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '50px', color: '#94a3b8', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                   <i className="las la-cross" style={{ fontSize: '48px' }}></i>
-                  <p>Nenhum registro encontrado</p>
+                  <p>{erroCarga ? 'Não foi possível carregar os registros.' : 'Nenhum registro encontrado'}</p>
                 </div>
               ) : (
                 listaFiltrada.map((o) => (
@@ -378,8 +383,8 @@ export default function ObitosPage() {
                 <div key={o.id} className="certidao-preview">
                   <h4>CERTIDÃO DE ÓBITO</h4>
                   <p style={{ lineHeight: '1.6' }}>
-                    Certifico para os devidos fins que <strong>{o.nome}</strong>, faleceu nas dependências desta instituição 
-                    no dia <strong>{new Date(o.data + 'T00:00:00').toLocaleDateString('pt-BR')}</strong> às <strong>{o.hora}</strong>, 
+                    Certifico para os devidos fins que <strong>{o.nome}</strong>, faleceu nas dependências desta instituição
+                    no dia <strong>{new Date(o.data + 'T00:00:00').toLocaleDateString('pt-BR')}</strong> às <strong>{o.hora}</strong>,
                     tendo como causa atestada: <strong>{o.causa}</strong>.
                   </p>
                   <p style={{ marginTop: '10px' }}>Médico Declarante: <strong>{o.medico}</strong></p>
@@ -400,7 +405,7 @@ export default function ObitosPage() {
             <h3 style={{ color: '#0a1f44', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>
               <i className="las la-cross"></i> Ficha de Registro de Óbito
             </h3>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
               <p><strong>Nome:</strong> {modalVisualizar.nome}</p>
               <p><strong>Data Nasc.:</strong> {modalVisualizar.nascimento ? new Date(modalVisualizar.nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/I'}</p>

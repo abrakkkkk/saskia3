@@ -29,7 +29,9 @@ export async function GET() {
       return { id: item.tipo, tipo: item.tipo, quantidade, status: statusDoEstoque(quantidade) }
     }).sort((a, b) => a.tipo.localeCompare(b.tipo))
 
-    return NextResponse.json(estoque)
+    return NextResponse.json(estoque, {
+      headers: { 'Cache-Control': 'private, no-store' },
+    })
   } catch (error) {
     console.error('Erro ao consultar estoque de sangue:', error)
     return NextResponse.json({ error: 'Erro ao consultar estoque de sangue' }, { status: 500 })

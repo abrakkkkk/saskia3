@@ -59,6 +59,7 @@ export default function AdminConfigDashboardPage() {
   const [feedback, setFeedback] = useState('');
   const [configState, setConfigState] = useState<Record<string, boolean>>({});
   const [activeProfile, setActiveProfile] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (status !== 'authenticated' || session?.user?.cargo !== 'ADMIN') return;
@@ -130,7 +131,9 @@ export default function AdminConfigDashboardPage() {
   };
 
   const saveConfig = async () => {
+    if (isSaving) return;
     setFeedback('');
+    setIsSaving(true);
     try {
       const response = await fetch('/api/config-dashboard', {
         method: 'POST',
@@ -141,14 +144,18 @@ export default function AdminConfigDashboardPage() {
       setFeedback('Configuração salva. O dashboard será atualizado na próxima carga.');
     } catch {
       setFeedback('Erro ao salvar configuração.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const resetConfig = async () => {
+    if (isSaving) return;
     if(await confirm("Tem certeza que deseja restaurar todos os módulos para o padrão (ativados)?")) {
       const newState = { ...configState };
       modulosConfigOriginal.forEach(m => newState[m.id] = true);
       try {
+        setIsSaving(true);
         const response = await fetch('/api/config-dashboard', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -160,6 +167,8 @@ export default function AdminConfigDashboardPage() {
         setFeedback('Configuração restaurada para o padrão.');
       } catch {
         setFeedback('Erro ao restaurar configuração.');
+      } finally {
+        setIsSaving(false);
       }
     }
   };
@@ -188,8 +197,8 @@ export default function AdminConfigDashboardPage() {
             <p>Personalize quais módulos e cards ficarão visíveis no sistema</p>
           </div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button className="btn btn-warning" onClick={resetConfig}><i className="las la-undo"></i> Restaurar Padrão</button>
-            <button className="btn btn-success" onClick={saveConfig}><i className="las la-save"></i> Salvar Configuração</button>
+            <button className="btn btn-warning" onClick={resetConfig} disabled={isSaving}><i className="las la-undo" aria-hidden="true"></i> Restaurar Padrão</button>
+            <button className="btn btn-success" onClick={saveConfig} disabled={isSaving}><i className="las la-save" aria-hidden="true"></i> {isSaving ? 'Salvando…' : 'Salvar Configuração'}</button>
           </div>
         </div>
 
@@ -201,28 +210,28 @@ export default function AdminConfigDashboardPage() {
           </div>
         </div>
 
-        {feedback && <p className="config-feedback" role="status">{feedback}</p>}
+        {feedback && <p className="config-feedback" role="status" aria-live="polite">{feedback}</p>}
 
         <div className="acoes-bar">
           <div>
             <strong style={{ color: '#0a1f44', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Perfis Rápidos de Instalação:</strong>
             <div className="perfis-rapidos">
-              <button className={`perfil-btn ${activeProfile === 'hospital' ? 'ativo' : ''}`} onClick={() => applyProfile('hospital')}>
+              <button type="button" aria-pressed={activeProfile === 'hospital'} className={`perfil-btn ${activeProfile === 'hospital' ? 'ativo' : ''}`} onClick={() => applyProfile('hospital')}>
                 <i className="las la-hospital"></i> Hospital Completo
               </button>
-              <button className={`perfil-btn ${activeProfile === 'clinica' ? 'ativo' : ''}`} onClick={() => applyProfile('clinica')}>
+              <button type="button" aria-pressed={activeProfile === 'clinica'} className={`perfil-btn ${activeProfile === 'clinica' ? 'ativo' : ''}`} onClick={() => applyProfile('clinica')}>
                 <i className="las la-clinic-medical"></i> Clínica
               </button>
-              <button className={`perfil-btn ${activeProfile === 'consultorio' ? 'ativo' : ''}`} onClick={() => applyProfile('consultorio')}>
+              <button type="button" aria-pressed={activeProfile === 'consultorio'} className={`perfil-btn ${activeProfile === 'consultorio' ? 'ativo' : ''}`} onClick={() => applyProfile('consultorio')}>
                 <i className="las la-user-md"></i> Consultório
               </button>
-              <button className={`perfil-btn ${activeProfile === 'upa' ? 'ativo' : ''}`} onClick={() => applyProfile('upa')}>
+              <button type="button" aria-pressed={activeProfile === 'upa'} className={`perfil-btn ${activeProfile === 'upa' ? 'ativo' : ''}`} onClick={() => applyProfile('upa')}>
                 <i className="las la-ambulance"></i> UPA / Emergência
               </button>
-              <button className={`perfil-btn ${activeProfile === 'todos' ? 'ativo' : ''}`} onClick={() => applyProfile('todos')}>
+              <button type="button" aria-pressed={activeProfile === 'todos'} className={`perfil-btn ${activeProfile === 'todos' ? 'ativo' : ''}`} onClick={() => applyProfile('todos')}>
                 <i className="las la-check-double"></i> Ativar Tudo
               </button>
-              <button className={`perfil-btn ${activeProfile === 'nenhum' ? 'ativo' : ''}`} onClick={() => applyProfile('nenhum')}>
+              <button type="button" aria-pressed={activeProfile === 'nenhum'} className={`perfil-btn ${activeProfile === 'nenhum' ? 'ativo' : ''}`} onClick={() => applyProfile('nenhum')}>
                 <i className="las la-times-circle"></i> Desativar Tudo
               </button>
             </div>
@@ -251,7 +260,7 @@ export default function AdminConfigDashboardPage() {
                     return (
                       <label className="toggle-item" key={m.id}>
                         <div className="toggle-info">
-                          <i className={m.icone}></i>
+                          <i className={m.icone} aria-hidden="true"></i>
                           <div>
                             <span className="toggle-name">{m.nome}</span>
                             <span className="toggle-desc">{m.desc}</span>
@@ -262,6 +271,7 @@ export default function AdminConfigDashboardPage() {
                             type="checkbox" 
                             checked={isChecked}
                             aria-label={`Ativar ${m.nome}`}
+                            disabled={isSaving}
                             onChange={() => toggleModule(m.id)}
                           />
                           <span className="slider"></span>

@@ -1,0 +1,11 @@
+.lembretesListPanel {
+  height: min(600px, 75vh);
+  min-height: min(360px, 75vh);
+}
+
+@media (max-width: 640px) {
+  .lembretesListPanel {
+    height: min(520px, 70vh);
+    min-height: min(320px, 70vh);
+  }
+}

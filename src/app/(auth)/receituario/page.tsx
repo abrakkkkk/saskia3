@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import './receituario.css';
 import AdesivosManager from '@/components/receituario/adesivos/AdesivosManager';
@@ -52,8 +52,10 @@ function sanitizeRecipeHtml(value: string) {
 }
 
 export default function ReceituarioPage() {
-  const { data: session } = useSession();
-  const isMedico = (session?.user as any)?.cargo === 'MEDICO';
+  const { data: session, status: sessionStatus } = useSession();
+  const cargoUsuario = (session?.user as { cargo?: string } | undefined)?.cargo;
+  const isMedico = cargoUsuario === 'MEDICO';
+  const podeVerHistorico = ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'TECNICO_ENFERMAGEM', 'FARMACEUTICO'].includes(cargoUsuario || '');
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [activeTab, setActiveTab] = useState<'receituario'|'adesivos'|'modelos'|'historico'>('receituario');
@@ -73,15 +75,22 @@ export default function ReceituarioPage() {
 
   const editorRefs = useRef<{[key: number]: HTMLDivElement | null}>({});
 
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     try {
       const [resPacientes, resReceitas] = await Promise.all([
         fetch('/api/pacientes'),
-        fetch('/api/receitas')
+        podeVerHistorico ? fetch('/api/receitas') : Promise.resolve(null)
       ]);
-      if(resPacientes.ok) setPacientes(await resPacientes.json());
-      else throw new Error('Não foi possível carregar pacientes para a prescrição.');
-      if(resReceitas.ok) {
+      if (resPacientes.ok) {
+        const dadosPacientes: unknown = await resPacientes.json();
+        if (!Array.isArray(dadosPacientes)) throw new Error('A resposta de pacientes é inválida.');
+        setPacientes(dadosPacientes);
+      } else throw new Error('Não foi possível carregar pacientes para a prescrição.');
+
+      if (!resReceitas) {
+        setHistorico([]);
+        setErroCarga('');
+      } else if(resReceitas.ok) {
         const receitas = await resReceitas.json();
         setHistorico(Array.isArray(receitas) ? receitas.map((receita: any) => ({
           ...receita,
@@ -101,9 +110,10 @@ export default function ReceituarioPage() {
       console.error(e);
       setErroCarga(e instanceof Error ? e.message : 'Não foi possível carregar os dados de prescrição.');
     }
-  };
+  }, [podeVerHistorico]);
 
   useEffect(() => {
+    if (sessionStatus !== 'authenticated') return;
     carregarDados();
     try {
       fetch('/api/me').then(async response => {
@@ -111,7 +121,7 @@ export default function ReceituarioPage() {
         if (response.ok && typeof data.hospital?.nome === 'string') setEstabelecimento(data.hospital.nome);
       }).catch(() => {});
     } catch {}
-  }, []);
+  }, [carregarDados, sessionStatus]);
 
   const saveDadosMemoria = (meds: Medicamento[]) => {
     setMedicamentos(meds);
@@ -228,7 +238,7 @@ export default function ReceituarioPage() {
   const pacienteNomeExibido = pacienteId ? pacientes.find(p => p.id === pacienteId)?.nome : nomePaciente;
 
   return (
-    <div className="container-receituario">
+    <div className={`container-receituario ${isMedico ? '' : 'receituario-restrito'}`}>
       <div className="sidebar-receita hide-on-print">
         {!isMedico && <p role="status" className="aviso-permissao">Somente usuários MEDICO podem criar e imprimir prescrições.</p>}
         {isMedico && <>
@@ -245,10 +255,10 @@ export default function ReceituarioPage() {
 
       <div className="main-receita">
         {erroCarga && <div role="alert" className="aviso-permissao">{erroCarga}</div>}
-        <div className="tabs-receita hide-on-print">
-          <button className={`tab-btn ${activeTab === 'receituario' ? 'ativo' : ''}`} onClick={() => setActiveTab('receituario')}><i className="las la-prescription-bottle"></i> Editor de Receita</button>
-          <button className={`tab-btn ${activeTab === 'historico' ? 'ativo' : ''}`} onClick={() => setActiveTab('historico')}><i className="las la-history"></i> Histórico do Paciente</button>
-          <button className={`tab-btn ${activeTab === 'adesivos' ? 'ativo' : ''}`} onClick={() => setActiveTab('adesivos')}><i className="las la-tag"></i> Adesivos</button>
+        <div className="tabs-receita hide-on-print" role="group" aria-label="Seções do receituário">
+          <button type="button" aria-pressed={activeTab === 'receituario'} className={`tab-btn ${activeTab === 'receituario' ? 'ativo' : ''}`} onClick={() => setActiveTab('receituario')}><i className="las la-prescription-bottle" aria-hidden="true"></i> Editor de Receita</button>
+          <button type="button" aria-pressed={activeTab === 'historico'} className={`tab-btn ${activeTab === 'historico' ? 'ativo' : ''}`} onClick={() => setActiveTab('historico')}><i className="las la-history" aria-hidden="true"></i> Histórico de Receitas</button>
+          <button type="button" aria-pressed={activeTab === 'adesivos'} className={`tab-btn ${activeTab === 'adesivos' ? 'ativo' : ''}`} onClick={() => setActiveTab('adesivos')}><i className="las la-tag" aria-hidden="true"></i> Adesivos</button>
         </div>
 
         {activeTab === 'receituario' && !isMedico && <div role="status" className="papel-receita">A criação e impressão de prescrições está disponível apenas para usuários MEDICO.</div>}
@@ -269,8 +279,9 @@ export default function ReceituarioPage() {
 
             <div className="form-row hide-on-print">
               <div className="form-campo">
-                <label>ESTABELECIMENTO DE SAÚDE (Institucional):</label>
+                <label htmlFor="receituario-estabelecimento">ESTABELECIMENTO DE SAÚDE (Institucional):</label>
                 <input
+                  id="receituario-estabelecimento"
                   type="text"
                   value={estabelecimento}
                   readOnly
@@ -279,8 +290,9 @@ export default function ReceituarioPage() {
                 />
               </div>
               <div className="form-campo">
-                <label>CÓDIGO DO REGISTRO:</label>
+                <label htmlFor="receituario-registro">CÓDIGO DO REGISTRO:</label>
                 <input
+                  id="receituario-registro"
                   type="text"
                   value={registro || 'Rascunho — ainda não registrado'}
                   readOnly
@@ -290,16 +302,16 @@ export default function ReceituarioPage() {
               </div>
             </div>
             <div className="form-campo hide-on-print">
-              <label>PACIENTE CADASTRADO (Para Prontuário):</label>
-              <select value={pacienteId} onChange={e => {setPacienteId(e.target.value); setNomePaciente('');}}>
+              <label htmlFor="receituario-paciente">PACIENTE CADASTRADO (Para Prontuário):</label>
+              <select id="receituario-paciente" value={pacienteId} onChange={e => {setPacienteId(e.target.value); setNomePaciente('');}}>
                 <option value="">Selecione...</option>
                 {pacientes.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </select>
             </div>
             {!pacienteId && (
               <div className="form-campo hide-on-print">
-                <label>NOME DO PACIENTE (Impressão Avulsa):</label>
-                <input type="text" value={nomePaciente} onChange={e => setNomePaciente(e.target.value)} placeholder="Nome completo do paciente" />
+                <label htmlFor="receituario-paciente-avulso">NOME DO PACIENTE (Impressão Avulsa):</label>
+                <input id="receituario-paciente-avulso" type="text" value={nomePaciente} onChange={e => setNomePaciente(e.target.value)} placeholder="Nome completo do paciente" />
               </div>
             )}
 
@@ -322,20 +334,23 @@ export default function ReceituarioPage() {
                   <div className="medicamento-card" key={med.id}>
                     <div className="card-header hide-on-print">
                       <div className="drag-control"><i className="las la-arrows-alt"></i></div>
-                      <select value={med.viaUso} onChange={e => atualizarViaUso(idx, e.target.value)}>
+                      <select aria-label={`Via de uso da prescrição ${idx + 1}`} value={med.viaUso} onChange={e => atualizarViaUso(idx, e.target.value)}>
                         <option value="Oral">Oral</option>
                         <option value="Intravenosa">IV</option>
                         <option value="Intramuscular">IM</option>
                         <option value="Tópica">Tópica</option>
                       </select>
                       <span className="card-title">Prescrição {idx + 1}</span>
-                      <button className="btn-remove-card" onClick={() => removerMedicamento(idx)}><i className="las la-trash"></i></button>
+                      <button type="button" className="btn-remove-card" aria-label={`Remover prescrição ${idx + 1}`} onClick={() => removerMedicamento(idx)}><i className="las la-trash" aria-hidden="true"></i></button>
                     </div>
                     <div className="print-via-uso" style={{display:'none', fontWeight:'bold', marginBottom:'5px'}}>Uso: {med.viaUso}</div>
 
                     <div
                       className="editor-custom"
                       contentEditable
+                      role="textbox"
+                      aria-label={`Conteúdo da prescrição ${idx + 1}`}
+                      aria-multiline="true"
                       suppressContentEditableWarning
                       ref={el => { if(el) { editorRefs.current[idx] = el; } }}
                       onBlur={e => handleEditorInput(idx, e.currentTarget.innerHTML)}

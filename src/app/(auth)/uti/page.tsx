@@ -123,7 +123,7 @@ export default function UtiPage() {
   const statusLabel: Record<string, string> = { LIVRE: " Disponível", OCUPADO: " Ocupado", RESERVADO: " Reservado", MANUTENCAO: " Manutenção", LIMPEZA: " Limpeza" };
   const cssClassMap: Record<string, string> = { LIVRE: "disponivel", OCUPADO: "ocupado", RESERVADO: "reservado", MANUTENCAO: "bloqueado", LIMPEZA: "bloqueado" };
 
-  if (loading) return <div>Carregando UTI...</div>;
+  if (loading) return <div className="uti-loading" role="status" aria-live="polite"><i className="las la-spinner la-spin" aria-hidden="true"></i> Carregando leitos da UTI...</div>;
 
   return (
     <div className="conteudo">
@@ -139,7 +139,7 @@ export default function UtiPage() {
           </div>
         </div>
 
-        {erroCarga && <p role="alert" style={{ color: '#b91c1c', background: '#fef2f2', padding: 12, borderRadius: 8 }}>{erroCarga}</p>}
+        {erroCarga && <p className="uti-error" role="alert"><i className="las la-exclamation-circle" aria-hidden="true"></i>{erroCarga}</p>}
 
         <div className="indicadores-grid">
           <div className="indicador-card bom"><div className="ind-icon"><i className="las la-bed"></i></div><div className="ind-valor">{totalLeitos}</div><div className="ind-label">Total de Leitos</div></div>
@@ -148,10 +148,10 @@ export default function UtiPage() {
           <div className="indicador-card alerta"><div className="ind-icon"><i className="las la-chart-line"></i></div><div className="ind-valor">{taxaOcupacao}%</div><div className="ind-label">Taxa de Ocupação</div></div>
         </div>
 
-        <div className="tabs-uti">
-          <button className={`tab-btn ${activeTab === 'mapa' ? 'ativo' : ''}`} onClick={() => setActiveTab('mapa')}><i className="las la-th-large"></i> Mapa de Leitos</button>
-          <button className={`tab-btn ${activeTab === 'admissao' ? 'ativo' : ''}`} onClick={() => setActiveTab('admissao')}><i className="las la-user-plus"></i> Admissão</button>
-          <button className={`tab-btn ${activeTab === 'pacientes' ? 'ativo' : ''}`} onClick={() => setActiveTab('pacientes')}><i className="las la-users"></i> Pacientes UTI</button>
+        <div className="tabs-uti" role="group" aria-label="Seções da UTI">
+          <button type="button" aria-pressed={activeTab === 'mapa'} className={`tab-btn ${activeTab === 'mapa' ? 'ativo' : ''}`} onClick={() => setActiveTab('mapa')}><i className="las la-th-large" aria-hidden="true"></i> Mapa de Leitos</button>
+          <button type="button" aria-pressed={activeTab === 'admissao'} className={`tab-btn ${activeTab === 'admissao' ? 'ativo' : ''}`} onClick={() => setActiveTab('admissao')}><i className="las la-user-plus" aria-hidden="true"></i> Admissão</button>
+          <button type="button" aria-pressed={activeTab === 'pacientes'} className={`tab-btn ${activeTab === 'pacientes' ? 'ativo' : ''}`} onClick={() => setActiveTab('pacientes')}><i className="las la-users" aria-hidden="true"></i> Pacientes UTI</button>
         </div>
 
         {activeTab === 'mapa' && (
@@ -191,15 +191,15 @@ export default function UtiPage() {
             <p>Esta ação altera o status e associa o paciente ao leito. Registre os dados clínicos da admissão no prontuário.</p>
             <div className="form-grid">
               <div className="form-grupo">
-                <label>Paciente *</label>
-                <select value={formAdmissao.pacienteId} onChange={e => setFormAdmissao({...formAdmissao, pacienteId: e.target.value})}>
+                <label htmlFor="uti-paciente">Paciente *</label>
+                <select id="uti-paciente" value={formAdmissao.pacienteId} onChange={e => setFormAdmissao({...formAdmissao, pacienteId: e.target.value})}>
                   <option value="">Selecione...</option>
                   {pacientesGerais.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
                 </select>
               </div>
               <div className="form-grupo">
-                <label>Leito *</label>
-                <select value={formAdmissao.leitoId} onChange={e => setFormAdmissao({...formAdmissao, leitoId: e.target.value})}>
+                <label htmlFor="uti-leito">Leito *</label>
+                <select id="uti-leito" value={formAdmissao.leitoId} onChange={e => setFormAdmissao({...formAdmissao, leitoId: e.target.value})}>
                   <option value="">Selecione o leito...</option>
                   {leitosUTI.filter(l => l.status === 'LIVRE').map(l => <option key={l.id} value={l.id}>Leito UTI {l.numero}</option>)}
                 </select>
@@ -214,9 +214,9 @@ export default function UtiPage() {
         {activeTab === 'pacientes' && (
           <div>
             <div className="search-box">
-              <input type="text" placeholder="Buscar por nome ou leito..." value={buscaPaciente} onChange={e => setBuscaPaciente(e.target.value)} />
+              <input type="text" aria-label="Buscar paciente internado por nome ou leito" placeholder="Buscar por nome ou leito..." value={buscaPaciente} onChange={e => setBuscaPaciente(e.target.value)} />
             </div>
-            <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+            <div className="uti-table-wrapper">
               <table className="tabela-uti">
                 <thead>
                   <tr>

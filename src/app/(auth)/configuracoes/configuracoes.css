@@ -1,0 +1,102 @@
+.configuracoes-page {
+  --configuracoes-azul: #0a1f44;
+  --configuracoes-borda: #dbe4ef;
+  --configuracoes-texto: #334155;
+  --configuracoes-secundario: #526174;
+}
+
+.configuracoes-page .page-header {
+  margin-bottom: 24px;
+}
+
+.configuracoes-page .page-header h2 {
+  line-height: 1.25;
+}
+
+.configuracoes-page .page-header p {
+  max-width: 70ch;
+  line-height: 1.55;
+}
+
+.configuracoes-indisponiveis {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  width: min(100%, 920px);
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 28px);
+  color: var(--configuracoes-texto);
+  background: #fff;
+  border: 1px solid var(--configuracoes-borda);
+  border-left: 4px solid #f59e0b;
+  border-radius: 12px;
+  box-shadow: 0 5px 18px rgba(15, 35, 72, 0.07);
+}
+
+.configuracoes-status-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  color: #1e3a8a;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  border-radius: 50%;
+  font-size: 22px;
+}
+
+.configuracoes-status-content {
+  min-width: 0;
+}
+
+.configuracoes-status-content h3 {
+  margin: 1px 0 10px;
+  color: var(--configuracoes-azul);
+  font-size: clamp(18px, 2vw, 21px);
+  line-height: 1.35;
+}
+
+.configuracoes-status-content p {
+  max-width: 78ch;
+  margin: 0;
+  color: var(--configuracoes-texto);
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.configuracoes-status-content p + p {
+  margin-top: 12px;
+  color: var(--configuracoes-secundario);
+  font-size: 14px;
+}
+
+@media (max-width: 560px) {
+  .configuracoes-page .page-header {
+    margin-bottom: 18px;
+  }
+
+  .configuracoes-indisponiveis {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 12px;
+    padding: 18px 16px;
+    border-radius: 10px;
+  }
+
+  .configuracoes-status-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+
+  .configuracoes-status-content p {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 380px) {
+  .configuracoes-indisponiveis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { MessageSquare, Search, Send } from 'lucide-react';
+import './chat.css';
 
 interface Contato {
   id: string;
@@ -148,7 +149,7 @@ export default function ChatPage() {
   );
 
   return (
-    <div style={{
+    <div className="chat-root" style={{
       display: 'flex',
       height: 'calc(100vh - 80px - 60px)',
       maxHeight: '820px',
@@ -161,7 +162,7 @@ export default function ChatPage() {
     }}>
 
       {/* SIDEBAR */}
-      <div style={{ width: '320px', minWidth: '320px', display: 'flex', flexDirection: 'column', borderRight: '1px solid #e2e8f0', background: '#f8fafc' }}>
+      <div className="chat-sidebar" style={{ width: '320px', minWidth: '320px', display: 'flex', flexDirection: 'column', borderRight: '1px solid #e2e8f0', background: '#f8fafc' }}>
 
         {/* Header User */}
         <div style={{ padding: '16px', background: 'linear-gradient(135deg, #1e3a8a, #1e40af)', color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -212,17 +213,11 @@ export default function ChatPage() {
           ) : contatosFiltrados.map(c => {
             const isAtivo = ativo?.id === c.id;
             return (
-              <div
+              <button
                 key={c.id}
-                role="button"
-                tabIndex={0}
+                type="button"
+                className="chat-contact"
                 onClick={() => setAtivo(c)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setAtivo(c);
-                  }
-                }}
                 aria-pressed={isAtivo}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
@@ -248,7 +243,7 @@ export default function ChatPage() {
                   <div style={{ fontWeight: 600, fontSize: '13px', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nome}</div>
                   <div style={{ fontSize: '11px', color: '#64748b' }}>{c.cargo}</div>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

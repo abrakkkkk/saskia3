@@ -1,0 +1,21 @@
+.root :global(button:focus-visible),
+.root :global(input:focus-visible),
+.root :global(textarea:focus-visible) {
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.root :global(button:disabled) {
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root :global(*),
+  .root :global(*::before),
+  .root :global(*::after) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

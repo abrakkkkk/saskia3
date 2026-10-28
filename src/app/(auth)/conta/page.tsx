@@ -138,18 +138,18 @@ export default function ContaPage() {
   const cargo = dadosBanco?.cargo || (session?.user as any)?.cargo || '';
 
   return (
-    <div>
-      <div className="page-header" style={{ marginBottom: 24 }}>
+    <div className="conta-page">
+      <div className="page-header conta-page-header" style={{ marginBottom: 24 }}>
         <h2><i className="las la-user-circle"></i> Minha Conta</h2>
       </div>
 
       {sucesso && (
-        <div className="alert-sucesso">
+        <div className="alert-sucesso" role="status" aria-live="polite">
           <i className="las la-check-circle"></i> {sucesso}
         </div>
       )}
       {erro && (
-        <div className="alert-erro">
+        <div className="alert-erro" role="alert">
           <i className="las la-exclamation-triangle"></i> {erro}
         </div>
       )}
@@ -165,7 +165,7 @@ export default function ContaPage() {
             <label htmlFor="uploadFoto" className="btn-salvar-conta" style={{ background: '#64748b', padding: '8px 14px', fontSize: 13, marginTop: 12, cursor: 'pointer' }}>
               <i className="las la-camera"></i> Trocar Foto
             </label>
-            <input id="uploadFoto" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ display: 'none' }} onChange={handleFoto} />
+            <input id="uploadFoto" className="conta-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleFoto} />
           </div>
 
           <div className="info-perfil">
@@ -222,6 +222,7 @@ export default function ContaPage() {
               <input
                 id="conta-nova-senha"
                 type="password"
+                autoComplete="new-password"
                 value={novaSenha}
                 onChange={e => setNovaSenha(e.target.value)}
                 placeholder="Digite a nova senha"
@@ -232,6 +233,7 @@ export default function ContaPage() {
               <input
                 id="conta-confirmar-senha"
                 type="password"
+                autoComplete="new-password"
                 value={confirmarSenha}
                 onChange={e => setConfirmarSenha(e.target.value)}
                 placeholder="Confirme a nova senha"
@@ -249,13 +251,14 @@ export default function ContaPage() {
             <input
               id="conta-senha-atual"
               type="password"
+              autoComplete="current-password"
               value={senhaAtual}
               onChange={e => setSenhaAtual(e.target.value)}
               placeholder="Digite sua senha atual"
             />
           </div>
 
-          <button type="submit" className="btn-salvar-conta" disabled={isSaving || isLoadingProfile}>
+          <button type="submit" className="btn-salvar-conta" disabled={isSaving || isLoadingProfile || !dadosBanco}>
             <i className={`las ${isSaving ? 'la-spinner la-spin' : 'la-save'}`}></i>
             {isSaving ? 'Salvando...' : 'Salvar Alterações'}
           </button>

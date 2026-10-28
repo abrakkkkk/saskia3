@@ -123,6 +123,19 @@
     box-shadow: 0 4px 10px rgba(30,58,138,0.2);
 }
 
+.perfil-btn:focus-visible,
+.btn:focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 3px;
+}
+
+.perfil-btn:disabled,
+.btn:disabled {
+    cursor: progress;
+    opacity: 0.7;
+    transform: none;
+}
+
 /* Grids e Toggles */
 .config-grid {
     display: grid;
@@ -284,5 +297,46 @@ input:checked + .slider:before {
     .config-section {
         min-width: 0;
         padding: 20px;
+    }
+
+    .banner-conf {
+        padding: 24px;
+    }
+}
+
+@media (max-width: 560px) {
+    .banner-conf {
+        padding: 20px 16px;
+        gap: 16px;
+    }
+
+    .banner-conf h1 {
+        font-size: 22px;
+        line-height: 1.25;
+    }
+
+    .acoes-bar {
+        align-items: stretch;
+        padding: 16px;
+    }
+
+    .acoes-bar > div,
+    .acoes-bar .info-text,
+    .perfis-rapidos,
+    .perfil-btn {
+        width: 100%;
+    }
+
+    .perfil-btn {
+        justify-content: flex-start;
+    }
+
+    .config-section {
+        padding: 16px;
+    }
+
+    .toggle-item {
+        gap: 12px;
+        padding: 12px;
     }
 }

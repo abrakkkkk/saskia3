@@ -7,7 +7,8 @@ export default function CSSDPage() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<'lotes'|'novo'|'itens'|'historico'>('lotes');
   const [loading, setLoading] = useState(true);
-  
+  const [erroCarregamento, setErroCarregamento] = useState('');
+
   const [lotes, setLotes] = useState<any[]>([]);
 
   // Filtros
@@ -40,18 +41,20 @@ export default function CSSDPage() {
     setLoading(true);
     try {
       const res = await fetch('/api/cssd');
-      if (res.ok) {
-        const data = await res.json();
-        setLotes(data);
-        
-        if (!loteNumero && data.length > 0) {
-          setLoteNumero(`CSSD-${new Date().getFullYear()}-${String(data.length + 1).padStart(3,'0')}`);
-        } else if (!loteNumero) {
-          setLoteNumero(`CSSD-${new Date().getFullYear()}-001`);
-        }
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || 'Não foi possível carregar os lotes.');
+      if (!Array.isArray(data)) throw new Error('A resposta de lotes está inválida.');
+      setLotes(data);
+      setErroCarregamento('');
+
+      if (!loteNumero && data.length > 0) {
+        setLoteNumero(`CSSD-${new Date().getFullYear()}-${String(data.length + 1).padStart(3,'0')}`);
+      } else if (!loteNumero) {
+        setLoteNumero(`CSSD-${new Date().getFullYear()}-001`);
       }
     } catch (e) {
       console.error(e);
+      setErroCarregamento(e instanceof Error ? e.message : 'Erro ao carregar lotes.');
     } finally {
       setLoading(false);
     }
@@ -68,7 +71,7 @@ export default function CSSDPage() {
       alert(" Preencha lote e setor!");
       return;
     }
-    
+
     const payload = {
       numero: loteNumero.trim(),
       setor: loteSetor,
@@ -80,7 +83,7 @@ export default function CSSDPage() {
       bowieDick: loteBowieDick,
       obs: loteObs.trim(),
     };
-    
+
     try {
       const res = await fetch('/api/cssd', {
         method: 'POST',
@@ -90,7 +93,7 @@ export default function CSSDPage() {
 
       const resposta = await res.json().catch(() => null);
       if (!res.ok) throw new Error(resposta?.error || 'Erro ao criar lote');
-      
+
       setLoteObs('');
       alert(" Lote criado com sucesso!");
       setActiveTab('lotes');
@@ -144,7 +147,7 @@ export default function CSSDPage() {
       alert(" Selecione o lote e digite o nome do material!");
       return;
     }
-    
+
     const payload = {
       loteId: itemLote,
       nome: itemNome.trim(),
@@ -160,10 +163,10 @@ export default function CSSDPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      
+
       const resposta = await res.json().catch(() => null);
       if (!res.ok) throw new Error(resposta?.error || 'Erro ao adicionar item');
-      
+
       setItemNome('');
       setItemQuantidade(1);
       alert(" Item adicionado ao lote!");
@@ -192,11 +195,18 @@ export default function CSSDPage() {
   const qtdPreparo = lotes.filter(l => l.status === "Preparo").length;
   const qtdEsteril = lotes.filter(l => l.status === "Esterilização").length;
 
-  if (loading && lotes.length === 0) return <div>Carregando...</div>;
+  if (loading && lotes.length === 0) return <div role="status" aria-live="polite" className="cssd-loading">Carregando lotes de esterilização…</div>;
 
   return (
     <div className="conteudo">
       <div className="cssd-container">
+
+        {erroCarregamento && (
+          <div className="cssd-load-error" role="alert">
+            <span>{erroCarregamento}</span>
+            <button type="button" onClick={carregarDados}>Tentar novamente</button>
+          </div>
+        )}
 
         <div className="banner-cssd">
           <div>
@@ -334,7 +344,7 @@ export default function CSSDPage() {
           <div className="form-panel">
             <h3><i className="las la-tools"></i> Vincular Instrumentais ao Lote</h3>
             <p style={{color:'#64748b', marginBottom:'20px'}}>Adicione as pinças, caixas e materiais que compõem o lote ativo.</p>
-            
+
             <div className="form-grid">
               <div className="form-grupo">
                 <label>Selecione o Lote Aberto *</label>

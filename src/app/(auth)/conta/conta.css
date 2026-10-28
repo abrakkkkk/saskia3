@@ -1,5 +1,5 @@
 /* ==================== CARD PRINCIPAL ==================== */
-.card-conta {
+.conta-page .card-conta {
     background: white;
     padding: 36px;
     border-radius: 8px;
@@ -9,7 +9,7 @@
 }
 
 /* ==================== PERFIL HEADER ==================== */
-.perfil-header {
+.conta-page .perfil-header {
     display: flex;
     gap: 36px;
     flex-wrap: wrap;
@@ -19,12 +19,12 @@
     border-bottom: 2px solid #f1f5f9;
 }
 
-.foto-perfil {
+.conta-page .foto-perfil {
     text-align: center;
     flex-shrink: 0;
 }
 
-.foto-perfil img {
+.conta-page .foto-perfil img {
     width: 140px;
     height: 140px;
     border-radius: 50%;
@@ -33,7 +33,7 @@
     box-shadow: 0 8px 20px rgba(30,58,138,0.2);
 }
 
-.foto-perfil .placeholder-foto {
+.conta-page .foto-perfil .placeholder-foto {
     width: 140px;
     height: 140px;
     border-radius: 50%;
@@ -46,7 +46,24 @@
     box-shadow: 0 8px 20px rgba(30,58,138,0.2);
 }
 
-.info-perfil h2 {
+.conta-page .conta-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.conta-page .foto-perfil:has(.conta-file-input:focus-visible) label {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.conta-page .info-perfil h2 {
     margin: 0 0 12px 0;
     color: #0a1f44;
     font-size: 24px;
@@ -56,7 +73,7 @@
     gap: 10px;
 }
 
-.info-perfil p {
+.conta-page .info-perfil p {
     margin: 8px 0;
     color: #475569;
     font-size: 15px;
@@ -66,7 +83,7 @@
     gap: 8px;
 }
 
-.info-perfil i {
+.conta-page .info-perfil i {
     color: #1e3a8a;
     font-size: 18px;
     width: 22px;
@@ -74,11 +91,11 @@
 }
 
 /* ==================== FORMULÁRIO ==================== */
-.form-grupo {
+.conta-page .form-grupo {
     margin-bottom: 20px;
 }
 
-.form-grupo label {
+.conta-page .form-grupo label {
     display: block;
     margin-bottom: 6px;
     font-weight: 700;
@@ -89,13 +106,13 @@
     gap: 6px;
 }
 
-.form-grupo label i {
+.conta-page .form-grupo label i {
     color: #1e3a8a;
     font-size: 16px;
 }
 
-.form-grupo input,
-.form-grupo select {
+.conta-page .form-grupo input,
+.conta-page .form-grupo select {
     width: 100%;
     padding: 11px 14px;
     border: 1.5px solid #e2e8f0;
@@ -107,22 +124,22 @@
     font-family: inherit;
 }
 
-.form-grupo input:focus,
-.form-grupo select:focus {
+.conta-page .form-grupo input:focus,
+.conta-page .form-grupo select:focus {
     outline: none;
     border-color: #1e3a8a;
     box-shadow: 0 0 0 3px rgba(30,58,138,0.08);
     background: white;
 }
 
-.form-linha {
+.conta-page .form-linha {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
 
 /* ==================== BOTÃO SALVAR ==================== */
-.btn-salvar-conta {
+.conta-page .btn-salvar-conta {
     background: linear-gradient(135deg, #16a34a, #22c55e);
     color: white;
     border: none;
@@ -138,13 +155,13 @@
     box-shadow: 0 4px 12px rgba(22,163,74,0.2);
 }
 
-.btn-salvar-conta:hover {
+.conta-page .btn-salvar-conta:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(22,163,74,0.3);
 }
 
 /* ==================== ALERTAS ==================== */
-.alert-sucesso {
+.conta-page .alert-sucesso {
     background: #dcfce7;
     border-left: 4px solid #16a34a;
     color: #15803d;
@@ -155,7 +172,7 @@
     font-size: 14px;
 }
 
-.alert-erro {
+.conta-page .alert-erro {
     background: #fee2e2;
     border-left: 4px solid #dc2626;
     color: #b91c1c;
@@ -167,7 +184,7 @@
 }
 
 /* ==================== HINT CONSELHO ==================== */
-.info-conselho {
+.conta-page .info-conselho {
     background: #eff6ff;
     border: 1px solid #bfdbfe;
     padding: 10px 14px;
@@ -183,7 +200,172 @@
 
 /* ==================== RESPONSIVO ==================== */
 @media (max-width: 640px) {
-    .form-linha { grid-template-columns: 1fr; }
-    .perfil-header { flex-direction: column; align-items: center; text-align: center; }
-    .info-perfil p { justify-content: center; }
+    .conta-page .form-linha { grid-template-columns: 1fr; }
+    .conta-page .perfil-header { flex-direction: column; align-items: center; text-align: center; }
+    .conta-page .info-perfil p { justify-content: center; }
+}
+
+.conta-page .form-grupo input:focus-visible,
+.conta-page .form-grupo select:focus-visible,
+.conta-page button:focus-visible,
+.conta-page .foto-perfil label:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.conta-page .btn-salvar-conta:disabled {
+    cursor: wait;
+    opacity: 0.7;
+    transform: none;
+}
+
+/* Refinamento visual da área de conta, mantendo os tons e ações existentes. */
+.conta-page {
+    --conta-blue: #1e3a8a;
+    --conta-ink: #0a1f44;
+    --conta-muted: #475569;
+    --conta-border: #e2e8f0;
+    color: var(--conta-ink);
+}
+
+.conta-page .conta-page-header {
+    padding: 2px 0 4px;
+}
+
+.conta-page .conta-page-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--conta-ink);
+    font-size: clamp(1.35rem, 2vw, 1.65rem);
+    font-weight: 750;
+    letter-spacing: -0.025em;
+}
+
+.conta-page .card-conta {
+    max-width: 1040px;
+    padding: clamp(20px, 4vw, 36px);
+    border-radius: 16px;
+    box-shadow: 0 10px 32px rgba(15, 23, 42, 0.07);
+}
+
+.conta-page .perfil-header {
+    gap: clamp(20px, 4vw, 36px);
+    padding-bottom: 28px;
+    border-bottom-width: 1px;
+}
+
+.conta-page .foto-perfil img,
+.conta-page .foto-perfil .placeholder-foto {
+    width: clamp(104px, 14vw, 140px);
+    height: clamp(104px, 14vw, 140px);
+}
+
+.conta-page .foto-perfil img {
+    border-width: 3px;
+}
+
+.conta-page .info-perfil {
+    min-width: 0;
+}
+
+.conta-page .info-perfil h2 {
+    gap: 8px;
+    overflow-wrap: anywhere;
+    font-size: clamp(1.2rem, 2.4vw, 1.5rem);
+    letter-spacing: -0.02em;
+}
+
+.conta-page .info-perfil p {
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+}
+
+.conta-page .form-grupo {
+    margin-bottom: 22px;
+}
+
+.conta-page .form-grupo label {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.conta-page .form-grupo input,
+.conta-page .form-grupo select {
+    min-height: 46px;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.conta-page .form-grupo input:disabled {
+    color: #475569;
+    border-color: #d7dee8;
+    opacity: 1 !important;
+    cursor: not-allowed;
+}
+
+.conta-page .btn-salvar-conta {
+    min-height: 46px;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+.conta-page .btn-salvar-conta:hover:not(:disabled) {
+    filter: brightness(0.97);
+}
+
+.conta-page .alert-sucesso,
+.conta-page .alert-erro {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.5;
+    border-radius: 10px;
+}
+
+.conta-page .alert-sucesso i,
+.conta-page .alert-erro i {
+    flex: 0 0 auto;
+    margin-top: 2px;
+}
+
+.conta-page button:focus-visible,
+.conta-page a:focus-visible,
+.conta-page .foto-perfil label:focus-visible,
+.conta-page .form-grupo input:focus-visible,
+.conta-page .form-grupo select:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+    .conta-page .perfil-header {
+        align-items: center;
+        gap: 18px;
+        padding-bottom: 22px;
+        margin-bottom: 24px;
+    }
+
+    .conta-page .info-perfil h2 {
+        justify-content: center;
+    }
+
+    .conta-page .info-perfil p {
+        font-size: 14px;
+    }
+
+    .conta-page button.btn-salvar-conta {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .conta-page *,
+    .conta-page *::before,
+    .conta-page *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }

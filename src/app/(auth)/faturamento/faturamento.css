@@ -1,0 +1,47 @@
+.faturamento-page .page-header {
+  margin-bottom: 24px;
+}
+
+.faturamento-page .page-header h2 {
+  color: #0a1f44;
+  font-size: clamp(1.5rem, 2.5vw, 1.9rem);
+  line-height: 1.25;
+}
+
+.faturamento-page .page-header p {
+  margin-top: 8px;
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.faturamento-notice {
+  box-sizing: border-box;
+  width: min(100%, 780px);
+  margin: 0 auto;
+  padding: 24px;
+  border-left: 4px solid #1e3a8a;
+}
+
+.faturamento-notice h3 {
+  margin: 0 0 12px;
+  color: #0a1f44;
+  font-size: 1.2rem;
+}
+
+.faturamento-notice p {
+  max-width: 68ch;
+  margin: 0 0 10px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.faturamento-notice p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 600px) {
+  .faturamento-notice {
+    padding: 18px;
+  }
+}

@@ -54,7 +54,7 @@ export default function VacinacaoPage() {
           webViewLink: 'webViewLink' in file && typeof file.webViewLink === 'string' ? file.webViewLink : undefined,
           webContentLink: 'webContentLink' in file && typeof file.webContentLink === 'string' ? file.webContentLink : undefined,
         })));
-        setDriveIndisponivel(false);
+        setDriveIndisponivel('configured' in data && data.configured === false);
       } catch {
         setDriveFiles([]);
         setDriveIndisponivel(true);
@@ -94,7 +94,7 @@ export default function VacinacaoPage() {
       a.click();
       document.body.removeChild(a);
     } else {
-      window.open(filePath, '_blank');
+      window.open(filePath, '_blank', 'noopener,noreferrer');
     }
   };
 

@@ -202,33 +202,33 @@ export default function PainelChamadasTV() {
   const ultimasChamadasHistorico = chamadaAtual ? chamadas.slice(1, 6) : [];
 
   if (sessionStatus === 'loading') {
-    return <main className="min-h-screen bg-slate-900 text-slate-100 grid place-items-center" role="status">Verificando sessão…</main>;
+    return <main className="min-h-screen bg-slate-900 text-slate-100 grid place-items-center p-6 text-center" role="status">Verificando sessão…</main>;
   }
   if (sessionStatus !== 'authenticated' || !session?.user) {
-    return <main className="min-h-screen bg-slate-900 text-slate-100 grid place-items-center p-8"><p role="alert">Entre no sistema para visualizar o painel de chamadas.</p></main>;
+    return <main className="min-h-screen bg-slate-900 text-slate-100 grid place-items-center p-6 sm:p-8 text-center"><p role="alert" className="max-w-xl rounded-xl border border-slate-700 bg-slate-800 px-5 py-4 leading-relaxed">Entre no sistema para visualizar o painel de chamadas.</p></main>;
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col overflow-hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col overflow-x-hidden overflow-y-auto lg:h-screen lg:overflow-hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
       
       {/* HEADER: ESTILO SGA (Simples, direto e institucional) */}
-      <header className="h-24 bg-slate-950 border-b-4 border-blue-600 px-10 flex items-center justify-between shrink-0 shadow-lg">
-        <div className="flex items-center gap-4">
-          <ActivitySquare className="w-10 h-10 text-blue-500" />
-          <h1 className="text-4xl font-black text-white tracking-tight uppercase" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>Saskia <span className="text-blue-500 font-light">Painel</span></h1>
+      <header className="min-h-20 h-auto lg:h-24 bg-slate-950 border-b-4 border-blue-600 px-4 sm:px-6 lg:px-10 py-4 lg:py-0 flex flex-wrap items-center justify-between gap-x-5 gap-y-4 shrink-0 shadow-lg">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <ActivitySquare aria-hidden="true" className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 text-blue-500" />
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight uppercase" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>Saskia <span className="text-blue-500 font-light">Painel</span></h1>
         </div>
         
-        <div className="flex items-center gap-8">
+        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 lg:gap-8 w-full sm:w-auto">
           {!audioPermitido && (
-            <div className="bg-red-500/20 text-red-400 px-4 py-2 rounded-lg flex items-center gap-2 border border-red-500/50">
-              <VolumeX className="w-5 h-5" /> Áudio inativo
+            <div className="bg-red-500/20 text-red-300 px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 border border-red-500/50 text-xs sm:text-sm font-medium">
+              <VolumeX aria-hidden="true" className="w-5 h-5 shrink-0" /> Áudio inativo
             </div>
           )}
           <div className="text-right">
-            <div className="text-5xl font-black text-white tracking-tighter leading-none">
+            <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tighter leading-none">
               {mounted ? horaAtual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
             </div>
-            <div className="text-blue-400 text-sm font-bold uppercase tracking-widest mt-1">
+            <div className="text-blue-300 text-[10px] sm:text-xs lg:text-sm font-bold uppercase tracking-[0.12em] lg:tracking-widest mt-1">
               {mounted ? horaAtual.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) : '---'}
             </div>
           </div>
@@ -236,62 +236,62 @@ export default function PainelChamadasTV() {
       </header>
 
       {/* MAIN CONTENT: SPLIT SCREEN CLASSIC */}
-      <main className="flex-1 flex bg-slate-800 relative">
-        {erroCarga && <div role="alert" className="absolute top-4 left-1/2 -translate-x-1/2 z-50 rounded bg-red-950 px-5 py-3 text-red-100">{erroCarga}</div>}
-        {carregando && <div role="status" className="absolute top-4 left-1/2 -translate-x-1/2 z-40 rounded bg-slate-800 px-5 py-3 text-slate-100">Carregando chamadas…</div>}
+      <main className="flex-1 min-h-0 flex flex-col lg:flex-row bg-slate-800 relative">
+        {erroCarga && <div role="alert" className="absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-1.5rem)] max-w-2xl rounded-xl border border-red-700 bg-red-950 px-4 sm:px-5 py-3 text-sm sm:text-base leading-relaxed text-red-100 shadow-xl">{erroCarga}</div>}
+        {carregando && <div role="status" className="absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-40 w-fit max-w-[calc(100%-1.5rem)] rounded-xl border border-slate-600 bg-slate-800 px-4 sm:px-5 py-3 text-sm sm:text-base text-slate-100 shadow-lg">Carregando chamadas…</div>}
         
         {/* ESQUERDA: CHAMADA ATUAL (MUITO DESTAQUE) */}
-        <div className="flex-[3] bg-slate-900 p-12 flex flex-col text-center border-r border-slate-700 shadow-[20px_0_30px_rgba(0,0,0,0.3)] relative z-10">
+        <div className="flex-none lg:flex-[3] min-h-[52vh] lg:min-h-0 bg-slate-900 p-5 sm:p-8 xl:p-12 flex flex-col text-center border-b lg:border-b-0 lg:border-r border-slate-700 shadow-[0_12px_24px_rgba(0,0,0,0.18)] lg:shadow-[20px_0_30px_rgba(0,0,0,0.3)] relative z-10">
           {chamadaAtual ? (
-            <div className="w-full h-full flex flex-col items-center justify-center gap-24 animate-in fade-in zoom-in duration-500">
+            <div className="w-full h-full min-h-[44vh] flex flex-col items-center justify-center gap-10 xl:gap-24 motion-reduce:animate-none animate-in fade-in zoom-in duration-500">
               <div className="flex flex-col items-center justify-center w-full">
-                <Bell className="w-20 h-20 text-blue-500 mb-6" />
-                <p className="text-2xl font-bold text-slate-400 uppercase tracking-[0.3em] mb-4">Paciente</p>
-                <h2 className="text-5xl xl:text-6xl leading-tight font-black text-white tracking-tight drop-shadow-lg break-words w-full px-8">
+                <Bell aria-hidden="true" className="w-12 h-12 sm:w-16 sm:h-16 xl:w-20 xl:h-20 text-blue-500 mb-5 sm:mb-6" />
+                <p className="text-lg sm:text-xl xl:text-2xl font-bold text-slate-300 uppercase tracking-[0.18em] xl:tracking-[0.3em] mb-3 sm:mb-4">Paciente</p>
+                <h2 className="text-3xl sm:text-4xl xl:text-6xl leading-tight font-black text-white tracking-tight drop-shadow-lg break-words w-full px-2 sm:px-8">
                   {chamadaAtual.pacienteNome}
                 </h2>
               </div>
               
-              <div className="bg-blue-600 rounded-[2rem] w-full max-w-2xl p-6 shadow-2xl border-b-8 border-blue-800 flex flex-col items-center shrink-0 text-center">
-                <p className="text-lg font-bold text-blue-200 uppercase tracking-[0.3em] mb-2">Dirija-se Para</p>
+              <div className="bg-blue-600 rounded-2xl sm:rounded-[2rem] w-full max-w-2xl p-5 sm:p-6 shadow-2xl border-b-4 sm:border-b-8 border-blue-800 flex flex-col items-center shrink-0 text-center">
+                <p className="text-sm sm:text-base lg:text-lg font-bold text-blue-100 uppercase tracking-[0.18em] sm:tracking-[0.3em] mb-2">Dirija-se Para</p>
                 <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
-                  <DoorOpen className="w-12 h-12 text-white shrink-0" />
-                  <span className="text-4xl leading-tight font-black text-white uppercase drop-shadow-md break-words max-w-full">
+                  <DoorOpen aria-hidden="true" className="w-9 h-9 sm:w-12 sm:h-12 text-white shrink-0" />
+                  <span className="text-2xl sm:text-3xl xl:text-4xl leading-tight font-black text-white uppercase drop-shadow-md break-words max-w-full">
                     {chamadaAtual.consultorio}
                   </span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="text-slate-600 flex flex-col items-center">
-              <ActivitySquare className="w-40 h-40 mb-8 opacity-20" />
-              <p className="text-4xl font-bold uppercase tracking-widest">Aguardando Chamadas</p>
+            <div className="text-slate-400 flex flex-col items-center justify-center min-h-[44vh]">
+              <ActivitySquare aria-hidden="true" className="w-24 h-24 sm:w-32 sm:h-32 xl:w-40 xl:h-40 mb-5 sm:mb-8 text-slate-300 opacity-20" />
+              <p className="text-2xl sm:text-3xl xl:text-4xl font-bold uppercase tracking-[0.12em] sm:tracking-widest">Aguardando Chamadas</p>
             </div>
           )}
         </div>
 
         {/* DIREITA: HISTÓRICO DE CHAMADAS */}
-        <div className="flex-[2] flex flex-col p-8">
-          <h3 className="text-3xl font-black text-slate-300 mb-8 uppercase tracking-widest border-b-2 border-slate-700 pb-4">
+        <div className="flex-none lg:flex-[2] min-h-[38vh] lg:min-h-0 flex flex-col p-5 sm:p-6 xl:p-8">
+          <h3 className="text-xl sm:text-2xl xl:text-3xl font-black text-slate-200 mb-5 sm:mb-6 xl:mb-8 uppercase tracking-[0.12em] sm:tracking-widest border-b-2 border-slate-700 pb-3 sm:pb-4">
             Últimas Chamadas
           </h3>
 
-          <div className="flex-1 flex flex-col gap-6 justify-start overflow-hidden">
+          <div className="flex-1 flex flex-col gap-3 sm:gap-4 xl:gap-6 justify-start overflow-y-auto overscroll-contain">
             {ultimasChamadasHistorico.length === 0 ? (
-              <div className="text-slate-500 text-center py-20 text-xl font-bold">Nenhum histórico recente.</div>
+              <div className="text-slate-400 text-center py-12 sm:py-16 xl:py-20 text-base sm:text-lg xl:text-xl font-bold">Nenhum histórico recente.</div>
             ) : (
               ultimasChamadasHistorico.map((c, i) => (
-                <div key={i} className="bg-slate-800/80 rounded-2xl p-4 flex items-center justify-between border-l-[6px] border-slate-600 shadow-md">
+                <div key={i} className="bg-slate-800/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-3 border-l-4 sm:border-l-[6px] border-slate-600 shadow-md">
                   <div className="flex-1 min-w-0 pr-4">
-                    <h4 className="text-xl font-bold text-white truncate leading-tight">{c.pacienteNome}</h4>
+                    <h4 className="text-base sm:text-lg xl:text-xl font-bold text-white truncate leading-tight">{c.pacienteNome}</h4>
                     <span className="text-sm text-slate-400 font-semibold mt-1 flex items-center gap-2">
                       <Clock className="w-3 h-3 text-blue-400" />
                       Chamado às {new Date(c.createdAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
                     </span>
                   </div>
-                  <div className="shrink-0 flex flex-col items-end pl-4 border-l border-slate-700 max-w-[45%]">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Local</span>
-                    <span className="text-xl font-black text-blue-400 uppercase tracking-tight text-right break-words line-clamp-2">
+                  <div className="shrink-0 flex flex-col items-end pl-3 sm:pl-4 border-l border-slate-700 max-w-[45%]">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Local</span>
+                    <span className="text-base sm:text-lg xl:text-xl font-black text-blue-300 uppercase tracking-tight text-right break-words line-clamp-2">
                       {c.consultorio}
                     </span>
                   </div>
@@ -303,54 +303,54 @@ export default function PainelChamadasTV() {
       </main>
 
       {/* FOOTER: ESTATÍSTICAS E TEMPO MÉDIO */}
-      <footer className="h-32 bg-slate-950 px-12 flex items-center shrink-0 border-t border-slate-800 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] z-20 w-full">
+      <footer className="h-auto min-h-32 bg-slate-950 px-4 sm:px-6 xl:px-12 py-5 lg:py-0 pb-20 lg:pb-6 flex flex-col lg:flex-row items-stretch lg:items-center gap-5 lg:gap-0 shrink-0 border-t border-slate-800 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] z-20 w-full">
         
         {/* Contadores */}
-        <div className="flex-1 flex items-center justify-around border-r border-slate-800 pr-12 h-full py-6">
+        <div className="w-full lg:flex-1 grid grid-cols-3 items-center justify-around lg:border-r border-slate-800 lg:pr-8 xl:pr-12 h-auto lg:h-full py-0 lg:py-6 gap-2">
           <div className="flex flex-col items-center justify-center">
-            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Aguardando</span>
-            <span className="text-4xl font-black text-white leading-none">{qtdAguardando}</span>
+            <span className="text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider sm:tracking-widest mb-1 text-center">Aguardando</span>
+            <span className="text-3xl sm:text-4xl font-black text-white leading-none">{qtdAguardando}</span>
           </div>
           <div className="flex flex-col items-center justify-center">
-            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Atendimento</span>
-            <span className="text-4xl font-black text-white leading-none">{qtdAtendimento}</span>
+            <span className="text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider sm:tracking-widest mb-1 text-center">Atendimento</span>
+            <span className="text-3xl sm:text-4xl font-black text-white leading-none">{qtdAtendimento}</span>
           </div>
           <div className="flex flex-col items-center justify-center">
-            <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Emergência</span>
-            <span className="text-4xl font-black text-red-400 leading-none">{qtdEmergencia}</span>
+            <span className="text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider sm:tracking-widest mb-1 text-center">Emergência</span>
+            <span className="text-3xl sm:text-4xl font-black text-red-400 leading-none">{qtdEmergencia}</span>
           </div>
         </div>
 
         {/* Tempos Médios */}
-        <div className="flex-[1.5] pl-12 h-full py-6 flex flex-col justify-center">
-          <span className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-3 flex items-center justify-center gap-2">
-            <Timer className="w-4 h-4 text-slate-400" /> Tempo Médio de Espera (Minutos)
+        <div className="w-full lg:flex-[1.5] lg:pl-8 xl:pl-12 h-auto lg:h-full py-0 lg:py-6 flex flex-col justify-center">
+          <span className="text-slate-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider sm:tracking-widest mb-3 flex items-center justify-center gap-2 text-center">
+            <Timer aria-hidden="true" className="w-4 h-4 text-slate-300 shrink-0" /> Tempo Médio de Espera (Minutos)
           </span>
-          <div className="flex items-center justify-around w-full">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center sm:justify-around gap-x-4 gap-y-3 w-full">
+            <div className="flex items-center gap-2">
               <div aria-hidden="true" className="w-4 h-4 rounded-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.6)]"></div>
-              <span className="sr-only">Vermelho</span>
-              <span className="text-2xl font-bold text-slate-200">{temposMedios["Vermelho"] ?? '--'}</span>
+              <span className="text-[9px] sm:text-[10px] font-semibold uppercase text-slate-300">Vermelho</span>
+              <span className="text-lg sm:text-2xl font-bold text-slate-100">{temposMedios["Vermelho"] ?? '--'}</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div aria-hidden="true" className="w-4 h-4 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.6)]"></div>
-              <span className="sr-only">Laranja</span>
-              <span className="text-2xl font-bold text-slate-200">{temposMedios["Laranja"] ?? '--'}</span>
+              <span className="text-[9px] sm:text-[10px] font-semibold uppercase text-slate-300">Laranja</span>
+              <span className="text-lg sm:text-2xl font-bold text-slate-100">{temposMedios["Laranja"] ?? '--'}</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div aria-hidden="true" className="w-4 h-4 rounded-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.6)]"></div>
-              <span className="sr-only">Amarelo</span>
-              <span className="text-2xl font-bold text-slate-200">{temposMedios["Amarelo"] ?? '--'}</span>
+              <span className="text-[9px] sm:text-[10px] font-semibold uppercase text-slate-300">Amarelo</span>
+              <span className="text-lg sm:text-2xl font-bold text-slate-100">{temposMedios["Amarelo"] ?? '--'}</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div aria-hidden="true" className="w-4 h-4 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)]"></div>
-              <span className="sr-only">Verde</span>
-              <span className="text-2xl font-bold text-slate-200">{temposMedios["Verde"] ?? '--'}</span>
+              <span className="text-[9px] sm:text-[10px] font-semibold uppercase text-slate-300">Verde</span>
+              <span className="text-lg sm:text-2xl font-bold text-slate-100">{temposMedios["Verde"] ?? '--'}</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div aria-hidden="true" className="w-4 h-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
-              <span className="sr-only">Azul</span>
-              <span className="text-2xl font-bold text-slate-200">{temposMedios["Azul"] ?? '--'}</span>
+              <span className="text-[9px] sm:text-[10px] font-semibold uppercase text-slate-300">Azul</span>
+              <span className="text-lg sm:text-2xl font-bold text-slate-100">{temposMedios["Azul"] ?? '--'}</span>
             </div>
           </div>
         </div>
@@ -361,7 +361,7 @@ export default function PainelChamadasTV() {
         onClick={() => setVozAtivada(!vozAtivada)} 
         aria-label={vozAtivada ? "Desativar anúncios por voz" : "Ativar anúncios por voz"}
         aria-pressed={vozAtivada}
-        className="fixed bottom-36 right-6 w-12 h-12 bg-slate-800 text-slate-500 rounded-full flex items-center justify-center hover:bg-slate-700 hover:text-white transition-all z-50 border border-slate-700 shadow-md"
+        className="fixed bottom-4 right-4 lg:bottom-36 lg:right-6 w-12 h-12 bg-slate-800 text-slate-300 rounded-full flex items-center justify-center hover:bg-slate-700 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 transition-all z-50 border border-slate-600 shadow-lg"
         title={vozAtivada ? "Desativar Voz" : "Ativar Voz"}
       >
         {vozAtivada ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5 text-red-400" />}

@@ -1,0 +1,159 @@
+.chamados-ti-page {
+  min-width: 0;
+}
+
+.chamados-ti-page .page-header {
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.chamados-ti-page .header-left h2 {
+  margin-bottom: 6px;
+  line-height: 1.25;
+}
+
+.chamados-ti-page .header-left p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.chamados-ti-page .ticket-form {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #f8fafc;
+}
+
+.chamados-ti-page .ticket-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.chamados-ti-page .ticket-field {
+  min-width: 0;
+}
+
+.chamados-ti-page .ticket-field-full {
+  grid-column: 1 / -1;
+}
+
+.chamados-ti-page .ticket-field label {
+  display: block;
+  margin-bottom: 6px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chamados-ti-page .ticket-field .input-field {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.chamados-ti-page .ticket-field textarea {
+  min-height: 108px;
+  resize: vertical;
+}
+
+.chamados-ti-page .ticket-field .input-field:focus-visible,
+.chamados-ti-page button:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.chamados-ti-page .ticket-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.chamados-ti-page .ticket-feedback {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  line-height: 1.45;
+}
+
+.chamados-ti-page .ticket-feedback-error,
+.chamados-ti-page .ticket-load-error {
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.chamados-ti-page .ticket-feedback-success {
+  margin: 0 0 16px;
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.chamados-ti-page .ticket-load-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+}
+
+.chamados-ti-page .ticket-description {
+  max-width: 36rem;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.chamados-ti-page .tabela-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.chamados-ti-page .tabela {
+  min-width: 620px;
+}
+
+.chamados-ti-page button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+@media (max-width: 640px) {
+  .chamados-ti-page .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chamados-ti-page .header-actions,
+  .chamados-ti-page .header-actions .btn {
+    width: 100%;
+  }
+
+  .chamados-ti-page .ticket-form {
+    padding: 16px;
+  }
+
+  .chamados-ti-page .ticket-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .chamados-ti-page .ticket-field-full {
+    grid-column: auto;
+  }
+
+  .chamados-ti-page .ticket-form-actions,
+  .chamados-ti-page .ticket-form-actions .btn {
+    width: 100%;
+  }
+}

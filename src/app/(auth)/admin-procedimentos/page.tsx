@@ -41,7 +41,14 @@ export default function AdminProcedimentosPage() {
     }
   };
 
-  useEffect(() => { carregarProcedimentos(); }, []);
+  useEffect(() => {
+    if (sessionStatus === 'loading') return;
+    if (!isAdmin) {
+      setCarregando(false);
+      return;
+    }
+    void carregarProcedimentos();
+  }, [isAdmin, sessionStatus]);
 
   const abrirModal = (index: number | null = null) => {
     if (index !== null) {
@@ -135,14 +142,14 @@ export default function AdminProcedimentosPage() {
   };
 
   return (
-    <div className="conteudo">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+    <div className="conteudo procedimentos-page">
+      <div className="procedimentos-header">
         <div>
-          <h2><i className="las la-syringe"></i> Procedimentos</h2>
+          <h2><i className="las la-syringe" aria-hidden="true"></i> Procedimentos</h2>
           <p>Gerencie o catálogo de procedimentos, exames e serviços prestados.</p>
         </div>
-        {isAdmin && <button className="btn btn-primary" onClick={() => abrirModal()} style={{ padding: '12px 24px' }}>
-          <i className="las la-plus"></i> Novo Procedimento
+        {isAdmin && <button className="btn btn-primary procedimentos-novo" onClick={() => abrirModal()}>
+          <i className="las la-plus" aria-hidden="true"></i> Novo Procedimento
         </button>}
       </div>
 
@@ -151,9 +158,14 @@ export default function AdminProcedimentosPage() {
 
       <div className="lista-procedimentos">
         {carregando ? (
-          <p role="status" style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#64748b', padding: '40px' }}>Carregando procedimentos…</p>
+          <p role="status" className="procedimentos-loading">Carregando procedimentos…</p>
+        ) : erro ? (
+          <div className="procedimentos-empty" role="status">
+            <p>Não foi possível exibir o catálogo.</p>
+            {isAdmin && <button type="button" className="btn btn-primary" onClick={() => void carregarProcedimentos()}>Tentar novamente</button>}
+          </div>
         ) : procedimentos.length === 0 ? (
-          <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#94a3b8', padding: '40px' }}>Nenhum procedimento cadastrado.</p>
+          <p className="procedimentos-empty" role="status">Nenhum procedimento cadastrado.</p>
         ) : (
           procedimentos.map((p, idx) => (
             <div className="procedimento-item" key={p.id}>
@@ -173,9 +185,9 @@ export default function AdminProcedimentosPage() {
                 </div>
               </div>
               <div className="procedimento-acoes">
-                {isAdmin && <button className="btn-editar" onClick={() => abrirModal(idx)} title="Editar"><i className="las la-edit"></i></button>}
-                {isAdmin && p.ativo && <button className="btn-excluir" onClick={() => excluirProcedimento(idx)} title="Desativar"><i className="las la-ban"></i></button>}
-                {isAdmin && !p.ativo && <button className="btn-editar" onClick={() => reativarProcedimento(p)} title="Reativar"><i className="las la-undo"></i></button>}
+                {isAdmin && <button type="button" className="btn-editar" onClick={() => abrirModal(idx)} aria-label={`Editar ${p.nome}`} title="Editar"><i className="las la-edit" aria-hidden="true"></i></button>}
+                {isAdmin && p.ativo && <button type="button" className="btn-excluir" onClick={() => excluirProcedimento(idx)} aria-label={`Desativar ${p.nome}`} title="Desativar"><i className="las la-ban" aria-hidden="true"></i></button>}
+                {isAdmin && !p.ativo && <button type="button" className="btn-editar" onClick={() => reativarProcedimento(p)} aria-label={`Reativar ${p.nome}`} title="Reativar"><i className="las la-undo" aria-hidden="true"></i></button>}
               </div>
             </div>
           ))
@@ -187,7 +199,7 @@ export default function AdminProcedimentosPage() {
           <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="procedimento-modal-title" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 id="procedimento-modal-title"><i className={editIndex !== null ? "las la-edit" : "las la-plus-circle"} aria-hidden="true"></i> {editIndex !== null ? "Editar Procedimento" : "Novo Procedimento"}</h3>
-              <button type="button" aria-label="Fechar formulário de procedimento" style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }} onClick={fecharModal}>&times;</button>
+              <button type="button" aria-label="Fechar formulário de procedimento" disabled={salvando} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }} onClick={fecharModal}>&times;</button>
             </div>
 
             <div className="modal-body">
@@ -230,8 +242,8 @@ export default function AdminProcedimentosPage() {
             </div>
 
             <div className="modal-footer">
-              <button className="btn btn-danger" onClick={fecharModal}>Cancelar</button>
-              <button className="btn btn-success" onClick={salvarProcedimento} disabled={salvando}><i className="las la-save"></i> {salvando ? 'Salvando…' : 'Salvar'}</button>
+              <button type="button" className="btn btn-danger" onClick={fecharModal} disabled={salvando}>Cancelar</button>
+              <button type="button" className="btn btn-success" onClick={salvarProcedimento} disabled={salvando}><i className="las la-save" aria-hidden="true"></i> {salvando ? 'Salvando…' : 'Salvar'}</button>
             </div>
           </div>
         </div>

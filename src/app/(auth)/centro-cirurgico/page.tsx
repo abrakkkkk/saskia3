@@ -96,10 +96,23 @@ export default function CentroCirurgicoPage() {
     carregarDados();
   }, []);
 
+  useEffect(() => {
+    if (sessionStatus === 'authenticated' && !podeGerenciar && activeTab === 'agendamento') {
+      setActiveTab('lista');
+    }
+  }, [sessionStatus, podeGerenciar, activeTab]);
+
   const agendarCirurgia = async () => {
     const { pacienteId, data, hora, procedimento, cirurgiao, anestesista, instrumentador, circulante, anestesia, prioridade, sala, obs } = formAgendamento;
     if (!pacienteId || !sala || !salas.includes(sala) || !data || !hora || !procedimento.trim() || !cirurgiao.trim()) {
       alert(" Preencha todos os campos obrigatórios (*)");
+      return;
+    }
+
+    const duracaoTexto = formAgendamento.duracao.trim();
+    const duracaoHoras = duracaoTexto ? Number(duracaoTexto) : 2;
+    if (!Number.isFinite(duracaoHoras) || duracaoHoras < 0.5) {
+      alert('Informe uma duração prevista de pelo menos 0,5 hora.');
       return;
     }
 
@@ -116,7 +129,7 @@ export default function CentroCirurgicoPage() {
       c.dataHora && 
       c.status !== 'CANCELADA' && 
       c.status !== 'CONCLUIDA' &&
-      Math.abs(new Date(c.dataHora).getTime() - new Date(dataHoraNova).getTime()) < (parseFloat(formAgendamento.duracao || '2') * 3600 * 1000)
+      Math.abs(new Date(c.dataHora).getTime() - new Date(dataHoraNova).getTime()) < (duracaoHoras * 3600 * 1000)
     );
 
     if (conflitoPaciente) {
@@ -131,7 +144,7 @@ export default function CentroCirurgicoPage() {
       c.dataHora && 
       c.status !== 'CANCELADA' && 
       c.status !== 'CONCLUIDA' &&
-      Math.abs(new Date(c.dataHora).getTime() - new Date(dataHoraNova).getTime()) < (parseFloat(formAgendamento.duracao || '2') * 3600 * 1000)
+      Math.abs(new Date(c.dataHora).getTime() - new Date(dataHoraNova).getTime()) < (duracaoHoras * 3600 * 1000)
     );
 
     if (conflito) {
@@ -142,7 +155,7 @@ export default function CentroCirurgicoPage() {
 
     try {
       const equipe = `Cirurgião: ${cirurgiao}. Anest: ${anestesista}. Instr: ${instrumentador}. Circ: ${circulante}`;
-      const observacoes = `Prioridade: ${prioridade}. Duração Prevista: ${formAgendamento.duracao}h. Obs: ${obs}`;
+      const observacoes = `Prioridade: ${prioridade}. Duração Prevista: ${duracaoHoras}h. Obs: ${obs}`;
       
       const res = await fetch('/api/cirurgias', {
         method: 'POST',
@@ -158,7 +171,10 @@ export default function CentroCirurgicoPage() {
         })
       });
 
-      if(!res.ok) throw new Error("Erro ao agendar cirurgia");
+      if (!res.ok) {
+        const erro = await res.json().catch(() => null);
+        throw new Error(typeof erro?.error === 'string' ? erro.error : 'Erro ao agendar cirurgia.');
+      }
       
       setFormAgendamento({
         ...formAgendamento,
@@ -169,8 +185,8 @@ export default function CentroCirurgicoPage() {
       alert(" Cirurgia agendada com sucesso!");
       carregarDados();
       setActiveTab('lista');
-    } catch(e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erro ao agendar cirurgia.');
     }
   };
 
@@ -191,14 +207,17 @@ export default function CentroCirurgicoPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: novoStatus })
         });
-        if(!res.ok) throw new Error("Erro ao atualizar cirurgia");
+        if (!res.ok) {
+          const erro = await res.json().catch(() => null);
+          throw new Error(typeof erro?.error === 'string' ? erro.error : 'Erro ao atualizar cirurgia.');
+        }
         
         if (novoStatus === 'EM_ANDAMENTO') alert(" Cirurgia iniciada!");
         if (novoStatus === 'CONCLUIDA') alert(" Cirurgia concluída!");
         if (novoStatus === 'CANCELADA') alert(" Cirurgia cancelada.");
         carregarDados();
-      } catch(e: any) {
-        alert(e.message);
+      } catch (e) {
+        alert(e instanceof Error ? e.message : 'Erro ao atualizar cirurgia.');
       }
     }
   };
@@ -279,9 +298,9 @@ export default function CentroCirurgicoPage() {
         </div>
 
         <div className="tabs-cc">
-          {podeGerenciar && <button className={`tab-btn ${activeTab === 'agendamento' ? 'ativo' : ''}`} onClick={() => setActiveTab('agendamento')}><i className="las la-calendar-plus"></i> Agendamento</button>}
-          <button className={`tab-btn ${activeTab === 'salas' ? 'ativo' : ''}`} onClick={() => setActiveTab('salas')}><i className="las la-door-open"></i> Salas Cirúrgicas</button>
-          <button className={`tab-btn ${activeTab === 'lista' ? 'ativo' : ''}`} onClick={() => setActiveTab('lista')}><i className="las la-list"></i> Lista de Cirurgias</button>
+          {podeGerenciar && <button type="button" aria-pressed={activeTab === 'agendamento'} className={`tab-btn ${activeTab === 'agendamento' ? 'ativo' : ''}`} onClick={() => setActiveTab('agendamento')}><i className="las la-calendar-plus" aria-hidden="true"></i> Agendamento</button>}
+          <button type="button" aria-pressed={activeTab === 'salas'} className={`tab-btn ${activeTab === 'salas' ? 'ativo' : ''}`} onClick={() => setActiveTab('salas')}><i className="las la-door-open" aria-hidden="true"></i> Salas Cirúrgicas</button>
+          <button type="button" aria-pressed={activeTab === 'lista'} className={`tab-btn ${activeTab === 'lista' ? 'ativo' : ''}`} onClick={() => setActiveTab('lista')}><i className="las la-list" aria-hidden="true"></i> Lista de Cirurgias</button>
         </div>
 
         {sessionStatus === 'authenticated' && !podeGerenciar && <div role="status" className="cc-panel" style={{ marginBottom: 16 }}>Somente ADMIN e MEDICO podem agendar cirurgias ou alterar status.</div>}
@@ -426,7 +445,7 @@ export default function CentroCirurgicoPage() {
         {activeTab === 'lista' && (
           <div>
             <div className="search-box">
-              <input type="text" placeholder="Buscar por paciente, procedimento ou equipe..." value={buscaCirurgia} onChange={e => setBuscaCirurgia(e.target.value)} />
+              <input type="text" aria-label="Buscar cirurgias por paciente, procedimento ou equipe" placeholder="Buscar por paciente, procedimento ou equipe..." value={buscaCirurgia} onChange={e => setBuscaCirurgia(e.target.value)} />
               <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)} style={{ width: 'auto', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '8px' }}>
                 <option value="todos">Todos os Status</option>
                 <option value="AGENDADA">Agendada</option>
@@ -435,7 +454,7 @@ export default function CentroCirurgicoPage() {
                 <option value="CANCELADA">Cancelada</option>
               </select>
             </div>
-            <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+            <div className="tabela-cc-wrapper">
               <table className="tabela-cc">
                 <thead>
                   <tr><th>Data/Hora</th><th>Paciente</th><th>Procedimento</th><th>Sala</th><th>Equipe/Detalhes</th><th>Status</th><th>Ações</th></tr>
@@ -454,9 +473,9 @@ export default function CentroCirurgicoPage() {
                         <td><span className={`badge ${getStatusBadge(c.status)}`}>{getStatusName(c.status)}</span></td>
                         <td>
                           {podeGerenciar && <>
-                          <button className="btn btn-sm btn-primary" onClick={() => alterarStatus(c.id, 'EM_ANDAMENTO')} disabled={c.status !== 'AGENDADA'}><i className="las la-play"></i></button>
-                          <button className="btn btn-sm btn-warning" onClick={() => alterarStatus(c.id, 'CONCLUIDA')} disabled={c.status !== 'EM_ANDAMENTO'} style={{ marginLeft: '4px' }}><i className="las la-check"></i></button>
-                          <button className="btn btn-sm btn-danger" onClick={() => alterarStatus(c.id, 'CANCELADA')} disabled={c.status === 'CANCELADA' || c.status === 'CONCLUIDA'} style={{ marginLeft: '4px' }}><i className="las la-times"></i></button>
+                          <button type="button" className="btn btn-sm btn-primary" aria-label={`Iniciar ${c.procedimento}`} onClick={() => alterarStatus(c.id, 'EM_ANDAMENTO')} disabled={c.status !== 'AGENDADA'}><i className="las la-play" aria-hidden="true"></i></button>
+                          <button type="button" className="btn btn-sm btn-warning" aria-label={`Concluir ${c.procedimento}`} onClick={() => alterarStatus(c.id, 'CONCLUIDA')} disabled={c.status !== 'EM_ANDAMENTO'} style={{ marginLeft: '4px' }}><i className="las la-check" aria-hidden="true"></i></button>
+                          <button type="button" className="btn btn-sm btn-danger" aria-label={`Cancelar ${c.procedimento}`} onClick={() => alterarStatus(c.id, 'CANCELADA')} disabled={c.status === 'CANCELADA' || c.status === 'CONCLUIDA'} style={{ marginLeft: '4px' }}><i className="las la-times" aria-hidden="true"></i></button>
                           </>}
                         </td>
                       </tr>

@@ -19,13 +19,22 @@ export async function GET() {
     
     const lotes = await prisma.cssdLote.findMany({
       where: { hospitalId },
-      include: {
-        itens: true
+      select: {
+        id: true,
+        numero: true,
+        setor: true,
+        operador: true,
+        status: true,
+        equipamento: true,
+        ciclo: true,
+        data: true,
+        indicadorBiologico: true,
+        itens: { select: { id: true } },
       },
       orderBy: { createdAt: 'desc' }
     });
 
-    return NextResponse.json(lotes);
+    return NextResponse.json(lotes, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
   } catch (error) {
     return NextResponse.json({ error: 'Erro ao buscar lotes de esterilização' }, { status: 500 });
   }

@@ -86,31 +86,42 @@ export default function LoginPage() {
 
   return (
     <div className={`min-h-screen w-full flex flex-col lg:flex-row-reverse selection:bg-blue-500/30 ${inter.className}`}>
-      
+
       {/* Lado Direito (Agora) - Formulário de Login */}
-      <div className="w-full lg:w-[45%] bg-[#0a1f44] flex flex-col items-center justify-center p-6 lg:p-12 relative z-10 shadow-[-20px_0_50px_rgba(0,0,0,0.5)]">
-        
+      <div className="min-h-screen w-full lg:w-[45%] bg-[#0a1f44] flex flex-col items-center justify-center p-5 sm:p-6 lg:p-12 relative z-10 shadow-[-20px_0_50px_rgba(0,0,0,0.5)]">
+
         {/* Container / Delimitador Visual (Mantido o mesmo design) */}
-        <div 
-          className="w-full max-w-sm relative z-10" 
-          style={{ 
-            backgroundColor: 'rgba(255, 255, 255, 0.04)', 
-            border: '1px solid rgba(255, 255, 255, 0.1)', 
-            padding: '36px 32px', 
-            borderRadius: '8px', 
+        <div
+          className="w-full max-w-sm relative z-10"
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            padding: 'clamp(24px, 5vw, 36px) clamp(20px, 4vw, 32px)',
+            borderRadius: '12px',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
             backdropFilter: 'blur(12px)',
           }}
         >
-          
-          {/* Logo Area (Removida temporariamente para visualização) */}
+
+          <div className="mb-7 flex flex-col items-center text-center">
+            <Image
+              src="/images/logo.png"
+              alt="Saskia Saúde"
+              width={180}
+              height={72}
+              className="mb-3 h-14 w-auto object-contain brightness-0 invert"
+              priority
+            />
+            <h1 className="text-xl font-semibold tracking-tight text-white">Acesso ao sistema</h1>
+            <p className="mt-1 text-sm text-slate-300">Gestão integrada em saúde</p>
+          </div>
 
           {/* Form Area */}
           <form onSubmit={handleLogin} aria-busy={loading || carregandoHospitais}>
-            
+
             <div className="flex flex-col" style={{ marginBottom: '20px' }}>
               <label htmlFor="hospitalId" className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
-                <Hospital className="w-3.5 h-3.5 text-blue-400" /> Unidade Hospitalar
+                <Hospital aria-hidden="true" className="w-3.5 h-3.5 text-blue-400" /> Unidade Hospitalar
               </label>
               <div className="relative">
                 <select
@@ -137,7 +148,7 @@ export default function LoginPage() {
 
             <div className="flex flex-col" style={{ marginBottom: '20px' }}>
               <label htmlFor="login-email" className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
-                <Mail className="w-3.5 h-3.5 text-blue-400" /> E-mail Institucional
+                <Mail aria-hidden="true" className="w-3.5 h-3.5 text-blue-400" /> E-mail Institucional
               </label>
               <input
                 id="login-email"
@@ -154,7 +165,7 @@ export default function LoginPage() {
 
             <div className="flex flex-col" style={{ marginBottom: '24px' }}>
               <label htmlFor="login-senha" className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
-                <Lock className="w-3.5 h-3.5 text-blue-400" /> Senha de Acesso
+                <Lock aria-hidden="true" className="w-3.5 h-3.5 text-blue-400" /> Senha de Acesso
               </label>
               <input
                 id="login-senha"
@@ -171,22 +182,22 @@ export default function LoginPage() {
 
             {erro && (
               <div role="alert" className="flex items-center gap-3 text-red-200 bg-red-500/20 border border-red-500/50 p-3.5 rounded-md text-sm font-medium" style={{ marginBottom: '20px' }}>
-                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <AlertTriangle aria-hidden="true" className="w-4 h-4 shrink-0" />
                 <p>{erro}</p>
               </div>
             )}
 
             <div>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading || carregandoHospitais || hospitais.length === 0}
-                className="w-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold transition-colors flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-[#1e3a8a] hover:bg-[#2563eb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300 text-white font-bold transition-colors flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ minHeight: '50px', padding: '12px 16px', borderRadius: '8px', fontSize: '16px', border: '1px solid rgba(255, 255, 255, 0.15)' }}
               >
                 {loading ? (
-                  <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Autenticando...</>
+                  <><div aria-hidden="true" className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Autenticando...</>
                 ) : (
-                  <><LogIn className="w-5 h-5" /> Acessar Sistema</>
+                  <><LogIn aria-hidden="true" className="w-5 h-5" /> Acessar Sistema</>
                 )}
               </button>
             </div>
@@ -198,29 +209,30 @@ export default function LoginPage() {
 
       {/* Lado Direito - Painel Decorativo (Abstract Branding) */}
       <div className="hidden lg:flex lg:w-[55%] relative bg-[#020817] overflow-hidden items-center justify-center">
-        
+
         {/* Grade de fundo (Grid) */}
-        <div 
-          className="absolute inset-0 z-0 opacity-[0.03]" 
+        <div aria-hidden="true"
+          className="absolute inset-0 z-0 opacity-[0.03]"
           style={{ backgroundImage: 'linear-gradient(#ffffff 1px, transparent 1px), linear-gradient(90deg, #ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}
         ></div>
-        
+
         {/* Brilhos (Gradients) decorativos */}
-        <div className="absolute top-1/4 left-1/4 w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] bg-blue-600 rounded-full mix-blend-screen filter blur-[150px] opacity-10"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-[50vw] h-[50vw] max-w-[500px] max-h-[500px] bg-blue-400 rounded-full mix-blend-screen filter blur-[120px] opacity-10"></div>
+        <div aria-hidden="true" className="absolute top-1/4 left-1/4 w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] bg-blue-600 rounded-full mix-blend-screen filter blur-[150px] opacity-10"></div>
+        <div aria-hidden="true" className="absolute bottom-1/4 right-1/4 w-[50vw] h-[50vw] max-w-[500px] max-h-[500px] bg-blue-400 rounded-full mix-blend-screen filter blur-[120px] opacity-10"></div>
 
         {/* Logo d'água no centro */}
         <div className="relative z-10 flex flex-col items-center opacity-60 select-none pointer-events-none">
           <Image
             src="/images/logo.png"
-            alt="Saskia Saúde Marca D'água"
+            alt=""
+            aria-hidden="true"
             width={500}
             height={200}
             className="brightness-0 invert object-contain"
             priority
           />
         </div>
-        
+
       </div>
 
     </div>

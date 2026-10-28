@@ -15,7 +15,6 @@ import {
   CheckCircle,
   AlertTriangle,
   Inbox,
-  CloudUpload,
   MessageSquareOff,
   Trash2
 } from 'lucide-react';
@@ -226,49 +225,53 @@ export default function SuportePage() {
   };
 
   return (
-    <div className="max-w-[1500px] mx-auto p-6 space-y-6">
+    <main className="mx-auto w-full max-w-[1500px] p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
       
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Headset className="w-8 h-8 text-blue-900" />
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <Headset aria-hidden="true" className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-blue-900" />
             Tickets de Suporte
           </h2>
           <p className="text-slate-500 mt-1">Gerencie todas as solicitações de suporte da sua conta.</p>
         </div>
         <button 
           onClick={() => setIsModalNovoOpen(true)}
-          className="bg-blue-900 hover:bg-blue-950 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm"
+          className="min-h-11 w-full sm:w-auto justify-center bg-blue-900 hover:bg-blue-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm"
         >
-          <PlusCircle className="w-5 h-5" /> Nova Solicitação
+          <PlusCircle aria-hidden="true" className="w-5 h-5" /> Nova Solicitação
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b-2 border-slate-200">
+      <div role="group" aria-label="Filtrar tickets" className="flex gap-1 sm:gap-2 overflow-x-auto border-b-2 border-slate-200">
         <button 
+          type="button"
+          aria-pressed={filtroAtual === 'andamento'}
           onClick={() => setFiltroAtual('andamento')}
-          className={`flex items-center gap-2 px-6 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] ${filtroAtual === 'andamento' ? 'border-blue-900 text-blue-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          className={`min-h-11 shrink-0 flex items-center gap-2 px-4 sm:px-6 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-700 ${filtroAtual === 'andamento' ? 'border-blue-900 text-blue-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
         >
-          <Spinner className="w-4 h-4" /> Em Andamento ({andamentoCount})
+          <TicketIcon aria-hidden="true" className="w-4 h-4" /> Em Andamento ({andamentoCount})
         </button>
         <button 
+          type="button"
+          aria-pressed={filtroAtual === 'arquivados'}
           onClick={() => setFiltroAtual('arquivados')}
-          className={`flex items-center gap-2 px-6 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] ${filtroAtual === 'arquivados' ? 'border-blue-900 text-blue-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          className={`min-h-11 shrink-0 flex items-center gap-2 px-4 sm:px-6 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-700 ${filtroAtual === 'arquivados' ? 'border-blue-900 text-blue-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
         >
-          <Archive className="w-4 h-4" /> Arquivados ({arquivadosCount})
+          <Archive aria-hidden="true" className="w-4 h-4" /> Arquivados ({arquivadosCount})
         </button>
       </div>
 
       {/* Lista Tickets */}
       <div className="min-h-[400px] space-y-4">
-        {erroCarga && <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-800">{erroCarga}</p>}
+        {erroCarga && <p role="alert" aria-live="assertive" className="rounded-xl border border-red-200 border-l-4 border-l-red-600 bg-red-50 p-4 text-sm leading-relaxed text-red-800">{erroCarga}</p>}
         {carregando ? (
-          <div role="status" className="flex items-center justify-center gap-2 py-20 text-slate-500"><Spinner className="h-5 w-5 animate-spin" /> Carregando tickets...</div>
+          <div role="status" className="flex items-center justify-center gap-2 py-20 text-slate-500"><Spinner aria-hidden="true" className="h-5 w-5 animate-spin motion-reduce:animate-none" /> Carregando tickets...</div>
         ) : ticketsFiltrados.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-4">
-            <Inbox className="w-16 h-16 opacity-30" />
+          <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-slate-500 gap-4 text-center">
+            <Inbox aria-hidden="true" className="w-14 h-14 opacity-40" />
             <p className="text-lg">Nenhum ticket encontrado</p>
             <p className="text-sm">Clique em "Nova Solicitação" para abrir um chamado</p>
           </div>
@@ -276,13 +279,13 @@ export default function SuportePage() {
           ticketsFiltrados.map(ticket => (
             <div 
               key={ticket.id} 
-              className={`bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-all border-l-4 ${getPrioridadeColor(ticket.prioridade)}`}
+              className={`bg-white rounded-xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all motion-reduce:transition-none border border-slate-200 border-l-4 ${getPrioridadeColor(ticket.prioridade)}`}
             >
               <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <span className="font-bold text-blue-900 flex items-center gap-1.5">
-                  <TicketIcon className="w-4 h-4" /> {ticket.numero}
+                  <TicketIcon aria-hidden="true" className="w-4 h-4" /> {ticket.numero}
                 </span>
-                <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${getStatusColor(ticket.status)}`}>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(ticket.status)}`}>
                   {getPrioridadeIcon(ticket.prioridade)} {ticket.status}
                 </span>
               </div>
@@ -291,18 +294,18 @@ export default function SuportePage() {
               <p className="text-sm text-slate-500 mb-4 line-clamp-2">{ticket.descricao}</p>
               
               <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-100">
-                <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400">
-                  <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {new Date(ticket.data).toLocaleString()}</span>
-                  <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> {ticket.solicitante}</span>
-                  <span className="flex items-center gap-1.5"><Flag className="w-3.5 h-3.5" /> {ticket.prioridade}</span>
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-slate-500">
+                  <span className="flex items-center gap-1.5"><Calendar aria-hidden="true" className="w-3.5 h-3.5" /> {new Date(ticket.data).toLocaleString()}</span>
+                  <span className="flex items-center gap-1.5"><User aria-hidden="true" className="w-3.5 h-3.5" /> {ticket.solicitante}</span>
+                  <span className="flex items-center gap-1.5"><Flag aria-hidden="true" className="w-3.5 h-3.5" /> {ticket.prioridade}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => setTicketDetalhe(ticket)}
-                    className="flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
+                    className="min-h-11 flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 px-3 py-1.5 rounded-lg transition-colors motion-reduce:transition-none"
                   >
-                    <Eye className="w-4 h-4" /> Ver Detalhes
+                    <Eye aria-hidden="true" className="w-4 h-4" /> Ver Detalhes
                   </button>
                 </div>
               </div>
@@ -313,44 +316,47 @@ export default function SuportePage() {
 
       {/* Modal Novo Ticket */}
       {isModalNovoOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xl overflow-hidden shadow-xl">
+        <div className="fixed inset-0 bg-black/55 z-50 flex items-center justify-center p-3 sm:p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="suporte-novo-titulo" className="bg-white rounded-2xl w-full max-w-xl max-h-[90dvh] overflow-hidden shadow-2xl">
             <div className="bg-blue-900 p-4 px-6 flex justify-between items-center text-white">
-              <h3 className="font-bold flex items-center gap-2"><TicketIcon className="w-5 h-5" /> Nova Solicitação</h3>
-              <button onClick={() => setIsModalNovoOpen(false)} className="text-white/70 hover:text-white transition-colors text-2xl leading-none">&times;</button>
+              <h3 id="suporte-novo-titulo" className="font-bold flex items-center gap-2"><TicketIcon aria-hidden="true" className="w-5 h-5" /> Nova Solicitação</h3>
+              <button type="button" aria-label="Fechar janela" onClick={() => setIsModalNovoOpen(false)} className="min-w-11 min-h-11 rounded-lg text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors motion-reduce:transition-none text-2xl leading-none">&times;</button>
             </div>
             
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-4 max-h-[calc(90dvh-145px)] overflow-y-auto overscroll-contain">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Título da Solicitação</label>
+                <label htmlFor="suporte-novo-titulo-input" className="block text-sm font-bold text-slate-700 mb-1">Título da Solicitação</label>
                 <input 
+                  id="suporte-novo-titulo-input"
                   type="text" 
                   value={novoTitulo}
                   onChange={e => setNovoTitulo(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm"
+                  className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm"
                   placeholder="Ex: Problema com acesso ao sistema"
                   maxLength={160}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Descrição Detalhada</label>
+                <label htmlFor="suporte-nova-descricao" className="block text-sm font-bold text-slate-700 mb-1">Descrição Detalhada</label>
                 <textarea 
+                  id="suporte-nova-descricao"
                   rows={4}
                   value={novaDescricao}
                   onChange={e => setNovaDescricao(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm resize-y"
+                  className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm resize-y"
                   placeholder="Descreva detalhadamente o problema ou solicitação..."
                   maxLength={4000}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Prioridade</label>
+                <label htmlFor="suporte-nova-prioridade" className="block text-sm font-bold text-slate-700 mb-1">Prioridade</label>
                 <select 
+                  id="suporte-nova-prioridade"
                   value={novaPrioridade}
                   onChange={e => setNovaPrioridade(e.target.value as Ticket['prioridade'])}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-600 text-sm bg-white"
+                  className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm bg-white"
                 >
                   <option value="Baixa"> Baixa</option>
                   <option value="Média"> Média</option>
@@ -359,15 +365,15 @@ export default function SuportePage() {
                 </select>
               </div>
 
-              <p role="status" className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">Anexos não estão disponíveis para persistência neste módulo.</p>
+              <p role="status" className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-700">Anexos não estão disponíveis para persistência neste módulo.</p>
             </div>
             
             <div className="p-4 border-t border-slate-100 bg-slate-50">
               <button 
                 onClick={criarTicket}
-                className="w-full bg-blue-900 hover:bg-blue-950 text-white font-bold py-3 rounded-xl transition-colors flex justify-center items-center gap-2"
+                className="w-full min-h-11 bg-blue-900 hover:bg-blue-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 text-white font-bold py-3 rounded-xl transition-colors flex justify-center items-center gap-2"
               >
-                <CloudUpload className="w-5 h-5" /> Enviar Solicitação
+                <Send aria-hidden="true" className="w-5 h-5" /> Enviar Solicitação
               </button>
             </div>
           </div>
@@ -376,15 +382,15 @@ export default function SuportePage() {
 
       {/* Modal Detalhes */}
       {ticketDetalhe && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-xl">
+        <div className="fixed inset-0 bg-black/55 z-50 flex items-center justify-center p-3 sm:p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="suporte-detalhe-titulo" className="bg-white rounded-2xl w-full max-w-2xl max-h-[90dvh] overflow-hidden shadow-2xl">
             <div className="bg-blue-900 p-4 px-6 flex justify-between items-center text-white">
-              <h3 className="font-bold flex items-center gap-2"><TicketIcon className="w-5 h-5" /> Detalhes do Ticket</h3>
-              <button onClick={() => setTicketDetalhe(null)} className="text-white/70 hover:text-white transition-colors text-2xl leading-none">&times;</button>
+              <h3 id="suporte-detalhe-titulo" className="font-bold flex items-center gap-2"><TicketIcon aria-hidden="true" className="w-5 h-5" /> Detalhes do Ticket</h3>
+              <button type="button" aria-label="Fechar janela" onClick={() => setTicketDetalhe(null)} className="min-w-11 min-h-11 rounded-lg text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-colors motion-reduce:transition-none text-2xl leading-none">&times;</button>
             </div>
             
-            <div className="p-6 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+            <div className="p-4 sm:p-6 max-h-[calc(90dvh-150px)] overflow-y-auto overscroll-contain">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 text-sm">
                 <div>
                   <span className="block text-slate-500 text-xs mb-1">Protocolo</span>
                   <span className="font-bold text-slate-900">{ticketDetalhe.numero}</span>
@@ -423,14 +429,14 @@ export default function SuportePage() {
                 <span className="block font-bold text-slate-900 mb-4 text-sm">Histórico de Respostas</span>
                 {ticketDetalhe.respostas.length === 0 ? (
                   <div className="flex items-center gap-2 text-slate-400 text-sm bg-slate-50 p-4 rounded-xl">
-                    <MessageSquareOff className="w-4 h-4" /> Nenhuma resposta ainda.
+                    <MessageSquareOff aria-hidden="true" className="w-4 h-4" /> Nenhuma resposta ainda.
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {ticketDetalhe.respostas.map((r, i) => (
                       <div key={i} className="bg-blue-50 p-4 rounded-xl border-l-4 border-blue-600">
                         <div className="flex items-center gap-2 text-[11px] text-slate-500 mb-1.5">
-                          <User className="w-3 h-3" /> {r.respondente} <span className="mx-1">•</span> {new Date(r.data).toLocaleString()}
+                          <User aria-hidden="true" className="w-3 h-3" /> {r.respondente} <span className="mx-1">•</span> {new Date(r.data).toLocaleString()}
                         </div>
                         <p className="text-sm text-slate-800">{r.resposta}</p>
                       </div>
@@ -440,20 +446,20 @@ export default function SuportePage() {
               </div>
             </div>
             
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+            <div className="p-3 sm:p-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
               {!ticketDetalhe.arquivado && isAdmin && (
                 <button 
                   onClick={() => arquivarTicket(ticketDetalhe.id)}
-                  className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-2"
+                  className="w-full sm:w-auto min-h-11 justify-center px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700 rounded-lg transition-colors flex items-center gap-2"
                 >
-                  <Archive className="w-4 h-4" /> Arquivar
+                  <Archive aria-hidden="true" className="w-4 h-4" /> Arquivar
                 </button>
               )}
               <button 
                 onClick={() => excluirTicket(ticketDetalhe.id)}
-                className="px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+                  className="w-full sm:w-auto min-h-11 justify-center px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-700 rounded-lg transition-colors flex items-center gap-2"
               >
-                <Trash2 className="w-4 h-4" /> Excluir
+                <Trash2 aria-hidden="true" className="w-4 h-4" /> Excluir
               </button>
             </div>
           </div>
@@ -462,12 +468,12 @@ export default function SuportePage() {
 
       {/* Alertas */}
       {alertMsg && (
-        <div className={`fixed bottom-6 right-6 px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 text-white font-medium z-50 animate-in slide-in-from-bottom-5 ${alertMsg.tipo === 'sucesso' ? 'bg-green-600' : 'bg-red-600'}`}>
-          {alertMsg.tipo === 'sucesso' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+        <div role={alertMsg.tipo === 'erro' ? 'alert' : 'status'} aria-live={alertMsg.tipo === 'erro' ? 'assertive' : 'polite'} className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-md px-4 sm:px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 text-white font-medium z-50 animate-in slide-in-from-bottom-5 motion-reduce:animate-none ${alertMsg.tipo === 'sucesso' ? 'bg-green-700' : 'bg-red-700'}`}>
+          {alertMsg.tipo === 'sucesso' ? <CheckCircle aria-hidden="true" className="w-5 h-5 shrink-0" /> : <AlertTriangle aria-hidden="true" className="w-5 h-5 shrink-0" />}
           {alertMsg.texto}
         </div>
       )}
 
-    </div>
+    </main>
   );
 }

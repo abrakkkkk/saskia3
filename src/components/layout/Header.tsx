@@ -22,23 +22,23 @@ export default function Header() {
 
   return (
     <header className="header">
-      <Link href="/dashboard" className="header-logo">
+      <Link href="/dashboard" className="header-logo" aria-label="Saskia Saúde, página inicial">
         <Image src="/images/logo.png" alt="Saskia Saúde" width={90} height={90} priority />
       </Link>
       <nav className="header-nav">
-        <Link href="/dashboard"><i className="las la-home"></i> <span>Início</span></Link>
-        <Link href="/pacientes"><i className="las la-user-injured"></i> <span>Pacientes</span></Link>
-        <Link href="/receituario"><i className="las la-file-medical"></i> <span>Receituário</span></Link>
-        <Link href="/agenda"><i className="las la-calendar"></i> <span>Agenda</span></Link>
-        <Link href="/recepcao"><i className="las la-user-nurse"></i> <span>Recepção</span></Link>
-        <Link href="/chat"><i className="las la-comments"></i> <span>Chat</span></Link>
-        <Link href="/admin"><i className="las la-hospital"></i> <span>Admin</span></Link>
-        <Link href="/painel-chamadas" target="_blank" style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', borderRadius: '8px', padding: '0 15px', fontWeight: 600, border: 'none' }}>
+        <Link href="/dashboard" aria-label="Início"><i className="las la-home" aria-hidden="true"></i> <span>Início</span></Link>
+        <Link href="/pacientes" aria-label="Pacientes"><i className="las la-user-injured" aria-hidden="true"></i> <span>Pacientes</span></Link>
+        <Link href="/receituario" aria-label="Receituário"><i className="las la-file-medical" aria-hidden="true"></i> <span>Receituário</span></Link>
+        <Link href="/agenda" aria-label="Agenda"><i className="las la-calendar" aria-hidden="true"></i> <span>Agenda</span></Link>
+        <Link href="/recepcao" aria-label="Recepção"><i className="las la-user-nurse" aria-hidden="true"></i> <span>Recepção</span></Link>
+        <Link href="/chat" aria-label="Chat"><i className="las la-comments" aria-hidden="true"></i> <span>Chat</span></Link>
+        <Link href="/admin" aria-label="Admin"><i className="las la-hospital" aria-hidden="true"></i> <span>Admin</span></Link>
+        <Link href="/painel-chamadas" target="_blank" rel="noopener noreferrer" aria-label="Painel TV (abre em nova aba)" style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', borderRadius: '8px', padding: '0 15px', fontWeight: 600, border: 'none' }}>
           <i className="las la-tv"></i> <span>Painel TV</span>
         </Link>
         <div className="user-menu" ref={dropdownRef}>
-          <button className="user-menu-btn" onClick={() => setDropdownOpen(!dropdownOpen)}>
-            <i className="las la-user-circle"></i>
+          <button className="user-menu-btn" onClick={() => setDropdownOpen(!dropdownOpen)} aria-expanded={dropdownOpen} aria-haspopup="true" aria-label={`Menu do usuário${session?.user?.name ? `: ${session.user.name}` : ''}`}>
+            <i className="las la-user-circle" aria-hidden="true"></i>
             <span className="user-name">{session?.user?.name?.split(' ')[0]}</span>
             <i className={`las la-angle-${dropdownOpen ? 'up' : 'down'} dropdown-arrow`}></i>
           </button>

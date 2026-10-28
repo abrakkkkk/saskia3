@@ -10,11 +10,11 @@ export default function AdminFinanceiroPage() {
             <p>Faturas, contas, guias, glosas, SUS e documentos fiscais.</p>
           </div>
         </div>
-        <div role="status" className="form-panel" style={{ background: 'white', padding: 24, borderRadius: 8, marginTop: 20 }}>
-          <h2>Recurso indisponível</h2>
+        <section className="finance-unavailable" aria-labelledby="finance-unavailable-title">
+          <h2 id="finance-unavailable-title">Recurso indisponível</h2>
           <p>Este painel ainda não está conectado a um serviço financeiro persistente. Para evitar registrar pagamentos, guias ou documentos fiscais apenas neste navegador, as operações estão desativadas.</p>
           <p>Nenhum dado financeiro foi carregado ou alterado nesta tela.</p>
-        </div>
+        </section>
       </section>
     </main>
   );

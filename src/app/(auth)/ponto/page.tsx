@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import './ponto.css';
 
 interface RegistroPonto {
+  id: string;
   data: string;
   hora: string;
   tipo: string;
@@ -22,6 +23,8 @@ export default function PontoPage() {
   const [tabAtiva, setTabAtiva] = useState('hoje');
   const [erroApi, setErroApi] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [carregandoRegistros, setCarregandoRegistros] = useState(true);
+  const [dadosCarregados, setDadosCarregados] = useState(false);
 
   // Filtros Histórico
   const [busca, setBusca] = useState('');
@@ -33,6 +36,7 @@ export default function PontoPage() {
   };
 
   const fetchRegistros = useCallback(async () => {
+    setCarregandoRegistros(true);
     try {
       const res = await fetch('/api/pontoregistro');
       if (!res.ok) {
@@ -40,9 +44,9 @@ export default function PontoPage() {
         throw new Error(typeof payload?.error === 'string' ? payload.error : 'Não foi possível carregar os registros de ponto.');
       }
       const data = await res.json();
+      if (!Array.isArray(data)) throw new Error('A resposta do servidor de ponto é inválida.');
       setErroApi('');
-      if (Array.isArray(data)) {
-        const mapped = data.flatMap(r => {
+      const mapped = data.flatMap((r: any) => {
           const dt = new Date(r?.dataHora);
           if (!r || typeof r.id !== 'string' || typeof r.usuario?.id !== 'string'
             || typeof r.tipo !== 'string' || Number.isNaN(dt.getTime())) return [];
@@ -63,11 +67,12 @@ export default function PontoPage() {
           }];
         });
         setRegistros(mapped);
-      } else {
-        setErroApi('A resposta do servidor de ponto é inválida.');
-      }
+      setDadosCarregados(true);
     } catch (error) {
+      setDadosCarregados(false);
       setErroApi(error instanceof Error ? error.message : 'Não foi possível carregar os registros de ponto. Tente novamente.');
+    } finally {
+      setCarregandoRegistros(false);
     }
   }, []);
 
@@ -87,6 +92,7 @@ export default function PontoPage() {
   }, []);
 
   const registrar = async (tipo: string) => {
+    if (salvando || carregandoRegistros || !dadosCarregados) return;
     setSalvando(true);
     setErroApi('');
     try {
@@ -145,6 +151,9 @@ export default function PontoPage() {
     statusClasse = 'status-ponto status-trabalhando';
     statusTexto = 'Em jornada';
   }
+  if (!dadosCarregados) {
+    statusTexto = carregandoRegistros ? 'Carregando status...' : 'Status indisponível';
+  }
 
   // Cards Hoje
   const regEntrada = registrosHoje.find(r => r.tipo === 'ENTRADA');
@@ -156,10 +165,16 @@ export default function PontoPage() {
     horasTrabalhadas = String(Math.floor(diff/3600000)).padStart(2,'0') + ':' + String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
   }
 
-  const diasTrabalhadosMes = [...new Set(registros.filter(r => r.usuarioId === usuarioId && r.tipo === 'ENTRADA').map(r => r.data))].length;
+  const mesAtual = new Date().getMonth() + 1;
+  const anoAtual = new Date().getFullYear();
+  const diasTrabalhadosMes = [...new Set(registros.filter(r => {
+    const data = new Date(r.timestamp);
+    return r.usuarioId === usuarioId && r.tipo === 'ENTRADA'
+      && data.getMonth() + 1 === mesAtual && data.getFullYear() === anoAtual;
+  }).map(r => r.data))].length;
 
   // Render Histórico
-  let historicoFiltrado = registros.filter(r => r.usuarioId === usuarioId).reverse();
+  let historicoFiltrado = registros.filter(r => r.usuarioId === usuarioId);
   if (mesFiltro !== 'todos') {
     historicoFiltrado = historicoFiltrado.filter(r => parseInt(r.data.split('/')[1]) === parseInt(mesFiltro));
   }
@@ -169,8 +184,6 @@ export default function PontoPage() {
   }
 
   // Resumo Mês (Expediente)
-  const mesAtual = new Date().getMonth() + 1;
-  const anoAtual = new Date().getFullYear();
   const regMes = registros.filter(r => {
     const p = r.data.split('/');
     return parseInt(p[1]) === mesAtual && parseInt(p[2]) === anoAtual && r.usuarioId === usuarioId;
@@ -211,7 +224,7 @@ export default function PontoPage() {
       <h2>Relatório de Ponto</h2>
       <p><strong>Profissional:</strong> ${escaparHtml(profissionalLogado)}</p>
       <table><thead><tr><th>Data</th><th>Hora</th><th>Tipo</th></tr></thead><tbody>
-      ${registros.filter(r => r.usuarioId === usuarioId).reverse().slice(0,200).map(r => `<tr><td>${escaparHtml(r.data)}</td><td>${escaparHtml(r.hora)}</td><td>${escaparHtml(r.tipo)}</td></tr>`).join('')}
+      ${registros.filter(r => r.usuarioId === usuarioId).slice(0,200).map(r => `<tr><td>${escaparHtml(r.data)}</td><td>${escaparHtml(r.hora)}</td><td>${escaparHtml(r.tipo)}</td></tr>`).join('')}
       </tbody></table></body></html>
     `);
     janela.document.close();
@@ -219,7 +232,8 @@ export default function PontoPage() {
   };
 
   return (
-    <>    <div role="status" aria-live="polite">{erroApi}</div>
+    <>
+    {erroApi && <div className="ponto-erro" role="alert"><span>{erroApi}</span><button type="button" onClick={() => void fetchRegistros()} disabled={carregandoRegistros}>Tentar novamente</button></div>}
     <div className="conteudo">
       <div className="ponto-container">
         <div className="banner-ponto">
@@ -233,22 +247,22 @@ export default function PontoPage() {
           <div className="relogio-digital">{horaAtual || '00:00:00'}</div>
           <div className="data-completa">{dataAtual || 'Carregando...'}</div>
           
-          <div className={statusClasse}>
+          <div className={statusClasse} role="status" aria-live="polite">
             <i className={`las ${temEntrada && temSaida ? 'la-check-circle' : 'la-circle'}`}></i> 
             <span>{statusTexto}</span>
           </div>
           
           <div className="ponto-botoes">
-            <button className="btn-ponto-acao btn-entrada" disabled={btnEntradaDisabled || salvando} onClick={() => registrar('ENTRADA')}>
+            <button className="btn-ponto-acao btn-entrada" disabled={btnEntradaDisabled || salvando || carregandoRegistros || !dadosCarregados} onClick={() => registrar('ENTRADA')}>
               <i className="las la-sign-in-alt"></i><span>ENTRADA</span>
             </button>
-            <button className="btn-ponto-acao btn-inicio-intervalo" disabled={btnInicioIntervaloDisabled || salvando} onClick={() => registrar('INÍCIO INTERVALO')}>
+            <button className="btn-ponto-acao btn-inicio-intervalo" disabled={btnInicioIntervaloDisabled || salvando || carregandoRegistros || !dadosCarregados} onClick={() => registrar('INÍCIO INTERVALO')}>
               <i className="las la-coffee"></i><span>INTERVALO</span>
             </button>
-            <button className="btn-ponto-acao btn-fim-intervalo" disabled={btnFimIntervaloDisabled || salvando} onClick={() => registrar('FIM INTERVALO')}>
+            <button className="btn-ponto-acao btn-fim-intervalo" disabled={btnFimIntervaloDisabled || salvando || carregandoRegistros || !dadosCarregados} onClick={() => registrar('FIM INTERVALO')}>
               <i className="las la-undo-alt"></i><span>FIM INTERVALO</span>
             </button>
-            <button className="btn-ponto-acao btn-saida" disabled={btnSaidaDisabled || salvando} onClick={() => registrar('SAÍDA')}>
+            <button className="btn-ponto-acao btn-saida" disabled={btnSaidaDisabled || salvando || carregandoRegistros || !dadosCarregados} onClick={() => registrar('SAÍDA')}>
               <i className="las la-sign-out-alt"></i><span>SAÍDA</span>
             </button>
           </div>
@@ -278,13 +292,13 @@ export default function PontoPage() {
         </div>
 
         <div className="tabs-ponto">
-          <button className={`tab-btn ${tabAtiva === 'hoje' ? 'ativo' : ''}`} onClick={() => setTabAtiva('hoje')}>
+          <button aria-pressed={tabAtiva === 'hoje'} className={`tab-btn ${tabAtiva === 'hoje' ? 'ativo' : ''}`} onClick={() => setTabAtiva('hoje')}>
             <i className="las la-calendar-day"></i> Hoje
           </button>
-          <button className={`tab-btn ${tabAtiva === 'historico' ? 'ativo' : ''}`} onClick={() => setTabAtiva('historico')}>
+          <button aria-pressed={tabAtiva === 'historico'} className={`tab-btn ${tabAtiva === 'historico' ? 'ativo' : ''}`} onClick={() => setTabAtiva('historico')}>
             <i className="las la-history"></i> Histórico
           </button>
-          <button className={`tab-btn ${tabAtiva === 'expediente' ? 'ativo' : ''}`} onClick={() => setTabAtiva('expediente')}>
+          <button aria-pressed={tabAtiva === 'expediente'} className={`tab-btn ${tabAtiva === 'expediente' ? 'ativo' : ''}`} onClick={() => setTabAtiva('expediente')}>
             <i className="las la-business-time"></i> Expediente
           </button>
         </div>
@@ -300,15 +314,17 @@ export default function PontoPage() {
                 </tr>
               </thead>
               <tbody>
-                {registrosHoje.length === 0 ? (
+                  {!dadosCarregados ? (
+                    <tr><td colSpan={3} role="status" style={{textAlign:'center', padding:'30px', color:'#64748b'}}>{carregandoRegistros ? 'Carregando registros...' : 'Registros indisponíveis. Tente novamente.'}</td></tr>
+                  ) : registrosHoje.length === 0 ? (
                   <tr><td colSpan={3} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhum registro hoje</td></tr>
                 ) : (
-                  [...registrosHoje].reverse().map((r, i) => {
+                    [...registrosHoje].reverse().map(r => {
                     const icones: Record<string, string> = {
                       'ENTRADA': '', 'SAÍDA': '', 'INÍCIO INTERVALO': '', 'FIM INTERVALO': ''
                     };
                     return (
-                      <tr key={i}>
+                      <tr key={r.id}>
                         <td><strong>{r.hora}</strong></td>
                         <td>{icones[r.tipo] || ''} {r.tipo}</td>
                         <td>{r.profissional}</td>
@@ -324,8 +340,8 @@ export default function PontoPage() {
         {tabAtiva === 'historico' && (
           <div>
             <div className="search-box">
-              <input type="text" placeholder="Buscar por data ou tipo..." value={busca} onChange={e => setBusca(e.target.value)} />
-              <select value={mesFiltro} onChange={e => setMesFiltro(e.target.value)}>
+              <input type="text" aria-label="Buscar no histórico por data ou tipo" placeholder="Buscar por data ou tipo..." value={busca} onChange={e => setBusca(e.target.value)} />
+              <select aria-label="Filtrar histórico por mês" value={mesFiltro} onChange={e => setMesFiltro(e.target.value)}>
                 <option value="todos">Todos os meses</option>
                 <option value="1">Janeiro</option><option value="2">Fevereiro</option>
                 <option value="3">Março</option><option value="4">Abril</option>
@@ -350,8 +366,8 @@ export default function PontoPage() {
                   {historicoFiltrado.length === 0 ? (
                     <tr><td colSpan={4} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhum registro encontrado</td></tr>
                   ) : (
-                    historicoFiltrado.slice(0, 100).map((r, i) => (
-                      <tr key={i}>
+                    historicoFiltrado.slice(0, 100).map(r => (
+                      <tr key={r.id}>
                         <td>{r.data}</td>
                         <td><strong>{r.hora}</strong></td>
                         <td><span className={`badge ${getBadgeClass(r.tipo)}`}>{r.tipo}</span></td>
