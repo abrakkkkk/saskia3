@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Inbox,
   MessageSquareOff,
+  Send,
   Trash2
 } from 'lucide-react';
 
