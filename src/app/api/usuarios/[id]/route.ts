@@ -2,17 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma, type CargoUsuario } from '@prisma/client'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import bcrypt from 'bcryptjs'
+import { hashSenha, isSenhaValida, MENSAGEM_SENHA_INVALIDA } from '@/lib/password'
+import { CARGOS } from '@/lib/permissions'
 
-const cargosPermitidos = new Set<CargoUsuario>([
-  'ADMIN',
-  'MEDICO',
-  'ENFERMEIRO_ASSISTENCIAL',
-  'TECNICO_ENFERMAGEM',
-  'RECEPCIONISTA',
-  'FARMACEUTICO',
-  'OUTROS',
-])
+const cargosPermitidos = new Set<string>(CARGOS)
 
 function isUniqueConstraintError(error: unknown) {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002'
@@ -50,7 +43,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       updateData.email = body.email.trim().toLowerCase()
     }
     if ('cargo' in body) {
-      if (typeof body.cargo !== 'string' || !cargosPermitidos.has(body.cargo as CargoUsuario)) {
+      if (typeof body.cargo !== 'string' || !cargosPermitidos.has(body.cargo)) {
         return NextResponse.json({ error: 'Cargo inválido' }, { status: 400 })
       }
       updateData.cargo = body.cargo as CargoUsuario
@@ -58,12 +51,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if ('ativo' in body) {
       if (typeof body.ativo !== 'boolean') return NextResponse.json({ error: 'Status inválido' }, { status: 400 })
       updateData.ativo = body.ativo
+      if (!body.ativo) updateData.sessionVersion = { increment: 1 }
     }
     if ('senha' in body && body.senha !== '') {
-      if (typeof body.senha !== 'string' || body.senha.length < 12 || new TextEncoder().encode(body.senha).length > 72) {
-        return NextResponse.json({ error: 'A senha deve ter pelo menos 12 caracteres e no máximo 72 bytes' }, { status: 400 })
+      if (!isSenhaValida(body.senha)) {
+        return NextResponse.json({ error: MENSAGEM_SENHA_INVALIDA }, { status: 400 })
       }
-      updateData.senha = await bcrypt.hash(body.senha, 12)
+      updateData.senha = await hashSenha(body.senha)
+      updateData.sessionVersion = { increment: 1 }
     }
     if (Object.keys(updateData).length === 0) return NextResponse.json({ error: 'Nenhuma alteração informada' }, { status: 400 })
 

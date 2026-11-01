@@ -17,6 +17,8 @@ enum CargoUsuario {
   TECNICO_ENFERMAGEM
   RECEPCIONISTA
   FARMACEUTICO
+  NUTRICIONISTA
+  ASSISTENTE_SOCIAL
   OUTROS
 }
 
@@ -147,6 +149,7 @@ model Usuario {
   cargo                CargoUsuario          @default(ENFERMEIRO_ASSISTENCIAL)
   avatar               String?
   ativo                Boolean               @default(true)
+  sessionVersion       Int                   @default(0)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   pontoRegistros       PontoRegistro[]
@@ -163,6 +166,15 @@ model Usuario {
   mensagensRecebidas   MensagemChat[]          @relation("MensagemRecebida")
   lembretesCriados     Lembrete[]              @relation("LembreteCriador")
   manifestacoesOuvidoria OuvidoriaTicket[]     @relation("OuvidoriaAutor")
+  registrosSinalVital SinalVital[]
+  registrosEscoreClinico EscoreClinico[]
+  registrosAvaliacaoNutricional AvaliacaoNutricional[]
+  registrosAvaliacaoMedica AvaliacaoMedica[]
+  registrosAnotacaoEnfermagem AnotacaoEnfermagem[]
+  registrosTimelineEvent TimelineEvent[]
+  examesSolicitados Exame[] @relation("ExameSolicitante")
+  examesLiberados Exame[] @relation("ExameLiberador")
+  obitosRegistrados Obito[]
 
   @@index([hospitalId])
 }
@@ -220,9 +232,11 @@ model Paciente {
   movimentacoesEstoque MovimentacaoEstoque[]
   utiLeitos            UtiLeito[]
   salas                Sala[]
+  obitos               Obito[]
 
   @@unique([cpf, hospitalId]) // Proteção contra CPFs duplicados no mesmo hospital
-  @@index([hospitalId])
+  @@index([hospitalId, arquivadoEm, createdAt])
+  @@index([hospitalId, status])
   @@index([cpf])
 }
 
@@ -329,6 +343,13 @@ model Agendamento {
 }
 
 model Exame {
+  usuarioId    String?
+  solicitante  Usuario?    @relation("ExameSolicitante", fields: [usuarioId], references: [id], onDelete: SetNull)
+  liberadoPorId String?
+  liberadoPor  Usuario?    @relation("ExameLiberador", fields: [liberadoPorId], references: [id], onDelete: SetNull)
+  liberadoEm   DateTime?
+  prioridade   String?
+  indicacao    String?
   id           String      @id @default(uuid())
   pacienteId   String
   paciente     Paciente    @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
@@ -508,6 +529,10 @@ model ConfigDashboard {
 // ==========================================
 
 model Obito {
+  pacienteId      String?
+  paciente        Paciente? @relation(fields: [pacienteId], references: [id], onDelete: SetNull)
+  usuarioId       String?
+  usuario         Usuario?  @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   id              String   @id @default(uuid())
   hospitalId      String
   hospital        Hospital @relation(fields: [hospitalId], references: [id])
@@ -647,9 +672,12 @@ model SinalVital {
   satO2        String?
   glicemia     String?
   profissional String?
+  usuarioId String?
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
 
-  @@index([pacienteId])
+  @@index([pacienteId, createdAt])
+  @@index([usuarioId])
 }
 
 model EscoreClinico {
@@ -660,9 +688,12 @@ model EscoreClinico {
   dor          Int?
   braden       Json?
   profissional String?
+  usuarioId String?
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
 
-  @@index([pacienteId])
+  @@index([pacienteId, createdAt])
+  @@index([usuarioId])
 }
 
 model AvaliacaoNutricional {
@@ -674,9 +705,12 @@ model AvaliacaoNutricional {
   dieta        String?
   restricoes   String?
   profissional String?
+  usuarioId String?
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
 
-  @@index([pacienteId])
+  @@index([pacienteId, createdAt])
+  @@index([usuarioId])
 }
 
 model AvaliacaoMedica {
@@ -689,9 +723,12 @@ model AvaliacaoMedica {
   diagnostico   String?
   conduta       String?
   profissional  String?
+  usuarioId String?
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   createdAt     DateTime @default(now())
 
-  @@index([pacienteId])
+  @@index([pacienteId, createdAt])
+  @@index([usuarioId])
 }
 
 model AnotacaoEnfermagem {
@@ -703,9 +740,12 @@ model AnotacaoEnfermagem {
   evolucao     String?
   prescricao   String?
   profissional String?
+  usuarioId String?
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
 
-  @@index([pacienteId])
+  @@index([pacienteId, createdAt])
+  @@index([usuarioId])
 }
 
 model TimelineEvent {
@@ -715,9 +755,12 @@ model TimelineEvent {
   tipo       String
   descricao  String
   user       String?
+  usuarioId String?
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   createdAt  DateTime @default(now())
 
-  @@index([pacienteId])
+  @@index([pacienteId, createdAt])
+  @@index([usuarioId])
 }
 
 model MovimentacaoEstoque {
@@ -974,4 +1017,28 @@ model Visitante {
 
   @@index([hospitalId])
   @@index([pacienteId])
+}
+
+// Trilha append-only de leitura e escrita (LGPD art. 37). Sem FK: precisa sobreviver a qualquer registro.
+model Auditoria {
+  id          String   @id @default(uuid())
+  hospitalId  String
+  usuarioId   String
+  usuarioNome String
+  cargo       String
+  acao        String
+  entidade    String
+  entidadeId  String?
+  detalhes    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([hospitalId, createdAt])
+  @@index([hospitalId, entidade, entidadeId])
+  @@index([usuarioId])
+}
+
+model TentativaLogin {
+  chave        String   @id
+  falhas       Int      @default(0)
+  inicioJanela DateTime @default(now())
 }

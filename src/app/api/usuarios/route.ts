@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import bcrypt from 'bcryptjs'
+import { hashSenha, isSenhaValida, MENSAGEM_SENHA_INVALIDA } from '@/lib/password'
+import { CARGOS } from '@/lib/permissions'
 import { CargoUsuario } from '@prisma/client'
 
 export async function GET() {
@@ -39,14 +40,14 @@ export async function POST(request: NextRequest) {
     try { body = await request.json() } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }) }
     if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
     const { nome, email, senha, cargo } = body as Record<string, unknown>
-    const cargosPermitidos = new Set<string>(['ADMIN', 'MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'TECNICO_ENFERMAGEM', 'RECEPCIONISTA', 'FARMACEUTICO', 'OUTROS'])
+    const cargosPermitidos = new Set<string>(CARGOS)
 
-    if (typeof nome !== 'string' || !nome.trim() || nome.length > 160 || typeof email !== 'string' || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof senha !== 'string' || senha.length < 12 || new TextEncoder().encode(senha).length > 72) {
+    if (typeof nome !== 'string' || !nome.trim() || nome.length > 160 || typeof email !== 'string' || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !isSenhaValida(senha)) {
        return NextResponse.json({ error: 'Nome, e-mail válido e senha entre 12 e 72 bytes são obrigatórios' }, { status: 400 })
     }
     if (typeof cargo !== 'string' || !cargosPermitidos.has(cargo)) return NextResponse.json({ error: 'Cargo inválido' }, { status: 400 })
 
-    const hash = await bcrypt.hash(senha, 12)
+    const hash = await hashSenha(senha)
 
     const usuario = await prisma.usuario.create({
       data: {

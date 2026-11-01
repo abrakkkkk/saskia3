@@ -106,7 +106,7 @@ export default function AgendaPage() {
 
   const alterarStatus = async (id: string, novoStatus: Agendamento['status']) => {
     if (novoStatus === 'CANCELADO') {
-      const confirmacao = window.confirm("Deseja realmente cancelar este agendamento?");
+      const confirmacao = await confirm("Deseja realmente cancelar este agendamento?");
       if (!confirmacao) return;
     }
     

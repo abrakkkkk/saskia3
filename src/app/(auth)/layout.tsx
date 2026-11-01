@@ -1,6 +1,7 @@
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import Footer from '@/components/layout/Footer';
+import RouteGuard from '@/components/layout/RouteGuard';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { CallProvider } from '@/contexts/CallContext';
@@ -13,14 +14,16 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     redirect('/');
   }
 
+  const { cargo, name, email } = session.user;
+
   return (
     <CallProvider>
       <div className="app-layout">
-        <Header />
+        <Header nome={name ?? 'Usuário'} email={email ?? ''} cargo={cargo} />
         <div className="app-container">
-          <Sidebar />
+          <Sidebar cargo={cargo} />
           <main className="app-content">
-            {children}
+            <RouteGuard cargo={cargo}>{children}</RouteGuard>
           </main>
         </div>
         <Footer />

@@ -1,11 +1,23 @@
 import "dotenv/config";
 import { PrismaClient, CargoUsuario, StatusAgendamento, StatusExame, StatusCirurgia, TipoLeito, StatusOcupacao, PrioridadeTicket, StatusTicket, StatusChamada, Usuario } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import bcrypt from 'bcryptjs';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
+const SENHA_SEED = process.env.SEED_PASSWORD;
+
+function exigirBancoLocal() {
+  const host = new URL(process.env.DATABASE_URL ?? 'postgresql://invalido').hostname;
+  if (process.env.NODE_ENV === 'production' || !['localhost', '127.0.0.1'].includes(host) || process.env.SEED_CONFIRM !== 'apagar-tudo' || !SENHA_SEED) {
+    throw new Error('Seed apaga todos os dados: exige banco local, SEED_CONFIRM=apagar-tudo e SEED_PASSWORD.');
+  }
+}
+
 async function main() {
+  exigirBancoLocal();
+  const senhaHash = await bcrypt.hash(SENHA_SEED!, 12);
   console.log('Iniciando o seed massivo de dados fictícios em TypeScript...');
 
   // Limpar dados existentes antes de popular
@@ -44,7 +56,7 @@ async function main() {
     data: {
       nome: 'Administrador',
       email: 'admin@hospitalalfa.com',
-      senha: '123456',
+      senha: senhaHash,
       cargo: CargoUsuario.ADMIN,
       hospitalId: hospital.id,
     },
@@ -62,7 +74,7 @@ async function main() {
   const medicos: Usuario[] = [];
   for (const m of medicosDados) {
     const doc = await prisma.usuario.create({
-      data: { ...m, hospitalId: hospital.id, senha: 'senha_criptografada_aqui' }
+      data: { ...m, hospitalId: hospital.id, senha: senhaHash }
     });
     medicos.push(doc);
   }
@@ -76,7 +88,7 @@ async function main() {
   const enfermeiros: Usuario[] = [];
   for (const e of enfermeirosDados) {
     const enf = await prisma.usuario.create({
-      data: { ...e, hospitalId: hospital.id, senha: 'senha_criptografada_aqui' }
+      data: { ...e, hospitalId: hospital.id, senha: senhaHash }
     });
     enfermeiros.push(enf);
   }
@@ -85,16 +97,16 @@ async function main() {
   console.log('Criando pacientes e históricos médicos vinculados...');
 
   const listaPacientes = [
-    { nome: 'João dos Santos', cpf: '111.222.333-44', rg: '12.345.678-9', nascimento: new Date('1985-05-20'), sexo: 'Masculino', tipoSanguineo: 'O+', status: 'Em Atendimento', classificacao: 'Verde', queixa: 'Dor de cabeça persistente e febre baixa.', alergias: 'Dipirona' },
+    { nome: 'João dos Santos', cpf: '111.222.333-44', rg: '12.345.678-9', nascimento: new Date('1985-05-20'), sexo: 'Masculino', tipoSanguineo: 'O+', status: 'Em Atendimento Médico', classificacao: 'Verde', queixa: 'Dor de cabeça persistente e febre baixa.', alergias: 'Dipirona' },
     { nome: 'Maria Oliveira Souza', cpf: '555.666.777-88', rg: '98.765.432-1', nascimento: new Date('1992-11-02'), sexo: 'Feminino', tipoSanguineo: 'A-', status: 'Recepção', classificacao: 'Azul', queixa: 'Apenas retorno para monitoramento de rotina.' },
-    { nome: 'Antônio Francisco Costa', cpf: '222.333.444-11', rg: '23.456.789-0', nascimento: new Date('1960-03-15'), sexo: 'Masculino', tipoSanguineo: 'B+', status: 'Em Atendimento', classificacao: 'Amarelo', queixa: 'Dor torácica leve e falta de ar ao caminhar.' },
+    { nome: 'Antônio Francisco Costa', cpf: '222.333.444-11', rg: '23.456.789-0', nascimento: new Date('1960-03-15'), sexo: 'Masculino', tipoSanguineo: 'B+', status: 'Em Atendimento Médico', classificacao: 'Amarelo', queixa: 'Dor torácica leve e falta de ar ao caminhar.' },
     { nome: 'Francisca Neide Lima', cpf: '444.555.666-22', rg: '34.567.890-1', nascimento: new Date('1978-08-24'), sexo: 'Feminino', tipoSanguineo: 'AB+', status: 'Internado', classificacao: 'Laranja', queixa: 'Crise asmática severa refratária a bombinha.' },
-    { nome: 'Marcos Vinícius Filho', cpf: '777.888.999-33', rg: '45.678.901-2', nascimento: new Date('2018-06-10'), sexo: 'Masculino', tipoSanguineo: 'O-', status: 'Em Atendimento', classificacao: 'Vermelho', queixa: 'Crise convulsiva generalizada ativa há mais de 5 minutos.' },
-    { nome: 'Ana Beatriz Cavalcante', cpf: '888.999.000-44', rg: '56.789.012-3', nascimento: new Date('2000-01-30'), sexo: 'Feminino', tipoSanguineo: 'A+', status: 'Alta', classificacao: 'Verde', queixa: 'Disúria e dor lombar baixa.' },
+    { nome: 'Marcos Vinícius Filho', cpf: '777.888.999-33', rg: '45.678.901-2', nascimento: new Date('2018-06-10'), sexo: 'Masculino', tipoSanguineo: 'O-', status: 'Em Atendimento Médico', classificacao: 'Vermelho', queixa: 'Crise convulsiva generalizada ativa há mais de 5 minutos.' },
+    { nome: 'Ana Beatriz Cavalcante', cpf: '888.999.000-44', rg: '56.789.012-3', nascimento: new Date('2000-01-30'), sexo: 'Feminino', tipoSanguineo: 'A+', status: 'Alta Médica', classificacao: 'Verde', queixa: 'Disúria e dor lombar baixa.' },
     { nome: 'Carlos Augusto Nobre', cpf: '333.444.555-55', rg: '67.890.123-4', nascimento: new Date('1953-12-05'), sexo: 'Masculino', tipoSanguineo: 'O+', status: 'Internado', classificacao: 'Amarelo', queixa: 'Pico hipertensivo com tontura e visão turva.' },
     { nome: 'Juliana Paes Leme', cpf: '999.111.222-66', rg: '78.901.234-5', nascimento: new Date('1988-07-12'), sexo: 'Feminino', tipoSanguineo: 'B-', status: 'Recepção', classificacao: 'Azul', queixa: 'Renovação de receita médica de uso contínuo.' },
-    { nome: 'Raimundo Nonato Silva', cpf: '123.456.789-77', rg: '89.012.345-6', nascimento: new Date('1967-09-09'), sexo: 'Masculino', tipoSanguineo: 'A-', status: 'Em Atendimento', classificacao: 'Verde', queixa: 'Entorse no tornozelo direito pós queda.' },
-    { nome: 'Gabriela Duarte Fontes', cpf: '987.654.321-00', rg: '90.123.456-7', nascimento: new Date('1995-04-18'), sexo: 'Feminino', tipoSanguineo: 'AB-', status: 'Alta', classificacao: 'Amarelo', queixa: 'Dor abdominal aguda em fossa ilíaca direita.' }
+    { nome: 'Raimundo Nonato Silva', cpf: '123.456.789-77', rg: '89.012.345-6', nascimento: new Date('1967-09-09'), sexo: 'Masculino', tipoSanguineo: 'A-', status: 'Em Atendimento Médico', classificacao: 'Verde', queixa: 'Entorse no tornozelo direito pós queda.' },
+    { nome: 'Gabriela Duarte Fontes', cpf: '987.654.321-00', rg: '90.123.456-7', nascimento: new Date('1995-04-18'), sexo: 'Feminino', tipoSanguineo: 'AB-', status: 'Alta Médica', classificacao: 'Amarelo', queixa: 'Dor abdominal aguda em fossa ilíaca direita.' }
   ];
 
   for (let i = 0; i < listaPacientes.length; i++) {

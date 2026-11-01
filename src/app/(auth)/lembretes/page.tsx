@@ -214,7 +214,7 @@ export default function LembretesPage() {
   };
 
   const excluirLembrete = async (id: string) => {
-    if (!window.confirm('Excluir este lembrete? Esta ação não pode ser desfeita.')) return;
+    if (!await confirm('Excluir este lembrete? Esta ação não pode ser desfeita.')) return;
     try {
         const res = await fetch(`/api/lembretes/${id}`, {
           method: 'DELETE'

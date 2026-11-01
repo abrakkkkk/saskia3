@@ -7,16 +7,15 @@ declare module 'next-auth' {
       cargo: string
       hospitalId: string
       hospitalNome: string
-      avatar: string | null
+      sessionVersion: number
     } & DefaultSession['user']
   }
 
   interface User {
-    id: string
     cargo: string
     hospitalId: string
     hospitalNome: string
-    avatar: string | null
+    sessionVersion: number
   }
 }
 
@@ -26,6 +25,6 @@ declare module 'next-auth/jwt' {
     cargo: string
     hospitalId: string
     hospitalNome: string
-    avatar: string | null
+    sessionVersion: number
   }
 }

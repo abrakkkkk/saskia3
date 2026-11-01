@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "SASKIA_T1/**",
+    ".agents/**",
+    "Audit-*/**",
+    "docs/**",
+    "public/**",
   ]),
 ]);
 

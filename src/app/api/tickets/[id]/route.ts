@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isRecord } from '@/lib/request-validation';
 import { Prisma, PrioridadeTicket, StatusTicket } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { compararSenha } from '@/lib/password';
 
 const PRIORIDADES = new Set<string>(['BAIXA', 'MEDIA', 'ALTA', 'URGENTE']);
 const STATUS = new Set<string>(['ENVIADO', 'EM_ANALISE', 'RESOLVIDO', 'FECHADO']);
@@ -65,10 +65,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       select: { senha: true },
     });
     if (!usuario) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
-    const senhaCorreta = usuario.senha.startsWith('$2')
-      ? await bcrypt.compare(body.senha, usuario.senha)
-      : body.senha === usuario.senha;
-    if (!senhaCorreta) return NextResponse.json({ error: 'Senha incorreta' }, { status: 403 });
+    if (!await compararSenha(body.senha, usuario.senha)) return NextResponse.json({ error: 'Senha incorreta' }, { status: 403 });
 
     const where = cargo === 'ADMIN' ? { id, hospitalId } : { id, hospitalId, creatorId: userId };
     const removido = await prisma.ticket.deleteMany({ where });

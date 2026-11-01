@@ -47,3 +47,6 @@ SASKIA_T1/
 .playwright-mcp/
 Audit-*/runtime-sandbox/
 
+
+.agents/
+

@@ -1,7 +1,11 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "./db"
-import bcrypt from "bcryptjs"
+import { compararSenha } from "./password"
+import { limparFalhas, registrarFalha, tentativasExcedidas } from "./rate-limit"
+
+const LIMITE_POR_CONTA = 8
+const LIMITE_POR_IP = 40
 
 const { handlers, auth: readSession, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -13,43 +17,41 @@ const { handlers, auth: readSession, signIn, signOut } = NextAuth({
         senha: { label: "Senha", type: "password" },
         hospitalId: { label: "Hospital", type: "text" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
+        const { email, senha, hospitalId } = credentials ?? {}
         if (
-          !credentials?.email ||
-          !credentials?.senha ||
-          !credentials?.hospitalId
+          typeof email !== "string" || !email || email.length > 254 ||
+          typeof senha !== "string" || !senha || senha.length > 256 ||
+          typeof hospitalId !== "string" || !hospitalId
         ) {
-          throw new Error("Preencha todos os campos")
+          return null
+        }
+
+        const emailNormalizado = email.trim().toLowerCase()
+        const ip = request?.headers?.get("x-forwarded-for")?.split(",")[0]?.trim() || "desconhecido"
+        const chaveConta = `conta:${emailNormalizado}`
+        const chaveIp = `ip:${ip}`
+        if (
+          await tentativasExcedidas(chaveConta, LIMITE_POR_CONTA) ||
+          await tentativasExcedidas(chaveIp, LIMITE_POR_IP)
+        ) {
+          return null
         }
 
         const usuario = await prisma.usuario.findFirst({
-          where: {
-            email: (credentials.email as string).toLowerCase(),
-            hospitalId: credentials.hospitalId as string,
-            ativo: true,
-          },
-          include: { hospital: true },
+          where: { email: emailNormalizado, hospitalId, ativo: true, hospital: { ativo: true } },
+          include: { hospital: { select: { nome: true } } },
         })
 
-        if (!usuario) {
-          throw new Error("Usuário não encontrado")
+        // Compara mesmo sem usuário, para o tempo de resposta não revelar quem existe.
+        const senhaValida = await compararSenha(senha, usuario?.senha)
+        if (!usuario || !senhaValida) {
+          await registrarFalha(chaveConta)
+          await registrarFalha(chaveIp)
+          return null
         }
 
-        let senhaValida = false
-
-        if (usuario.senha.startsWith("$2")) {
-          senhaValida = await bcrypt.compare(
-            credentials.senha as string,
-            usuario.senha,
-          )
-        } else {
-          senhaValida = (credentials.senha as string) === usuario.senha
-        }
-
-        if (!senhaValida) {
-          throw new Error("Senha incorreta")
-        }
-
+        await limparFalhas(chaveConta)
         return {
           id: usuario.id,
           name: usuario.nome,
@@ -57,23 +59,23 @@ const { handlers, auth: readSession, signIn, signOut } = NextAuth({
           cargo: usuario.cargo,
           hospitalId: usuario.hospitalId,
           hospitalNome: usuario.hospital.nome,
-          avatar: usuario.avatar,
+          sessionVersion: usuario.sessionVersion,
         }
       },
     }),
   ],
   session: {
     strategy: "jwt",
-    maxAge: 24 * 60 * 60,
+    maxAge: 12 * 60 * 60,
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id as string
-        token.cargo = user.cargo as string
-        token.hospitalId = user.hospitalId as string
-        token.hospitalNome = user.hospitalNome as string
-        token.avatar = user.avatar as string | null
+        token.cargo = user.cargo
+        token.hospitalId = user.hospitalId
+        token.hospitalNome = user.hospitalNome
+        token.sessionVersion = user.sessionVersion
       }
       return token
     },
@@ -83,7 +85,7 @@ const { handlers, auth: readSession, signIn, signOut } = NextAuth({
         session.user.cargo = token.cargo as string
         session.user.hospitalId = token.hospitalId as string
         session.user.hospitalNome = token.hospitalNome as string
-        session.user.avatar = token.avatar as string | null
+        session.user.sessionVersion = token.sessionVersion as number
       }
       return session
     },
@@ -114,12 +116,13 @@ export async function auth() {
       nome: true,
       email: true,
       cargo: true,
-      avatar: true,
+      sessionVersion: true,
       hospital: { select: { nome: true } },
     },
   })
 
-  if (!activeUser) return null
+  // sessionVersion sobe ao trocar a senha ou desativar: derruba sessões antigas.
+  if (!activeUser || activeUser.sessionVersion !== (session.user.sessionVersion ?? 0)) return null
 
   return {
     ...session,
@@ -129,7 +132,6 @@ export async function auth() {
       email: activeUser.email,
       cargo: activeUser.cargo,
       hospitalNome: activeUser.hospital.nome,
-      avatar: activeUser.avatar,
     },
   }
 }

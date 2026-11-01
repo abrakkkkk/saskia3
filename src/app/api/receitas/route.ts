@@ -2,35 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { JSDOM } from 'jsdom'
+import sanitizeHtml from 'sanitize-html'
 import { isRecord } from '@/lib/request-validation'
 
-const ALLOWED_RECIPE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR', 'P', 'DIV', 'UL', 'OL', 'LI', 'IMG']);
-const DROP_CONTENT_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH', 'TEMPLATE']);
-
 function sanitizeRecipeHtml(value: string) {
-  const document = new JSDOM(value).window.document;
-  for (const element of Array.from(document.body.querySelectorAll('*'))) {
-    if (!ALLOWED_RECIPE_TAGS.has(element.tagName)) {
-      if (DROP_CONTENT_TAGS.has(element.tagName)) element.remove();
-      else element.replaceWith(...Array.from(element.childNodes));
-      continue;
-    }
-    if (element.tagName === 'IMG') {
-      const src = element.getAttribute('src') || '';
-      const alt = element.getAttribute('alt') || '';
-      if (!src.startsWith('/adesivos/') || src.includes('..') || src.includes('\\')) {
-        element.remove();
-        continue;
-      }
-      for (const attribute of Array.from(element.attributes)) element.removeAttribute(attribute.name);
-      element.setAttribute('src', src);
-      element.setAttribute('alt', alt.slice(0, 120));
-    } else {
-      for (const attribute of Array.from(element.attributes)) element.removeAttribute(attribute.name);
-    }
-  }
-  return document.body.innerHTML;
+  return sanitizeHtml(value, {
+    allowedTags: ['b', 'strong', 'i', 'em', 'u', 'br', 'p', 'div', 'ul', 'ol', 'li', 'img'],
+    allowedAttributes: { img: ['src', 'alt'] },
+    allowedSchemes: [],
+    allowProtocolRelative: false,
+    exclusiveFilter: (frame) => frame.tag === 'img'
+      && (!frame.attribs.src?.startsWith('/adesivos/') || frame.attribs.src.includes('..') || frame.attribs.src.includes('\\')),
+  });
 }
 
 export async function GET() {

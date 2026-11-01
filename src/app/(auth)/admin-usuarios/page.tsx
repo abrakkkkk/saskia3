@@ -77,7 +77,7 @@ export default function AdminUsuariosPage() {
   const toggleActive = async (user: Usuario) => {
     setError(''); setNotice('')
     const action = user.ativo ? 'desativar' : 'reativar'
-    if (!window.confirm(`Deseja ${action} ${user.nome}?`)) return
+    if (!await confirm(`Deseja ${action} ${user.nome}?`)) return
     try {
       const response = await fetch(`/api/usuarios/${user.id}`, user.ativo
         ? { method: 'DELETE' }

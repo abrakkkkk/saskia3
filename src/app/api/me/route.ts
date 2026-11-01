@@ -2,15 +2,10 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { isRecord } from '@/lib/request-validation'
-import bcrypt from 'bcryptjs'
+import { compararSenha, hashSenha, isSenhaValida, MENSAGEM_SENHA_INVALIDA } from '@/lib/password'
 
 const MAX_NOME = 160
 const MAX_AVATAR_CHARS = 1_400_000
-const MAX_SENHA_BYTES = 72
-
-function isPasswordLengthValid(value: string) {
-  return value.length >= 4 && new TextEncoder().encode(value).length <= MAX_SENHA_BYTES
-}
 
 function isValidAvatar(value: unknown): value is string | null {
   if (value === null) return true
@@ -73,8 +68,8 @@ export async function PUT(req: Request) {
       if (typeof senhaAtual !== 'string' || !senhaAtual) {
         return NextResponse.json({ error: 'Informe a senha atual para alterá-la.' }, { status: 400 })
       }
-      if (typeof novaSenha !== 'string' || !isPasswordLengthValid(novaSenha)) {
-        return NextResponse.json({ error: 'A nova senha deve ter pelo menos 4 caracteres e no máximo 72 bytes.' }, { status: 400 })
+      if (!isSenhaValida(novaSenha)) {
+        return NextResponse.json({ error: MENSAGEM_SENHA_INVALIDA }, { status: 400 })
       }
     } else if (senhaAtual !== undefined && senhaAtual !== '') {
       return NextResponse.json({ error: 'Informe também a nova senha.' }, { status: 400 })
@@ -83,14 +78,14 @@ export async function PUT(req: Request) {
     const usuario = await prisma.usuario.findFirst({ where: { id: session.user.id, hospitalId } })
     if (!usuario) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
 
-    const updateData: { nome: string; avatar?: string | null; senha?: string } = { nome }
+    const updateData: { nome: string; avatar?: string | null; senha?: string; sessionVersion?: { increment: number } } = { nome }
     if (body.avatar !== undefined) updateData.avatar = body.avatar as string | null
     if (typeof novaSenha === 'string' && novaSenha) {
-      const senhaValida = usuario.senha.startsWith('$2')
-        ? await bcrypt.compare(senhaAtual as string, usuario.senha)
-        : senhaAtual === usuario.senha
-      if (!senhaValida) return NextResponse.json({ error: 'Senha atual incorreta!' }, { status: 400 })
-      updateData.senha = await bcrypt.hash(novaSenha, 10)
+      if (!await compararSenha(senhaAtual as string, usuario.senha)) {
+        return NextResponse.json({ error: 'Senha atual incorreta.' }, { status: 400 })
+      }
+      updateData.senha = await hashSenha(novaSenha)
+      updateData.sessionVersion = { increment: 1 }
     }
 
     const atualizado = await prisma.usuario.updateMany({
