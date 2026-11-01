@@ -68,4 +68,136 @@
 .modal-laudo-content h3 { color: #0a1f44; margin-bottom: 20px; }
 @media (max-width: 768px) { .form-grid, .form-grid-3 { grid-template-columns: 1fr; } .tabela-exames { font-size: 11px; } .tabela-exames th, .tabela-exames td { padding: 8px 10px; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 
+/* Polimento visual do fluxo de exames sem alterar as ações existentes. */
+.exames-container {
+  padding: 12px 0;
+}
+
+.banner-exames {
+  border-radius: 14px;
+  padding: clamp(20px, 3vw, 32px) clamp(20px, 4vw, 40px);
+  box-shadow: 0 12px 28px rgba(2, 8, 23, 0.16);
+}
+
+.banner-exames h1 {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.form-panel,
+.stat-card,
+.resultado-card,
+.tabela-exames-wrapper {
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(15, 35, 72, 0.06);
+}
+
+.stat-card {
+  border-left: 4px solid #1e3a8a;
+}
+
+.stat-card .stat-label {
+  color: #52627a;
+}
+
+.form-panel {
+  padding: clamp(18px, 2.5vw, 28px);
+}
+
+.form-grupo label {
+  color: #334155;
+}
+
+.form-grupo input,
+.form-grupo select,
+.form-grupo textarea,
+.search-box input,
+.search-box select {
+  min-height: 44px;
+  border-color: #cbd5e1;
+  border-radius: 9px;
+}
+
+.form-grupo :is(input, select, textarea):focus-visible,
+.search-box :is(input, select):focus-visible {
+  outline: 3px solid rgba(96, 165, 250, 0.5);
+  outline-offset: 1px;
+  border-color: #1e3a8a;
+}
+
+.tab-main {
+  min-height: 48px;
+  padding-inline: clamp(14px, 2vw, 28px);
+}
+
+.tabela-exames-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  background: #fff;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabela-exames {
+  min-width: 760px;
+  box-shadow: none;
+}
+
+.tabela-exames th {
+  color: #e2e8f0;
+}
+
+.tabela-exames tbody tr:hover {
+  background: #eff6ff;
+}
+
+.modal-laudo-content {
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(2, 8, 23, 0.28);
+}
+
+.exames-container :where(button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+/* As abas ficam sobre o fundo navy da área autenticada. */
+.tabs-main .tab-main {
+  color: #dbeafe;
+  border-radius: 8px 8px 0 0;
+}
+
+.tabs-main .tab-main:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tabs-main .tab-main.ativo {
+  color: #fff;
+  border-bottom-color: #60a5fa;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 600px) {
+  .banner-exames > div:last-child {
+    width: 100%;
+  }
+
+  .banner-exames > div:last-child .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .tabs-main {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab-main {
+    flex: 0 0 auto;
+  }
+}
+
 footer a:hover{color:white!important;}footer i{margin-right:5px;}

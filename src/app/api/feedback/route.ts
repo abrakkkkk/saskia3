@@ -20,10 +20,14 @@ export async function GET() {
 
     const data = await prisma.feedback.findMany({
       where: { hospitalId, ...(session.user.cargo === 'ADMIN' ? {} : { usuarioId }) },
-      include: {
+      select: {
+        id: true,
+        tipo: true,
+        mensagem: true,
+        status: true,
+        createdAt: true,
         usuario: {
           select: {
-            id: true,
             nome: true,
           }
         }
@@ -31,7 +35,7 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     });
 
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
   } catch (error) {
     console.error('Erro ao buscar feedbacks:', error);
     return NextResponse.json({ error: 'Erro ao buscar feedbacks' }, { status: 500 });

@@ -114,7 +114,7 @@ export default function ManutencaoPage() {
             <h1><i className="las la-tools"></i> Manutenção Predial & Equipamentos</h1>
             <p>Controle de ordens de serviço, preventivas e corretivas</p>
           </div>
-          <button className="btn btn-success" onClick={() => setTabAtiva('nova')}>
+          <button type="button" className="btn btn-success" onClick={() => setTabAtiva('nova')}>
             <i className="las la-plus-circle"></i> Nova OS
           </button>
         </div>
@@ -135,16 +135,16 @@ export default function ManutencaoPage() {
         </div>
 
         <div className="tabs-mnt">
-          <button className={`tab-btn ${tabAtiva === 'nova' ? 'ativo' : ''}`} onClick={() => setTabAtiva('nova')}>
+          <button type="button" aria-pressed={tabAtiva === 'nova'} className={`tab-btn ${tabAtiva === 'nova' ? 'ativo' : ''}`} onClick={() => setTabAtiva('nova')}>
             <i className="las la-plus-circle"></i> Nova OS
           </button>
-          <button className={`tab-btn ${tabAtiva === 'lista' ? 'ativo' : ''}`} onClick={() => setTabAtiva('lista')}>
+          <button type="button" aria-pressed={tabAtiva === 'lista'} className={`tab-btn ${tabAtiva === 'lista' ? 'ativo' : ''}`} onClick={() => setTabAtiva('lista')}>
             <i className="las la-list"></i> Lista de OS
           </button>
         </div>
 
-        {loading && ordens.length === 0 && <p role="status">Carregando ordens…</p>}
-        {erroCarga && <p role="alert" style={{ color: '#b91c1c', marginBottom: 16 }}>{erroCarga}</p>}
+        {loading && ordens.length === 0 && <p className="mnt-load" role="status" aria-live="polite">Carregando ordens…</p>}
+        {erroCarga && <p className="mnt-error" role="alert" aria-live="assertive">{erroCarga}</p>}
 
         {tabAtiva === 'nova' && (
           <div className="form-panel">
@@ -205,12 +205,13 @@ export default function ManutencaoPage() {
         {tabAtiva === 'lista' && (
           <div className="tabela-wrapper">
             <table className="tabela-mnt">
+              <caption className="mnt-sr-only">Ordens de serviço de manutenção</caption>
               <thead>
                 <tr><th>OS</th><th>Data</th><th>Equipamento</th><th>Setor</th><th>Tipo</th><th>Prioridade</th><th>Status</th><th>Ações</th></tr>
               </thead>
               <tbody>
                 {ordens.length === 0 ? (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhuma OS registrada.</td></tr>
+                  <tr><td colSpan={8} className="mnt-empty">Nenhuma OS registrada.</td></tr>
                 ) : (
                   ordens.map((o, i) => {
                     let prioridadeBadge = "badge-info";
@@ -233,7 +234,7 @@ export default function ManutencaoPage() {
                         <td>
                           {o.status !== 'Concluída' && (
                             <button className="btn btn-success btn-sm" onClick={() => concluirOS(o.id)}>
-                              <i className="las la-check"></i> Concluir
+                              <i aria-hidden="true" className="las la-check"></i> Concluir
                             </button>
                           )}
                         </td>

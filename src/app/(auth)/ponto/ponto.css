@@ -311,8 +311,73 @@
 
 .btn-imprimir:hover { background: #d97706; color: white; transform: translateY(-2px); }
 
+.tabs-ponto .tab-btn {
+    color: #dbeafe;
+    border-radius: 8px 8px 0 0;
+}
+
+.tabs-ponto .tab-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.tabs-ponto .tab-btn.ativo {
+    color: #fff;
+    border-bottom-color: #60a5fa;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.ponto-container :where(button, input, select):focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 2px;
+}
+
+.ponto-erro {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 auto 12px;
+    max-width: 1200px;
+    padding: 12px 16px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.ponto-erro button {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    border: 1px solid #b91c1c;
+    border-radius: 6px;
+    background: white;
+    color: #991b1b;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.ponto-erro button:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.tabela-ponto { min-width: 560px; }
+
 @media (max-width: 768px) {
-    .relogio-digital { font-size: 42px; }
+    .ponto-container { padding: 15px 12px; }
+    .banner-ponto { padding: 24px 20px; }
+    .banner-ponto h1 { font-size: 22px; }
+    .relogio-secao { padding: 28px 16px; }
+    .relogio-digital { font-size: clamp(30px, 10vw, 42px); letter-spacing: clamp(1px, 1vw, 5px); }
     .ponto-botoes { flex-direction: column; align-items: stretch; }
     .btn-ponto-acao { width: 100%; }
+    .search-box { flex-direction: column; padding: 14px; }
+    .search-box input, .search-box select { width: 100%; min-width: 0; }
+    .ponto-erro { margin-inline: 12px; align-items: flex-start; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-ponto-acao, .status-card, .tab-btn, .btn-imprimir { transition: none; }
 }

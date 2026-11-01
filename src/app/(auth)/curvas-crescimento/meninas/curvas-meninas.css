@@ -1,24 +1,38 @@
 
-.documentos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-.doc-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 15px; cursor: pointer; }
-.doc-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
-.doc-preview { text-align: center; padding: 20px; background: #f1f5f9; border-radius: 8px; margin-bottom: 12px; }
-.doc-preview i { font-size: 42px; color: #1e3a8a; }
-.btn-voltar { background: #1e3a8a; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; }
-.btn-doc { padding: 6px 12px; border: none; border-radius: 8px; cursor: pointer; margin-right: 5px; }
-.btn-ver { background: #1e3a8a; color: white; }
-.btn-baixar { background: #16a34a; color: white; }
-.modal-pdf { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10001; justify-content: center; align-items: center; }
-.modal-pdf-conteudo { background: white; width: 90%; height: 90%; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
-.modal-pdf-header { background: #1e3a8a; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
-.modal-pdf-body { flex: 1; overflow: auto; }
-.modal-pdf-body iframe { width: 100%; height: 100%; border: none; }
+.curvas-meninas-page .documentos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 16px; }
+.curvas-meninas-page .doc-card { min-width: 0; background: white; border: 1px solid #dbe4f0; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(15,35,72,.06); padding: 16px; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.curvas-meninas-page .doc-card:hover { transform: translateY(-2px); border-color: #b8c8dc; box-shadow: 0 8px 20px rgba(15,35,72,.1); }
+.curvas-meninas-page .doc-preview { text-align: center; padding: 18px; background: #f1f5f9; border-radius: 10px; margin-bottom: 14px; }
+.curvas-meninas-page .doc-preview i { font-size: 40px; color: #1e3a8a; }
+.curvas-meninas-page .doc-titulo { color: #0f172a; line-height: 1.45; overflow-wrap: anywhere; }
+.curvas-meninas-page .doc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.curvas-meninas-page .btn-voltar { min-height: 44px; background: #1e3a8a; color: white; border: none; padding: 10px 18px; border-radius: 10px; cursor: pointer; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; transition: background-color .18s ease, transform .18s ease; }
+.curvas-meninas-page .btn-doc { min-height: 44px; padding: 10px 14px; border: 1px solid transparent; border-radius: 9px; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; gap: 7px; font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.curvas-meninas-page .btn-ver { background: #1e3a8a; color: white; }
+.curvas-meninas-page .btn-baixar { background: #16a34a; color: white; }
+.curvas-meninas-page .btn-voltar:hover, .curvas-meninas-page .btn-ver:hover { background: #1d4ed8; }
+.curvas-meninas-page .btn-baixar:hover { background: #15803d; }
+.curvas-meninas-page .btn-doc:active, .curvas-meninas-page .btn-voltar:active { transform: translateY(1px); }
+.curvas-meninas-page .doc-card :focus-visible, .curvas-meninas-page .btn-voltar:focus-visible, .curvas-meninas-page .btn-doc:focus-visible, .curvas-meninas-page .modal-pdf-close:focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; }
+.curvas-meninas-page .modal-pdf { display: flex; position: fixed; inset: 0; padding: 16px; background: rgba(7,18,40,.78); z-index: 10001; justify-content: center; align-items: center; }
+.curvas-meninas-page .modal-pdf-conteudo { background: white; width: min(1100px, 100%); height: min(90dvh, 900px); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 24px 70px rgba(0,0,0,.32); }
+.curvas-meninas-page .modal-pdf-header { flex: 0 0 auto; background: #1e3a8a; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.curvas-meninas-page .modal-pdf-header span { min-width: 0; overflow-wrap: anywhere; line-height: 1.4; }
+.curvas-meninas-page .modal-pdf-close { flex: 0 0 40px; width: 40px; height: 40px; background: transparent; border: 0; border-radius: 8px; color: white; font-size: 26px; line-height: 1; cursor: pointer; }
+.curvas-meninas-page .modal-pdf-close:hover { background: rgba(255,255,255,.14); }
+.curvas-meninas-page .modal-pdf-body { flex: 1; min-height: 0; overflow: auto; }
+.curvas-meninas-page .modal-pdf-body iframe { display: block; width: 100%; height: 100%; min-height: 300px; border: none; }
 
+@media (max-width: 600px) {
+  .curvas-meninas-page .documentos-grid { gap: 12px; }
+  .curvas-meninas-page .modal-pdf { padding: 0; }
+  .curvas-meninas-page .modal-pdf-conteudo { width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .curvas-meninas-page .modal-pdf-header { padding: 10px 12px; }
+  .curvas-meninas-page .modal-pdf-body iframe { height: calc(100dvh - 60px); }
+}
 
-    footer a:hover {
-        color: white !important;
-        transition: all 0.3s ease;
-    }
-    footer i {
-        margin-right: 5px;
-    }
+@media (prefers-reduced-motion: reduce) {
+  .curvas-meninas-page .doc-card,
+  .curvas-meninas-page .btn-doc,
+  .curvas-meninas-page .btn-voltar { transition: none; }
+}

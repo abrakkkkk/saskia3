@@ -53,5 +53,299 @@
 .evento-lista-item:hover { background: #e2e8f0; }
 
 
-footer a:hover{color:white!important;}footer i{margin-right:5px;}
+/* Refinamento visual do módulo de agenda. */
+.header-agenda,
+.navegacao-agenda {
+  gap: 16px;
+}
+
+.btn-novo-evento,
+.nav-btn,
+.filtro-btn,
+.btn-salvar-evento,
+.btn-excluir-evento {
+  min-height: 42px;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.btn-novo-evento,
+.btn-salvar-evento {
+  box-shadow: 0 3px 8px rgba(30, 58, 138, 0.16);
+}
+
+.visualizacao-agenda,
+.eventos-dia,
+.legenda {
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(15, 35, 72, 0.06);
+}
+
+.visualizacao-agenda {
+  -webkit-overflow-scrolling: touch;
+}
+
+.cabecalho-dias {
+  background: linear-gradient(110deg, #0a1f44, #1e3a8a);
+}
+
+.linha-horario:nth-child(even) {
+  background: #fbfdff;
+}
+
+.evento-card {
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.evento-titulo {
+  font-size: 11px;
+}
+
+.evento-horario {
+  font-size: 10px;
+  color: #475569;
+}
+
+.modal-evento {
+  padding: 20px;
+  background: rgba(2, 8, 23, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+.modal-evento-conteudo {
+  width: min(520px, 100%);
+  max-height: min(90vh, 760px);
+  overflow-y: auto;
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(2, 8, 23, 0.28);
+}
+
+.modal-evento-header {
+  background: linear-gradient(110deg, #0a1f44, #1e3a8a);
+  padding: 16px 22px;
+}
+
+.modal-evento-header button {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+}
+
+.modal-evento-body {
+  padding: 24px;
+}
+
+.modal-evento-body label {
+  color: #334155;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.modal-evento-body input,
+.modal-evento-body select,
+.modal-evento-body textarea {
+  min-height: 42px;
+  border-color: #cbd5e1;
+  border-radius: 9px;
+  font: inherit;
+}
+
+.modal-evento-body input:focus,
+.modal-evento-body select:focus,
+.modal-evento-body textarea:focus {
+  outline: 3px solid rgba(96, 165, 250, 0.45);
+  outline-offset: 1px;
+  border-color: #1e3a8a;
+}
+
+.evento-lista-item {
+  border: 1px solid #e2e8f0;
+  padding: 10px 12px;
+}
+
+@media (max-width: 600px) {
+  .linha-dupla {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .modal-evento {
+    padding: 12px;
+  }
+
+  .modal-evento-body {
+    padding: 18px;
+  }
+
+  .data-atual {
+    font-size: 16px;
+  }
+}
+
+/* Ajustes de densidade e responsividade da visualização em tabela. */
+.agenda-page {
+  padding: clamp(16px, 3vw, 32px) !important;
+  color: #1e293b;
+}
+
+.agenda-page > div:first-child {
+  margin-bottom: 24px !important;
+}
+
+.agenda-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+  margin-bottom: 24px !important;
+}
+
+.agenda-stats > div {
+  min-width: 0;
+  padding: 18px !important;
+  border: 1px solid #dbe4ef !important;
+  border-radius: 14px !important;
+  box-shadow: 0 3px 12px rgba(15, 35, 72, 0.06) !important;
+}
+
+.agenda-toolbar,
+.agenda-table-card {
+  border: 1px solid #dbe4ef !important;
+  border-radius: 14px !important;
+  box-shadow: 0 3px 12px rgba(15, 35, 72, 0.06) !important;
+}
+
+.agenda-toolbar {
+  margin-bottom: 24px !important;
+  padding: 18px !important;
+  gap: 16px !important;
+}
+
+.agenda-toolbar input,
+.agenda-toolbar select {
+  min-height: 44px;
+  border-color: #cbd5e1 !important;
+  border-radius: 10px !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.agenda-table-card > div {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.agenda-table-card table {
+  min-width: 850px;
+}
+
+.agenda-table-card th {
+  padding: 14px 18px !important;
+  white-space: nowrap;
+}
+
+.agenda-table-card td {
+  padding: 14px 18px !important;
+}
+
+.agenda-table-card tbody tr {
+  transition: background-color 0.16s ease;
+}
+
+.agenda-table-card tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+.agenda-quick-overlay {
+  padding: 16px !important;
+  background: rgba(2, 8, 23, 0.62) !important;
+  backdrop-filter: blur(3px);
+}
+
+.agenda-quick-dialog {
+  width: min(100%, 440px) !important;
+  max-height: min(90vh, 760px);
+  overflow-y: auto !important;
+  border: 1px solid #dbe4ef !important;
+  border-radius: 14px !important;
+  box-shadow: 0 24px 64px rgba(2, 8, 23, 0.28) !important;
+}
+
+.agenda-quick-dialog button,
+.agenda-page button {
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.agenda-page button:focus-visible,
+.agenda-page input:focus-visible,
+.agenda-page select:focus-visible,
+.agenda-page textarea:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.38);
+  outline-offset: 2px;
+}
+
+.agenda-create-form {
+  border: 1px solid #dbe4ef;
+  box-shadow: 0 24px 64px rgba(2, 8, 23, 0.28);
+}
+
+@media (max-width: 960px) {
+  .agenda-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .agenda-page > div:first-child {
+    align-items: flex-start !important;
+    margin-bottom: 20px !important;
+  }
+
+  .agenda-stats {
+    gap: 12px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .agenda-stats > div {
+    gap: 12px !important;
+    padding: 14px !important;
+  }
+
+  .agenda-stats > div > div:first-child {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 20px !important;
+  }
+
+  .agenda-toolbar {
+    padding: 14px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .agenda-create-form {
+    grid-template-columns: minmax(0, 1fr) !important;
+    padding: 18px !important;
+  }
+
+  .agenda-create-form > * {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .agenda-stats {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agenda-page *,
+  .agenda-page *::before,
+  .agenda-page *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -10,11 +10,11 @@ type Usuario = { id: string; nome: string; email: string; cargo: Cargo; ativo: b
 
 const cargos: { value: Cargo; label: string }[] = [
   { value: 'ADMIN', label: 'Administrador' },
-  { value: 'MEDICO', label: 'Médico' },
+  { value: 'MEDICO', label: 'MÃ©dico' },
   { value: 'ENFERMEIRO_ASSISTENCIAL', label: 'Enfermeiro assistencial' },
-  { value: 'TECNICO_ENFERMAGEM', label: 'Técnico de enfermagem' },
+  { value: 'TECNICO_ENFERMAGEM', label: 'TÃ©cnico de enfermagem' },
   { value: 'RECEPCIONISTA', label: 'Recepcionista' },
-  { value: 'FARMACEUTICO', label: 'Farmacêutico' },
+  { value: 'FARMACEUTICO', label: 'FarmacÃªutico' },
   { value: 'OUTROS', label: 'Outros profissionais' },
 ]
 
@@ -23,6 +23,7 @@ export default function AdminUsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [query, setQuery] = useState('')
@@ -37,11 +38,12 @@ export default function AdminUsuariosPage() {
     try {
       const response = await fetch('/api/usuarios', { cache: 'no-store' })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Não foi possível carregar os usuários.')
+      if (!response.ok) throw new Error(data.error || 'NÃ£o foi possÃ­vel carregar os usuÃ¡rios.')
+      if (!Array.isArray(data)) throw new Error('A resposta de usuÃ¡rios Ã© invÃ¡lida.')
       setError('')
       setUsuarios(data)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Erro ao carregar usuários.')
+      setError(cause instanceof Error ? cause.message : 'Erro ao carregar usuÃ¡rios.')
     } finally {
       setLoading(false)
     }
@@ -60,7 +62,9 @@ export default function AdminUsuariosPage() {
     setEditing(user); setNome(user.nome); setEmail(user.email); setSenha(''); setCargo(user.cargo); setError(''); setNotice(''); setModal(true)
   }
   const saveUser = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); setSaving(true); setError(''); setNotice('')
+    event.preventDefault()
+    if (saving) return
+    setSaving(true); setError(''); setNotice('')
     try {
       const payload: Record<string, string> = { nome: nome.trim(), email: email.trim(), cargo }
       if (senha) payload.senha = senha
@@ -68,44 +72,51 @@ export default function AdminUsuariosPage() {
         method: editing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
       })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Não foi possível salvar o usuário.')
-      setModal(false); setNotice(editing ? 'Usuário atualizado.' : 'Usuário criado.'); await loadUsers()
+      if (!response.ok) throw new Error(data.error || 'NÃ£o foi possÃ­vel salvar o usuÃ¡rio.')
+      setModal(false); setNotice(editing ? 'UsuÃ¡rio atualizado.' : 'UsuÃ¡rio criado.'); await loadUsers()
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Erro ao salvar usuário.')
+      setError(cause instanceof Error ? cause.message : 'Erro ao salvar usuÃ¡rio.')
     } finally { setSaving(false) }
   }
   const toggleActive = async (user: Usuario) => {
+    if (updatingUserId !== null) return
     setError(''); setNotice('')
     const action = user.ativo ? 'desativar' : 'reativar'
     if (!await confirm(`Deseja ${action} ${user.nome}?`)) return
+    setUpdatingUserId(user.id)
     try {
       const response = await fetch(`/api/usuarios/${user.id}`, user.ativo
         ? { method: 'DELETE' }
         : { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ativo: true }) })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || `Não foi possível ${action} o usuário.`)
-      setNotice(`Usuário ${user.ativo ? 'desativado' : 'reativado'}.`); await loadUsers()
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Erro ao alterar usuário.') }
+      if (!response.ok) throw new Error(data.error || `NÃ£o foi possÃ­vel ${action} o usuÃ¡rio.`)
+      setNotice(`UsuÃ¡rio ${user.ativo ? 'desativado' : 'reativado'}.`); await loadUsers()
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Erro ao alterar usuÃ¡rio.') }
+    finally { setUpdatingUserId(null) }
   }
 
-  if (status === 'loading' || (session?.user?.cargo === 'ADMIN' && loading)) return <main className="conteudo usuarios-page"><p className="usuarios-state"><LoaderCircle className="spin" size={20} /> Carregando usuários…</p></main>
+  if (status === 'loading' || (session?.user?.cargo === 'ADMIN' && loading)) return <main className="conteudo usuarios-page"><p className="usuarios-state"><LoaderCircle className="spin" size={20} /> Carregando usuÃ¡riosâ€¦</p></main>
   if (!session?.user) return <main className="conteudo usuarios-page"><p className="usuarios-alert"><AlertCircle size={18} /> Entre no sistema para continuar.</p></main>
-  if (session.user.cargo !== 'ADMIN') return <main className="conteudo usuarios-page"><p className="usuarios-alert"><ShieldCheck size={18} /> Esta área é restrita ao administrador do hospital.</p></main>
+  if (session.user.cargo !== 'ADMIN') return <main className="conteudo usuarios-page"><p className="usuarios-alert"><ShieldCheck size={18} /> Esta Ã¡rea Ã© restrita ao administrador do hospital.</p></main>
 
-  const filtered = usuarios.filter(user => `${user.nome} ${user.email} ${user.cargo}`.toLowerCase().includes(query.toLowerCase()))
+  const normalizedQuery = query.trim().toLocaleLowerCase('pt-BR')
+  const filtered = usuarios.filter(user => {
+    const cargoVisivel = cargos.find(item => item.value === user.cargo)?.label ?? user.cargo
+    return `${user.nome} ${user.email} ${cargoVisivel} ${user.cargo}`.toLocaleLowerCase('pt-BR').includes(normalizedQuery)
+  })
   return <main className="conteudo usuarios-page">
     <header className="usuarios-heading">
-      <div><p className="usuarios-eyebrow">{session.user.hospitalNome}</p><h1>Usuários</h1><p>Gerencie os profissionais e o acesso ao sistema deste hospital.</p></div>
-      <button className="usuarios-primary" onClick={openCreate}><Plus size={18} /> Novo usuário</button>
+      <div><p className="usuarios-eyebrow">{session.user.hospitalNome}</p><h1>UsuÃ¡rios</h1><p>Gerencie os profissionais e o acesso ao sistema deste hospital.</p></div>
+      <button className="usuarios-primary" onClick={openCreate}><Plus size={18} /> Novo usuÃ¡rio</button>
     </header>
     {(error || notice) && <div className={error ? 'usuarios-alert' : 'usuarios-notice'} role={error ? 'alert' : 'status'}>{error ? <AlertCircle size={18} /> : <Check size={18} />}{error || notice}</div>}
-    <label className="usuarios-search"><Search size={18} aria-hidden="true" /><input aria-label="Buscar usuários por nome, e-mail ou cargo" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar por nome, e-mail ou cargo" /></label>
-    {filtered.length === 0 ? <section className="usuarios-empty"><UserRound size={24} /><strong>{usuarios.length ? 'Nenhum resultado' : 'Nenhum usuário cadastrado'}</strong><span>{usuarios.length ? 'Tente outra busca.' : 'Cadastre os profissionais autorizados deste hospital.'}</span></section> : <section className="usuarios-list" aria-label="Lista de usuários">
+    <label className="usuarios-search"><Search size={18} aria-hidden="true" /><input aria-label="Buscar usuÃ¡rios por nome, e-mail ou cargo" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar por nome, e-mail ou cargo" /></label>
+    {filtered.length === 0 ? <section className="usuarios-empty"><UserRound size={24} /><strong>{usuarios.length ? 'Nenhum resultado' : 'Nenhum usuÃ¡rio cadastrado'}</strong><span>{usuarios.length ? 'Tente outra busca.' : 'Cadastre os profissionais autorizados deste hospital.'}</span></section> : <section className="usuarios-list" aria-label="Lista de usuÃ¡rios">
       {filtered.map(user => <article className={`usuarios-card ${user.ativo ? '' : 'is-inactive'}`} key={user.id}>
         <div className="usuarios-avatar"><UserRound size={20} /></div><div className="usuarios-details"><strong>{user.nome}</strong><span>{user.email}</span><div className="usuarios-tags"><span>{cargos.find(item => item.value === user.cargo)?.label ?? user.cargo}</span><span className={user.ativo ? 'status-active' : 'status-inactive'}>{user.ativo ? 'Ativo' : 'Inativo'}</span></div></div>
-        <div className="usuarios-actions"><button className="usuarios-icon-button" onClick={() => openEdit(user)} aria-label={`Editar ${user.nome}`} title="Editar"><Pencil size={17} /></button><button className="usuarios-icon-button" onClick={() => void toggleActive(user)} aria-label={`${user.ativo ? 'Desativar' : 'Reativar'} ${user.nome}`} title={user.ativo ? 'Desativar' : 'Reativar'}>{user.ativo ? <UserRoundX size={17} /> : <Check size={17} />}</button></div>
+        <div className="usuarios-actions"><button type="button" className="usuarios-icon-button" onClick={() => openEdit(user)} aria-label={`Editar ${user.nome}`} title="Editar"><Pencil size={17} /></button><button type="button" className="usuarios-icon-button" onClick={() => void toggleActive(user)} disabled={updatingUserId !== null} aria-label={`${user.ativo ? 'Desativar' : 'Reativar'} ${user.nome}`} title={user.ativo ? 'Desativar' : 'Reativar'}>{updatingUserId === user.id ? <LoaderCircle className="spin" size={17} /> : user.ativo ? <UserRoundX size={17} /> : <Check size={17} />}</button></div>
       </article>)}
     </section>}
-    {modal && <div className="usuarios-overlay" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setModal(false) }}><section className="usuarios-dialog" role="dialog" aria-modal="true" aria-labelledby="usuarios-dialog-title"><header><div><h2 id="usuarios-dialog-title">{editing ? 'Editar usuário' : 'Novo usuário'}</h2><p>Os dados ficam vinculados ao hospital da sua sessão.</p></div><button type="button" className="usuarios-icon-button" onClick={() => setModal(false)} aria-label="Fechar" disabled={saving}><X size={19} /></button></header><form onSubmit={saveUser}><label>Nome completo<input required maxLength={120} autoComplete="name" value={nome} onChange={event => setNome(event.target.value)} /></label><label>E-mail<input required type="email" maxLength={254} autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} /></label><label>Cargo<select value={cargo} onChange={event => setCargo(event.target.value as Cargo)}>{cargos.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label><label>Senha {editing && <span className="usuarios-hint">(deixe em branco para manter a atual)</span>}<input required={!editing} minLength={12} type="password" autoComplete={editing ? 'new-password' : 'new-password'} value={senha} onChange={event => setSenha(event.target.value)} /></label>{error && <p className="usuarios-alert"><AlertCircle size={17} />{error}</p>}<footer><button type="button" className="usuarios-secondary" onClick={() => setModal(false)} disabled={saving}>Cancelar</button><button className="usuarios-primary" disabled={saving}>{saving && <LoaderCircle className="spin" size={17} />}{editing ? 'Salvar alterações' : 'Criar usuário'}</button></footer></form></section></div>}
+    {modal && <div className="usuarios-overlay" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setModal(false) }}><section className="usuarios-dialog" role="dialog" aria-modal="true" aria-labelledby="usuarios-dialog-title"><header><div><h2 id="usuarios-dialog-title">{editing ? 'Editar usuÃ¡rio' : 'Novo usuÃ¡rio'}</h2><p>Os dados ficam vinculados ao hospital da sua sessÃ£o.</p></div><button type="button" className="usuarios-icon-button" onClick={() => setModal(false)} aria-label="Fechar" disabled={saving}><X size={19} /></button></header><form onSubmit={saveUser}><label>Nome completo<input required maxLength={120} autoComplete="name" value={nome} onChange={event => setNome(event.target.value)} /></label><label>E-mail<input required type="email" maxLength={254} autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} /></label><label>Cargo<select value={cargo} onChange={event => setCargo(event.target.value as Cargo)}>{cargos.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label><label>Senha {editing && <span className="usuarios-hint">(deixe em branco para manter a atual)</span>}<input required={!editing} minLength={12} type="password" autoComplete={editing ? 'new-password' : 'new-password'} value={senha} onChange={event => setSenha(event.target.value)} /></label>{error && <p className="usuarios-alert"><AlertCircle size={17} />{error}</p>}<footer><button type="button" className="usuarios-secondary" onClick={() => setModal(false)} disabled={saving}>Cancelar</button><button className="usuarios-primary" disabled={saving}>{saving && <LoaderCircle className="spin" size={17} />}{editing ? 'Salvar alteraÃ§Ãµes' : 'Criar usuÃ¡rio'}</button></footer></form></section></div>}
   </main>
 }

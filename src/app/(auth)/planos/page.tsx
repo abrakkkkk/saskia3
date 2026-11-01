@@ -10,24 +10,24 @@ export default function PlanosPage() {
           Valores e condições abaixo são apenas referências informativas e não configuram plano contratado, proposta comercial vigente ou cobrança do hospital.
         </div>
         <div className="banner-planos">
-          <div className="icone-banner"></div>
+          <div className="icone-banner" aria-hidden="true"><i className="las la-tags"></i></div>
           <h1>Planos e Valores</h1>
           <p>Soluções sob medida para cada porte de instituição. Da prefeitura de uma pequena cidade à grande rede hospitalar privada.</p>
         </div>
 
         <div className="cards-destaque">
           <div className="card-destaque anual">
-            <div className="icone-destaque"></div>
+            <div className="icone-destaque" aria-hidden="true"><i className="las la-calendar-check"></i></div>
             <h4>Plano Anual com Desconto</h4>
             <p>Economize o equivalente a <strong>2 meses</strong> de mensalidade contratando o plano anual. Mesmo suporte, menor custo.</p>
           </div>
           <div className="card-destaque suporte">
-            <div className="icone-destaque"></div>
+            <div className="icone-destaque" aria-hidden="true"><i className="las la-headset"></i></div>
             <h4>Suporte 24/7</h4>
             <p>Adicione <strong>20% a 30%</strong> sobre a mensalidade para suporte VIP com atendimento prioritário por telefone e WhatsApp.</p>
           </div>
           <div className="card-destaque implementacao">
-            <div className="icone-destaque"></div>
+            <div className="icone-destaque" aria-hidden="true"><i className="las la-cogs"></i></div>
             <h4>Taxa de Implementação</h4>
             <p>Cobrada uma única vez. Inclui parametrização do sistema, treinamento da equipe e migração de dados.</p>
           </div>
@@ -37,7 +37,7 @@ export default function PlanosPage() {
           <h2><i className="las la-landmark"></i> Prefeituras e Órgãos Públicos</h2>
           
           <div className="tabela-wrapper">
-            <table className="tabela-planos">
+            <table className="tabela-planos" aria-label="Preços para prefeituras e órgãos públicos">
               <thead>
                 <tr>
                   <th>Porte</th>
@@ -85,7 +85,7 @@ export default function PlanosPage() {
           <h2><i className="las la-clinic-medical"></i> Clínicas e Consultórios</h2>
           
           <div className="tabela-wrapper">
-            <table className="tabela-planos">
+            <table className="tabela-planos" aria-label="Preços para clínicas e consultórios">
               <thead>
                 <tr>
                   <th>Porte</th>
@@ -133,7 +133,7 @@ export default function PlanosPage() {
           <h2><i className="las la-hospital"></i> Hospitais e Unidades Hospitalares</h2>
           
           <div className="tabela-wrapper">
-            <table className="tabela-planos">
+            <table className="tabela-planos" aria-label="Preços para hospitais e unidades hospitalares">
               <thead>
                 <tr>
                   <th>Porte</th>
@@ -181,7 +181,7 @@ export default function PlanosPage() {
           <h2><i className="las la-hand-holding-heart"></i> Instituições Filantrópicas</h2>
           
           <div className="tabela-wrapper">
-            <table className="tabela-planos">
+            <table className="tabela-planos" aria-label="Preços para instituições filantrópicas">
               <thead>
                 <tr>
                   <th>Porte</th>
@@ -222,7 +222,7 @@ export default function PlanosPage() {
           <h2><i className="las la-headset"></i> Adicionais de Suporte</h2>
           
           <div className="tabela-wrapper">
-            <table className="tabela-planos">
+            <table className="tabela-planos" aria-label="Adicionais de suporte e seus valores">
               <thead>
                 <tr>
                   <th>Tipo de Suporte</th>

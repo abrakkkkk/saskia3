@@ -19,6 +19,7 @@ export default function TransportePage() {
   const [activeTab, setActiveTab] = useState<'solicitar'|'lista'>('solicitar');
   const [loading, setLoading] = useState(true);
   const [erroCarga, setErroCarga] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   
   const [transportes, setTransportes] = useState<Transporte[]>([]);
   const [pacientes, setPacientes] = useState<any[]>([]);
@@ -70,6 +71,7 @@ export default function TransportePage() {
   }, [statusSessao]);
 
   const solicitarTransporte = async () => {
+    if (isSaving) return;
     if (!transpPaciente) {
       alert(" Selecione o paciente!");
       return;
@@ -84,6 +86,7 @@ export default function TransportePage() {
       status: "Pendente"
     };
 
+    setIsSaving(true);
     try {
       const res = await fetch('/api/transporte', {
         method: 'POST',
@@ -99,6 +102,8 @@ export default function TransportePage() {
       await carregarDados();
     } catch (error: any) {
       alert(error.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -211,8 +216,8 @@ export default function TransportePage() {
                 <input id="transporte-data" type="datetime-local" value={transpData} onChange={e => setTranspData(e.target.value)} />
               </div>
             </div>
-            <button className="btn btn-success" onClick={solicitarTransporte} style={{width:'100%', marginTop:'15px', padding:'14px', justifyContent:'center'}}>
-              <i className="las la-save"></i> Solicitar Transporte
+            <button className="btn btn-success" onClick={solicitarTransporte} disabled={isSaving || statusSessao !== 'authenticated'} style={{width:'100%', marginTop:'15px', padding:'14px', justifyContent:'center'}}>
+              <i className="las la-save"></i> {isSaving ? 'Enviando solicitação...' : 'Solicitar Transporte'}
             </button>
           </div>
         )}

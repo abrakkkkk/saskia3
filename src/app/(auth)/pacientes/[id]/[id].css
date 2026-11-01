@@ -1,8 +1,6 @@
-body {
-    background: #f1f5f9;
-}
+/* Estilos escopados à página do prontuário para evitar vazamento em outras rotas. */
 
-.card {
+.prontuario-page .card {
     background: white;
     padding: 25px;
     border-radius: 8px;
@@ -10,7 +8,7 @@ body {
     margin-bottom: 25px;
 }
 
-.nome {
+.prontuario-page .nome {
     font-size: 26px;
     font-weight: 700;
     color: #0a1f44;
@@ -19,7 +17,7 @@ body {
     gap: 10px;
 }
 
-.alerta-alergia-topo {
+.prontuario-page .alerta-alergia-topo {
     background: linear-gradient(135deg, #dc2626, #991b1b);
     color: white;
     padding: 15px 25px;
@@ -34,7 +32,7 @@ body {
     box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
 }
 
-.alerta-alergia-topo i {
+.prontuario-page .alerta-alergia-topo i {
     font-size: 28px;
 }
 
@@ -50,7 +48,7 @@ body {
     }
 }
 
-.tabs {
+.prontuario-page .tabs {
     display: flex;
     gap: 4px;
     margin-bottom: 20px;
@@ -59,7 +57,7 @@ body {
     padding-bottom: 3px;
 }
 
-.tabs button {
+.prontuario-page .tabs button {
     padding: 10px 16px;
     border: none;
     background: transparent;
@@ -76,25 +74,25 @@ body {
     margin-bottom: -5px;
 }
 
-.tabs button:hover {
+.prontuario-page .tabs button:hover {
     color: #1e3a8a;
     background: #f8fafc;
 }
 
-.tabs button.ativo {
+.prontuario-page .tabs button.ativo {
     color: #1e3a8a;
     background: #eff6ff;
     border-bottom-color: #1e3a8a;
     font-weight: 700;
 }
 
-.aba {
+.prontuario-page .aba {
     display: none;
 }
 
-input,
-select,
-textarea {
+.prontuario-page input,
+.prontuario-page select,
+.prontuario-page textarea {
     margin-bottom: 10px;
     width: 100%;
     padding: 11px 14px;
@@ -107,20 +105,20 @@ textarea {
     background: #f8fafc;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+.prontuario-page input:focus,
+.prontuario-page select:focus,
+.prontuario-page textarea:focus {
     border-color: #1e3a8a;
     outline: none;
     box-shadow: 0 0 0 4px rgba(30, 58, 138, 0.08);
     background: white;
 }
 
-.form-group {
+.prontuario-page .form-group {
     margin-bottom: 14px;
 }
 
-.form-group label {
+.prontuario-page .form-group label {
     display: block;
     margin-bottom: 6px;
     font-weight: 700;
@@ -131,19 +129,19 @@ textarea:focus {
     gap: 6px;
 }
 
-.form-row {
+.prontuario-page .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
 }
 
-.form-row-3 {
+.prontuario-page .form-row-3 {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 14px;
 }
 
-.badge-status {
+.prontuario-page .badge-status {
     display: inline-block;
     padding: 6px 16px;
     border-radius: 8px;
@@ -155,14 +153,14 @@ textarea:focus {
     border: 1px solid #bfdbfe;
 }
 
-.escores-grid {
+.prontuario-page .escores-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
     margin-bottom: 25px;
 }
 
-.escore-card {
+.prontuario-page .escore-card {
     background: white;
     border-radius: 8px;
     padding: 20px;
@@ -170,7 +168,7 @@ textarea:focus {
     border: 2px solid #e2e8f0;
 }
 
-.escore-card h4 {
+.prontuario-page .escore-card h4 {
     color: #0a1f44;
     font-size: 15px;
     margin-bottom: 12px;
@@ -181,7 +179,7 @@ textarea:focus {
     padding-bottom: 8px;
 }
 
-.escore-total {
+.prontuario-page .escore-total {
     text-align: center;
     margin-top: 12px;
     padding: 10px;
@@ -190,41 +188,41 @@ textarea:focus {
     font-weight: 700;
 }
 
-.escore-total .numero-grande {
+.prontuario-page .escore-total .numero-grande {
     font-size: 40px;
     font-weight: 800;
     display: block;
 }
 
-.escore-total.glasgow {
+.prontuario-page .escore-total.glasgow {
     background: #eff6ff;
     color: #1e3a8a;
 }
 
-.escore-total.braden {
+.prontuario-page .escore-total.braden {
     background: #ecfdf5;
     color: #059669;
 }
 
-.escore-total.dor {
+.prontuario-page .escore-total.dor {
     background: #fefce8;
     color: #d97706;
 }
 
-.glasgow-grid {
+.prontuario-page .glasgow-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 8px;
 }
 
-.glasgow-item {
+.prontuario-page .glasgow-item {
     background: #f8fafc;
     border-radius: 8px;
     padding: 10px;
     border: 2px solid #e2e8f0;
 }
 
-.glasgow-item label {
+.prontuario-page .glasgow-item label {
     font-size: 10px;
     text-transform: uppercase;
     color: #94a3b8;
@@ -233,7 +231,7 @@ textarea:focus {
     font-weight: 700;
 }
 
-.glasgow-item select {
+.prontuario-page .glasgow-item select {
     width: 100%;
     padding: 8px;
     border-radius: 8px;
@@ -243,13 +241,13 @@ textarea:focus {
     font-weight: 600;
 }
 
-.braden-grid {
+.prontuario-page .braden-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 6px;
 }
 
-.braden-item {
+.prontuario-page .braden-item {
     background: #f8fafc;
     border-radius: 8px;
     padding: 8px 12px;
@@ -259,13 +257,13 @@ textarea:focus {
     border: 2px solid #e2e8f0;
 }
 
-.braden-item label {
+.prontuario-page .braden-item label {
     font-size: 11px;
     color: #334155;
     font-weight: 600;
 }
 
-.braden-item select {
+.prontuario-page .braden-item select {
     width: auto;
     padding: 4px 8px;
     border-radius: 8px;
@@ -273,7 +271,7 @@ textarea:focus {
     font-size: 11px;
 }
 
-.dor-visual {
+.prontuario-page .dor-visual {
     display: flex;
     justify-content: space-between;
     gap: 6px;
@@ -281,7 +279,7 @@ textarea:focus {
     flex-wrap: wrap;
 }
 
-.dor-opcao {
+.prontuario-page .dor-opcao {
     text-align: center;
     cursor: pointer;
     padding: 10px 6px;
@@ -292,35 +290,35 @@ textarea:focus {
     min-width: 55px;
 }
 
-.dor-opcao:hover {
+.prontuario-page .dor-opcao:hover {
     transform: translateY(-5px);
 }
 
-.dor-opcao.selecionado {
+.prontuario-page .dor-opcao.selecionado {
     border-color: #1e3a8a;
     background: #eff6ff;
 }
 
-.dor-opcao .dor-emoji {
+.prontuario-page .dor-opcao .dor-emoji {
     font-size: 28px;
     display: block;
     margin-bottom: 3px;
 }
 
-.dor-opcao .dor-numero {
+.prontuario-page .dor-opcao .dor-numero {
     font-weight: 700;
     color: #0a1f44;
     font-size: 12px;
 }
 
-.manchester-container {
+.prontuario-page .manchester-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
     margin-bottom: 20px;
 }
 
-.manchester-card {
+.prontuario-page .manchester-card {
     border-radius: 8px;
     padding: 18px 12px;
     cursor: pointer;
@@ -330,96 +328,96 @@ textarea:focus {
     background: white;
 }
 
-.manchester-card:hover {
+.prontuario-page .manchester-card:hover {
     transform: translateY(-5px);
 }
 
-.manchester-card.selecionado {
+.prontuario-page .manchester-card.selecionado {
     transform: scale(1.05);
 }
 
-.manchester-card.vermelho {
+.prontuario-page .manchester-card.vermelho {
     background: #fef2f2;
     border-color: #fecaca;
 }
 
-.manchester-card.vermelho.selecionado {
+.prontuario-page .manchester-card.vermelho.selecionado {
     background: #dc2626;
     border-color: #b91c1c;
     color: white;
 }
 
-.manchester-card.laranja {
+.prontuario-page .manchester-card.laranja {
     background: #fff7ed;
     border-color: #fed7aa;
 }
 
-.manchester-card.laranja.selecionado {
+.prontuario-page .manchester-card.laranja.selecionado {
     background: #f97316;
     border-color: #ea580c;
     color: white;
 }
 
-.manchester-card.amarelo {
+.prontuario-page .manchester-card.amarelo {
     background: #fefce8;
     border-color: #fde68a;
 }
 
-.manchester-card.amarelo.selecionado {
+.prontuario-page .manchester-card.amarelo.selecionado {
     background: #eab308;
     border-color: #ca8a04;
 }
 
-.manchester-card.verde {
+.prontuario-page .manchester-card.verde {
     background: #f0fdf4;
     border-color: #bbf7d0;
 }
 
-.manchester-card.verde.selecionado {
+.prontuario-page .manchester-card.verde.selecionado {
     background: #22c55e;
     border-color: #16a34a;
     color: white;
 }
 
-.manchester-card.azul {
+.prontuario-page .manchester-card.azul {
     background: #eff6ff;
     border-color: #bfdbfe;
 }
 
-.manchester-card.azul.selecionado {
+.prontuario-page .manchester-card.azul.selecionado {
     background: #3b82f6;
     border-color: #2563eb;
     color: white;
 }
 
-.manchester-card .cor-numero {
+.prontuario-page .manchester-card .cor-numero {
     font-size: 32px;
     font-weight: 800;
 }
 
-.manchester-card .cor-nome {
+.prontuario-page .manchester-card .cor-nome {
     font-size: 14px;
     font-weight: 700;
 }
 
-.manchester-card .cor-tempo {
+.prontuario-page .manchester-card .cor-tempo {
     font-size: 11px;
     opacity: 0.8;
 }
 
-.manchester-card .cor-icon {
+.prontuario-page .manchester-card .cor-icon {
     font-size: 28px;
     margin-bottom: 5px;
 }
 
-.sinais-triagem-grid {
+.prontuario-page .sinais-triagem-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 10px;
     margin-bottom: 20px;
 }
 
-.sinal-triagem-card {
+.prontuario-page .sinal-triagem-card {
     background: white;
     border: 2px solid #e2e8f0;
     border-radius: 8px;
@@ -427,7 +425,7 @@ textarea:focus {
     text-align: center;
 }
 
-.sinal-triagem-card label {
+.prontuario-page .sinal-triagem-card label {
     font-size: 10px;
     text-transform: uppercase;
     color: #94a3b8;
@@ -436,7 +434,7 @@ textarea:focus {
     font-weight: 700;
 }
 
-.sinal-triagem-card input {
+.prontuario-page .sinal-triagem-card input {
     font-size: 20px;
     font-weight: 700;
     text-align: center;
@@ -448,7 +446,7 @@ textarea:focus {
     color: #0a1f44;
 }
 
-.mews-container {
+.prontuario-page .mews-container {
     background: white;
     border-radius: 8px;
     padding: 20px;
@@ -456,43 +454,43 @@ textarea:focus {
     border: 2px solid #e2e8f0;
 }
 
-.mews-score {
+.prontuario-page .mews-score {
     text-align: center;
     padding: 20px;
     border-radius: 8px;
     margin-bottom: 15px;
 }
 
-.mews-score.baixo {
+.prontuario-page .mews-score.baixo {
     background: #dcfce7;
     border: 3px solid #22c55e;
 }
 
-.mews-score.medio {
+.prontuario-page .mews-score.medio {
     background: #fefce8;
     border: 3px solid #eab308;
 }
 
-.mews-score.alto {
+.prontuario-page .mews-score.alto {
     background: #fef2f2;
     border: 3px solid #dc2626;
     animation: piscarAlerta 1s infinite;
 }
 
-.mews-score .score-numero {
+.prontuario-page .mews-score .score-numero {
     font-size: 56px;
     font-weight: 800;
 }
 
-.mews-score.baixo .score-numero {
+.prontuario-page .mews-score.baixo .score-numero {
     color: #16a34a;
 }
 
-.mews-score.medio .score-numero {
+.prontuario-page .mews-score.medio .score-numero {
     color: #d97706;
 }
 
-.mews-score.alto .score-numero {
+.prontuario-page .mews-score.alto .score-numero {
     color: #dc2626;
 }
 
@@ -508,13 +506,13 @@ textarea:focus {
     }
 }
 
-.linha-tempo {
+.prontuario-page .linha-tempo {
     max-height: 400px;
     overflow-y: auto;
     padding: 10px;
 }
 
-.post-atividade {
+.prontuario-page .post-atividade {
     background: #f8fafc;
     border-left: 5px solid #1e3a8a;
     padding: 15px;
@@ -522,30 +520,30 @@ textarea:focus {
     border-radius: 8px;
 }
 
-.post-cabecalho {
+.prontuario-page .post-cabecalho {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
 }
 
-.post-profissional {
+.prontuario-page .post-profissional {
     font-weight: 700;
     color: #1e3a8a;
 }
 
-.post-data {
+.prontuario-page .post-data {
     font-size: 11px;
     color: #94a3b8;
 }
 
-.post-titulo {
+.prontuario-page .post-titulo {
     font-weight: 700;
     margin-bottom: 8px;
     font-size: 14px;
 }
 
-.post-conteudo {
+.prontuario-page .post-conteudo {
     font-size: 14px;
     color: #475569;
     margin-top: 8px;
@@ -553,7 +551,7 @@ textarea:focus {
     border-top: 1px dashed #e2e8f0;
 }
 
-.leito-btn {
+.prontuario-page .leito-btn {
     padding: 10px;
     margin: 4px;
     border: 2px solid #e2e8f0;
@@ -566,19 +564,19 @@ textarea:focus {
     font-size: 12px;
 }
 
-.leito-btn.ocupado {
+.prontuario-page .leito-btn.ocupado {
     background: #dc2626;
     color: white;
     border-color: #dc2626;
 }
 
-.leito-btn.disponivel {
+.prontuario-page .leito-btn.disponivel {
     background: #22c55e;
     color: white;
     border-color: #22c55e;
 }
 
-.botoes-acao {
+.prontuario-page .botoes-acao {
     display: flex;
     gap: 15px;
     margin-top: 25px;
@@ -586,7 +584,7 @@ textarea:focus {
     flex-wrap: wrap;
 }
 
-.btn-salvar {
+.prontuario-page .btn-salvar {
     background: linear-gradient(135deg, #16a34a, #22c55e);
     color: white;
     border: none;
@@ -600,7 +598,7 @@ textarea:focus {
     gap: 8px;
 }
 
-.btn-cancelar {
+.prontuario-page .btn-cancelar {
     background: #64748b;
     color: white;
     border: none;
@@ -614,7 +612,7 @@ textarea:focus {
     gap: 8px;
 }
 
-.btn-postar {
+.prontuario-page .btn-postar {
     background: linear-gradient(135deg, #1e3a8a, #2563eb);
     color: white;
     border: none;
@@ -628,7 +626,7 @@ textarea:focus {
     gap: 6px;
 }
 
-.btn-imprimir {
+.prontuario-page .btn-imprimir {
     background: linear-gradient(135deg, #0891b2, #0e7490);
     color: white;
     border: none;
@@ -644,24 +642,28 @@ textarea:focus {
 
 @media (max-width: 768px) {
 
-    .form-row,
-    .form-row-3,
-    .escores-grid {
+    .prontuario-page .form-row,
+.prontuario-page .form-row-3,
+.prontuario-page .escores-grid {
         grid-template-columns: 1fr;
     }
 
-    .tabs button {
+    .prontuario-page .tabs button {
         font-size: 10px;
         padding: 8px 10px;
     }
 }
 
-
-body {
-    font-family: Arial;
-    padding: 30px;
-}
-
-h2 {
+.prontuario-page h2 {
     color: #0a1f44;
 }
+
+.prontuario-page { min-width: 0; padding: 20px; border-radius: 14px; background: #f1f5f9; }
+
+.prontuario-page :is(button, a, input, select, textarea):focus-visible { outline: 3px solid #60a5fa !important; outline-offset: 2px; }
+
+.prontuario-page :is(button, select):disabled { cursor: not-allowed; opacity: .65; }
+
+@media (max-width: 600px) { .prontuario-page { padding: 12px; } }
+
+@media (prefers-reduced-motion: reduce) { .prontuario-page *, .prontuario-page *::before, .prontuario-page *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }

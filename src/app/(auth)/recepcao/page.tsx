@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import './recepcao.css';
 
 interface Paciente {
   id: string;
@@ -85,7 +86,13 @@ export default function RecepcaoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'Aguardando Triagem' })
       });
-      if (!res.ok) throw new Error('Erro ao enviar paciente para triagem');
+      const resposta: unknown = await res.json().catch(() => null);
+      if (!res.ok) {
+        const mensagem = resposta && typeof resposta === 'object' && 'error' in resposta && typeof resposta.error === 'string'
+          ? resposta.error
+          : 'Erro ao enviar paciente para triagem';
+        throw new Error(mensagem);
+      }
       fetchPacientes();
       if (resultadoBusca && resultadoBusca.id === id) {
         setResultadoBusca({ ...resultadoBusca, status: 'Aguardando Triagem' });
@@ -119,8 +126,11 @@ export default function RecepcaoPage() {
         fetchPacientes();
         alert('Paciente cadastrado com sucesso!');
       } else {
-        const errorData = await res.json();
-        alert(errorData.error || 'Erro ao cadastrar paciente.');
+        const errorData: unknown = await res.json().catch(() => null);
+        const message = errorData && typeof errorData === 'object' && 'error' in errorData && typeof errorData.error === 'string'
+          ? errorData.error
+          : 'Erro ao cadastrar paciente.';
+        alert(message);
       }
     } catch (error) {
       console.error(error);
@@ -146,8 +156,11 @@ export default function RecepcaoPage() {
         fetchVisitantes();
         alert('Visitante registrado com sucesso!');
       } else {
-        const errorData = await res.json();
-        alert(errorData.error || 'Erro ao registrar visitante.');
+        const errorData: unknown = await res.json().catch(() => null);
+        const message = errorData && typeof errorData === 'object' && 'error' in errorData && typeof errorData.error === 'string'
+          ? errorData.error
+          : 'Erro ao registrar visitante.';
+        alert(message);
       }
     } catch (error) {
       console.error(error);
@@ -289,6 +302,7 @@ export default function RecepcaoPage() {
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <input
             type="text"
+            aria-label="Buscar paciente por nome ou CPF"
             placeholder="Digite nome ou CPF..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -317,7 +331,7 @@ export default function RecepcaoPage() {
                 </button>
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '25px', color: '#94a3b8', background: '#f8fafc', borderRadius: '8px' }}>
+              <div role="status" style={{ textAlign: 'center', padding: '25px', color: '#64748b', background: '#f8fafc', borderRadius: '8px' }}>
                 <i className="las la-user-slash" style={{ fontSize: '40px', marginBottom: '8px' }}></i>
                 <p style={{ margin: '0 0 10px 0' }}>Paciente não encontrado</p>
                 <button onClick={() => setModalAberto(true)} style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '13px' }}>
@@ -332,6 +346,8 @@ export default function RecepcaoPage() {
       {/* Abas */}
       <div style={{ display: 'flex', gap: '0', marginBottom: '0' }}>
         <button
+          type="button"
+          aria-pressed={abaAtiva === 'pacientes'}
           onClick={() => setAbaAtiva('pacientes')}
           style={{
             padding: '12px 28px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px',
@@ -345,6 +361,8 @@ export default function RecepcaoPage() {
           <i className="las la-user-injured"></i> Pacientes Recentes
         </button>
         <button
+          type="button"
+          aria-pressed={abaAtiva === 'visitantes'}
           onClick={() => setAbaAtiva('visitantes')}
           style={{
             padding: '12px 28px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px',
@@ -357,7 +375,7 @@ export default function RecepcaoPage() {
         >
           <i className="las la-walking"></i> Controle de Visitantes
           {visitantesDentro.length > 0 && (
-            <span style={{ background: '#6366f1', color: 'white', borderRadius: '50%', width: '22px', height: '22px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800' }}>
+            <span aria-label={`${visitantesDentro.length} visitantes dentro`} style={{ background: '#6366f1', color: 'white', borderRadius: '50%', width: '22px', height: '22px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800' }}>
               {visitantesDentro.length}
             </span>
           )}
@@ -369,7 +387,7 @@ export default function RecepcaoPage() {
 
         {abaAtiva === 'pacientes' && (
           <>
-            <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0a1f44' }}><i className="las la-history"></i> Últimos Pacientes na Recepção</h3>
+            <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0a1f44' }}><i className="las la-history" aria-hidden="true"></i> Últimos cadastros de pacientes</h3>
             {erroPacientes && <p role="alert" style={{ color: '#b91c1c' }}>{erroPacientes}</p>}
             {loading ? (
               <p style={{ textAlign: 'center', padding: '20px' }}>Carregando...</p>
@@ -387,7 +405,7 @@ export default function RecepcaoPage() {
                   </thead>
                   <tbody>
                     {recentes.length === 0 ? (
-                      <tr><td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhum paciente na recepção</td></tr>
+                      <tr><td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Nenhum paciente cadastrado</td></tr>
                     ) : (
                       recentes.map((p, idx) => (
                         <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#fafbfc' : 'white', transition: 'background 0.15s' }}>
@@ -464,8 +482,8 @@ export default function RecepcaoPage() {
                 <tbody>
                   {visitantes.length === 0 ? (
                     <tr><td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                      <i className="las la-door-open" style={{ fontSize: '40px', display: 'block', marginBottom: '8px' }}></i>
-                      Nenhum visitante registrado hoje.
+                      <i className="las la-door-open" aria-hidden="true" style={{ fontSize: '40px', display: 'block', marginBottom: '8px' }}></i>
+                      Nenhum visitante registrado.
                     </td></tr>
                   ) : (
                     visitantes.map((v, idx) => (
@@ -524,10 +542,10 @@ export default function RecepcaoPage() {
       {/* Modal Novo Paciente */}
       {modalAberto && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-          <div style={{ background: 'white', width: '450px', maxWidth: '90%', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div role="dialog" aria-modal="true" aria-label="Novo paciente" style={{ background: 'white', width: '450px', maxWidth: '90%', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', color: 'white', padding: '18px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}><i className="las la-user-plus"></i> Novo Paciente</span>
-              <button onClick={() => setModalAberto(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
+              <button type="button" aria-label="Fechar cadastro de paciente" onClick={() => setModalAberto(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
             </div>
             <div style={{ padding: '25px' }}>
               <form onSubmit={criarPaciente}>
@@ -570,10 +588,10 @@ export default function RecepcaoPage() {
       {/* Modal Registrar Visitante */}
       {modalVisitante && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-          <div style={{ background: 'white', width: '450px', maxWidth: '90%', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div role="dialog" aria-modal="true" aria-label="Registrar visitante" style={{ background: 'white', width: '450px', maxWidth: '90%', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white', padding: '18px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}><i className="las la-walking"></i> Registrar Visitante</span>
-              <button onClick={() => setModalVisitante(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
+              <button type="button" aria-label="Fechar cadastro de visitante" onClick={() => setModalVisitante(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
             </div>
             <div style={{ padding: '25px' }}>
               <form onSubmit={criarVisitante}>

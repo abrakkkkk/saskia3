@@ -10,8 +10,8 @@ function dataLocalISO(data = new Date()) {
 interface Sala {
   id: string;
   nome: string;
-  tipo: string;
-  setor: string;
+  tipo: string | null;
+  setor: string | null;
   andar?: string;
   capacidade: number;
   equipamentos?: string;
@@ -30,7 +30,7 @@ interface Reserva {
   status: string; // ATIVA, RESERVADA, FINALIZADA, CANCELADA
 }
 
-const tiposSala: any = {
+const tiposSala: Record<string, string> = {
   consultorio: " Consultório",
   cirurgica: " Sala Cirúrgica",
   exame: " Sala de Exames",
@@ -42,7 +42,7 @@ const tiposSala: any = {
   outro: " Outro"
 };
 
-const statusLabel: any = {
+const statusLabel: Record<string, string> = {
   LIVRE: " Livre",
   OCUPADO: " Em Uso",
   RESERVADO: " Reservada",
@@ -75,10 +75,11 @@ export default function GestaoSalasPage() {
   });
 
   const carregarDados = async () => {
+    setLoading(true);
     try {
       const [resSalas, resReservas] = await Promise.all([
-        fetch('/api/salas'),
-        fetch('/api/salas/reservas')
+        fetch('/api/salas', { cache: 'no-store' }),
+        fetch('/api/salas/reservas', { cache: 'no-store' })
       ]);
       if (!resSalas.ok || !resReservas.ok) {
         throw new Error('Não foi possível carregar salas e reservas. Atualize a tela e tente novamente.');
@@ -242,9 +243,9 @@ export default function GestaoSalasPage() {
   // Filters
   let salasFiltradas = salas;
   if (filtroStatusSala !== 'todos') salasFiltradas = salasFiltradas.filter(s => s.status === filtroStatusSala);
-  if (buscarSala) {
-    const t = buscarSala.toLowerCase();
-    salasFiltradas = salasFiltradas.filter(s => s.nome.toLowerCase().includes(t) || s.tipo.toLowerCase().includes(t) || s.setor.toLowerCase().includes(t));
+  if (buscarSala.trim()) {
+    const t = buscarSala.trim().toLocaleLowerCase('pt-BR');
+    salasFiltradas = salasFiltradas.filter(s => s.nome.toLocaleLowerCase('pt-BR').includes(t) || (s.tipo || '').toLocaleLowerCase('pt-BR').includes(t) || (s.setor || '').toLocaleLowerCase('pt-BR').includes(t));
   }
 
   let reservasFiltradas = [...reservas];
@@ -253,7 +254,7 @@ export default function GestaoSalasPage() {
     reservasFiltradas = reservasFiltradas.filter(r => r.profissional.toLowerCase().includes(t) || (r.paciente || '').toLowerCase().includes(t));
   }
 
-  if (loading) return <div>Carregando Gestão de Salas...</div>;
+  if (loading) return <div className="salas-loading" role="status" aria-live="polite">Carregando Gestão de Salas…</div>;
 
   return (
     <div className="conteudo">
@@ -264,19 +265,26 @@ export default function GestaoSalasPage() {
             <h1><i className="las la-door-open"></i> Gestão de Salas & Consultórios</h1>
             <p>Cadastro, reserva e monitoramento em tempo real de salas e espaços</p>
           </div>
-          <div style={{display:'flex', gap:'10px', flexWrap:'wrap'}}>
+          <div className="banner-salas-acoes">
             <button className="btn btn-success" onClick={() => setActiveTab('cadastro')}><i className="las la-plus-circle"></i> Nova Sala</button>
-            <button className="btn btn-primary" onClick={() => abrirReserva()}><i className="las la-calendar-plus"></i> Nova Reserva</button>
+            <button className="btn btn-primary" onClick={() => abrirReserva()} disabled={!!erroCarga} title={erroCarga ? 'Carregue os dados antes de criar uma reserva' : undefined}><i aria-hidden="true" className="las la-calendar-plus"></i> Nova Reserva</button>
           </div>
         </div>
 
         <div className="stats-grid">
-          <div className="stat-card livre"><div className="stat-icon"><i className="las la-check-circle"></i></div><div className="stat-valor">{stats.livres}</div><div className="stat-label"> Livres</div></div>
-          <div className="stat-card ocupado"><div className="stat-icon"><i className="las la-door-closed"></i></div><div className="stat-valor">{stats.ocupadas}</div><div className="stat-label"> Em Uso</div></div>
-          <div className="stat-card reservado"><div className="stat-icon"><i className="las la-clock"></i></div><div className="stat-valor">{stats.reservadas}</div><div className="stat-label"> Reservadas</div></div>
-          <div className="stat-card manutencao"><div className="stat-icon"><i className="las la-tools"></i></div><div className="stat-valor">{stats.manutencao}</div><div className="stat-label"> Manutenção</div></div>
-          <div className="stat-card"><div className="stat-icon"><i className="las la-door-open"></i></div><div className="stat-valor">{stats.total}</div><div className="stat-label">Total de Salas</div></div>
+          <div className="stat-card livre"><div className="stat-icon" aria-hidden="true"><i className="las la-check-circle"></i></div><div className="stat-valor">{erroCarga ? '—' : stats.livres}</div><div className="stat-label">Livres</div></div>
+          <div className="stat-card ocupado"><div className="stat-icon" aria-hidden="true"><i className="las la-door-closed"></i></div><div className="stat-valor">{erroCarga ? '—' : stats.ocupadas}</div><div className="stat-label">Em Uso</div></div>
+          <div className="stat-card reservado"><div className="stat-icon" aria-hidden="true"><i className="las la-clock"></i></div><div className="stat-valor">{erroCarga ? '—' : stats.reservadas}</div><div className="stat-label">Reservadas</div></div>
+          <div className="stat-card manutencao"><div className="stat-icon" aria-hidden="true"><i className="las la-tools"></i></div><div className="stat-valor">{erroCarga ? '—' : stats.manutencao}</div><div className="stat-label">Manutenção</div></div>
+          <div className="stat-card"><div className="stat-icon" aria-hidden="true"><i className="las la-door-open"></i></div><div className="stat-valor">{erroCarga ? '—' : stats.total}</div><div className="stat-label">Total de Salas</div></div>
         </div>
+
+        {erroCarga && (
+          <div className="salas-erro" role="alert">
+            <span>{erroCarga}</span>
+            <button className="btn btn-primary btn-sm" onClick={carregarDados}>Tentar novamente</button>
+          </div>
+        )}
 
         <div className="legenda-salas">
           <div className="legenda-item"><div className="legenda-cor" style={{background:'#22c55e'}}></div>  Livre - Disponível para uso</div>
@@ -286,18 +294,17 @@ export default function GestaoSalasPage() {
         </div>
 
         <div className="tabs-salas">
-          <button className={`tab-btn ${activeTab === 'mapa' ? 'ativo' : ''}`} onClick={() => setActiveTab('mapa')}><i className="las la-th-large"></i> Mapa de Salas</button>
-          <button className={`tab-btn ${activeTab === 'cadastro' ? 'ativo' : ''}`} onClick={() => setActiveTab('cadastro')}><i className="las la-plus-circle"></i> Cadastrar Sala</button>
-          <button className={`tab-btn ${activeTab === 'reservas' ? 'ativo' : ''}`} onClick={() => setActiveTab('reservas')}><i className="las la-calendar-alt"></i> Reservas</button>
-          <button className={`tab-btn ${activeTab === 'historico' ? 'ativo' : ''}`} onClick={() => setActiveTab('historico')}><i className="las la-history"></i> Histórico</button>
+          <button type="button" aria-pressed={activeTab === 'mapa'} className={`tab-btn ${activeTab === 'mapa' ? 'ativo' : ''}`} onClick={() => setActiveTab('mapa')}><i aria-hidden="true" className="las la-th-large"></i> Mapa de Salas</button>
+          <button type="button" aria-pressed={activeTab === 'cadastro'} className={`tab-btn ${activeTab === 'cadastro' ? 'ativo' : ''}`} onClick={() => setActiveTab('cadastro')}><i aria-hidden="true" className="las la-plus-circle"></i> Cadastrar Sala</button>
+          <button type="button" aria-pressed={activeTab === 'reservas'} className={`tab-btn ${activeTab === 'reservas' ? 'ativo' : ''}`} onClick={() => setActiveTab('reservas')}><i aria-hidden="true" className="las la-calendar-alt"></i> Reservas</button>
+          <button type="button" aria-pressed={activeTab === 'historico'} className={`tab-btn ${activeTab === 'historico' ? 'ativo' : ''}`} onClick={() => setActiveTab('historico')}><i aria-hidden="true" className="las la-history"></i> Histórico</button>
         </div>
 
         {activeTab === 'mapa' && (
           <div>
-            {erroCarga && <p role="alert" style={{ color: '#b91c1c' }}>{erroCarga}</p>}
             <div className="search-box">
-              <input type="text" placeholder="Buscar sala por nome, tipo ou setor..." value={buscarSala} onChange={e => setBuscarSala(e.target.value)} />
-              <select value={filtroStatusSala} onChange={e => setFiltroStatusSala(e.target.value)}>
+              <input aria-label="Buscar sala por nome, tipo ou setor" type="search" placeholder="Buscar sala por nome, tipo ou setor..." value={buscarSala} onChange={e => setBuscarSala(e.target.value)} />
+              <select aria-label="Filtrar salas por status" value={filtroStatusSala} onChange={e => setFiltroStatusSala(e.target.value)}>
                 <option value="todos">Todos os Status</option>
                 <option value="LIVRE"> Livres</option>
                 <option value="RESERVADO"> Reservadas</option>
@@ -306,7 +313,7 @@ export default function GestaoSalasPage() {
               </select>
             </div>
             <div className="mapa-salas">
-              {salasFiltradas.length === 0 ? (
+              {erroCarga ? null : salasFiltradas.length === 0 ? (
                 <div style={{textAlign:'center', padding:'50px', color:'#94a3b8', gridColumn:'1/-1'}}><i className="las la-door-open" style={{fontSize:'64px', opacity:0.3}}></i><p>Nenhuma sala encontrada</p></div>
               ) : (
                 salasFiltradas.map(s => {
@@ -339,8 +346,8 @@ export default function GestaoSalasPage() {
                     <div key={s.id} className={`sala-card ${salaStatusCss}`}>
                       <div className="sala-numero"><span>{s.nome}</span><span className="sala-status">{statusLabel[s.status]}</span></div>
                       <div className="sala-info">
-                          <p><i className="las la-tag"></i> {tiposSala[s.tipo] || s.tipo}</p>
-                          <p><i className="las la-map-marker"></i> {s.setor}{s.andar ? ' - ' + s.andar : ''}</p>
+                          <p><i aria-hidden="true" className="las la-tag"></i> {tiposSala[s.tipo || ''] || s.tipo || 'Tipo não informado'}</p>
+                          <p><i aria-hidden="true" className="las la-map-marker"></i> {s.setor || 'Setor não informado'}{s.andar ? ' - ' + s.andar : ''}</p>
                           <p><i className="las la-users"></i> Capacidade: {s.capacidade} pessoa(s)</p>
                           {s.equipamentos && <p><i className="las la-tools"></i> {s.equipamentos}</p>}
                           {s.obs && <p><i className="las la-info-circle"></i> {s.obs}</p>}
@@ -383,23 +390,23 @@ export default function GestaoSalasPage() {
           <div className="form-panel">
             <h3><i className="las la-plus-circle"></i> Cadastrar Nova Sala</h3>
             <div className="form-grid">
-              <div className="form-grupo"><label>Nome da Sala *</label><input type="text" placeholder="Ex: Consultório 3" value={formSala.nome} onChange={e => setFormSala({...formSala, nome: e.target.value})} /></div>
-              <div className="form-grupo"><label>Tipo *</label><select value={formSala.tipo} onChange={e => setFormSala({...formSala, tipo: e.target.value})}>
+              <div className="form-grupo"><label htmlFor="sala-nome">Nome da Sala *</label><input id="sala-nome" type="text" placeholder="Ex: Consultório 3" value={formSala.nome} onChange={e => setFormSala({...formSala, nome: e.target.value})} /></div>
+              <div className="form-grupo"><label htmlFor="sala-tipo">Tipo *</label><select id="sala-tipo" value={formSala.tipo} onChange={e => setFormSala({...formSala, tipo: e.target.value})}>
                 <option value="consultorio"> Consultório</option><option value="cirurgica"> Sala Cirúrgica</option>
                 <option value="exame"> Sala de Exames</option><option value="reuniao"> Sala de Reunião</option>
                 <option value="triagem"> Sala de Triagem</option><option value="observacao"> Sala de Observação</option>
                 <option value="procedimento"> Sala de Procedimentos</option><option value="aula"> Sala de Aula</option>
                 <option value="outro"> Outro</option>
               </select></div>
-              <div className="form-grupo"><label>Setor *</label><select value={formSala.setor} onChange={e => setFormSala({...formSala, setor: e.target.value})}>
+              <div className="form-grupo"><label htmlFor="sala-setor">Setor *</label><select id="sala-setor" value={formSala.setor} onChange={e => setFormSala({...formSala, setor: e.target.value})}>
                 <option>Consultórios</option><option>Centro Cirúrgico</option><option>Emergência</option>
                 <option>UTI</option><option>Enfermaria</option><option>Ambulatório</option>
                 <option>Administração</option><option>Outro</option>
               </select></div>
-              <div className="form-grupo"><label>Andar</label><input type="text" placeholder="Térreo, 1º Andar..." value={formSala.andar} onChange={e => setFormSala({...formSala, andar: e.target.value})} /></div>
-              <div className="form-grupo"><label>Capacidade</label><input type="number" min="1" value={formSala.capacidade} onChange={e => setFormSala({...formSala, capacidade: parseInt(e.target.value)})} /></div>
-              <div className="form-grupo"><label>Equipamentos</label><input type="text" placeholder="Maca, Computador, Projetor..." value={formSala.equipamentos} onChange={e => setFormSala({...formSala, equipamentos: e.target.value})} /></div>
-              <div className="form-grupo full"><label>Observações</label><textarea rows={2} value={formSala.obs} onChange={e => setFormSala({...formSala, obs: e.target.value})}></textarea></div>
+              <div className="form-grupo"><label htmlFor="sala-andar">Andar</label><input id="sala-andar" type="text" placeholder="Térreo, 1º Andar..." value={formSala.andar} onChange={e => setFormSala({...formSala, andar: e.target.value})} /></div>
+              <div className="form-grupo"><label htmlFor="sala-capacidade">Capacidade</label><input id="sala-capacidade" type="number" min="1" value={formSala.capacidade} onChange={e => setFormSala({...formSala, capacidade: parseInt(e.target.value) || 1})} /></div>
+              <div className="form-grupo"><label htmlFor="sala-equipamentos">Equipamentos</label><input id="sala-equipamentos" type="text" placeholder="Maca, Computador, Projetor..." value={formSala.equipamentos} onChange={e => setFormSala({...formSala, equipamentos: e.target.value})} /></div>
+              <div className="form-grupo full"><label htmlFor="sala-obs">Observações</label><textarea id="sala-obs" rows={2} value={formSala.obs} onChange={e => setFormSala({...formSala, obs: e.target.value})}></textarea></div>
             </div>
             <button className="btn btn-success" onClick={cadastrarSala} disabled={isSaving} style={{width:'100%', marginTop:'15px', justifyContent:'center', padding:'14px'}}><i className="las la-save"></i> {isSaving ? 'Cadastrando...' : 'Cadastrar Sala'}</button>
           </div>
@@ -407,12 +414,13 @@ export default function GestaoSalasPage() {
 
         {activeTab === 'reservas' && (
           <div>
-            {erroCarga && <p role="alert" style={{ color: '#b91c1c' }}>{erroCarga}</p>}
-            <div className="search-box"><input type="text" placeholder="Buscar por sala, profissional ou paciente..." value={buscarReserva} onChange={e => setBuscarReserva(e.target.value)} /></div>
-            <div style={{background:'white', borderRadius: '8px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)'}}>
+            <div className="search-box"><input aria-label="Buscar reserva por profissional ou paciente" type="search" placeholder="Buscar por sala, profissional ou paciente..." value={buscarReserva} onChange={e => setBuscarReserva(e.target.value)} /></div>
+            <div className="tabela-salas-wrapper">
               <table className="tabela-salas"><thead><tr><th>Sala</th><th>Profissional</th><th>Paciente/Evento</th><th>Data</th><th>Horário</th><th>Status</th><th>Ações</th></tr></thead>
               <tbody>
-                {reservasFiltradas.filter(r => r.status === 'ATIVA' || r.status === 'RESERVADA').length === 0 ? (
+                {erroCarga ? (
+                  <tr><td colSpan={7} role="status" style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Reservas indisponíveis enquanto os dados não carregam.</td></tr>
+                ) : reservasFiltradas.filter(r => r.status === 'ATIVA' || r.status === 'RESERVADA').length === 0 ? (
                   <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhuma reserva ativa encontrada</td></tr>
                 ) : (
                   reservasFiltradas.filter(r => r.status === 'ATIVA' || r.status === 'RESERVADA').map(r => {
@@ -443,10 +451,12 @@ export default function GestaoSalasPage() {
         )}
 
         {activeTab === 'historico' && (
-          <div style={{background:'white', borderRadius: '8px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)'}}>
+          <div className="tabela-salas-wrapper">
             <table className="tabela-salas"><thead><tr><th>Data</th><th>Sala</th><th>Profissional</th><th>Status</th><th>Detalhes</th></tr></thead>
             <tbody>
-              {reservas.length === 0 ? (
+              {erroCarga ? (
+                <tr><td colSpan={5} role="status" style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Histórico indisponível enquanto os dados não carregam.</td></tr>
+              ) : reservas.length === 0 ? (
                 <tr><td colSpan={5} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhum histórico</td></tr>
               ) : (
                 reservas.map(r => {
@@ -473,24 +483,24 @@ export default function GestaoSalasPage() {
 
       {isModalOpen && (
         <div className="modal-overlay show">
-          <div className="modal-box">
-            <h3><i className="las la-calendar-plus"></i> Reservar Sala</h3>
+          <div className="modal-box" role="dialog" aria-modal="true" aria-labelledby="reserva-sala-titulo">
+            <h3 id="reserva-sala-titulo"><i aria-hidden="true" className="las la-calendar-plus"></i> Reservar Sala</h3>
             <div className="form-grid">
               <div className="form-grupo">
-                <label>Sala *</label>
-                <select value={formReserva.salaId} onChange={e => setFormReserva({...formReserva, salaId: e.target.value})}>
+                <label htmlFor="reserva-sala">Sala *</label>
+                <select id="reserva-sala" value={formReserva.salaId} onChange={e => setFormReserva({...formReserva, salaId: e.target.value})}>
                   <option value="">Selecione...</option>
-                  {salas.filter(s => s.status === 'LIVRE' || s.id === formReserva.salaId).map(s => <option key={s.id} value={s.id}>{s.nome} ({s.setor})</option>)}
+                  {salas.filter(s => s.status === 'LIVRE' || s.status === 'RESERVADO' || s.id === formReserva.salaId).map(s => <option key={s.id} value={s.id}>{s.nome} ({s.setor})</option>)}
                 </select>
               </div>
-              <div className="form-grupo"><label>Profissional *</label><input type="text" value={formReserva.profissional} onChange={e => setFormReserva({...formReserva, profissional: e.target.value})} /></div>
-              <div className="form-grupo"><label>Paciente / Evento</label><input type="text" value={formReserva.paciente} onChange={e => setFormReserva({...formReserva, paciente: e.target.value})} /></div>
-              <div className="form-grupo"><label>Data *</label><input type="date" value={formReserva.data} onChange={e => setFormReserva({...formReserva, data: e.target.value})} /></div>
-              <div className="form-grupo"><label>Horário Início *</label><input type="time" value={formReserva.horaInicio} onChange={e => setFormReserva({...formReserva, horaInicio: e.target.value})} /></div>
-              <div className="form-grupo"><label>Horário Término *</label><input type="time" value={formReserva.horaFim} onChange={e => setFormReserva({...formReserva, horaFim: e.target.value})} /></div>
+              <div className="form-grupo"><label htmlFor="reserva-profissional">Profissional *</label><input id="reserva-profissional" type="text" value={formReserva.profissional} onChange={e => setFormReserva({...formReserva, profissional: e.target.value})} /></div>
+              <div className="form-grupo"><label htmlFor="reserva-paciente">Paciente / Evento</label><input id="reserva-paciente" type="text" value={formReserva.paciente} onChange={e => setFormReserva({...formReserva, paciente: e.target.value})} /></div>
+              <div className="form-grupo"><label htmlFor="reserva-data">Data *</label><input id="reserva-data" type="date" value={formReserva.data} onChange={e => setFormReserva({...formReserva, data: e.target.value})} /></div>
+              <div className="form-grupo"><label htmlFor="reserva-inicio">Horário Início *</label><input id="reserva-inicio" type="time" value={formReserva.horaInicio} onChange={e => setFormReserva({...formReserva, horaInicio: e.target.value})} /></div>
+              <div className="form-grupo"><label htmlFor="reserva-fim">Horário Término *</label><input id="reserva-fim" type="time" value={formReserva.horaFim} onChange={e => setFormReserva({...formReserva, horaFim: e.target.value})} /></div>
               <div className="form-grupo">
-                <label>Duração (atalho)</label>
-                <select value={formReserva.duracao} onChange={e => calcularHoraFim(e.target.value, formReserva.horaInicio)}>
+                <label htmlFor="reserva-duracao">Duração (atalho)</label>
+                <select id="reserva-duracao" value={formReserva.duracao} onChange={e => calcularHoraFim(e.target.value, formReserva.horaInicio)}>
                   <option value="">Personalizado</option><option value="15">15 minutos</option><option value="30">30 minutos</option>
                   <option value="45">45 minutos</option><option value="60">1 hora</option><option value="120">2 horas</option>
                 </select>

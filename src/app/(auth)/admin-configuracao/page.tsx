@@ -10,8 +10,10 @@ export default function AdminConfiguracaoPage() {
   const hospitalId = session?.user?.hospitalId ?? '';
   const canManageHospital = status === 'authenticated' && session.user.cargo === 'ADMIN' && Boolean(hospitalId);
   const [loadingHospital, setLoadingHospital] = useState(true);
+  const [erroCarregamento, setErroCarregamento] = useState(false);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [feedbackErro, setFeedbackErro] = useState(false);
 
   // Form states
   const [nome, setNome] = useState('');
@@ -25,10 +27,13 @@ export default function AdminConfiguracaoPage() {
     if (!canManageHospital) return;
 
     const controller = new AbortController();
+    setLoadingHospital(true);
+    setErroCarregamento(false);
     fetch(`/api/hospitais/${encodeURIComponent(hospitalId)}`, { signal: controller.signal })
       .then(async response => {
         const current = await response.json();
         if (!response.ok) throw new Error(current.error || 'Não foi possível carregar os dados do hospital.');
+        if (!current || typeof current !== 'object') throw new Error('A resposta do hospital é inválida.');
         setNome(current.nome || '');
         setCnpj(current.cnpj || '');
         setEndereco(current.endereco || '');
@@ -36,9 +41,15 @@ export default function AdminConfiguracaoPage() {
         setLogoUrl(current.logo || '');
       })
       .catch(error => {
-        if (error instanceof Error && error.name !== 'AbortError') setFeedback(error.message || 'Erro ao carregar os dados do hospital.');
+        if (error instanceof Error && error.name !== 'AbortError') {
+          setErroCarregamento(true);
+          setFeedbackErro(true);
+          setFeedback(error.message || 'Erro ao carregar os dados do hospital.');
+        }
       })
-      .finally(() => setLoadingHospital(false));
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingHospital(false);
+      });
 
     return () => controller.abort();
   }, [canManageHospital, hospitalId]);
@@ -46,30 +57,52 @@ export default function AdminConfiguracaoPage() {
   const handleSalvar = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (session?.user?.cargo !== 'ADMIN' || !hospitalId) {
+      setFeedbackErro(true);
       setFeedback('Apenas o administrador do hospital pode alterar estas configurações.');
       return;
     }
     if (!nome.trim()) {
+      setFeedbackErro(true);
       setFeedback('O nome da instituição é obrigatório.');
       return;
     }
     if (!cnpj.trim()) {
+      setFeedbackErro(true);
       setFeedback('O CNPJ da instituição é obrigatório.');
       return;
     }
 
     setSaving(true);
     setFeedback('');
+    setFeedbackErro(false);
     try {
       const response = await fetch(`/api/hospitais/${encodeURIComponent(hospitalId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome, cnpj, endereco, telefone, logoUrl })
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Erro ao salvar configurações.');
+      const result: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        const message = result && typeof result === 'object' && 'error' in result && typeof result.error === 'string'
+          ? result.error
+          : 'Erro ao salvar configurações.';
+        throw new Error(message);
+      }
+      if (result && typeof result === 'object') {
+        if ('nome' in result && typeof result.nome === 'string') setNome(result.nome);
+        if ('cnpj' in result && typeof result.cnpj === 'string') setCnpj(result.cnpj);
+        if ('endereco' in result) setEndereco(typeof result.endereco === 'string' ? result.endereco : '');
+        if ('telefone' in result) setTelefone(typeof result.telefone === 'string' ? result.telefone : '');
+        if ('logo' in result) {
+          const savedLogo = typeof result.logo === 'string' ? result.logo : '';
+          setLogoUrl(savedLogo);
+          setLogoPreviewErro(false);
+        }
+      }
+      setFeedbackErro(false);
       setFeedback('Configurações salvas com sucesso.');
     } catch (error) {
+      setFeedbackErro(true);
       setFeedback(error instanceof Error ? error.message : 'Erro ao salvar configurações.');
     } finally {
       setSaving(false);
@@ -92,11 +125,11 @@ export default function AdminConfiguracaoPage() {
         </div>
 
         {status !== 'loading' && !canManageHospital && (
-          <p role="alert" className="config-feedback">Apenas o administrador do hospital pode alterar estas configurações.</p>
+          <p role="alert" className="config-feedback erro">Apenas o administrador do hospital pode alterar estas configurações.</p>
         )}
-        {feedback && <p role="status" aria-live="polite" className="config-feedback">{feedback}</p>}
+        {feedback && <p role={feedbackErro ? 'alert' : 'status'} aria-live={feedbackErro ? 'assertive' : 'polite'} className={`config-feedback ${feedbackErro ? 'erro' : 'sucesso'}`}>{feedback}</p>}
 
-        {status === 'loading' || (canManageHospital && loadingHospital) ? <p role="status">Carregando dados da instituição…</p> : canManageHospital && <form className="form-panel" onSubmit={handleSalvar}>
+        {status === 'loading' || (canManageHospital && loadingHospital) ? <p role="status">Carregando dados da instituição…</p> : canManageHospital && erroCarregamento ? null : canManageHospital && <form className="form-panel" onSubmit={handleSalvar}>
           <h3><Hospital aria-hidden="true" /> Dados Cadastrais</h3>
           
           <div className="form-grid">
@@ -120,6 +153,7 @@ export default function AdminConfiguracaoPage() {
                 id="instituicao-cnpj"
                 name="cnpj"
                 type="text" 
+                inputMode="numeric"
                 value={cnpj} 
                 onChange={(e) => setCnpj(e.target.value)} 
                 placeholder="00.000.000/0001-00"
@@ -134,6 +168,7 @@ export default function AdminConfiguracaoPage() {
                 id="instituicao-telefone"
                 name="telefone"
                 type="text" 
+                inputMode="tel"
                 value={telefone} 
                 onChange={(e) => setTelefone(e.target.value)} 
                 placeholder="(00) 0000-0000"
@@ -167,7 +202,9 @@ export default function AdminConfiguracaoPage() {
               />
               <div className="logo-preview-box">
                 {logoUrl && !logoPreviewErro ? (
-                  <img src={logoUrl} alt="Prévia do logotipo" onError={() => setLogoPreviewErro(true)} />
+                  <img src={logoUrl} alt="Prévia do logotipo" referrerPolicy="no-referrer" onError={() => setLogoPreviewErro(true)} />
+                ) : logoUrl && logoPreviewErro ? (
+                  <p role="status" className="logo-preview-error">Não foi possível carregar a prévia desta imagem.</p>
                 ) : (
                   <>
                     <ImagePlus aria-hidden="true" />

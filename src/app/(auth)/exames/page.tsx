@@ -182,24 +182,33 @@ export default function ExamesPage() {
   };
 
   const examesPendentes = exames.filter(e => e.status !== "SOLICITADO" && !e.resultado);
-  const resultadosRecentes = exames.filter(e => e.resultado).slice(0, 10);
+  const resultadosRecentes = exames
+    .filter(e => e.resultado)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 10);
 
   const dataLocal = new Date();
-  const hoje = `${dataLocal.getFullYear()}-${String(dataLocal.getMonth() + 1).padStart(2, '0')}-${String(dataLocal.getDate()).padStart(2, '0')}`;
+  const concluidoHoje = (updatedAt: string) => {
+    const dataAtualizacao = new Date(updatedAt);
+    return Number.isFinite(dataAtualizacao.getTime())
+      && dataAtualizacao.getFullYear() === dataLocal.getFullYear()
+      && dataAtualizacao.getMonth() === dataLocal.getMonth()
+      && dataAtualizacao.getDate() === dataLocal.getDate();
+  };
   const stats = {
     lab: exames.filter(e => tipoNormalizado(e.tipo) === "laboratorio").length,
     img: exames.filter(e => tipoNormalizado(e.tipo) === "imagem").length,
     pendentes: exames.filter(e => !e.resultado).length,
-    concluidos: exames.filter(e => e.status === 'CONCLUIDO' && e.updatedAt.startsWith(hoje)).length,
+    concluidos: exames.filter(e => e.status === 'CONCLUIDO' && concluidoHoje(e.updatedAt)).length,
     alterados: exames.filter(e => e.status === "ALTERADO_CRITICO").length
   };
 
   let listaExames = [...exames];
   if (filtroTipo !== 'todos') listaExames = listaExames.filter(e => tipoNormalizado(e.tipo) === filtroTipo);
   if (filtroStatus !== 'todos') listaExames = listaExames.filter(e => e.status === filtroStatus);
-  if (buscarExame) {
-    const t = buscarExame.toLowerCase();
-    listaExames = listaExames.filter(e => e.paciente.nome.toLowerCase().includes(t) || e.nome.toLowerCase().includes(t));
+  if (buscarExame.trim()) {
+    const t = buscarExame.trim().toLocaleLowerCase('pt-BR');
+    listaExames = listaExames.filter(e => e.paciente.nome.toLocaleLowerCase('pt-BR').includes(t) || e.nome.toLocaleLowerCase('pt-BR').includes(t));
   }
 
   const getStatusName = (status: string) => {
@@ -286,7 +295,7 @@ export default function ExamesPage() {
               <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}><option value="todos">Todos os Tipos</option><option value="laboratorio"> Laboratório</option><option value="imagem"> Imagem</option></select>
               <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}><option value="todos">Todos os Status</option><option value="SOLICITADO">Solicitado</option><option value="COLETADO">Coletado</option><option value="EM_ANALISE">Em Análise</option><option value="CONCLUIDO">Concluído</option><option value="ALTERADO_CRITICO">Alterado/Crítico</option></select>
             </div>
-            <div style={{background:'white', borderRadius: '8px', overflow:'hidden', boxShadow:'0 4px 15px rgba(0,0,0,0.06)'}}>
+            <div className="tabela-exames-wrapper">
               <table className="tabela-exames">
                 <thead><tr><th>Data</th><th>Tipo</th><th>Paciente</th><th>Exame</th><th>Solicitante</th><th>Status</th><th>Ações</th></tr></thead>
                 <tbody>

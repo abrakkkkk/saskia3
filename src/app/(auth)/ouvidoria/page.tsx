@@ -119,15 +119,15 @@ export default function OuvidoriaPage() {
 
         <div className="banner-ouv">
           <div>
-            <h1><i className="las la-headset"></i> Ouvidoria</h1>
+          <h1><i className="las la-headset" aria-hidden="true"></i> Ouvidoria</h1>
             <p>Canal de manifestações: elogios, sugestões, reclamações e denúncias</p>
           </div>
           <button className="btn btn-success" onClick={() => setTabAtiva('registrar')}>
-            <i className="las la-plus-circle"></i> Nova Manifestação
+            <i className="las la-plus-circle" aria-hidden="true"></i> Nova Manifestação
           </button>
         </div>
 
-        {erroCarga && <div role="alert" className="alert-erro" style={{ margin: '0 0 16px' }}>{erroCarga}</div>}
+        {erroCarga && <div role="alert" aria-live="assertive" className="alert-erro">{erroCarga}</div>}
 
         <div className="stats-grid">
           <div className="stat-card">
@@ -145,17 +145,17 @@ export default function OuvidoriaPage() {
         </div>
 
         <div className="tabs-ouv">
-          <button className={`tab-btn ${tabAtiva === 'registrar' ? 'ativo' : ''}`} onClick={() => setTabAtiva('registrar')}>
-            <i className="las la-plus-circle"></i> Registrar
+          <button type="button" aria-pressed={tabAtiva === 'registrar'} className={`tab-btn ${tabAtiva === 'registrar' ? 'ativo' : ''}`} onClick={() => setTabAtiva('registrar')}>
+            <i className="las la-plus-circle" aria-hidden="true"></i> Registrar
           </button>
-          <button className={`tab-btn ${tabAtiva === 'lista' ? 'ativo' : ''}`} onClick={() => setTabAtiva('lista')}>
-            <i className="las la-list"></i> Manifestações
+          <button type="button" aria-pressed={tabAtiva === 'lista'} className={`tab-btn ${tabAtiva === 'lista' ? 'ativo' : ''}`} onClick={() => setTabAtiva('lista')}>
+            <i className="las la-list" aria-hidden="true"></i> Manifestações
           </button>
         </div>
 
         {tabAtiva === 'registrar' && (
           <div className="form-panel">
-            <h3><i className="las la-headset"></i> Registrar Manifestação</h3>
+            <h3><i className="las la-headset" aria-hidden="true"></i> Registrar Manifestação</h3>
             <div className="form-grid">
               <div className="form-grupo">
                 <label htmlFor="ouv-tipo">Tipo *</label>
@@ -186,7 +186,7 @@ export default function OuvidoriaPage() {
                 <textarea id="ouv-descricao" rows={4} maxLength={5000} value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} placeholder="Descreva sua manifestação..."></textarea>
               </div>
             </div>
-            <button className="btn btn-success" onClick={registrarManifestacao} disabled={salvando} style={{ width: '100%', marginTop: '15px' }}>
+            <button type="button" className="btn btn-success btn-enviar-ouv" onClick={registrarManifestacao} disabled={salvando}>
               <i className="las la-save" aria-hidden="true"></i> {salvando ? 'Enviando...' : 'Enviar Manifestação'}
             </button>
           </div>

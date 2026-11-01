@@ -47,7 +47,9 @@ export async function GET() {
       where: { hospitalId: acesso.hospitalId },
       orderBy: { createdAt: 'desc' },
     })
-    return NextResponse.json(casos)
+    return NextResponse.json(casos, {
+      headers: { 'Cache-Control': 'private, no-store, max-age=0' },
+    })
   } catch (error) {
     console.error('Erro ao buscar casos do Serviço Social:', error)
     return NextResponse.json({ error: 'Erro ao buscar casos do Serviço Social' }, { status: 500 })
@@ -103,7 +105,10 @@ export async function POST(request: NextRequest) {
         status: body.status,
       },
     })
-    return NextResponse.json(caso, { status: 201 })
+    return NextResponse.json(caso, {
+      status: 201,
+      headers: { 'Cache-Control': 'private, no-store, max-age=0' },
+    })
   } catch (error) {
     console.error('Erro ao registrar atendimento social:', error)
     return NextResponse.json({ error: 'Erro ao registrar atendimento social' }, { status: 500 })

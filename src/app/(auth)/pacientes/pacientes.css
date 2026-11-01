@@ -105,6 +105,175 @@
 
 @media (max-width: 768px) { .tabela { font-size: 11px; } .tabela th, .tabela td { padding: 10px 8px; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 
+/* Refinamento visual e adaptação para telas menores. */
+.pacientes-container {
+  padding: clamp(8px, 1.5vw, 18px);
+}
+
+.header-pacientes h2 {
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.stats-grid {
+  gap: 16px;
+}
+
+.stat-card {
+  border: 1px solid #dbe4ef;
+  border-left: 4px solid #1e3a8a;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(15, 35, 72, 0.06);
+}
+
+.stat-card:hover {
+  box-shadow: 0 8px 20px rgba(15, 35, 72, 0.11);
+}
+
+.toolbar {
+  gap: 12px;
+}
+
+.busca-wrapper {
+  min-width: min(280px, 100%);
+}
+
+.busca-wrapper input {
+  min-height: 46px;
+  border-radius: 10px;
+}
+
+.filtros {
+  gap: 8px;
+}
+
+.filtro-badge {
+  min-height: 40px;
+  border-width: 1px;
+  border-radius: 999px;
+  padding-inline: 15px;
+}
+
+.tabela-wrapper {
+  overflow-x: auto;
+  border: 1px solid #dbe4ef;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(15, 35, 72, 0.07);
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabela {
+  min-width: 760px;
+}
+
+.tabela th {
+  color: #e2e8f0;
+  letter-spacing: 0.06em;
+}
+
+.tabela tbody tr:hover {
+  background: #eff6ff;
+}
+
+.status-badge,
+.manchester-badge,
+.leito-badge {
+  white-space: nowrap;
+}
+
+.pag-btn {
+  width: 40px;
+  height: 40px;
+  border-width: 1px;
+}
+
+.modal-consultorio {
+  max-height: min(90vh, 760px);
+  overflow-y: auto;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(2, 8, 23, 0.32);
+}
+
+.modal-consultorio .paciente-info {
+  border: 1px solid #dbeafe;
+}
+
+.modal-consultorio .sala-opcao {
+  border-width: 1px;
+  border-radius: 10px;
+}
+
+.modal-consultorio .input-sala-manual {
+  min-height: 44px;
+}
+
+.pacientes-container :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .header-pacientes {
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+
+  .header-pacientes h2 {
+    font-size: 22px;
+  }
+
+  .stats-grid {
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .stat-card .stat-icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+  }
+
+  .toolbar {
+    align-items: stretch;
+  }
+
+  .toolbar > .btn {
+    justify-content: center;
+  }
+
+  .filtros {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 2px 2px 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .filtro-badge {
+    flex: 0 0 auto;
+  }
+
+  .modal-consultorio {
+    padding: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-card,
+  .btn-primary,
+  .btn-success,
+  .tabela tbody tr {
+    transition: none;
+  }
+
+  .tabela .chamado {
+    animation: none;
+  }
+}
+
 
 footer a:hover{color:white!important;}footer i{margin-right:5px;}
 

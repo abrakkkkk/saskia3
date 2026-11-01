@@ -4,6 +4,7 @@
     margin: 40px auto;
     padding: 0 20px 40px;
     animation: fadeIn 0.6s ease-out;
+    min-width: 0;
 }
 
 @keyframes fadeIn {
@@ -43,7 +44,7 @@
 }
 .card-mvv {
     background: white;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 28px 24px;
     text-align: center;
     box-shadow: 0 6px 20px rgba(0,0,0,0.05);
@@ -82,7 +83,7 @@
 
 .card-pessoa {
     background: white;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 24px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.05);
     border: 1px solid #e2e8f0;
@@ -212,7 +213,7 @@
 
 .secao-historia {
     background: white;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 32px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.05);
     border: 1px solid #e2e8f0;
@@ -227,7 +228,7 @@
 
 .secao-projeto {
     background: white;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 32px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.05);
     border: 1px solid #e2e8f0;
@@ -235,7 +236,7 @@
 .secao-projeto h2 { color: #0f172a; font-size: 22px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; font-weight: 800; }
 .grid-projeto { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .card-projeto {
-    background: #f8fafc; border-radius: 8px; padding: 18px;
+    background: #f8fafc; border-radius: 12px; padding: 18px;
     border: 1px solid #e2e8f0; transition: all 0.25s;
 }
 .card-projeto:hover { border-color: #1e3a8a; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
@@ -250,7 +251,7 @@
 /* ==================== IMPACTO ==================== */
 .secao-impacto {
     background: linear-gradient(135deg, #0a1f44, #1e3a8a);
-    border-radius: 8px; padding: 44px;
+    border-radius: 12px; padding: 44px;
     color: white;
     box-shadow: 0 16px 36px rgba(10,31,68,0.25);
 }
@@ -264,11 +265,17 @@
     .equipe-grid         { grid-template-columns: 1fr; }
     .secao-bottom-grid   { grid-template-columns: 1fr; }
 }
+@media (min-width: 1100px) {
+    .equipe-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+    .card-pessoa { display: flex; flex-direction: column; min-width: 0; }
+    .tags-formacao { margin-top: auto; padding-top: 4px; }
+}
 @media (max-width: 768px) {
     .secao-mvv           { grid-template-columns: 1fr; }
     .impacto-grid        { grid-template-columns: repeat(2, 1fr); }
     .grid-projeto        { grid-template-columns: 1fr; }
     .banner-sobre h1     { font-size: 24px; }
+    .secao-impacto       { padding: 32px 24px; }
     .card-pessoa.idealizador::after,
     .card-pessoa.designer::after,
     .card-pessoa.orientadora::after,
@@ -280,4 +287,20 @@
     .impacto-grid        { grid-template-columns: 1fr; }
     .banner-sobre        { padding: 32px 20px; }
     .foto-pessoa         { width: 60px; height: 60px; }
+    .sobre-nos-container { margin-top: 24px; padding-inline: 12px; }
+    .card-pessoa         { padding: 18px 16px; }
+    .card-header         { gap: 12px; }
+    .pessoa-header-info h3 { overflow-wrap: anywhere; }
+    .secao-historia,
+    .secao-projeto        { padding: 22px 18px; }
+    .secao-impacto        { padding: 28px 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sobre-nos-container,
+    .card-mvv,
+    .card-pessoa,
+    .foto-pessoa,
+    .card-projeto,
+    .contato-link { animation: none; transition: none; }
 }

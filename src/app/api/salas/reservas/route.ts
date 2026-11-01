@@ -29,7 +29,7 @@ export async function GET() {
       orderBy: { data: 'desc' },
     })
 
-    return NextResponse.json(reservas)
+    return NextResponse.json(reservas, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) {
     console.error('Erro ao buscar reservas de sala:', error)
     return NextResponse.json({ error: 'Erro ao buscar reservas' }, { status: 500 })

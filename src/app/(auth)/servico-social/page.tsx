@@ -3,12 +3,27 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import './servico-social.css';
 
+function dataDoAtendimento(registro: any): Date | null {
+  const dataInformada = typeof registro.detalhe === 'string'
+    ? registro.detalhe.match(/(?:^|\n)Data do atendimento: (\d{4}-\d{2}-\d{2})(?:\n|$)/)?.[1]
+    : undefined;
+  if (dataInformada) {
+    const [ano, mes, dia] = dataInformada.split('-').map(Number);
+    const data = new Date(ano, mes - 1, dia);
+    if (data.getFullYear() === ano && data.getMonth() === mes - 1 && data.getDate() === dia) return data;
+  }
+
+  const criadaEm = new Date(registro.createdAt);
+  return Number.isNaN(criadaEm.getTime()) ? null : criadaEm;
+}
+
 export default function ServicoSocialPage() {
   const { data: session, status: sessionStatus } = useSession();
   const [tabAtiva, setTabAtiva] = useState('atendimento');
   const [loading, setLoading] = useState(true);
   const [erroCarga, setErroCarga] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [feedbackAtendimento, setFeedbackAtendimento] = useState({ texto: '', erro: false });
   
   // Dados
   const [pacientes, setPacientes] = useState<any[]>([]);
@@ -32,8 +47,10 @@ export default function ServicoSocialPage() {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      const resP = await fetch('/api/pacientes');
-      const resA = await fetch('/api/servico-social');
+      const [resP, resA] = await Promise.all([
+        fetch('/api/pacientes?visao=servico-social', { cache: 'no-store' }),
+        fetch('/api/servico-social', { cache: 'no-store' }),
+      ]);
       if (!resP.ok || !resA.ok) throw new Error('Não foi possível carregar os dados do Serviço Social. Atualize a página.');
       const [dadosPacientes, dadosAtendimentos] = await Promise.all([resP.json(), resA.json()]);
       if (!Array.isArray(dadosPacientes) || !Array.isArray(dadosAtendimentos)) throw new Error('A resposta do servidor está inválida.');
@@ -63,11 +80,12 @@ export default function ServicoSocialPage() {
 
   const registrarAtendimento = async () => {
     if (!form.pacienteId || !form.data || !form.relato.trim()) {
-      alert(" Selecione o paciente e preencha a data e o relato do atendimento.");
+      setFeedbackAtendimento({ texto: 'Selecione o paciente e preencha a data e o relato do atendimento.', erro: true });
       return;
     }
     if (salvando) return;
     setSalvando(true);
+    setFeedbackAtendimento({ texto: '', erro: false });
     const payload = {
       pacienteId: form.pacienteId,
       situacao: form.demanda,
@@ -88,11 +106,11 @@ export default function ServicoSocialPage() {
       if (!res.ok) throw new Error(resposta?.error || 'Erro ao registrar atendimento');
       
       setForm(prev => ({ ...prev, relato: '', encaminhamentos: '', pacienteId: '' }));
-      alert(" Atendimento registrado com sucesso!");
+      setFeedbackAtendimento({ texto: 'Atendimento registrado com sucesso.', erro: false });
       await carregarDados();
       setTabAtiva('lista');
     } catch (error: any) {
-      alert(error.message);
+      setFeedbackAtendimento({ texto: error instanceof Error ? error.message : 'Não foi possível registrar o atendimento.', erro: true });
     } finally {
       setSalvando(false);
     }
@@ -101,10 +119,10 @@ export default function ServicoSocialPage() {
   // Filtros de Tabela
   let listaFiltrada = atendimentos.slice();
   if (buscaLista) {
-    const t = buscaLista.toLowerCase();
+    const t = buscaLista.trim().toLocaleLowerCase('pt-BR');
     listaFiltrada = listaFiltrada.filter(a => 
-      (a.pacienteNome || '').toLowerCase().includes(t) ||
-      (a.situacao || '').toLowerCase().includes(t)
+      (a.pacienteNome || '').toLocaleLowerCase('pt-BR').includes(t) ||
+      (a.situacao || '').toLocaleLowerCase('pt-BR').includes(t)
     );
   }
 
@@ -113,8 +131,8 @@ export default function ServicoSocialPage() {
   const mesAtual = agora.getMonth() + 1;
   const anoAtual = agora.getFullYear();
   const atendimentosMes = atendimentos.filter(a => {
-    const d = new Date(a.createdAt);
-    return (d.getMonth() + 1) === mesAtual && d.getFullYear() === anoAtual;
+    const d = dataDoAtendimento(a);
+    return d !== null && (d.getMonth() + 1) === mesAtual && d.getFullYear() === anoAtual;
   }).length;
   
   const pendentes = atendimentos.filter(a => {
@@ -133,7 +151,7 @@ export default function ServicoSocialPage() {
     return (
       <div className="conteudo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '350px', gap: '16px' }}>
         <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <p style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>Carregando dados do Serviço Social...</p>
+        <p role="status" style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>Carregando dados do Serviço Social...</p>
       </div>
     );
   }
@@ -142,56 +160,57 @@ export default function ServicoSocialPage() {
     <div className="conteudo">
       <div className="ss-container">
 
-        {erroCarga && <p role="alert" style={{ color: '#b91c1c', background: '#fff', padding: 12, borderRadius: 8 }}>{erroCarga}</p>}
+        {erroCarga && <div className="ss-alerta-carga" role="alert"><span>{erroCarga}</span><button type="button" onClick={() => void carregarDados()} disabled={loading}>{loading ? 'Tentando novamente…' : 'Tentar novamente'}</button></div>}
+        {feedbackAtendimento.texto && <p className={`ss-feedback ${feedbackAtendimento.erro ? 'erro' : 'sucesso'}`} role={feedbackAtendimento.erro ? 'alert' : 'status'}>{feedbackAtendimento.texto}</p>}
 
         <div className="banner-ss">
           <div>
-            <h1><i className="las la-hands-helping"></i> Serviço Social</h1>
+          <h1><i className="las la-hands-helping" aria-hidden="true"></i> Serviço Social</h1>
             <p>Atendimento social, acolhimento e controle de demandas do paciente.</p>
           </div>
-          <button className="btn btn-success" onClick={() => setTabAtiva('atendimento')}>
-            <i className="las la-plus-circle"></i> Novo Atendimento
+          <button type="button" className="btn btn-success" onClick={() => setTabAtiva('atendimento')}>
+            <i className="las la-plus-circle" aria-hidden="true"></i> Novo Atendimento
           </button>
         </div>
 
         <div className="stats-grid">
           <div className="stat-card">
-            <div className="stat-icon"><i className="las la-users"></i></div>
+            <div className="stat-icon" aria-hidden="true"><i className="las la-users"></i></div>
             <div className="stat-numero">{atendimentosMes}</div>
             <div className="stat-label">Atendimentos (Mês)</div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon" style={{ color: '#f59e0b' }}><i className="las la-clock"></i></div>
+            <div className="stat-icon" aria-hidden="true" style={{ color: '#f59e0b' }}><i className="las la-clock"></i></div>
             <div className="stat-numero">{pendentes}</div>
             <div className="stat-label">Pendentes</div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon" style={{ color: '#16a34a' }}><i className="las la-check-circle"></i></div>
+            <div className="stat-icon" aria-hidden="true" style={{ color: '#16a34a' }}><i className="las la-check-circle"></i></div>
             <div className="stat-numero">{concluidos}</div>
             <div className="stat-label">Concluídos</div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon" style={{ color: '#7c3aed' }}><i className="las la-share"></i></div>
+            <div className="stat-icon" aria-hidden="true" style={{ color: '#7c3aed' }}><i className="las la-share"></i></div>
             <div className="stat-numero">{comEncaminhamentos}</div>
             <div className="stat-label">Encaminhamentos</div>
           </div>
         </div>
 
-        <div className="tabs-ss">
-          <button className={`tab-btn ${tabAtiva === 'atendimento' ? 'ativo' : ''}`} onClick={() => setTabAtiva('atendimento')}>
-            <i className="las la-plus-circle"></i> Atendimento
+        <div className="tabs-ss" role="group" aria-label="Seções do Serviço Social">
+          <button type="button" aria-pressed={tabAtiva === 'atendimento'} className={`tab-btn ${tabAtiva === 'atendimento' ? 'ativo' : ''}`} onClick={() => setTabAtiva('atendimento')}>
+            <i className="las la-plus-circle" aria-hidden="true"></i> Atendimento
           </button>
-          <button className={`tab-btn ${tabAtiva === 'lista' ? 'ativo' : ''}`} onClick={() => setTabAtiva('lista')}>
-            <i className="las la-list"></i> Lista Completa
+          <button type="button" aria-pressed={tabAtiva === 'lista'} className={`tab-btn ${tabAtiva === 'lista' ? 'ativo' : ''}`} onClick={() => setTabAtiva('lista')}>
+            <i className="las la-list" aria-hidden="true"></i> Lista Completa
           </button>
-          <button className={`tab-btn ${tabAtiva === 'encaminhamentos' ? 'ativo' : ''}`} onClick={() => setTabAtiva('encaminhamentos')}>
-            <i className="las la-share"></i> Encaminhamentos
+          <button type="button" aria-pressed={tabAtiva === 'encaminhamentos'} className={`tab-btn ${tabAtiva === 'encaminhamentos' ? 'ativo' : ''}`} onClick={() => setTabAtiva('encaminhamentos')}>
+            <i className="las la-share" aria-hidden="true"></i> Encaminhamentos
           </button>
         </div>
 
         {tabAtiva === 'atendimento' && (
           <div className="form-panel">
-            <h3><i className="las la-hands-helping"></i> Registrar Atendimento Social</h3>
+            <h3><i className="las la-hands-helping" aria-hidden="true"></i> Registrar Atendimento Social</h3>
             <div className="form-grid">
               <div className="form-grupo">
                 <label htmlFor="social-paciente">Paciente *</label>
@@ -202,7 +221,7 @@ export default function ServicoSocialPage() {
               </div>
               <div className="form-grupo">
                 <label htmlFor="social-tipo">Tipo de Atendimento *</label>
-                <select id="social-tipo" value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
+                <select id="social-tipo" required value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
                   <option>Orientação Social</option>
                   <option>Acolhimento</option>
                   <option>Visita Domiciliar</option>
@@ -212,7 +231,7 @@ export default function ServicoSocialPage() {
               </div>
               <div className="form-grupo">
                 <label htmlFor="social-demanda">Demanda Principal *</label>
-                <select id="social-demanda" value={form.demanda} onChange={e => setForm({...form, demanda: e.target.value})}>
+                <select id="social-demanda" required value={form.demanda} onChange={e => setForm({...form, demanda: e.target.value})}>
                   <option>Vulnerabilidade Social</option>
                   <option>Violência Doméstica</option>
                   <option>Abandono Familiar</option>
@@ -243,15 +262,16 @@ export default function ServicoSocialPage() {
               </div>
               <div className="form-grupo full">
                 <label htmlFor="social-relato">Relato / Evolução *</label>
-                <textarea id="social-relato" rows={3} required maxLength={4000} value={form.relato} onChange={e => setForm({...form, relato: e.target.value})} placeholder="Descreva o atendimento ou evolução do caso..."></textarea>
+                <textarea id="social-relato" rows={3} required maxLength={4000} aria-describedby="social-relato-contagem" value={form.relato} onChange={e => setForm({...form, relato: e.target.value})} placeholder="Descreva o atendimento ou evolução do caso..."></textarea>
+                <small id="social-relato-contagem" className="ss-contagem">{form.relato.length}/4000 caracteres</small>
               </div>
               <div className="form-grupo full">
                 <label htmlFor="social-encaminhamentos">Encaminhamentos Realizados</label>
                 <textarea id="social-encaminhamentos" rows={2} maxLength={1000} value={form.encaminhamentos} onChange={e => setForm({...form, encaminhamentos: e.target.value})} placeholder="Ex: Encaminhado ao CRAS para benefício eventual."></textarea>
               </div>
             </div>
-            <button className="btn btn-success" onClick={registrarAtendimento} disabled={salvando || loading || sessionStatus !== 'authenticated'} style={{ width: '100%', marginTop: '15px' }}>
-              <i className="las la-save"></i> {salvando ? 'Salvando...' : 'Salvar Atendimento'}
+            <button type="button" className="btn btn-success" onClick={registrarAtendimento} disabled={salvando || loading || sessionStatus !== 'authenticated'} aria-busy={salvando} style={{ width: '100%', marginTop: '15px' }}>
+              <i className="las la-save" aria-hidden="true"></i> {salvando ? 'Salvando...' : 'Salvar Atendimento'}
             </button>
           </div>
         )}
@@ -263,12 +283,13 @@ export default function ServicoSocialPage() {
             </div>
             <div style={{ background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
               <table className="tabela-ss">
+                <caption className="ss-sr-only">Atendimentos de Serviço Social registrados</caption>
                 <thead>
                   <tr><th>Data</th><th>Paciente</th><th>Demanda</th><th>Detalhe</th><th>Status</th></tr>
                 </thead>
                 <tbody>
                   {listaFiltrada.length === 0 ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhum atendimento registrado.</td></tr>
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>{buscaLista.trim() ? 'Nenhum atendimento corresponde à busca.' : 'Nenhum atendimento registrado.'}</td></tr>
                   ) : (
                     listaFiltrada.map((a) => {
                       let badge = "badge-info";
@@ -278,7 +299,7 @@ export default function ServicoSocialPage() {
                       
                       return (
                         <tr key={a.id}>
-                          <td>{new Date(a.createdAt).toLocaleDateString('pt-BR')}</td>
+                          <td>{dataDoAtendimento(a)?.toLocaleDateString('pt-BR') || '—'}</td>
                           <td><strong>{a.pacienteNome}</strong></td>
                           <td>{a.situacao}</td>
                           <td>{a.detalhe}</td>

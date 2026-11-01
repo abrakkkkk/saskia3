@@ -83,6 +83,7 @@
 
 .tabela-planos {
     width: 100%;
+    min-width: 760px;
     border-collapse: collapse;
 }
 
@@ -224,10 +225,15 @@
 }
 
 @media (max-width: 768px) {
+    .container-planos { padding: 14px; }
+    .banner-planos { padding: 34px 20px; }
     .banner-planos h1 {
         font-size: 28px;
     }
     .cards-destaque {
         grid-template-columns: 1fr;
     }
+    .secao-planos { margin-bottom: 36px; }
+    .secao-planos h2 { font-size: 20px; }
+    .tabela-planos th, .tabela-planos td { padding: 14px 16px; }
 }

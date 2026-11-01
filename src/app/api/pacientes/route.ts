@@ -59,6 +59,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(fila)
     }
 
+    if (request.nextUrl.searchParams.get('visao') === 'servico-social') {
+      const pacientes = await prisma.paciente.findMany({
+        where: { hospitalId, arquivadoEm: null },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, nome: true },
+      })
+      return NextResponse.json(pacientes, {
+        headers: { 'Cache-Control': 'private, no-store, max-age=0' },
+      })
+    }
+
     const pacientes = await prisma.paciente.findMany({
       where: { hospitalId, arquivadoEm: archived ? { not: null } : null },
       orderBy: { createdAt: 'desc' },

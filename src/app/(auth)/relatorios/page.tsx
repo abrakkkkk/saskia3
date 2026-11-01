@@ -4,7 +4,23 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 import './relatorios.css';
 
 // Cores para gráficos
-const COLORS = ['#f59e0b', '#3b82f6', '#ec4899', '#22c55e', '#64748b'];
+const COLORS = ['#f59e0b', '#3b82f6', '#ec4899', '#22c55e', '#64748b', '#8b5cf6', '#0891b2'];
+const STATUS_LABELS: Record<string, string> = {
+  AGENDADO: 'Agendado',
+  CONFIRMADO: 'Confirmado',
+  EM_ESPERA: 'Em espera',
+  EM_ATENDIMENTO: 'Em atendimento',
+  CONCLUIDO: 'Concluído',
+  CANCELADO: 'Cancelado',
+  FALTOU: 'Faltou',
+};
+const FILTER_LABELS: Record<string, string> = {
+  hoje: 'Hoje',
+  semana: 'Últimos 7 dias',
+  mes: 'Últimos 30 dias',
+  ano: 'Este ano',
+  todos: 'Todo o período',
+};
 
 function dataLocalKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -53,11 +69,11 @@ export default function RelatoriosPage() {
       setInicio(dataLocalKey(hoje));
       setFim(dataLocalKey(hoje));
     } else if (periodo === 'semana') {
-      const sete = new Date(hoje); sete.setDate(hoje.getDate() - 7);
+      const sete = new Date(hoje); sete.setDate(hoje.getDate() - 6);
       setInicio(dataLocalKey(sete));
       setFim(dataLocalKey(hoje));
     } else if (periodo === 'mes') {
-      const trinta = new Date(hoje); trinta.setDate(hoje.getDate() - 30);
+      const trinta = new Date(hoje); trinta.setDate(hoje.getDate() - 29);
       setInicio(dataLocalKey(trinta));
       setFim(dataLocalKey(hoje));
     } else if (periodo === 'ano') {
@@ -71,6 +87,10 @@ export default function RelatoriosPage() {
   const gerarRelatorios = async () => {
     const idRequisicao = ++requisicaoAtual.current;
     setErro('');
+    if (inicio && fim && inicio > fim) {
+      setCarregando(false);
+      return;
+    }
     setCarregando(true);
     try {
       const params = new URLSearchParams({ inicio, fim });
@@ -78,8 +98,16 @@ export default function RelatoriosPage() {
       const report = await response.json();
       if (!response.ok) throw new Error(report.error || 'Não foi possível carregar os dados do relatório.');
       const metricas = ['pacientesNoPeriodo', 'internadosAgora', 'obitosNoPeriodo', 'cirurgiasNoPeriodo'];
-      if (!report || metricas.some(campo => typeof report[campo] !== 'number' || !Number.isFinite(report[campo]))
-        || !Array.isArray(report.agendamentos) || !Array.isArray(report.leitos)) {
+      const agendamentosValidos = Array.isArray(report?.agendamentos) && report.agendamentos.every((item: any) =>
+        item && typeof item.status === 'string'
+        && (item.profissional === null || typeof item.profissional === 'string')
+        && Number.isSafeInteger(item.total) && item.total >= 0
+      );
+      const leitosValidos = Array.isArray(report?.leitos) && report.leitos.every((leito: any) =>
+        leito && (leito.tipo === null || typeof leito.tipo === 'string') && typeof leito.status === 'string'
+      );
+      if (!report || metricas.some(campo => !Number.isSafeInteger(report[campo]) || report[campo] < 0)
+        || !agendamentosValidos || !leitosValidos) {
         throw new Error('A resposta do relatório está incompleta.');
       }
       if (idRequisicao !== requisicaoAtual.current) return;
@@ -98,7 +126,7 @@ export default function RelatoriosPage() {
         cirurgias: report.cirurgiasNoPeriodo,
       });
       const statuses = ['AGENDADO', 'CONFIRMADO', 'EM_ESPERA', 'EM_ATENDIMENTO', 'CONCLUIDO', 'CANCELADO', 'FALTOU'];
-      setChartStatus(statuses.map(name => ({ name, value: agendamentos.filter((item: any) => item.status === name).reduce((sum: number, item: any) => sum + item.total, 0) })));
+      setChartStatus(statuses.map(name => ({ name: STATUS_LABELS[name] || name, value: agendamentos.filter((item: any) => item.status === name).reduce((sum: number, item: any) => sum + item.total, 0) })));
       const tipos = Array.from(new Set(leitos.map((leito: any) => leito.tipo).filter(Boolean)));
       setChartLeitos(tipos.map(tipo => ({ tipo, ocupados: leitos.filter((leito: any) => leito.tipo === tipo && leito.status === 'OCUPADO').length, total: leitos.filter((leito: any) => leito.tipo === tipo).length })));
       const porProfissional = new Map<string, number>();
@@ -121,19 +149,35 @@ export default function RelatoriosPage() {
   };
 
   const handleExportCSV = () => {
-    const csv = 'Indicador;Valor\n' + Object.entries(data).map(([nome, valor]) => `"${nome}";"${valor}"`).join('\n');
-    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+    const labels: Record<keyof typeof data, string> = {
+      totalPacientes: 'Pacientes cadastrados no período',
+      atendimentos: 'Agendamentos concluídos no período',
+      internacoes: 'Pacientes internados agora',
+      obitos: 'Óbitos no período',
+      taxaUTI: 'Ocupação atual da UTI',
+      cirurgias: 'Cirurgias cadastradas no período',
+    };
+    const csvCell = (value: string) => {
+      const safeValue = /^[\u0000-\u0020]*[=+@-]/.test(value) ? `'${value}` : value;
+      return `"${safeValue.replace(/"/g, '""')}"`;
+    };
+    const csv = 'Indicador;Valor\n' + Object.entries(data)
+      .map(([nome, valor]) => `${csvCell(labels[nome as keyof typeof labels])};${csvCell(String(valor))}`)
+      .join('\n');
+    const blob = new Blob(['\uFEFF', csv], {type: 'text/csv;charset=utf-8'});
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = 'relatorio-gerencial.csv';
     anchor.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const handlePrint = () => {
     window.print();
   };
+
+  const periodoInvalido = Boolean(inicio && fim && inicio > fim);
 
   if (!mounted) return null;
 
@@ -142,45 +186,47 @@ export default function RelatoriosPage() {
       <div className="rel-container">
         
         {/* HEADER */}
-        <div className="banner-rel" style={{ background: 'linear-gradient(135deg, #0a1f44, #1e3a8a)', borderRadius: '8px', padding: '30px 40px', color: 'white', marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+        <div className="banner-rel">
           <div>
-            <h1 style={{ fontSize: '28px', margin: 0 }}><i className="las la-chart-bar"></i> Relatórios Gerenciais Avançados</h1>
-            <p style={{ opacity: 0.9, marginTop: '5px' }}>Indicadores calculados a partir dos registros do hospital e exportação</p>
+            <h1><i className="las la-chart-bar" aria-hidden="true"></i> Relatórios Gerenciais Avançados</h1>
+            <p>Indicadores calculados a partir dos registros do hospital</p>
           </div>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button className="btn btn-success" onClick={handleExportCSV} style={{ padding: '11px 22px', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}><i className="las la-file-excel"></i> Exportar Excel</button>
-            <button className="btn btn-warning btn-imprimir" onClick={handlePrint} style={{ padding: '11px 22px', background: '#f59e0b', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}><i className="las la-print"></i> Imprimir PDF</button>
+          <div className="banner-rel-acoes">
+            <button className="btn-exportar" onClick={handleExportCSV} disabled={carregando || Boolean(erro)}><i className="las la-file-csv" aria-hidden="true"></i> Exportar resumo CSV</button>
+            <button className="btn-imprimir" onClick={handlePrint}><i className="las la-print" aria-hidden="true"></i> Imprimir PDF</button>
           </div>
         </div>
 
         {/* FILTROS */}
         <div className="filtros-rapidos" style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
           {['hoje', 'semana', 'mes', 'ano', 'todos'].map(f => (
-            <button key={f} aria-pressed={filtroRapido === f} onClick={() => aplicarFiltroRapido(f)} style={{ padding: '8px 16px', border: '2px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', background: filtroRapido === f ? '#1e3a8a' : 'white', color: filtroRapido === f ? 'white' : '#64748b', fontSize: '12px', fontWeight: 600, transition: 'all 0.2s' }}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
+            <button key={f} className={`filtro-rel-btn ${filtroRapido === f ? 'ativo' : ''}`} aria-pressed={filtroRapido === f} onClick={() => aplicarFiltroRapido(f)}>
+              {FILTER_LABELS[f]}
             </button>
           ))}
         </div>
 
         <div className="filtros-periodo" style={{ display: 'flex', gap: '10px', marginBottom: '25px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div><label htmlFor="relatorio-inicio" style={{display:'block', fontSize:'12px', fontWeight:600, color:'#64748b', marginBottom:'4px'}}>Data Inicial</label><input id="relatorio-inicio" type="date" value={inicio} onChange={e => setInicio(e.target.value)} style={{ padding: '10px 14px', border: '2px solid #e2e8f0', borderRadius: '8px' }} /></div>
-          <div><label htmlFor="relatorio-fim" style={{display:'block', fontSize:'12px', fontWeight:600, color:'#64748b', marginBottom:'4px'}}>Data Final</label><input id="relatorio-fim" type="date" value={fim} onChange={e => setFim(e.target.value)} style={{ padding: '10px 14px', border: '2px solid #e2e8f0', borderRadius: '8px' }} /></div>
-          <button className="btn-atualizar" onClick={gerarRelatorios} disabled={carregando} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: carregando ? 'wait' : 'pointer', height: '42px', opacity: carregando ? 0.7 : 1 }}><i className="las la-sync-alt"></i> {carregando ? 'Atualizando...' : 'Atualizar'}</button>
+          <div className="periodo-campo"><label htmlFor="relatorio-inicio">Data Inicial</label><input id="relatorio-inicio" type="date" className="periodo-input" max={fim || undefined} value={inicio} onChange={e => { setFiltroRapido(''); setInicio(e.target.value); }} /></div>
+          <div className="periodo-campo"><label htmlFor="relatorio-fim">Data Final</label><input id="relatorio-fim" type="date" className="periodo-input" min={inicio || undefined} value={fim} onChange={e => { setFiltroRapido(''); setFim(e.target.value); }} /></div>
+          <button className="btn-atualizar" onClick={gerarRelatorios} disabled={carregando || periodoInvalido} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: carregando ? 'wait' : 'pointer', height: '42px', opacity: carregando || periodoInvalido ? 0.7 : 1 }}><i className="las la-sync-alt" aria-hidden="true"></i> {carregando ? 'Atualizando...' : 'Atualizar'}</button>
         </div>
+        {periodoInvalido && <p role="alert" style={{ margin: '-12px 0 16px', color: '#991b1b', fontSize: '13px' }}>A data inicial deve ser anterior ou igual à data final.</p>}
         {erro && <p role="alert" style={{ margin: '0 0 16px', padding: '12px 16px', background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: 8 }}>{erro}</p>}
+        {carregando && <p role="status" aria-live="polite" style={{ margin: '0 0 16px', color: '#1e3a8a', fontSize: '13px' }}>Atualizando indicadores…</p>}
 
         {/* MINI CARDS (STATS GRID) */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '15px', marginBottom: '25px' }}>
           <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #1e3a8a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px'}}><i className="las la-users"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.totalPacientes}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Total Pacientes</div></div>
           <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #16a34a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#16a34a'}}><i className="las la-calendar-check"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.atendimentos}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Atendimentos concluídos no período</div></div>
           <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #f59e0b', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#f59e0b'}}><i className="las la-clock"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.internacoes}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Internados agora</div></div>
-          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #dc2626', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#dc2626'}}><i className="las la-cross"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.obitos}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Óbitos</div></div>
+          <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #dc2626', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#dc2626'}}><i className="las la-cross" aria-hidden="true"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.obitos}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Óbitos no período</div></div>
           <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #1e3a8a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px'}}><i className="las la-bed"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.taxaUTI}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Ocupação UTI atual</div></div>
           <div style={{ background: 'white', borderRadius: '8px', padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderTop: '3px solid #16a34a', textAlign: 'center' }}><div style={{fontSize:'28px', marginBottom:'6px', color:'#16a34a'}}><i className="las la-chart-line"></i></div><div style={{fontSize:'24px', fontWeight:800, color:'#0a1f44'}}>{data.cirurgias}</div><div style={{fontSize:'10px', color:'#94a3b8', textTransform:'uppercase', fontWeight:600}}>Cirurgias cadastradas no período</div></div>
         </div>
 
         {/* TAB MENU */}
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '25px', borderBottom: '2px solid #e2e8f0', flexWrap: 'wrap' }}>
+        <div className="rel-tabs" style={{ display: 'flex', gap: '6px', marginBottom: '25px', borderBottom: '2px solid #e2e8f0', flexWrap: 'wrap' }}>
           {[
             { id: 'geral', icon: 'la-chart-pie', label: 'Dashboard Geral (Gráficos)' },
             { id: 'producao', icon: 'la-user-md', label: 'Produção Médica' },
@@ -197,7 +243,7 @@ export default function RelatoriosPage() {
           <div className="animate-in fade-in duration-300">
             {/* GRÁFICOS */}
             <div className="rel-graficos">
-              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+              <div className="rel-chart-card">
                 <h3 style={{ color: '#0a1f44', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-chart-bar"></i> Agendamentos por profissional</h3>
                 <div style={{ height: '300px' }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -212,7 +258,7 @@ export default function RelatoriosPage() {
                 </div>
               </div>
 
-              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+              <div className="rel-chart-card">
                 <h3 style={{ color: '#0a1f44', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-chart-pie"></i> Distribuição por Status</h3>
                 <div style={{ height: '300px' }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -229,7 +275,7 @@ export default function RelatoriosPage() {
                 </div>
               </div>
 
-              <div style={{ background: 'white', borderRadius: '8px', padding: '25px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+              <div className="rel-chart-card">
                 <h3 style={{ color: '#0a1f44', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}><i className="las la-bed"></i> Ocupação de Leitos</h3>
                 <div style={{ height: '300px' }}>
                   <ResponsiveContainer width="100%" height="100%">

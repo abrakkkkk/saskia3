@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import './agenda.css';
 
 import { inter } from '@/app/fonts'
 
@@ -165,7 +166,7 @@ export default function AgendaPage() {
   const especialidades = ['Todas', ...Array.from(new Set(agendamentos.map(a => a.especialidade).filter(Boolean)))];
 
   return (
-    <div className={inter.className} style={{ padding: '32px', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+    <div className={`agenda-page ${inter.className}`} style={{ padding: '32px', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
       
       {/* HEADER */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '32px' }}>
@@ -186,7 +187,7 @@ export default function AgendaPage() {
       </div>
 
       {/* STATS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+      <div className="agenda-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '32px' }}>
         
         {/* Agendados */}
         <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -235,7 +236,7 @@ export default function AgendaPage() {
       </div>
 
       {/* COMMAND BAR / FILTROS */}
-      <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', position: 'relative', zIndex: 10 }}>
+      <div className="agenda-toolbar" style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', position: 'relative', zIndex: 10 }}>
         
         <div style={{ flex: '1 1 200px' }}>
           <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', marginLeft: '4px' }}>Data da Agenda</label>
@@ -278,7 +279,7 @@ export default function AgendaPage() {
       </div>
 
       {/* TABELA DE AGENDAMENTOS */}
-      <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', overflow: 'hidden', position: 'relative', zIndex: 0 }}>
+      <div className="agenda-table-card" style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', overflow: 'hidden', position: 'relative', zIndex: 0 }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
             <thead>
@@ -360,6 +361,7 @@ export default function AgendaPage() {
                           style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', backgroundColor: 'transparent', border: '1px solid transparent', cursor: 'pointer', margin: '0 auto', transition: 'all 0.2s' }}
                           onClick={() => setAgendaSelecionada(agenda)}
                           title="Opções"
+                          aria-label={`Abrir opções de atendimento para ${agenda.paciente.nome}`}
                         >
                           <i className="las la-ellipsis-v" style={{ fontSize: '18px' }}></i>
                         </button>
@@ -375,16 +377,18 @@ export default function AgendaPage() {
 
       {/* MODAL DE AÇÕES RÁPIDAS */}
       {agendaSelecionada && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', width: '100%', maxWidth: '384px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #334155', overflow: 'hidden' }}>
+        <div className="agenda-quick-overlay" role="presentation" style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)' }}>
+          <div className="agenda-quick-dialog" role="dialog" aria-modal="true" aria-labelledby="agenda-quick-title" style={{ backgroundColor: '#ffffff', borderRadius: '8px', width: '100%', maxWidth: '384px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #334155', overflow: 'hidden' }}>
             
             {/* Modal Header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #94a3b8', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', backgroundColor: '#f8fafc' }}>
               <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', lineHeight: 1.25, margin: 0 }}>{agendaSelecionada.paciente.nome}</h3>
+                <h3 id="agenda-quick-title" style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', lineHeight: 1.25, margin: 0 }}>{agendaSelecionada.paciente.nome}</h3>
                 <p style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '4px 0 0 0' }}>Opções de Atendimento</p>
               </div>
               <button 
+                type="button"
+                aria-label="Fechar opções de atendimento"
                 onClick={() => setAgendaSelecionada(null)} 
                 style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', marginRight: '-8px' }}
               >
@@ -444,7 +448,7 @@ export default function AgendaPage() {
 
       {criando && (
         <div role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCriando(false); }} style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(15,23,42,.55)' }}>
-          <form onSubmit={criarAgendamento} aria-labelledby="novo-agendamento-titulo" style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 560, padding: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, maxHeight: '90vh', overflowY: 'auto' }}>
+          <form className="agenda-create-form" role="dialog" aria-modal="true" onSubmit={criarAgendamento} aria-labelledby="novo-agendamento-titulo" style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 560, padding: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 id="novo-agendamento-titulo" style={{ gridColumn: '1 / -1', margin: 0, color: '#0f172a' }}>Novo agendamento</h3>
             {erro && <p role="alert" style={{ gridColumn: '1 / -1', color: '#b91c1c', margin: 0 }}>{erro}</p>}
             <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>Paciente

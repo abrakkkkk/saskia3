@@ -43,7 +43,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (!nome || nome.length > 160) return NextResponse.json({ error: 'Nome da instituição inválido' }, { status: 400 });
     const cnpj = typeof body.cnpj === 'string' ? body.cnpj.trim() : '';
     if (!cnpj || cnpj.length > 20) return NextResponse.json({ error: 'CNPJ da instituição inválido' }, { status: 400 });
-    const optionalString = (value: unknown, max: number) => typeof value === 'string' ? (value.trim().length <= max ? value.trim() || null : undefined) : null;
+    const optionalString = (value: unknown, max: number) => {
+      if (value === undefined || value === null) return null;
+      if (typeof value !== 'string') return undefined;
+      const trimmed = value.trim();
+      return trimmed.length <= max ? trimmed || null : undefined;
+    };
     const endereco = optionalString(body.endereco, 300);
     const telefone = optionalString(body.telefone, 40);
     const logo = optionalString(body.logoUrl, 2048);

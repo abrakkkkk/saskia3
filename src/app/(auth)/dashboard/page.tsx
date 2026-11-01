@@ -167,13 +167,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {statsErro && <p role="alert" style={{ color: '#b91c1c', margin: '0 0 20px' }}>{statsErro}</p>}
+      {statsErro && <p className="dashboard-error" role="alert" aria-live="assertive">{statsErro}</p>}
 
       <div className="cards-nav">
         {NAV_CARDS.filter(card => isModuleActive(card.id)).map ((card) => (
           <Link key={card.href} href={card.href} style={{ textDecoration: 'none' }}>
-            <div className={`card-nav theme-${card.theme}`} style={{ border: '2px solid #000000', borderRadius: '8px' }}>
-              <div className="icon-wrapper"><i className={card.icon}></i></div>
+            <div className={`card-nav theme-${card.theme}`}>
+              <div className="icon-wrapper" aria-hidden="true"><i className={card.icon}></i></div>
               <div className="nav-info">
                 <h3>{card.title}</h3>
                 <p>{card.desc}</p>
@@ -183,10 +183,10 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '30px' }}>
+      <div className="contadores">
         
         {isModuleActive('contador_atendidos') && (
-        <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-contador">
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-users" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Pacientes Atendidos</h3>
@@ -196,7 +196,7 @@ export default function DashboardPage() {
         )}
 
         {isModuleActive('contador_aguardando') && (
-        <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-contador">
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-hourglass-half" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Aguardando Atendimento</h3>
@@ -206,27 +206,27 @@ export default function DashboardPage() {
         )}
 
         {isModuleActive('contador_leitos_vermelha') && (
-        <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-contador">
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-door-open" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Pacientes Sala Vermelha</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{indicador(stats.ocupadosVermelha)}</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#dc2626' }}>{indicador(stats.ocupadosVermelha)}</div>
           </div>
         </div>
         )}
 
         {isModuleActive('contador_leitos_amarela') && (
-        <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-contador">
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-door-closed" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Pacientes Sala Amarela</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{indicador(stats.ocupadosAmarela)}</div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#d97706' }}>{indicador(stats.ocupadosAmarela)}</div>
           </div>
         </div>
         )}
 
         {isModuleActive('contador_salas_cc') && (
-        <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-contador">
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-procedures" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Cirurgias em andamento</h3>
@@ -236,7 +236,7 @@ export default function DashboardPage() {
         )}
 
         {isModuleActive('contador_leitos_uti') && (
-        <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-contador">
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-bed" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Leitos UTI</h3>
@@ -247,7 +247,7 @@ export default function DashboardPage() {
         )}
 
         {isModuleActive('contador_altas') && (
-        <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-contador">
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-check-circle" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Altas</h3>
@@ -257,7 +257,7 @@ export default function DashboardPage() {
         )}
 
         {isModuleActive('contador_evasao') && (
-        <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-contador">
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-exclamation-triangle" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Evasão</h3>
@@ -267,7 +267,7 @@ export default function DashboardPage() {
         )}
 
         {isModuleActive('contador_transferencias') && (
-        <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-contador">
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-truck" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Transferências</h3>
@@ -277,7 +277,7 @@ export default function DashboardPage() {
         )}
 
         {isModuleActive('contador_media_idade') && (
-        <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-contador">
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-chart-bar" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Média Etária</h3>
@@ -288,7 +288,7 @@ export default function DashboardPage() {
         )}
 
         {isModuleActive('contador_total') && (
-        <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-contador">
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-file-alt" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Resumo Geral</h3>
@@ -299,7 +299,7 @@ export default function DashboardPage() {
         )}
 
         {isModuleActive('contador_obitos') && (
-        <div className="card-contador" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-contador">
           <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
             <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-cross" style={{ fontSize: '24px' }}></i></div>
             <h3 style={{ fontSize: '13px', color: '#64748b' }}>Óbitos</h3>
@@ -320,7 +320,7 @@ export default function DashboardPage() {
             <div className="categorias">
               {activeItems.map ((cat) => (
                 <Link key={cat.href} href={cat.href} style={{ textDecoration: 'none' }}>
-                  <div className={`card-categoria theme-${cat.theme}`} style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+                  <div className={`card-categoria theme-${cat.theme}`}>
                     <div className="icon-wrapper"><i className={cat.icon}></i></div>
                     <div>
                       <h4>{cat.title}</h4>
@@ -336,7 +336,7 @@ export default function DashboardPage() {
 
       <div className="graficos">
         {isModuleActive('grafico_status') && (
-        <div className="card-grafico" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-grafico">
           <h3><i className="las la-chart-pie"></i> Distribuição por Status</h3>
 
           {totalStatus > 0 ? (
@@ -368,7 +368,7 @@ export default function DashboardPage() {
         )}
 
         {isModuleActive('grafico_resumo_mes') && (
-        <div className="card-grafico" style={{ border: '2px solid #000000', borderRadius: '8px' }}>
+        <div className="card-grafico">
           <h3><i className="las la-chart-line"></i> Resumo assistencial</h3>
           <div className="resumo-metricas">
             <div className="metrica-box">

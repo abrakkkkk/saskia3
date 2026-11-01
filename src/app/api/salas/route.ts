@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       orderBy: { nome: 'asc' }
     })
 
-    return NextResponse.json(salas)
+    return NextResponse.json(salas, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }

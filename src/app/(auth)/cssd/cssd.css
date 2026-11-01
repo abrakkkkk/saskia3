@@ -328,3 +328,50 @@
     .form-grid { grid-template-columns: 1fr; }
     .lotes-grid { grid-template-columns: 1fr; }
 }
+
+.cssd-loading {
+    padding: 24px;
+    color: #475569;
+    text-align: center;
+}
+
+.cssd-load-error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 12px 16px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.cssd-load-error button {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border: 1px solid #b91c1c;
+    border-radius: 6px;
+    background: white;
+    color: #991b1b;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.cssd-load-error button:focus-visible {
+    outline: 3px solid #1d4ed8;
+    outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+    .banner-cssd { padding: 22px 18px; }
+    .banner-cssd h1 { font-size: 21px; }
+    .tabs-cssd { gap: 2px; }
+    .tab-btn { flex: 1 1 45%; justify-content: center; padding: 11px 10px; }
+    .controles-topo { flex-direction: column; }
+    .controles-topo > *, .pesquisa-box, .pesquisa-box input { width: 100%; min-width: 0; }
+    .form-panel { padding: 20px 16px; }
+    .cssd-load-error { align-items: flex-start; flex-direction: column; }
+}

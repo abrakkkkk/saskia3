@@ -1,16 +1,37 @@
 /* prontuarios.css */
 
-.lista-modelos {
+.prontuarios-page .lista-modelos {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 18px;
     margin-top: 25px;
 }
 
-.modelo-item {
+.prontuarios-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.prontuarios-page-header > div { min-width: 0; }
+.prontuarios-page-header h2 { color: #fff; line-height: 1.2; }
+.prontuarios-page-header p { color: #cbd5e1; margin-top: 8px; line-height: 1.5; }
+.prontuarios-load-error, .prontuarios-empty, .prontuarios-feedback {
+    grid-column: 1 / -1;
+    padding: 18px;
+    border-radius: 12px;
+}
+.prontuarios-load-error { display: flex; justify-content: space-between; align-items: center; gap: 16px; background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; }
+.prontuarios-empty { text-align: center; color: #64748b; padding-block: 40px; background: #fff; border: 1px dashed #cbd5e1; }
+.prontuarios-feedback { margin: 16px 0; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+.prontuarios-form-error { padding: 12px 14px; margin: 0 0 14px; color: #9f1239; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px; }
+
+.prontuarios-page .modelo-item {
     background: #ffffff; /* Fundo totalmente branco garantido */
     padding: 24px;
-    border-radius: 8px;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
@@ -18,35 +39,37 @@
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.modelo-item:hover {
+.prontuarios-page .modelo-item:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.08);
 }
 
-.modelo-header {
+.prontuarios-page .modelo-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 12px;
 }
 
-.modelo-header h4 {
+.prontuarios-page .modelo-header h4 {
     margin: 0;
     color: #1e3a8a;
     font-size: 18px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
-.modelo-descricao {
+.prontuarios-page .modelo-descricao {
     color: #64748b;
     font-size: 14px;
     margin-bottom: 20px;
     line-height: 1.5;
 }
 
-.modelo-campos-preview {
+.prontuarios-page .modelo-campos-preview {
     background: #f8fafc;
     padding: 15px;
     border-radius: 8px;
@@ -54,7 +77,7 @@
     border: 1px solid #e2e8f0;
 }
 
-.modelo-campos-preview strong {
+.prontuarios-page .modelo-campos-preview strong {
     color: #0a1f44;
     display: block;
     margin-bottom: 8px;
@@ -63,22 +86,22 @@
     letter-spacing: 0.5px;
 }
 
-.modelo-campos-preview ul {
+.prontuarios-page .modelo-campos-preview ul {
     margin: 0;
     padding-left: 18px;
     color: #475569;
 }
 
-.modelo-campos-preview li {
+.prontuarios-page .modelo-campos-preview li {
     margin-bottom: 4px;
 }
 
-.modelo-acoes {
+.prontuarios-page .modelo-acoes {
     display: flex;
     gap: 10px;
 }
 
-.btn-excluir {
+.prontuarios-page .btn-excluir {
     background: #fef2f2;
     color: #dc2626;
     padding: 8px 12px;
@@ -90,9 +113,9 @@
     align-items: center;
     justify-content: center;
 }
-.btn-excluir:hover { background: #dc2626; color: white; border-color: #dc2626; }
+.prontuarios-page .btn-excluir:hover { background: #dc2626; color: white; border-color: #dc2626; }
 
-.btn-editar {
+.prontuarios-page .btn-editar {
     background: #fffbeb;
     color: #d97706;
     padding: 8px 12px;
@@ -104,11 +127,19 @@
     align-items: center;
     justify-content: center;
 }
-.btn-editar:hover { background: #f59e0b; color: white; border-color: #f59e0b; }
+.prontuarios-page .btn-editar:hover { background: #f59e0b; color: white; border-color: #f59e0b; }
+
+.prontuarios-page .btn-editar:focus-visible,
+.prontuarios-page .btn-excluir:focus-visible,
+.prontuarios-page .btn-remover-campo:focus-visible,
+.prontuarios-page .modal-header button:focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 2px;
+}
 
 
 /* Modal */
-.modal-overlay {
+.prontuarios-page .modal-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(15, 23, 42, 0.7);
@@ -120,9 +151,9 @@
     animation: fadeIn 0.2s ease-out;
 }
 
-.modal-content {
+.prontuarios-page .modal-content {
     background: #ffffff;
-    width: 700px;
+    width: min(700px, calc(100vw - 32px));
     max-width: 95%;
     max-height: 90vh;
     border-radius: 8px;
@@ -133,7 +164,7 @@
     overflow: hidden;
 }
 
-.modal-header {
+.prontuarios-page .modal-header {
     background: linear-gradient(135deg, #1e3a8a, #2563eb);
     color: white;
     padding: 20px 24px;
@@ -142,7 +173,7 @@
     align-items: center;
 }
 
-.modal-header h3 {
+.prontuarios-page .modal-header h3 {
     margin: 0;
     font-size: 18px;
     display: flex;
@@ -150,16 +181,16 @@
     gap: 10px;
 }
 
-.modal-body {
+.prontuarios-page .modal-body {
     padding: 24px;
     overflow-y: auto;
 }
 
-.form-group {
+.prontuarios-page .form-group {
     margin-bottom: 15px;
 }
 
-.form-group label {
+.prontuarios-page .form-group label {
     display: block;
     font-size: 13px;
     font-weight: 700;
@@ -167,7 +198,7 @@
     margin-bottom: 6px;
 }
 
-.form-group input, .form-group textarea {
+.prontuarios-page .form-group input, .prontuarios-page .form-group textarea {
     width: 100%;
     padding: 12px;
     border: 2px solid #e2e8f0;
@@ -178,20 +209,20 @@
     transition: all 0.2s;
 }
 
-.form-group input:focus, .form-group textarea:focus {
+.prontuarios-page .form-group input:focus, .prontuarios-page .form-group textarea:focus {
     border-color: #1e3a8a;
     outline: none;
     background: white;
 }
 
 /* Construtor Dinâmico de Campos */
-.campos-builder {
+.prontuarios-page .campos-builder {
     margin-top: 30px;
     border-top: 2px solid #e2e8f0;
     padding-top: 20px;
 }
 
-.campos-builder-header {
+.prontuarios-page .campos-builder-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -200,7 +231,7 @@
     margin-bottom: 15px;
 }
 
-.campos-builder-header h4 {
+.prontuarios-page .campos-builder-header h4 {
     margin: 0;
     color: #0a1f44;
     font-size: 16px;
@@ -209,7 +240,7 @@
     gap: 8px;
 }
 
-.campo-dinamico-item {
+.prontuarios-page .campo-dinamico-item {
     background: #f8fafc;
     padding: 15px;
     border-radius: 8px;
@@ -221,13 +252,13 @@
     transition: all 0.2s;
 }
 
-.campo-dinamico-item:hover {
+.prontuarios-page .campo-dinamico-item:hover {
     background: white;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     border-color: #cbd5e1;
 }
 
-.campo-dinamico-item input {
+.prontuarios-page .campo-dinamico-item input {
     flex: 1;
     margin: 0;
     padding: 10px 14px;
@@ -236,7 +267,7 @@
     font-size: 14px;
 }
 
-.campo-dinamico-item select {
+.prontuarios-page .campo-dinamico-item select {
     width: 150px;
     padding: 10px 14px;
     border: 2px solid #e2e8f0;
@@ -246,12 +277,12 @@
     cursor: pointer;
 }
 
-.campo-dinamico-item input:focus, .campo-dinamico-item select:focus {
+.prontuarios-page .campo-dinamico-item input:focus, .prontuarios-page .campo-dinamico-item select:focus {
     border-color: #1e3a8a;
     outline: none;
 }
 
-.btn-remover-campo {
+.prontuarios-page .btn-remover-campo {
     background: #fef2f2;
     color: #dc2626;
     padding: 10px;
@@ -263,9 +294,9 @@
     justify-content: center;
     transition: all 0.2s;
 }
-.btn-remover-campo:hover { background: #dc2626; color: white; border-color: #dc2626; }
+.prontuarios-page .btn-remover-campo:hover { background: #dc2626; color: white; border-color: #dc2626; }
 
-.modal-footer {
+.prontuarios-page .modal-footer {
     padding: 20px 24px;
     background: #f8fafc;
     border-top: 1px solid #e2e8f0;
@@ -274,31 +305,48 @@
     flex-wrap: wrap;
 }
 
-.modal-footer button {
+.prontuarios-page .modal-footer button {
     flex: 1;
     padding: 12px;
     font-size: 14px;
 }
 
 @media (max-width: 600px) {
-    .modelo-header {
+    .prontuarios-page .modelo-header {
         flex-wrap: wrap;
         gap: 12px;
     }
 
-    .modal-content {
+    .prontuarios-page .modal-content {
         max-height: calc(100dvh - 24px);
     }
 
-    .modal-body {
+    .prontuarios-page .modal-body {
         padding: 18px;
     }
 
-    .campo-dinamico-item {
+    .prontuarios-page .campo-dinamico-item {
         flex-direction: column;
         align-items: stretch;
     }
-    .campo-dinamico-item select {
+    .prontuarios-page .campo-dinamico-item select {
         width: 100%;
     }
+}
+
+@media (max-width: 480px) {
+    .prontuarios-page-header { align-items: stretch; flex-direction: column; }
+    .prontuarios-page-header > button { width: 100%; }
+    .prontuarios-page .modal-overlay { padding: 12px; }
+    .prontuarios-page .modal-content { width: 100%; max-width: none; max-height: calc(100dvh - 24px); }
+    .prontuarios-page .modal-header, .prontuarios-page .modal-body { padding: 16px; }
+    .prontuarios-page .modal-header h3 { font-size: 16px; }
+    .prontuarios-page .modal-footer { padding: 14px 16px; }
+    .prontuarios-page .modal-footer button { min-height: 44px; }
+    .prontuarios-load-error { align-items: stretch; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .modelo-item, .btn-editar, .btn-excluir, .prontuarios-page .campo-dinamico-item { transition: none; }
+    .prontuarios-page .modal-overlay, .prontuarios-page .modal-content { animation: none; }
 }

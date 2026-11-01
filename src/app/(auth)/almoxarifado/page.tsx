@@ -1,5 +1,4 @@
 'use client';
-import { getSessionUser } from '@/lib/session';
 import { useState, useEffect } from 'react';
 import './almoxarifado.css';
 
@@ -29,9 +28,16 @@ interface MovimentacaoEstoque {
   createdAt: string;
 }
 
+async function mensagemErroResposta(response: Response, fallback: string) {
+  const data: unknown = await response.json().catch(() => null);
+  if (data && typeof data === 'object' && 'error' in data && typeof data.error === 'string') return data.error;
+  return fallback;
+}
+
 export default function AlmoxarifadoPage() {
   const [activeTab, setActiveTab] = useState<'estoque' | 'movimentacoes'>('estoque');
   const [loading, setLoading] = useState(true);
+  const [erroCarga, setErroCarga] = useState('');
   
   const [itens, setItens] = useState<EstoqueItem[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoEstoque[]>([]);
@@ -65,6 +71,7 @@ export default function AlmoxarifadoPage() {
 
   const carregarDados = async () => {
     setLoading(true);
+    const erros: string[] = [];
     try {
       const [resItens, resMov] = await Promise.all([
         fetch('/api/estoque?categoria=ALMOXARIFADO'),
@@ -73,21 +80,27 @@ export default function AlmoxarifadoPage() {
 
       if (resItens.ok) {
         const dataItens = await resItens.json();
-        setItens(Array.isArray(dataItens) ? dataItens : []);
+        if (Array.isArray(dataItens)) setItens(dataItens);
+        else { setItens([]); erros.push('itens do estoque'); }
       } else {
         setItens([]);
+        erros.push('itens do estoque');
       }
 
       if (resMov.ok) {
         const dataMov = await resMov.json();
-        setMovimentacoes(Array.isArray(dataMov) ? dataMov : []);
+        if (Array.isArray(dataMov)) setMovimentacoes(dataMov);
+        else { setMovimentacoes([]); erros.push('movimentações'); }
       } else {
         setMovimentacoes([]);
+        erros.push('movimentações');
       }
+      setErroCarga(erros.length ? `Não foi possível carregar: ${erros.join(' e ')}.` : '');
     } catch (e) {
       console.error('Erro ao buscar estoque almoxarifado:', e);
       setItens([]);
       setMovimentacoes([]);
+      setErroCarga('Não foi possível conectar aos dados do almoxarifado. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -109,18 +122,9 @@ export default function AlmoxarifadoPage() {
     return () => window.removeEventListener('keydown', fecharComEscape);
   }, [modalEntrada, modalSaida, modalNovoItem, isSaving]);
 
-  const getResponsavel = () => {
-    try {
-      const u = JSON.stringify(getSessionUser());
-      return (u ? JSON.parse(u) : null)?.nome || "Sistema";
-    } catch {
-      return "Sistema";
-    }
-  };
-
   const confirmarEntrada = async () => {
-    if (!entradaItemId || !entradaQtd) {
-      alert("Selecione item e quantidade!");
+    if (!entradaItemId || !Number.isSafeInteger(entradaQtd) || entradaQtd <= 0 || entradaQtd > 2147483647) {
+      alert('Selecione um item e informe uma quantidade inteira positiva.');
       return;
     }
     setIsSaving(true);
@@ -130,29 +134,29 @@ export default function AlmoxarifadoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tipo: 'ENTRADA',
+          categoria: 'ALMOXARIFADO',
           itemId: entradaItemId,
           quantidade: entradaQtd,
           fornecedor: entradaFornecedor,
-          responsavel: getResponsavel()
         })
       });
 
-      if (!resMov.ok) throw new Error("Erro ao registrar entrada");
+      if (!resMov.ok) throw new Error(await mensagemErroResposta(resMov, 'Erro ao registrar entrada.'));
 
       setModalEntrada(false);
       setEntradaItemId(''); setEntradaQtd(1); setEntradaFornecedor('');
       alert(" Entrada registrada!");
       carregarDados();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erro ao registrar entrada.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const confirmarSaida = async () => {
-    if (!saidaItemId || !saidaQtd) {
-      alert("Selecione item e quantidade!");
+    if (!saidaItemId || !Number.isSafeInteger(saidaQtd) || saidaQtd <= 0 || saidaQtd > 2147483647) {
+      alert('Selecione um item e informe uma quantidade inteira positiva.');
       return;
     }
     setIsSaving(true);
@@ -162,44 +166,44 @@ export default function AlmoxarifadoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tipo: 'SAIDA',
+          categoria: 'ALMOXARIFADO',
           itemId: saidaItemId,
           quantidade: saidaQtd,
           setor: saidaSetor,
-          responsavel: getResponsavel()
         })
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Erro ao registrar saída");
+        throw new Error(await mensagemErroResposta(res, 'Erro ao registrar saída.'));
       }
 
       setModalSaida(false);
       setSaidaItemId(''); setSaidaQtd(1); setSaidaSetor('Farmácia');
       alert(" Saída registrada!");
       carregarDados();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erro ao registrar saída.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const confirmarNovoItem = async () => {
-    if (!novoNome) {
-      alert("Digite o nome do item!");
+    if (!novoNome.trim() || !Number.isSafeInteger(novoQtd) || novoQtd < 0 || novoQtd > 2147483647 ||
+      !Number.isSafeInteger(novoMinimo) || novoMinimo < 0 || novoMinimo > 2147483647) {
+      alert('Informe o nome do item, uma quantidade inicial inteira e um mínimo válido.');
       return;
     }
     setIsSaving(true);
     try {
-      const finalCodigo = novoCodigo || ("MAT-" + String(itens.length + 1).padStart(3, '0'));
+      const finalCodigo = novoCodigo.trim() || ("MAT-" + String(itens.length + 1).padStart(3, '0'));
       
       const resNovo = await fetch('/api/estoque', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           categoria: 'ALMOXARIFADO', // Forçando a categoria master
-          nome: novoNome,
+          nome: novoNome.trim(),
           codigo: finalCodigo,
           subcategoria: novoCategoria,
           validade: null,
@@ -219,8 +223,8 @@ export default function AlmoxarifadoPage() {
       setNovoNome(''); setNovoCodigo(''); setNovoQtd(0); setNovoMinimo(10);
       alert(" Item cadastrado!");
       carregarDados();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erro ao cadastrar item.');
     } finally {
       setIsSaving(false);
     }
@@ -239,8 +243,8 @@ export default function AlmoxarifadoPage() {
   };
 
   let listaEstoque = itens;
-  if (buscarItem) {
-    const t = buscarItem.toLowerCase();
+  if (buscarItem.trim()) {
+    const t = buscarItem.trim().toLocaleLowerCase('pt-BR');
     listaEstoque = listaEstoque.filter(i => i.nome.toLowerCase().includes(t) || (i.codigo || '').toLowerCase().includes(t));
   }
 
@@ -248,8 +252,9 @@ export default function AlmoxarifadoPage() {
   if (filtroTipoMov !== 'todos') {
     listaMov = listaMov.filter(m => m.tipo === filtroTipoMov.toUpperCase());
   }
-  if (buscarMov) {
-    listaMov = listaMov.filter(m => m.item?.nome?.toLowerCase().includes(buscarMov.toLowerCase()));
+  if (buscarMov.trim()) {
+    const t = buscarMov.trim().toLocaleLowerCase('pt-BR');
+    listaMov = listaMov.filter(m => m.item?.nome?.toLocaleLowerCase('pt-BR').includes(t));
   }
 
   if (loading && itens.length === 0) {
@@ -276,6 +281,8 @@ export default function AlmoxarifadoPage() {
           </div>
         </div>
 
+        {erroCarga && <div className="almox-load-error" role="alert">{erroCarga}</div>}
+
         <div className="stats-grid" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '30px', gap: '20px'}}>
           <div className="stat-card" style={{borderLeftColor: '#1e3a8a'}}>
             <div className="stat-icon" style={{background:'#eff6ff', color:'#1e3a8a'}}><i className="las la-boxes"></i></div>
@@ -300,8 +307,8 @@ export default function AlmoxarifadoPage() {
         </div>
 
         <div className="tabs-almox">
-          <button className={`tab-btn ${activeTab === 'estoque' ? 'ativo' : ''}`} onClick={() => setActiveTab('estoque')}><i className="las la-boxes"></i> Estoque</button>
-          <button className={`tab-btn ${activeTab === 'movimentacoes' ? 'ativo' : ''}`} onClick={() => setActiveTab('movimentacoes')}><i className="las la-exchange-alt"></i> Movimentações</button>
+          <button type="button" aria-pressed={activeTab === 'estoque'} className={`tab-btn ${activeTab === 'estoque' ? 'ativo' : ''}`} onClick={() => setActiveTab('estoque')}><i className="las la-boxes" aria-hidden="true"></i> Estoque</button>
+          <button type="button" aria-pressed={activeTab === 'movimentacoes'} className={`tab-btn ${activeTab === 'movimentacoes' ? 'ativo' : ''}`} onClick={() => setActiveTab('movimentacoes')}><i className="las la-exchange-alt" aria-hidden="true"></i> Movimentações</button>
         </div>
 
         {activeTab === 'estoque' && (
@@ -388,7 +395,7 @@ export default function AlmoxarifadoPage() {
             <h3 id="almox-entrada-title" style={{color:'#0a1f44', marginBottom:'20px', borderBottom:'2px solid #f1f5f9', paddingBottom:'10px'}}><i className="las la-arrow-down" aria-hidden="true"></i> Registrar Entrada</h3>
             <div className="form-grid">
               <div className="form-group"><label htmlFor="almox-entrada-item">Item *</label><select id="almox-entrada-item" value={entradaItemId} onChange={e => setEntradaItemId(e.target.value)}><option value="">Selecione...</option>{itens.map(i => <option key={i.id} value={i.id}>{i.nome}</option>)}</select></div>
-              <div className="form-group"><label htmlFor="almox-entrada-quantidade">Quantidade *</label><input id="almox-entrada-quantidade" type="number" min="1" value={entradaQtd} onChange={e => setEntradaQtd(parseInt(e.target.value))} /></div>
+              <div className="form-group"><label htmlFor="almox-entrada-quantidade">Quantidade *</label><input id="almox-entrada-quantidade" type="number" min="1" step="1" value={Number.isNaN(entradaQtd) ? '' : entradaQtd} onChange={e => setEntradaQtd(e.target.value === '' ? 0 : Number(e.target.value))} /></div>
               <div className="form-group"><label htmlFor="almox-entrada-fornecedor">Fornecedor</label><input id="almox-entrada-fornecedor" type="text" value={entradaFornecedor} onChange={e => setEntradaFornecedor(e.target.value)} /></div>
             </div>
             <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'20px'}}>
@@ -405,7 +412,7 @@ export default function AlmoxarifadoPage() {
             <h3 id="almox-saida-title" style={{color:'#0a1f44', marginBottom:'20px', borderBottom:'2px solid #f1f5f9', paddingBottom:'10px'}}><i className="las la-arrow-up" aria-hidden="true"></i> Registrar Saída</h3>
             <div className="form-grid">
               <div className="form-group"><label htmlFor="almox-saida-item">Item *</label><select id="almox-saida-item" value={saidaItemId} onChange={e => setSaidaItemId(e.target.value)}><option value="">Selecione...</option>{itens.filter(i => i.quantidade > 0).map(i => <option key={i.id} value={i.id}>{i.nome} ({i.quantidade})</option>)}</select></div>
-              <div className="form-group"><label htmlFor="almox-saida-quantidade">Quantidade *</label><input id="almox-saida-quantidade" type="number" min="1" value={saidaQtd} onChange={e => setSaidaQtd(parseInt(e.target.value))} /></div>
+              <div className="form-group"><label htmlFor="almox-saida-quantidade">Quantidade *</label><input id="almox-saida-quantidade" type="number" min="1" step="1" value={Number.isNaN(saidaQtd) ? '' : saidaQtd} onChange={e => setSaidaQtd(e.target.value === '' ? 0 : Number(e.target.value))} /></div>
               <div className="form-group"><label htmlFor="almox-saida-setor">Setor Destino</label><select id="almox-saida-setor" value={saidaSetor} onChange={e => setSaidaSetor(e.target.value)}><option>Farmácia</option><option>UTI</option><option>Emergência</option><option>Enfermaria</option><option>Centro Cirúrgico</option><option>Outro</option></select></div>
             </div>
             <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'20px'}}>
@@ -425,8 +432,8 @@ export default function AlmoxarifadoPage() {
               <div className="form-group"><label htmlFor="almox-novo-codigo">Código</label><input id="almox-novo-codigo" type="text" placeholder="Automático se vazio" value={novoCodigo} onChange={e => setNovoCodigo(e.target.value)} /></div>
               <div className="form-group"><label htmlFor="almox-novo-categoria">Categoria *</label><select id="almox-novo-categoria" value={novoCategoria} onChange={e => setNovoCategoria(e.target.value)}><option>Material Hospitalar</option><option>Equipamentos</option><option>Higiene e Limpeza</option><option>EPIs</option><option>Escritório</option></select></div>
               <div className="form-group"><label htmlFor="almox-novo-unidade">Unidade</label><select id="almox-novo-unidade" value={novoUnidade} onChange={e => setNovoUnidade(e.target.value)}><option>Unidade</option><option>Caixa</option><option>Pacote</option><option>Frasco</option><option>Par</option><option>Metro</option><option>Litro</option><option>Kg</option></select></div>
-              <div className="form-group"><label htmlFor="almox-novo-quantidade">Qtd. Inicial</label><input id="almox-novo-quantidade" type="number" min="0" value={novoQtd} onChange={e => setNovoQtd(parseInt(e.target.value))} /></div>
-              <div className="form-group"><label htmlFor="almox-novo-minimo">Estoque Mínimo</label><input id="almox-novo-minimo" type="number" min="1" value={novoMinimo} onChange={e => setNovoMinimo(parseInt(e.target.value))} /></div>
+              <div className="form-group"><label htmlFor="almox-novo-quantidade">Qtd. Inicial</label><input id="almox-novo-quantidade" type="number" min="0" max="2147483647" step="1" value={Number.isNaN(novoQtd) ? '' : novoQtd} onChange={e => setNovoQtd(e.target.value === '' ? 0 : Number(e.target.value))} /></div>
+              <div className="form-group"><label htmlFor="almox-novo-minimo">Estoque Mínimo</label><input id="almox-novo-minimo" type="number" min="0" max="2147483647" step="1" value={Number.isNaN(novoMinimo) ? '' : novoMinimo} onChange={e => setNovoMinimo(e.target.value === '' ? 0 : Number(e.target.value))} /></div>
             </div>
             <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'20px'}}>
               <button className="btn btn-danger" onClick={() => setModalNovoItem(false)} disabled={isSaving}>Cancelar</button>

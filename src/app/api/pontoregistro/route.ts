@@ -11,16 +11,20 @@ export async function GET() {
     }
 
     const hospitalId = session.user.hospitalId;
-    if (!hospitalId) {
-      return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
+    const usuarioId = session.user.id;
+    if (!hospitalId || !usuarioId) {
+      return NextResponse.json({ error: 'Sessão inválida' }, { status: 403 });
     }
 
     const data = await prisma.pontoRegistro.findMany({
       where: {
         hospitalId,
-        usuarioId: session.user.id,
+        usuarioId,
       },
-      include: {
+      select: {
+        id: true,
+        tipo: true,
+        dataHora: true,
         usuario: {
           select: {
             id: true,
@@ -31,7 +35,7 @@ export async function GET() {
       orderBy: { dataHora: 'desc' },
     });
 
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
   } catch (error) {
     console.error('Erro ao buscar registros de ponto:', error);
     return NextResponse.json({ error: 'Erro ao buscar dados' }, { status: 500 });
@@ -73,19 +77,20 @@ export async function POST(request: NextRequest) {
         dataHora: agora,
         localizacao: typeof localizacao === 'string' && localizacao.trim() ? localizacao.trim() : null
       },
-      include: {
+      select: {
+        id: true,
+        tipo: true,
+        dataHora: true,
         usuario: {
           select: {
             id: true,
             nome: true,
-            email: true,
-            cargo: true
           }
         }
       }
     });
 
-    return NextResponse.json(data, { status: 201 });
+    return NextResponse.json(data, { status: 201, headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
   } catch (error) {
     console.error('Erro ao registrar ponto:', error);
     return NextResponse.json({ error: 'Erro ao registrar ponto' }, { status: 500 });

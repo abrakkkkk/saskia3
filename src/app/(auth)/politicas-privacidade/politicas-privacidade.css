@@ -1,33 +1,45 @@
 
 .politica-container {
     background: white;
-    border-radius: 8px;
-    padding: 40px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    width: min(100%, 1040px);
+    margin-inline: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: clamp(20px, 4vw, 40px);
+    box-shadow: 0 4px 18px rgba(15, 35, 72, 0.07);
+    box-sizing: border-box;
 }
 
 .politica-container h1 {
     color: #1e3a8a;
-    font-size: 28px;
-    margin-bottom: 10px;
-    border-bottom: 3px solid #1e3a8a;
-    padding-bottom: 15px;
+    font-size: clamp(24px, 3vw, 30px);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin: 0 0 14px;
+    border-bottom: 2px solid #1e3a8a;
+    padding-bottom: 16px;
 }
 
 .politica-container .data-versao {
     color: #64748b;
     font-size: 13px;
-    margin-bottom: 30px;
+    line-height: 1.5;
+    margin-bottom: 24px;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 8px 20px;
     flex-wrap: wrap;
 }
 
+.politica-container .data-versao span { display: inline-flex; align-items: baseline; gap: 6px; }
+.politica-container .data-versao i { color: #1e3a8a; }
+
 .politica-container h2 {
     color: #0a1f44;
-    font-size: 20px;
-    margin: 30px 0 15px 0;
-    padding-left: 12px;
+    font-size: 19px;
+    line-height: 1.35;
+    margin: 32px 0 14px;
+    padding: 2px 0 2px 12px;
     border-left: 4px solid #1e3a8a;
 }
 
@@ -39,26 +51,27 @@
 
 .politica-container p {
     color: #334155;
-    line-height: 1.6;
-    margin-bottom: 15px;
-    text-align: justify;
+    line-height: 1.7;
+    margin-bottom: 14px;
+    text-align: left;
+    overflow-wrap: anywhere;
 }
 
 .politica-container ul, .politica-container ol {
-    margin-left: 25px;
-    margin-bottom: 15px;
+    margin: 0 0 18px;
+    padding-left: 24px;
 }
 
 .politica-container li {
     color: #334155;
-    line-height: 1.6;
-    margin-bottom: 8px;
+    line-height: 1.65;
+    margin-bottom: 7px;
 }
 
 .politica-container .destaque {
     background: #f8fafc;
-    padding: 20px;
-    border-radius: 8px;
+    padding: 18px 20px;
+    border-radius: 10px;
     margin: 20px 0;
     border-left: 4px solid #1e3a8a;
 }
@@ -70,19 +83,26 @@
 .tabela-direitos {
     width: 100%;
     border-collapse: collapse;
-    margin: 20px 0;
+    table-layout: fixed;
+    margin: 20px 0 24px;
+    color: #334155;
+    font-size: 14px;
 }
 
 .tabela-direitos th {
     background: #1e3a8a;
     color: white;
-    padding: 12px;
+    padding: 12px 14px;
     text-align: left;
+    line-height: 1.4;
 }
 
 .tabela-direitos td {
-    padding: 12px;
+    padding: 12px 14px;
     border-bottom: 1px solid #e2e8f0;
+    line-height: 1.55;
+    vertical-align: top;
+    overflow-wrap: anywhere;
 }
 
 .tabela-direitos tr:hover {
@@ -102,10 +122,11 @@
 
 .contato-privacidade {
     background: #e0f2fe;
-    padding: 20px;
-    border-radius: 8px;
+    padding: 22px;
+    border-radius: 12px;
     margin-top: 30px;
     text-align: center;
+    overflow-wrap: anywhere;
 }
 
 .contato-privacidade a {
@@ -123,16 +144,26 @@
     background: #16a34a;
     color: white;
     padding: 4px 12px;
-    border-radius: 8px;
+    border-radius: 999px;
     font-size: 11px;
-    margin-left: 10px;
+    margin-left: 8px;
+    vertical-align: middle;
 }
 
+.politica-container a { overflow-wrap: anywhere; }
+.politica-container a:focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; border-radius: 3px; }
+.politica-container .tabela-direitos tr:last-child td { border-bottom: 0; }
 
-.politica-container footer a:hover {
-        color: white !important;
-        transition: all 0.3s ease;
-    }
-.politica-container footer i {
-        margin-right: 5px;
-    }
+@media (max-width: 640px) {
+    .politica-container { border-radius: 12px; }
+    .politica-container h2 { font-size: 17px; margin-top: 28px; }
+    .politica-container h3 { font-size: 15px; }
+    .politica-container .data-versao { flex-direction: column; gap: 6px; }
+    .politica-container .destaque, .glossario, .contato-privacidade { padding: 16px; }
+    .tabela-direitos { font-size: 12px; }
+    .tabela-direitos th, .tabela-direitos td { padding: 9px 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .contato-privacidade a { transition: none; }
+}

@@ -16,9 +16,20 @@ export async function GET() {
     const tickets = await prisma.ticket.findMany({
       where: cargo === 'ADMIN' ? { hospitalId } : { hospitalId, creatorId: userId },
       orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        numero: true,
+        solicitante: true,
+        titulo: true,
+        descricao: true,
+        status: true,
+        prioridade: true,
+        createdAt: true,
+        respostas: true,
+      },
     })
 
-    return NextResponse.json(tickets)
+    return NextResponse.json(tickets, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) {
     console.error('Erro ao buscar tickets:', error)
     return NextResponse.json({ error: 'Erro ao buscar tickets' }, { status: 500 })
