@@ -1,4 +1,4 @@
-
+﻿
 .cards-nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:16px;margin-bottom:28px}
 .cards-nav>a{display:flex;min-width:0;border-radius:12px;text-decoration:none;outline-offset:4px}
 .cards-nav .card-nav{display:flex;align-items:center;gap:16px;width:100%;min-width:0;min-height:96px;background:white;padding:20px;border-radius:12px;text-align:left;cursor:pointer;transition:transform 0.2s ease,box-shadow 0.2s ease,border-color 0.2s ease;box-shadow:0 2px 8px rgba(15,35,72,0.08);border:1px solid #dbe4f0;box-sizing:border-box}
@@ -9,16 +9,6 @@
 .card-nav .nav-info{min-width:0}
 .card-nav h3{margin:0 0 4px;font-size:15px;line-height:1.35;color:#0a1f44}
 .card-nav p{margin:0;font-size:13px;line-height:1.45;color:#64748b}
-.sidebar{position:fixed;left:0;top:60px;height:calc(100vh - 60px);background:linear-gradient(180deg,#0a1f44 0%,#1e3a8a 100%);box-shadow:4px 0 20px rgba(0,0,0,0.25);z-index:999;transition:transform 0.35s;width:250px;overflow-y:auto;padding:20px 12px;border-radius: 0 8px 8px 0;transform:translateX(-270px)}
-.sidebar.aberta{transform:translateX(0)}
-.sidebar button{display:block;width:100%;padding:13px 16px;margin-bottom:4px;border:none;background:rgba(255,255,255,0.04);color:#e2e8f0;border-radius: 8px;cursor:pointer;font-size:14px;text-align:left;transition:all 0.25s;font-weight:500}
-.sidebar button:hover{background:rgba(255,255,255,0.1);color:white;padding-left:22px;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
-.sidebar button i{margin-right:10px;width:20px;text-align:center;color:#60a5fa;font-size:16px}
-.sidebar button:hover i{color:#93c5fd}
-.sidebar-toggle{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:1000;background:linear-gradient(135deg,#1e3a8a,#0a1f44);color:white;border:none;width:28px;height:55px;border-radius: 0 8px 8px 0;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.35s;box-shadow:3px 0 15px rgba(0,0,0,0.3)}
-.sidebar-toggle:hover{background:linear-gradient(135deg,#2563eb,#1e3a8a);width:32px}
-.sidebar-toggle i{transition:transform 0.35s}
-.sidebar.aberta ~ .sidebar-toggle i{transform:rotate(180deg)}
 .conteudo{margin-left:40px;transition:margin-left 0.35s;padding:10px}
 .conteudo.recolhido{margin-left:260px}
 .contadores{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:16px;margin-bottom:28px}
@@ -111,7 +101,7 @@
 .chatbot-input:focus{border-color:#1e3a8a}
 .chatbot-enviar{width:40px;height:40px;border-radius: 50%;background:#1e3a8a;border:none;color:white;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
 .chatbot-enviar:hover{background:#2563eb}
-@media(max-width:768px){.sidebar{transform:translateX(-270px)}.sidebar.aberta{transform:translateX(0)}.conteudo{margin-left:20px!important}.sidebar-toggle{left:0!important}.chatbot-janela{width:95vw;right:2.5vw}.cards-nav{gap:12px}.card-nav{min-height:84px;padding:16px}.card-contador{min-height:136px;padding:16px}.card-grafico{padding:18px}}
+@media(max-width:768px){.conteudo{margin-left:20px!important}.chatbot-janela{width:95vw;right:2.5vw}.cards-nav{gap:12px}.card-nav{min-height:84px;padding:16px}.card-contador{min-height:136px;padding:16px}.card-grafico{padding:18px}}
 @media(max-width:420px){.card-contador{min-height:120px;padding:14px}.card-grafico{padding:16px}.cards-nav>a{width:100%}}
 
 @media(prefers-reduced-motion:reduce){.card-nav,.card-categoria,.chatbot-btn,.btn-panico,.btn-pcr{animation:none!important;transition:none!important}}
@@ -119,3 +109,42 @@
 
 footer a:hover{color:white!important;}footer i{margin-right:5px;}
 
+
+/* Indicadores compactos, separados por cor */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:10px}
+.kpi{--kpi:#475569;--kpi-texto:#334155;position:relative;display:flex;flex-direction:column;gap:2px;min-width:0;padding:14px 14px 12px;background:#fff;border-radius:12px;border-top:4px solid var(--kpi);box-shadow:0 2px 8px rgba(15,35,72,.08)}
+.kpi>i{position:absolute;top:12px;right:12px;font-size:20px;color:var(--kpi);opacity:.85}
+.kpi-valor{font-size:28px;font-weight:800;line-height:1.1;color:var(--kpi-texto)}
+.kpi-rotulo{font-size:13px;font-weight:600;color:#475569}
+.kpi-sub{font-size:11px;color:#64748b}
+.kpi-warning{--kpi:#f59e0b;--kpi-texto:#b45309}
+.kpi-info{--kpi:#3b82f6;--kpi-texto:#1d4ed8}
+.kpi-danger{--kpi:#ef4444;--kpi-texto:#b91c1c}
+.kpi-success{--kpi:#22c55e;--kpi-texto:#15803d}
+.kpi-pink{--kpi:#ec4899;--kpi-texto:#be185d}
+.kpi-atualizado{margin:0 0 22px;font-size:12px;color:var(--ui-on-dark-muted)}
+
+/* Atalhos compactos, tema por Ã¡rea */
+.categorias{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:24px}
+.categorias .card-categoria{min-height:64px;padding:10px 14px;gap:12px}
+.categorias .card-categoria .icon-wrapper{flex:0 0 38px;width:38px;height:38px;border-radius:10px}
+.categorias .card-categoria .icon-wrapper i,.categorias .card-categoria i{font-size:20px}
+.categorias .card-categoria h4{margin:0;font-size:14px;font-weight:600}
+.categorias .card-categoria p{margin:1px 0 0;font-size:12px;line-height:1.3}
+.categorias .card-categoria i{color:inherit}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.categorias .card-categoria{border-left-width:4px}
+.categorias .theme-blue{border-left-color:#3b82f6}.categorias .theme-blue .icon-wrapper{background:#eff6ff;color:#1d4ed8}
+.categorias .theme-green{border-left-color:#10b981}.categorias .theme-green .icon-wrapper{background:#dcfce7;color:#15803d}
+.categorias .theme-red{border-left-color:#ef4444}.categorias .theme-red .icon-wrapper{background:#fee2e2;color:#b91c1c}
+.categorias .theme-orange{border-left-color:#f59e0b}.categorias .theme-orange .icon-wrapper{background:#fef3c7;color:#b45309}
+.categorias .theme-purple{border-left-color:#8b5cf6}.categorias .theme-purple .icon-wrapper{background:#ede9fe;color:#6d28d9}
+.categorias .theme-pink{border-left-color:#ec4899}.categorias .theme-pink .icon-wrapper{background:#fce7f3;color:#be185d}
+.categorias .theme-gray{border-left-color:#64748b}.categorias .theme-gray .icon-wrapper{background:#f1f5f9;color:#475569}
+@media(max-width:768px){
+.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kpi{padding:12px}
+.kpi-valor{font-size:24px}
+.categorias{grid-template-columns:1fr}
+}
+.metrica-box .label{color:#475569}

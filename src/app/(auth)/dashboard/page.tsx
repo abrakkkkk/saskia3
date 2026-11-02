@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { inter } from '@/app/fonts'
-import { ErrorState, LoadingState, StatCard, StatGrid } from '@/components/ui'
+import { ErrorState, LoadingState } from '@/components/ui'
 import { menuDoCargo } from '@/lib/navigation'
 import { CARGO_LABEL, type Cargo } from '@/lib/permissions'
 import './dashboard.css'
@@ -38,6 +38,27 @@ const ID_CONFIG: Record<string, string> = {
   '/servico-social': 'cat_servico_social', '/ccih': 'cat_ccih', '/admin-usuarios': 'cat_usuarios', '/ponto': 'cat_ponto',
   '/relatorios': 'cat_relatorios', '/ouvidoria': 'cat_ouvidoria', '/chat': 'cat_chat', '/biblioteca': 'cat_biblioteca',
   '/feedback': 'cat_feedback', '/utilitarios': 'cat_utilitarios',
+}
+
+// Cor de cada atalho, por área: azul assistência, verde apoio clínico, vermelho críticos,
+// laranja operação, roxo gestão e conhecimento, cinza registros.
+const TEMAS: Record<string, string> = {
+  '/farmacia': 'green', '/servico-social': 'green', '/ccih': 'green',
+  '/uti': 'red', '/centro-cirurgico': 'red', '/banco-sangue': 'red',
+  '/transporte': 'orange', '/gestao-salas': 'orange', '/ponto': 'orange', '/feedback': 'orange', '/suporte': 'orange', '/lembretes': 'orange',
+  '/admin': 'purple', '/admin-usuarios': 'purple', '/admin-configuracao': 'purple', '/admin-procedimentos': 'purple', '/admin-prontuarios': 'purple',
+  '/admin-config-dashboard': 'purple', '/relatorios': 'purple', '/ouvidoria': 'purple', '/biblioteca': 'purple', '/vacinacao': 'purple', '/curvas-crescimento': 'purple',
+  '/obitos': 'gray', '/manutencao': 'gray', '/utilitarios': 'gray', '/chamados-ti': 'gray', '/equipe-seguranca': 'gray',
+}
+
+const DESCRICOES: Record<string, string> = {
+  '/pacientes': 'Cadastros', '/pacientes-busca': 'Pesquisa avançada', '/agenda': 'Consultas e horários', '/receituario': 'Prescrições',
+  '/exames': 'Laboratório e imagem', '/fichas-auxiliares': 'Formulários', '/uti': 'Leitos', '/centro-cirurgico': 'Salas e agenda',
+  '/banco-sangue': 'Hemoterapia', '/recepcao': 'Atendimento inicial', '/painel-chamadas': 'Painel de TV', '/farmacia': 'Medicamentos',
+  '/almoxarifado': 'Estoque', '/cssd': 'Esterilização', '/ccih': 'Controle de infecção', '/servico-social': 'Atendimento social',
+  '/obitos': 'Registro', '/manutencao': 'Predial e equipamentos', '/transporte': 'Remoção', '/gestao-salas': 'Reservas',
+  '/chat': 'Mensagens', '/ponto': 'Entrada e saída', '/ouvidoria': 'Manifestações', '/relatorios': 'Indicadores', '/biblioteca': 'Materiais',
+  '/utilitarios': 'Ferramentas', '/admin-usuarios': 'Colaboradores',
 }
 
 const STATUS_CORES: Record<string, string> = {
@@ -112,6 +133,21 @@ export default function DashboardPage() {
   const valor = (numero: number) => (statsErro && !stats ? '—' : numero)
   const s = stats
 
+  // Rótulos curtos; a definição exata de cada contagem fica no tooltip.
+  const kpis = s ? [
+    { config: 'contador_aguardando', icone: 'las la-hourglass-half', tom: 'warning', valor: valor(s.aguardando), rotulo: 'Aguardando', dica: 'Recepção, triagem e médico' },
+    { config: 'contador_atendidos', icone: 'las la-user-md', tom: 'info', valor: valor(s.emAtendimento), rotulo: 'Em atendimento', dica: 'Triagem e consulta em curso' },
+    { config: 'contador_total', icone: 'las la-procedures', tom: 'pink', valor: valor(s.internados), rotulo: 'Internados', dica: 'Enfermaria e UTI' },
+    { config: 'contador_leitos_vermelha', icone: 'las la-exclamation-circle', tom: 'danger', valor: valor(s.riscoVermelho), rotulo: 'Risco vermelho', dica: 'Classificação de risco em curso (não é sala)' },
+    { config: 'contador_leitos_amarela', icone: 'las la-exclamation-triangle', tom: 'warning', valor: valor(s.riscoAmarelo), rotulo: 'Risco amarelo', dica: 'Classificação de risco em curso (não é sala)' },
+    { config: 'contador_salas_cc', icone: 'las la-cut', tom: 'success', valor: valor(s.cirurgiasEmAndamento), rotulo: 'Cirurgias', sub: 'em andamento', dica: 'Cirurgias em andamento agora' },
+    { config: 'contador_leitos_uti', icone: 'las la-bed', tom: 'success', valor: statsErro && !stats ? '—' : `${s.leitosUti}/${s.totalLeitosUti}`, rotulo: 'Leitos de UTI', sub: 'ocupados', dica: 'Ocupados / cadastrados' },
+    { config: 'contador_altas', icone: 'las la-check-circle', tom: 'success', valor: valor(s.altas), rotulo: 'Altas', dica: 'Registros ativos, sem período' },
+    { config: 'contador_evasao', icone: 'las la-door-open', tom: 'danger', valor: valor(s.evasoes), rotulo: 'Evasões', dica: 'Registros ativos, sem período' },
+    { config: 'contador_transferencias', icone: 'las la-truck', tom: 'info', valor: valor(s.transferencias), rotulo: 'Transferências', dica: 'Registros ativos, sem período' },
+    { config: 'contador_obitos', icone: 'las la-cross', tom: 'neutral', valor: valor(s.obitos), rotulo: 'Óbitos', dica: 'Total registrado, sem período' },
+  ] : []
+
   const distribuicao = s ? [
     ['Aguardando', s.aguardando], ['Em atendimento', s.emAtendimento], ['Internados', s.internados],
     ['Alta médica', s.altas], ['Transferido', s.transferencias], ['Evasão', s.evasoes],
@@ -136,20 +172,17 @@ export default function DashboardPage() {
 
       {s && (
         <section aria-label="Indicadores do momento">
-          <StatGrid>
-            {ativo('contador_aguardando') && <StatCard icon="las la-hourglass-half" tone="warning" value={valor(s.aguardando)} label="Aguardando atendimento" hint="Recepção, triagem e médico" />}
-            {ativo('contador_atendidos') && <StatCard icon="las la-user-md" tone="info" value={valor(s.emAtendimento)} label="Em atendimento" hint="Triagem e consulta em curso" />}
-            {ativo('contador_total') && <StatCard icon="las la-procedures" tone="info" value={valor(s.internados)} label="Internados" hint="Enfermaria e UTI" />}
-            {ativo('contador_leitos_vermelha') && <StatCard icon="las la-exclamation-circle" tone="danger" value={valor(s.riscoVermelho)} label="Risco vermelho em curso" hint="Classificação de risco, não é sala" />}
-            {ativo('contador_leitos_amarela') && <StatCard icon="las la-exclamation-triangle" tone="warning" value={valor(s.riscoAmarelo)} label="Risco amarelo em curso" hint="Classificação de risco, não é sala" />}
-            {ativo('contador_salas_cc') && <StatCard icon="las la-cut" tone="neutral" value={valor(s.cirurgiasEmAndamento)} label="Cirurgias em andamento" />}
-            {ativo('contador_leitos_uti') && <StatCard icon="las la-bed" tone="neutral" value={statsErro && !stats ? '—' : `${s.leitosUti}/${s.totalLeitosUti}`} label="Leitos de UTI ocupados" hint="Ocupados / cadastrados" />}
-            {ativo('contador_altas') && <StatCard icon="las la-check-circle" tone="success" value={valor(s.altas)} label="Altas" hint="Registros ativos, sem período" />}
-            {ativo('contador_evasao') && <StatCard icon="las la-door-open" tone="danger" value={valor(s.evasoes)} label="Evasões" hint="Registros ativos, sem período" />}
-            {ativo('contador_transferencias') && <StatCard icon="las la-truck" tone="neutral" value={valor(s.transferencias)} label="Transferências" hint="Registros ativos, sem período" />}
-            {ativo('contador_obitos') && <StatCard icon="las la-cross" tone="neutral" value={valor(s.obitos)} label="Óbitos" hint="Total registrado, sem período" />}
-          </StatGrid>
-          {atualizadoEm && <p className="dashboard-atualizado" style={{ color: 'var(--ui-on-dark-muted)', fontSize: 13, margin: '-12px 0 20px' }}>Atualizado às {atualizadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Indicadores históricos e por período ficam em Relatórios.</p>}
+          <div className="kpis">
+            {kpis.filter(k => ativo(k.config)).map(k => (
+              <div key={k.config} className={`kpi kpi-${k.tom}`} title={k.dica}>
+                <i className={k.icone} aria-hidden="true"></i>
+                <div className="kpi-valor">{k.valor}</div>
+                <div className="kpi-rotulo">{k.rotulo}</div>
+                {k.sub && <div className="kpi-sub">{k.sub}</div>}
+              </div>
+            ))}
+          </div>
+          {atualizadoEm && <p className="kpi-atualizado">Atualizado às {atualizadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>}
         </section>
       )}
 
@@ -159,9 +192,12 @@ export default function DashboardPage() {
           <div className="categorias">
             {grupo.itens.map(item => (
               <Link key={item.href} href={item.href}>
-                <div className="card-categoria theme-blue">
+                <div className={`card-categoria theme-${TEMAS[item.href] ?? 'blue'}`}>
                   <div className="icon-wrapper" aria-hidden="true"><i className={item.icon}></i></div>
-                  <div><h4>{item.label}</h4></div>
+                  <div>
+                    <h4>{item.label}</h4>
+                    {DESCRICOES[item.href] && <p>{DESCRICOES[item.href]}</p>}
+                  </div>
                 </div>
               </Link>
             ))}
@@ -169,9 +205,9 @@ export default function DashboardPage() {
         </div>
       ))}
 
-      {s && ativo('grafico_status') && (
+      {s && (ativo('grafico_status') || ativo('grafico_resumo_mes')) && (
         <div className="graficos">
-          <div className="card-grafico">
+          {ativo('grafico_status') && <div className="card-grafico">
             <h3><i className="las la-chart-pie" aria-hidden="true"></i> Distribuição por status</h3>
             {totalDistribuicao > 0 ? distribuicao.map(([nome, quantidade]) => {
               if (quantidade === 0) return null
@@ -183,7 +219,25 @@ export default function DashboardPage() {
                 </div>
               )
             }) : <p style={{ textAlign: 'center', color: 'var(--ui-text-muted)', padding: 20 }}>Nenhum paciente nos status exibidos.</p>}
-          </div>
+          </div>}
+
+          {ativo('grafico_resumo_mes') && (
+            <div className="card-grafico">
+              <h3><i className="las la-chart-line" aria-hidden="true"></i> Resumo assistencial</h3>
+              <div className="resumo-metricas">
+                <div className="metrica-box">
+                  <div className="metrica-badge"><i className="las la-users" aria-hidden="true"></i> Em fluxo</div>
+                  <div className="valor">{valor(s.aguardando + s.emAtendimento)}</div>
+                  <div className="label">Aguardando e em atendimento</div>
+                </div>
+                <div className="metrica-box">
+                  <div className="metrica-badge" style={{ background: '#eff6ff', color: '#1e40af' }}><i className="las la-check-double" aria-hidden="true"></i> Desfechos</div>
+                  <div className="valor">{valor(s.altas + s.transferencias)}</div>
+                  <div className="label">Altas e transferências</div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

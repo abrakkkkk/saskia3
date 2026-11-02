@@ -23,14 +23,6 @@ export default function Sidebar({ cargo }: { cargo: string }) {
 
   return (
     <>
-      <button
-        className="sidebar-toggle"
-        onClick={() => setOpen(!open)}
-        aria-label={open ? 'Fechar menu' : 'Abrir menu'}
-        aria-expanded={open}
-      >
-        <i className={`las la-${open ? 'times' : 'bars'}`} aria-hidden="true"></i>
-      </button>
       <aside className={`sidebar ${open ? 'aberta' : ''}`} aria-label="Menu principal">
         <div className="sidebar-header">
           <h3><i className="las la-th-large" aria-hidden="true"></i> Menu</h3>
@@ -76,6 +68,13 @@ export default function Sidebar({ cargo }: { cargo: string }) {
         </nav>
       </aside>
       {open && <div className="sidebar-overlay" onClick={() => setOpen(false)} />}
-    </>
+      <button
+        className="sidebar-toggle"
+        onClick={() => setOpen(!open)}
+        aria-label={open ? 'Fechar menu' : 'Abrir menu'}
+        aria-expanded={open}
+      >
+        <i className={`las la-${open ? 'times' : 'bars'}`} aria-hidden="true"></i>
+      </button>    </>
   );
 }

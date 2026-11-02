@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 @theme {
   --radius-xs: 8px;
@@ -269,13 +269,12 @@ img {
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.25s;
+  transition: background-color 0.18s ease, color 0.18s ease;
   white-space: nowrap;
 }
 .sidebar-link:hover {
   background: rgba(255, 255, 255, 0.1);
   color: white;
-  padding-left: 22px;
 }
 .sidebar-link.active {
   background: rgba(255, 255, 255, 0.15);
@@ -309,12 +308,19 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.35s;
+  transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s ease;
   box-shadow: 3px 0 15px rgba(0, 0, 0, 0.3);
 }
 .sidebar-toggle:hover {
   background: linear-gradient(135deg, #2563eb, #1e3a8a);
-  width: 32px;
+}
+/* O botão acompanha a borda do menu em vez de ficar escondido atrás dele. */
+.sidebar.aberta ~ .sidebar-toggle {
+  left: 250px;
+}
+/* Sem isso o estilo genérico de :active dos botões troca o translateY(-50%) e o botão pula. */
+.sidebar-toggle:active:not(:disabled) {
+  transform: translateY(-50%);
 }
 .sidebar-overlay {
   position: fixed;
@@ -1916,7 +1922,7 @@ img {
 
 /* force-hmr-reload-3 */
 
-/* Refinamento visual compartilhado: mantém a paleta institucional e os fluxos atuais. */
+/* Refinamento visual compartilhado: mantÃ©m a paleta institucional e os fluxos atuais. */
 :root {
   --surface: #ffffff;
   --surface-muted: #f8fafc;
@@ -1969,7 +1975,6 @@ body {
 }
 
 .sidebar-link:hover {
-  padding-left: 16px;
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -2274,11 +2279,8 @@ button,
 .sidebar-search input:focus { border-color: var(--ui-blue-500); outline: none; }
 .sidebar-vazio { padding: 10px 15px; color: #94a3b8; font-size: 13px; }
 
-.footer-compacto { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 30px; color: var(--ui-on-dark-muted); font-size: 13px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-.footer-compacto nav { display: flex; gap: 18px; }
-.footer-compacto a:hover { color: var(--ui-on-dark); text-decoration: underline; }
 
-/* Cabeçalho: em telas estreitas os atalhos saem, a navegação fica no menu lateral */
+/* CabeÃ§alho: em telas estreitas os atalhos saem, a navegaÃ§Ã£o fica no menu lateral */
 @media (max-width: 1100px) {
   .header-atalho { display: none !important; }
 }
@@ -2292,7 +2294,9 @@ button,
   .ui-panel { padding: 16px; }
   .ui-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .ui-stat { padding: 12px; }
-  .sidebar-toggle { top: auto; bottom: 16px; left: 12px; width: 48px; height: 48px; border-radius: 50%; }
+  .sidebar-toggle { top: auto; bottom: 16px; left: 12px; width: 48px; height: 48px; border-radius: 50%; transform: none; }
+  .sidebar-toggle:active:not(:disabled) { transform: none; }
+  .sidebar.aberta ~ .sidebar-toggle { left: 262px; }
   input, select, textarea, button { min-height: 40px; }
   .modal-content { width: calc(100vw - 24px); max-width: none; }
 }
