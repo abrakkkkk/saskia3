@@ -60,7 +60,7 @@ export default function LoginPage() {
     }
 
     if (!hospitais.some(hospital => hospital.id === hospitalId)) {
-      setErro('Selecione uma unidade hospitalar válida.')
+      setErro('Selecione o hospital.')
       return
     }
 
@@ -75,7 +75,7 @@ export default function LoginPage() {
 
       if (resultado?.error || !resultado?.ok) {
         // Mensagem única: não revela se a conta existe, está inativa ou bloqueada por excesso de tentativas.
-        setErro('Não foi possível entrar. Confira a unidade, o e-mail e a senha, ou tente novamente em alguns minutos.')
+        setErro('Não foi possível entrar. Confira os dados ou tente de novo em alguns minutos.')
         setLoading(false)
       } else {
         router.push('/dashboard')
@@ -105,17 +105,17 @@ export default function LoginPage() {
           }}
         >
 
-          <div className="mb-7 flex flex-col items-center text-center">
+          <div className="flex flex-col items-center text-center" style={{ marginBottom: '28px' }}>
             <Image
               src="/images/logo.png"
               alt="Saskia Saúde"
               width={180}
               height={72}
-              className="mb-3 h-14 w-auto object-contain brightness-0 invert"
+              className="h-14 w-auto object-contain brightness-0 invert"
+              style={{ marginBottom: '20px' }}
               priority
             />
-            <h1 className="text-xl font-semibold tracking-tight text-white">Acesso ao sistema</h1>
-            <p className="mt-1 text-sm text-slate-300">Gestão integrada em saúde</p>
+            <h1 className="text-xl font-semibold tracking-tight text-white" style={{ margin: 0 }}>Acessar o sistema</h1>
           </div>
 
           {/* Form Area */}
@@ -123,7 +123,7 @@ export default function LoginPage() {
 
             <div className="flex flex-col" style={{ marginBottom: '20px' }}>
               <label htmlFor="hospitalId" className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
-                <Hospital aria-hidden="true" className="w-3.5 h-3.5 text-blue-400" /> Unidade Hospitalar
+                <Hospital aria-hidden="true" className="w-3.5 h-3.5 text-blue-400" /> Hospital
               </label>
               <div className="relative">
                 <select
@@ -135,7 +135,7 @@ export default function LoginPage() {
                   className="w-full bg-white border-2 border-transparent focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-lg appearance-none"
                   style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', color: '#0f172a' }}
                 >
-                  <option value="" style={{ color: '#64748b' }}>{carregandoHospitais ? 'Carregando unidades...' : 'Selecione a unidade operacional...'}</option>
+                  <option value="" style={{ color: '#64748b' }}>{carregandoHospitais ? 'Carregando...' : 'Selecione o hospital'}</option>
                   {hospitais.map((hospital) => (
                     <option key={hospital.id} value={hospital.id}>{hospital.nome}</option>
                   ))}
@@ -150,7 +150,7 @@ export default function LoginPage() {
 
             <div className="flex flex-col" style={{ marginBottom: '20px' }}>
               <label htmlFor="login-email" className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
-                <Mail aria-hidden="true" className="w-3.5 h-3.5 text-blue-400" /> E-mail Institucional
+                <Mail aria-hidden="true" className="w-3.5 h-3.5 text-blue-400" /> E-mail
               </label>
               <input
                 id="login-email"
@@ -167,7 +167,7 @@ export default function LoginPage() {
 
             <div className="flex flex-col" style={{ marginBottom: '24px' }}>
               <label htmlFor="login-senha" className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
-                <Lock aria-hidden="true" className="w-3.5 h-3.5 text-blue-400" /> Senha de Acesso
+                <Lock aria-hidden="true" className="w-3.5 h-3.5 text-blue-400" /> Senha
               </label>
               <input
                 id="login-senha"
@@ -197,15 +197,15 @@ export default function LoginPage() {
                 style={{ minHeight: '50px', padding: '12px 16px', borderRadius: '8px', fontSize: '16px', border: '1px solid rgba(255, 255, 255, 0.15)' }}
               >
                 {loading ? (
-                  <><div aria-hidden="true" className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Autenticando...</>
+                  <><div aria-hidden="true" className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Entrando...</>
                 ) : (
-                  <><LogIn aria-hidden="true" className="w-5 h-5" /> Acessar Sistema</>
+                  <><LogIn aria-hidden="true" className="w-5 h-5" /> Entrar</>
                 )}
               </button>
             </div>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-300">
+          <p className="text-center text-sm text-slate-300" style={{ margin: '24px 0 0' }}>
             <Link href="/politicas-privacidade" className="underline hover:text-white">Política de Privacidade</Link>
           </p>
 
