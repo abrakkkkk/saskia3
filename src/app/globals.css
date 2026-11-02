@@ -201,8 +201,8 @@ img {
 .sidebar {
   position: fixed;
   left: 0;
-  top: 80px;
-  height: calc(100vh - 80px);
+  top: 76px;
+  height: calc(100vh - 76px);
   background: linear-gradient(135deg, #11235a, #051024);
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.25);
   z-index: 999;
@@ -1945,8 +1945,8 @@ body {
 }
 
 .header {
-  min-height: 76px;
-  height: auto;
+  --header-h: 76px;
+  height: var(--header-h);
   padding-inline: clamp(16px, 2.5vw, 36px);
   box-shadow: 0 4px 18px rgba(2, 8, 23, 0.22);
 }
