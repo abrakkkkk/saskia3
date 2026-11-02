@@ -97,7 +97,7 @@ export default function InstitucionalPage() {
             <section aria-labelledby="diferenciais-titulo">
                 <div className="text-center mb-12">
                     <Star aria-hidden="true" className="w-12 h-12 mx-auto mb-4 text-yellow-400 fill-yellow-400" />
-                    <h2 id="diferenciais-titulo" className="text-2xl sm:text-3xl font-black text-slate-800">Por que escolher a Saskia?</h2>
+                    <h2 id="diferenciais-titulo" className="text-2xl sm:text-3xl font-black text-white">Por que escolher a Saskia?</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">

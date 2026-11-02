@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import './config-dashboard.css';
@@ -246,7 +246,7 @@ export default function AdminConfigDashboardPage() {
               <div className="config-section" key={secaoNome}>
                 <h3>
                   <i className="las la-folder"></i> {secaoNome}
-                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: 'auto', background: '#f8fafc', padding: '4px 8px', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '11px', color: '#64748b', marginLeft: 'auto', background: '#f8fafc', padding: '4px 8px', borderRadius: '8px' }}>
                     {ativosNaSecao}/{modulos.length} ativos
                   </span>
                 </h3>

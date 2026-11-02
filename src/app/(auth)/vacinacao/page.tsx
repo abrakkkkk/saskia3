@@ -111,7 +111,7 @@ export default function VacinacaoPage() {
       </div>
 
       {driveIndisponivel && (
-        <p role="status" className="text-sm text-slate-600">
+        <p role="status" className="text-sm text-blue-100">
           O catálogo remoto não está disponível agora. Os documentos locais continuam acessíveis.
         </p>
       )}

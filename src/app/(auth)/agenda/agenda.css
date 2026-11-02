@@ -24,7 +24,7 @@
 .evento-procedimento { background: #dcfce7; border-left-color: #22c55e; }
 .evento-exame { background: #fef3c7; border-left-color: #eab308; }
 .evento-pessoal { background: #f3e8ff; border-left-color: #a855f7; }
-.evento-cirurgia { background: #fee2e2; border-left-color: #dc2626; }
+.evento-cirurgia { background: #fee2e2; border-left-color: #b91c1c; }
 .evento-titulo { font-weight: bold; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .evento-horario { font-size: 8px; color: #666; }
 .legenda { display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap; padding: 12px; background: white; border-radius: 8px; }

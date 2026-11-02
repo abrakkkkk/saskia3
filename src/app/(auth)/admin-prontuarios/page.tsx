@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import './prontuarios.css';
@@ -241,7 +241,7 @@ export default function AdminProntuariosPage() {
                     )}
                   </ul>
                 ) : (
-                  <span style={{ color: '#94a3b8' }}>Nenhum campo estruturado</span>
+                  <span style={{ color: '#64748b' }}>Nenhum campo estruturado</span>
                 )}
               </div>
             </div>

@@ -20,10 +20,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## 1. Domínio e Arquitetura
 - **Domínio:** Sistema de Gestão Hospitalar e Clínica (ERP Clínico/Administrativo).
 - **Multi-Tenancy Obrigatório:** Todas as entidades e operações clínicas são vinculadas a um `hospitalId`. Nunca execute queries de dados sensíveis sem associar ou validar o `hospitalId` da sessão.
-- **Controle de Acesso (RBAC):** Baseado no enum `CargoUsuario` (`ADMIN`, `MEDICO`, `ENFERMEIRO_ASSISTENCIAL`, `TECNICO_ENFERMAGEM`, `RECEPCIONISTA`, `FARMACEUTICO`, `OUTROS`).
+- **Controle de Acesso (RBAC):** Baseado no enum `CargoUsuario` (`ADMIN`, `MEDICO`, `ENFERMEIRO_ASSISTENCIAL`, `TECNICO_ENFERMAGEM`, `RECEPCIONISTA`, `FARMACEUTICO`, `NUTRICIONISTA`, `ASSISTENTE_SOCIAL`, `OUTROS`). A matriz cargo × permissão vive só em `@/lib/permissions`; rotas de API usam `exigir(permissao)` de `@/lib/api-guard` e o menu vem de `@/lib/navigation`. Nunca compare cargo por string solta.
 
 ## 2. Padrões de Stack e Código
 - **Next.js 16 + React 19:** Utilizar App Router, Server Actions e Route Handlers sob `src/app`.
-- **Estilização:** TailwindCSS v4 com ícones de `lucide-react`.
+- **Estilização:** TailwindCSS v4 com ícones Line Awesome (`<i className="las la-...">`) na maior parte das telas e `lucide-react` em páginas mais novas; ao tocar uma tela, mantenha a família que ela já usa. Componentes compartilhados de página (PageHeader, StatCard, Tabs, Panel, EmptyState etc.) ficam em `@/components/ui`.
 - **Banco de Dados (Prisma 7):** Sempre importar a instância singleton de `@/lib/db` (`import { prisma } from '@/lib/db'`). Nunca crie instâncias de `PrismaClient` avulsas.
-- **Autenticação (NextAuth v5):** Obter sessão através de `@/lib/auth` ou `@/lib/session`. Credenciais autenticam com `email`, `senha` e `hospitalId`.
+- **Autenticação (NextAuth v5):** Em rotas de API, obter o ator com `exigir()` de `@/lib/api-guard` (valida sessão, permissão e `hospitalId`); em páginas, use `auth()` de `@/lib/auth`. Senhas: só bcrypt via `@/lib/password` (mínimo de 12 caracteres). Credenciais autenticam com `email`, `senha` e `hospitalId`.

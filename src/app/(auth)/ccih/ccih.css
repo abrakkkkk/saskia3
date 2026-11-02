@@ -16,9 +16,9 @@
 .ind-card.bom .ind-valor { color: #16a34a; }
 .ind-card .ind-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
 .tabs-ccih { display: flex; gap: 6px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; flex-wrap: wrap; }
-.tab-btn { padding: 13px 26px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #64748b; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
-.tab-btn:hover { color: #1e3a8a; }
-.tab-btn.ativo { color: #1e3a8a; border-bottom-color: #1e3a8a; }
+.tab-btn { padding: 13px 26px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #cbd5e1; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+.tab-btn:hover { color: #fff; }
+.tab-btn.ativo { color: #fff; border-bottom-color: #fff; }
 .tab-btn:focus-visible, .btn:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
 .tab-conteudo { display: none; }
 .tab-conteudo.ativo { display: block; }
@@ -39,19 +39,19 @@
 .tabela-ccih tbody tr:hover { background: #f8fafc; }
 .tabela-ccih tbody tr:last-child td { border-bottom: none; }
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; }
-.badge-success { background: #dcfce7; color: #16a34a; }
-.badge-danger { background: #fef2f2; color: #dc2626; }
-.badge-warning { background: #fefce8; color: #d97706; }
-.badge-info { background: #dbeafe; color: #2563eb; }
+.badge-success { background: #dcfce7; color: #15803d; }
+.badge-danger { background: #fef2f2; color: #b91c1c; }
+.badge-warning { background: #fefce8; color: #b45309; }
+.badge-info { background: #dbeafe; color: #1d4ed8; }
 .badge-purple { background: #f5f3ff; color: #7c3aed; }
 .badge-gray { background: #f3f4f6; color: #6b7280; }
 .btn { padding: 11px 22px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; white-space: nowrap; }
 .btn-primary { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; }
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(30,58,138,0.3); }
-.btn-success { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; }
+.btn-success { background: #15803d; color: white; }
 .btn-warning { background: #f59e0b; color: #0f172a; }
 .btn-danger { background: #dc2626; color: white; }
-.btn-info { background: #0891b2; color: white; }
+.btn-info { background: #0e7490; color: white; }
 .btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 8px; }
 .btn-xs { padding: 5px 10px; font-size: 11px; border-radius: 8px; }
 .search-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -61,8 +61,8 @@
 .iras-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
 .ira-card { background: white; border-radius: 8px; padding: 22px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 2px solid #e2e8f0; transition: all 0.3s; border-left: 5px solid #1e3a8a; }
 .ira-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-.ira-card.ativo { border-left-color: #dc2626; background: #fef2f2; }
-.ira-card.tratado { border-left-color: #16a34a; background: #f0fdf4; }
+.ira-card.ativo { border-left-color: #b91c1c; background: #fef2f2; }
+.ira-card.tratado { border-left-color: #15803d; background: #f0fdf4; }
 .ira-card .ira-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
 .ira-card .ira-paciente { font-size: 16px; font-weight: 700; color: #0a1f44; }
 .ira-card .ira-info { margin: 8px 0; font-size: 13px; color: #64748b; }
@@ -73,7 +73,7 @@
 .checklist-item:hover { border-color: #1e3a8a; background: #eff6ff; }
 .checklist-item.check { border-color: #22c55e; background: #dcfce7; }
 .checklist-item.check .check-icon { background: #22c55e; color: white; }
-.checklist-item.nao-check .check-icon { background: #fef2f2; color: #dc2626; }
+.checklist-item.nao-check .check-icon { background: #fef2f2; color: #b91c1c; }
 .checklist-item .check-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: #e2e8f0; color: #94a3b8; transition: all 0.2s; flex-shrink: 0; }
 .checklist-item .check-label { font-size: 13px; font-weight: 600; color: #334155; }
 @media (max-width: 768px) { .form-grid, .form-grid-3 { grid-template-columns: 1fr; } .checklist-grid { grid-template-columns: 1fr; } .iras-grid { grid-template-columns: 1fr; } .tabela-ccih { min-width: 720px; font-size: 11px; } .tabela-ccih th, .tabela-ccih td { padding: 8px 10px; } }

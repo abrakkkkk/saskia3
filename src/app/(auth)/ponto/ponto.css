@@ -90,8 +90,8 @@
     font-size: 44px;
 }
 
-.btn-entrada { background: #16a34a; box-shadow: 0 8px 20px rgba(22,163,74,0.3); }
-.btn-entrada:hover:not(:disabled) { background: #15803d; transform: translateY(-4px); box-shadow: 0 12px 25px rgba(22,163,74,0.4); }
+.btn-entrada { background: #15803d; box-shadow: 0 8px 20px rgba(22,163,74,0.3); }
+.btn-entrada:hover:not(:disabled) { background: #166534; transform: translateY(-4px); box-shadow: 0 12px 25px rgba(22,163,74,0.4); }
 
 .btn-saida { background: #dc2626; box-shadow: 0 8px 20px rgba(220,38,38,0.3); }
 .btn-saida:hover:not(:disabled) { background: #b91c1c; transform: translateY(-4px); box-shadow: 0 12px 25px rgba(220,38,38,0.4); }
@@ -99,12 +99,12 @@
 .btn-inicio-intervalo { background: #f59e0b; color: #0f172a; box-shadow: 0 8px 20px rgba(245,158,11,0.3); }
 .btn-inicio-intervalo:hover:not(:disabled) { background: #d97706; transform: translateY(-4px); box-shadow: 0 12px 25px rgba(245,158,11,0.4); }
 
-.btn-fim-intervalo { background: #0891b2; box-shadow: 0 8px 20px rgba(8,145,178,0.3); }
-.btn-fim-intervalo:hover:not(:disabled) { background: #0e7490; transform: translateY(-4px); box-shadow: 0 12px 25px rgba(8,145,178,0.4); }
+.btn-fim-intervalo { background: #0e7490; box-shadow: 0 8px 20px rgba(8,145,178,0.3); }
+.btn-fim-intervalo:hover:not(:disabled) { background: #155e75; transform: translateY(-4px); box-shadow: 0 12px 25px rgba(8,145,178,0.4); }
 
 .btn-ponto-acao:disabled {
     background: #475569;
-    color: #94a3b8;
+    color: #e2e8f0;
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
@@ -225,10 +225,10 @@
     display: inline-block;
 }
 
-.badge-success { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
-.badge-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-.badge-warning { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
-.badge-info { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.badge-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.badge-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.badge-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.badge-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 
 .search-box {
     display: flex;

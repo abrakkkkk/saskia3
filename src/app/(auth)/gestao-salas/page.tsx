@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Tabs } from '@/components/ui';
@@ -422,7 +422,7 @@ export default function GestaoSalasPage() {
                 {erroCarga ? (
                   <tr><td colSpan={7} role="status" style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Reservas indisponíveis enquanto os dados não carregam.</td></tr>
                 ) : reservasFiltradas.filter(r => r.status === 'ATIVA' || r.status === 'RESERVADA').length === 0 ? (
-                  <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhuma reserva ativa encontrada</td></tr>
+                  <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Nenhuma reserva ativa encontrada</td></tr>
                 ) : (
                   reservasFiltradas.filter(r => r.status === 'ATIVA' || r.status === 'RESERVADA').map(r => {
                     const sala = salas.find(s => s.id === r.salaId);
@@ -458,7 +458,7 @@ export default function GestaoSalasPage() {
               {erroCarga ? (
                 <tr><td colSpan={5} role="status" style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Histórico indisponível enquanto os dados não carregam.</td></tr>
               ) : reservas.length === 0 ? (
-                <tr><td colSpan={5} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhum histórico</td></tr>
+                <tr><td colSpan={5} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Nenhum histórico</td></tr>
               ) : (
                 reservas.map(r => {
                   const sala = salas.find(s => s.id === r.salaId);

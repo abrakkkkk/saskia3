@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
@@ -47,10 +47,10 @@ const TIPO_PLURAL: Record<TipoFeedback, string> = {
 };
 
 const TIPO_COLORS: Record<TipoFeedback, { bg: string, text: string, border: string }> = {
-  sugestao: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-500' },
-  elogio: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-500' },
-  reclamacao: { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-500' },
-  bug: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-500' },
+  sugestao: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-500' },
+  elogio: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-500' },
+  reclamacao: { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-500' },
+  bug: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-500' },
 };
 
 function mapearFeedback(item: { id?: unknown; mensagem?: unknown; tipo?: unknown; createdAt?: unknown; status?: unknown; usuario?: { nome?: string } } | null): Feedback {
@@ -349,7 +349,7 @@ export default function FeedbackPage() {
             {carregando ? (
               <p role="status" className="py-16 text-center text-slate-500">Carregando feedbacks...</p>
             ) : lista.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-4">
+              <div className="flex flex-col items-center justify-center py-16 text-slate-600 gap-4">
                 <Inbox aria-hidden="true" className="w-12 h-12 sm:w-16 sm:h-16 opacity-30" />
                 <p>Nenhum feedback encontrado nesta categoria.</p>
               </div>
@@ -366,7 +366,7 @@ export default function FeedbackPage() {
                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${TIPO_COLORS[f.tipo].bg} ${TIPO_COLORS[f.tipo].text}`}>
                           <Icon aria-hidden="true" className="w-3.5 h-3.5" /> {TIPO_LABEL[f.tipo]}
                         </span>
-                        <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                        <span className="text-xs text-slate-600 flex items-center gap-1.5">
                           <Calendar aria-hidden="true" className="w-3.5 h-3.5" /> {dataStr}
                         </span>
                       </div>

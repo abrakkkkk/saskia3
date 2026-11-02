@@ -152,8 +152,8 @@ export default function BibliotecaPage() {
 
       <div>
         <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-slate-100">
-          <FileText className="w-6 h-6 text-blue-800" />
-          <h2 className="text-2xl font-bold text-slate-800">Documentos Técnicos e Protocolos</h2>
+          <FileText className="w-6 h-6 text-blue-200" />
+          <h2 className="text-2xl font-bold text-white">Documentos Técnicos e Protocolos</h2>
         </div>
 
         {loading && (

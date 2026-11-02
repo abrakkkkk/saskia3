@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
@@ -499,7 +499,7 @@ export default function CcihPage() {
             </thead>
             <tbody>
               {culturas.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign:'center', padding:30, color:'#94a3b8' }}>Nenhuma cultura registrada</td></tr>
+                <tr><td colSpan={7} style={{ textAlign:'center', padding:30, color:'#64748b' }}>Nenhuma cultura registrada</td></tr>
               ) : culturas.map(c => (
                 <tr key={c.id}>
                   <td>{fmtData(c.data)}</td>
@@ -628,7 +628,7 @@ export default function CcihPage() {
               </thead>
               <tbody>
                 {antimicrobianos.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign:'center', padding:30, color:'#94a3b8' }}>Nenhum antimicrobiano em monitoramento</td></tr>
+                  <tr><td colSpan={7} style={{ textAlign:'center', padding:30, color:'#64748b' }}>Nenhum antimicrobiano em monitoramento</td></tr>
                 ) : antimicrobianos.map(a => (
                   <tr key={a.id}>
                     <td>{a.paciente}</td>

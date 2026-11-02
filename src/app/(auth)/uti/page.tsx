@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -245,7 +245,7 @@ export default function UtiPage() {
                 </thead>
                 <tbody>
                   {leitosFiltrados.length === 0 ? (
-                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhum paciente internado encontrado</td></tr>
+                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Nenhum paciente internado encontrado</td></tr>
                   ) : (
                     leitosFiltrados.map(l => (
                       <tr key={l.id}>

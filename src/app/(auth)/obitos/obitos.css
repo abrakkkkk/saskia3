@@ -206,8 +206,8 @@
 
 .obitos-page .btn-primary { background: #1e3a8a; }
 .obitos-page .btn-primary:hover:not(:disabled) { background: #1e40af; transform: translateY(-2px); }
-.obitos-page .btn-success { background: #16a34a; }
-.obitos-page .btn-success:hover:not(:disabled) { background: #15803d; transform: translateY(-2px); }
+.obitos-page .btn-success { background: #15803d; }
+.obitos-page .btn-success:hover:not(:disabled) { background: #166534; transform: translateY(-2px); }
 .obitos-page .btn-warning { background: #f59e0b; color: #0f172a; }
 .obitos-page .btn-danger { background: #dc2626; }
 .obitos-page .btn-obitos:disabled { cursor: wait; opacity: .7; transform: none; }
@@ -296,9 +296,9 @@
     display: inline-block;
 }
 
-.badge-info { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-.badge-success { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
-.badge-warning { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.badge-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.badge-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.badge-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
 
 .certidao-preview {
     background: white;

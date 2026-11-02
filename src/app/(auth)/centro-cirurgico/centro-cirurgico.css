@@ -9,16 +9,16 @@
 .stat-card .stat-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
 .stat-card .stat-icon { width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
 .stat-card .stat-icon.blue { background: #eff6ff; color: #1e3a8a; }
-.stat-card .stat-icon.green { background: #dcfce7; color: #16a34a; }
-.stat-card .stat-icon.orange { background: #fffbeb; color: #d97706; }
-.stat-card .stat-icon.red { background: #fef2f2; color: #dc2626; }
+.stat-card .stat-icon.green { background: #dcfce7; color: #15803d; }
+.stat-card .stat-icon.orange { background: #fffbeb; color: #b45309; }
+.stat-card .stat-icon.red { background: #fef2f2; color: #b91c1c; }
 .stat-card .stat-icon.purple { background: #f5f3ff; color: #7c3aed; }
 .stat-card .stat-numero { font-size: 30px; font-weight: 800; color: #0a1f44; }
-.stat-card .stat-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+.stat-card .stat-label { font-size: 12px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
 .tabs-cc { display: flex; gap: 6px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; flex-wrap: wrap; }
-.tab-btn { padding: 13px 26px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #64748b; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
-.tab-btn:hover { color: #1e3a8a; }
-.tab-btn.ativo { color: #1e3a8a; border-bottom-color: #1e3a8a; }
+.tab-btn { padding: 13px 26px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #cbd5e1; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+.tab-btn:hover { color: #fff; }
+.tab-btn.ativo { color: #fff; border-bottom-color: #fff; }
 .tab-conteudo { display: none; }
 .tab-conteudo.ativo { display: block; }
 .cc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px; }
@@ -45,18 +45,18 @@
 .tabela-cc tbody tr:hover { background: #f8fafc; }
 .tabela-cc tbody tr:last-child td { border-bottom: none; }
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; }
-.badge-agendado { background: #eff6ff; color: #2563eb; }
-.badge-andamento { background: #fffbeb; color: #d97706; }
+.badge-agendado { background: #eff6ff; color: #1d4ed8; }
+.badge-andamento { background: #fffbeb; color: #b45309; }
 .badge-recuperacao { background: #f5f3ff; color: #7c3aed; }
-.badge-concluido { background: #dcfce7; color: #16a34a; }
-.badge-cancelado { background: #fef2f2; color: #dc2626; }
+.badge-concluido { background: #dcfce7; color: #15803d; }
+.badge-cancelado { background: #fef2f2; color: #b91c1c; }
 .badge-eletiva { background: #dbeafe; color: #1e40af; }
-.badge-urgencia { background: #fef2f2; color: #dc2626; }
+.badge-urgencia { background: #fef2f2; color: #b91c1c; }
 .badge-emergencia { background: #fef2f2; color: #b91c1c; font-weight: 800; }
 .btn { padding: 11px 22px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; white-space: nowrap; }
 .btn-primary { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; box-shadow: 0 4px 12px rgba(30,58,138,0.2); }
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(30,58,138,0.3); }
-.btn-success { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; box-shadow: 0 4px 12px rgba(22,163,74,0.2); }
+.btn-success { background: #15803d; color: white; box-shadow: 0 4px 12px rgba(22,163,74,0.2); }
 .btn-success:hover { transform: translateY(-2px); }
 .btn-warning { background: #f59e0b; color: #0f172a; }
 .btn-danger { background: #dc2626; color: white; }
@@ -65,7 +65,7 @@
 .salas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
 .sala-card { background: white; border-radius: 8px; padding: 22px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 2px solid #e2e8f0; transition: all 0.3s; }
 .sala-card:hover { border-color: #1e3a8a; box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
-.sala-card.ocupada { border-color: #dc2626; background: #fef2f2; }
+.sala-card.ocupada { border-color: #b91c1c; background: #fef2f2; }
 .sala-card.disponivel { border-color: #22c55e; background: #f0fdf4; }
 .sala-card.limpeza { border-color: #f59e0b; background: #fffbeb; }
 .sala-card .sala-numero { font-size: 32px; font-weight: 800; color: #0a1f44; }

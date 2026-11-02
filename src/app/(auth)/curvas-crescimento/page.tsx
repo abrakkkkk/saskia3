@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { 
@@ -117,7 +117,7 @@ export default function CurvasCrescimentoPage() {
           className={`flex-1 min-h-12 py-3 px-3 sm:px-4 rounded-lg font-bold flex items-center justify-center gap-2 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
             abaAtiva === 'meninas' 
               ? 'bg-white text-pink-600 shadow-sm' 
-              : 'text-slate-500 hover:text-slate-700'
+              : 'text-slate-600 hover:text-slate-800'
           }`}
         >
           <Baby aria-hidden="true" className="w-5 h-5" /> Meninas
@@ -128,8 +128,8 @@ export default function CurvasCrescimentoPage() {
           onClick={() => setAbaAtiva('meninos')}
           className={`flex-1 min-h-12 py-3 px-3 sm:px-4 rounded-lg font-bold flex items-center justify-center gap-2 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
             abaAtiva === 'meninos' 
-              ? 'bg-white text-blue-600 shadow-sm' 
-              : 'text-slate-500 hover:text-slate-700'
+              ? 'bg-white text-blue-800 shadow-sm' 
+              : 'text-slate-600 hover:text-slate-800'
           }`}
         >
           <Baby aria-hidden="true" className="w-5 h-5" /> Meninos

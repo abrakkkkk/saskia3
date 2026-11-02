@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import './chamados-ti.css';
@@ -95,10 +95,10 @@ export default function ChamadosTiPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'ENVIADO': return 'bg-red-50 text-red-600 border border-red-200';
-      case 'EM_ANALISE': return 'bg-blue-50 text-blue-600 border border-blue-200';
-      case 'RESOLVIDO': return 'bg-green-50 text-green-600 border border-green-200';
-      case 'FECHADO': return 'bg-gray-100 text-gray-500 border border-gray-200';
+      case 'ENVIADO': return 'bg-red-50 text-red-800 border border-red-200';
+      case 'EM_ANALISE': return 'bg-blue-50 text-blue-800 border border-blue-200';
+      case 'RESOLVIDO': return 'bg-green-50 text-green-800 border border-green-200';
+      case 'FECHADO': return 'bg-gray-100 text-gray-700 border border-gray-200';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -169,7 +169,7 @@ export default function ChamadosTiPage() {
         ) : erro ? (
           <div className="ticket-load-error" role="alert"><span>{erro}</span><button type="button" className="btn btn-primary" onClick={() => void carregarDados()}>Tentar novamente</button></div>
         ) : tickets.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: '#475569' }}>
             <i className="las la-smile" style={{ fontSize: '48px', marginBottom: '10px', color: '#10b981' }}></i>
             <p>Você ainda não abriu nenhum chamado.</p>
           </div>
@@ -198,7 +198,7 @@ export default function ChamadosTiPage() {
                     </td>
                     <td>
                       <div style={{ fontSize: '13px', color: '#475569' }}><i className="las la-user" aria-hidden="true"></i> {ticket.solicitante}</div>
-                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>{new Date(ticket.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</div>
+                      <div style={{ fontSize: '11px', color: '#475569' }}>{new Date(ticket.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</div>
                     </td>
                     <td>
                       <span className={`status-badge ${getPrioridadeBadge(ticket.prioridade)}`} style={{ padding: '4px 8px', borderRadius: '8px' }}>

@@ -61,7 +61,7 @@
 
 .ouv-container .stat-card .stat-label {
     font-size: 11px;
-    color: #94a3b8;
+    color: #475569;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-top: 5px;
@@ -210,10 +210,10 @@
     font-weight: 700;
 }
 
-.ouv-container .badge-success { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
-.ouv-container .badge-warning { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
-.ouv-container .badge-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-.ouv-container .badge-info { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.ouv-container .badge-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.ouv-container .badge-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.ouv-container .badge-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.ouv-container .badge-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 
 .ouv-container .btn {
     padding: 11px 22px;
@@ -231,8 +231,8 @@
 
 .ouv-container .btn-primary { background: #1e3a8a; color: white; }
 .ouv-container .btn-primary:hover { background: #1e40af; transform: translateY(-2px); }
-.ouv-container .btn-success { background: #16a34a; color: white; }
-.ouv-container .btn-success:hover { background: #15803d; transform: translateY(-2px); }
+.ouv-container .btn-success { background: #15803d; color: white; }
+.ouv-container .btn-success:hover { background: #166534; transform: translateY(-2px); }
 .ouv-container .btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 8px; }
 
 @media (max-width: 768px) {
@@ -244,7 +244,7 @@
 .ouv-container .banner-ouv h1 { line-height: 1.2; letter-spacing: -.02em; }
 .ouv-container .stats-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px; }
 .ouv-container .stat-card { border-radius: 12px; box-shadow: 0 3px 12px rgba(15, 35, 72, .06); }
-.ouv-container .stat-card .stat-label { color: #64748b; font-size: 12px; font-weight: 600; }
+.ouv-container .stat-card .stat-label { color: #475569; font-size: 12px; font-weight: 600; }
 .ouv-container .tabs-ouv { gap: 8px; }
 .ouv-container .tab-btn { min-height: 46px; padding: 11px 18px; border-radius: 10px 10px 0 0; }
 .ouv-container .form-panel { border-radius: 12px; padding: 26px; box-shadow: 0 3px 14px rgba(15, 35, 72, .06); }

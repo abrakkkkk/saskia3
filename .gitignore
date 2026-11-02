@@ -50,3 +50,4 @@ Audit-*/runtime-sandbox/
 
 .agents/
 
+!.env.example

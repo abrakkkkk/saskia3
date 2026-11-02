@@ -61,7 +61,7 @@
 
 .ss-container .stat-card .stat-label {
     font-size: 11px;
-    color: #94a3b8;
+    color: #475569;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-top: 3px;
@@ -82,7 +82,7 @@
     cursor: pointer;
     font-size: 14px;
     font-weight: 600;
-    color: #64748b;
+    color: #cbd5e1;
     border-bottom: 3px solid transparent;
     margin-bottom: -2px;
     transition: all 0.2s;
@@ -92,12 +92,12 @@
 }
 
 .ss-container .tab-btn:hover {
-    color: #1e3a8a;
+    color: #fff;
 }
 
 .ss-container .tab-btn.ativo {
-    color: #1e3a8a;
-    border-bottom-color: #1e3a8a;
+    color: #fff;
+    border-bottom-color: #fff;
 }
 
 .ss-container .form-panel {
@@ -213,10 +213,10 @@
     font-weight: 700;
 }
 
-.ss-container .badge-success { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
-.ss-container .badge-warning { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
-.ss-container .badge-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-.ss-container .badge-info { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.ss-container .badge-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.ss-container .badge-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.ss-container .badge-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.ss-container .badge-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 
 .ss-container .btn {
     padding: 11px 22px;
@@ -235,8 +235,8 @@
 
 .ss-container .btn-primary { background: #1e3a8a; color: white; }
 .ss-container .btn-primary:hover { background: #1e40af; transform: translateY(-2px); }
-.ss-container .btn-success { background: #16a34a; color: white; }
-.ss-container .btn-success:hover { background: #15803d; transform: translateY(-2px); }
+.ss-container .btn-success { background: #15803d; color: white; }
+.ss-container .btn-success:hover { background: #166534; transform: translateY(-2px); }
 
 .ss-container .search-box {
     display: flex;
@@ -350,5 +350,5 @@
         transition-duration: 0.01ms !important;
     }
 }
-.ss-container .stat-label { color: #64748b; }
+.ss-container .stat-label { color: #475569; }
 .ss-container .ss-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

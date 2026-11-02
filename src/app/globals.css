@@ -849,7 +849,7 @@ img {
   box-shadow: 0 6px 20px rgba(30, 58, 138, 0.3);
 }
 .btn-success {
-  background: linear-gradient(135deg, #16a34a, #22c55e);
+  background: #15803d;
   color: white;
   box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
 }
@@ -869,7 +869,7 @@ img {
   color: #0f172a;
 }
 .btn-info {
-  background: #0891b2;
+  background: #0e7490;
   color: white;
 }
 .btn-purple {

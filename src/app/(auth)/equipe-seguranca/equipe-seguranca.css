@@ -30,7 +30,7 @@
 }
 .seg-container .banner-seg h1 svg { flex: 0 0 auto; }
 .seg-container .banner-seg p { margin: 0; font-size: 15px; line-height: 1.55; color: rgba(255,255,255,.9); }
-.seg-container .banner-seg .btn { width: auto; min-height: 44px; padding: 10px 18px; border: 1px solid rgba(255,255,255,.22); border-radius: 10px; background: #0891b2; color: #fff; }
+.seg-container .banner-seg .btn { width: auto; min-height: 44px; padding: 10px 18px; border: 1px solid rgba(255,255,255,.22); border-radius: 10px; background: #0e7490; color: #fff; }
 .seg-container .banner-seg .btn:hover:not(:disabled) { background: #0e7490; }
 
 .seg-container .stats-grid {
@@ -54,7 +54,7 @@
 .seg-container .stat-icon { display: grid; place-items: center; margin-bottom: 9px; color: #b91c1c; }
 .seg-container .stat-icon svg { width: 26px; height: 26px; }
 .seg-container .stat-valor { color: #0a1f44; font-size: 30px; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.seg-container .stat-label { margin-top: 5px; color: #64748b; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.seg-container .stat-label { margin-top: 5px; color: #475569; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 
 .seg-container .seg-flow-status {
   display: flex;
@@ -146,8 +146,9 @@
 .seg-container .tabela-seg tbody tr:hover { background: #f8fafc; }
 .seg-container .seg-empty { padding: 32px 20px !important; color: #64748b !important; text-align: center; }
 .seg-container .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 9px 16px; border: 0; border-radius: 9px; font-size: 14px; font-weight: 650; white-space: nowrap; cursor: pointer; transition: background-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-.seg-container .btn-success { background: #16a34a; color: #fff; }
-.seg-container .btn-success:hover:not(:disabled) { background: #15803d; transform: translateY(-1px); }
+.seg-container .form-panel :is(h2, label) { color: #f8fafc; }
+.seg-container .btn-success { background: #15803d; color: #fff; }
+.seg-container .btn-success:hover:not(:disabled) { background: #166534; transform: translateY(-1px); }
 .seg-container .btn-sm { min-height: 36px; padding: 7px 13px; font-size: 13px; }
 .seg-container button:disabled { opacity: .6; cursor: not-allowed; }
 .seg-container button:focus-visible, .seg-container input:focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }

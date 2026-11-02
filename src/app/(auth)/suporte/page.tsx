@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
@@ -253,7 +253,7 @@ export default function SuportePage() {
           type="button"
           aria-pressed={filtroAtual === 'andamento'}
           onClick={() => setFiltroAtual('andamento')}
-          className={`min-h-11 shrink-0 flex items-center gap-2 px-4 sm:px-6 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-700 ${filtroAtual === 'andamento' ? 'border-blue-900 text-blue-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          className={`min-h-11 shrink-0 flex items-center gap-2 px-4 sm:px-6 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-700 ${filtroAtual === 'andamento' ? 'border-white text-white' : 'border-transparent text-slate-300 hover:text-white'}`}
         >
           <TicketIcon aria-hidden="true" className="w-4 h-4" /> Em Andamento ({andamentoCount})
         </button>
@@ -261,7 +261,7 @@ export default function SuportePage() {
           type="button"
           aria-pressed={filtroAtual === 'arquivados'}
           onClick={() => setFiltroAtual('arquivados')}
-          className={`min-h-11 shrink-0 flex items-center gap-2 px-4 sm:px-6 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-700 ${filtroAtual === 'arquivados' ? 'border-blue-900 text-blue-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          className={`min-h-11 shrink-0 flex items-center gap-2 px-4 sm:px-6 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-700 ${filtroAtual === 'arquivados' ? 'border-white text-white' : 'border-transparent text-slate-300 hover:text-white'}`}
         >
           <Archive aria-hidden="true" className="w-4 h-4" /> Concluídos e arquivados ({arquivadosCount})
         </button>
@@ -273,7 +273,7 @@ export default function SuportePage() {
         {carregando ? (
           <div role="status" className="flex items-center justify-center gap-2 py-20 text-slate-500"><Spinner aria-hidden="true" className="h-5 w-5 animate-spin motion-reduce:animate-none" /> Carregando tickets...</div>
         ) : ticketsFiltrados.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-slate-500 gap-4 text-center">
+          <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-slate-300 gap-4 text-center">
             <Inbox aria-hidden="true" className="w-14 h-14 opacity-40" />
             <p className="text-lg">Nenhum ticket encontrado</p>
             <p className="text-sm">Clique em &quot;Nova Solicitação&quot; para abrir um chamado</p>

@@ -12,16 +12,16 @@
 .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
 .stat-card .stat-icon { font-size: 28px; margin-bottom: 6px; }
 .stat-card .stat-valor { font-size: 30px; font-weight: 800; color: #0a1f44; }
-.stat-card .stat-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+.stat-card .stat-label { font-size: 11px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
 .stat-card.livre { border-left-color: #16a34a; }
 .stat-card.ocupado { border-left-color: #dc2626; }
 .stat-card.reservado { border-left-color: #f59e0b; }
 .stat-card.manutencao { border-left-color: #6b7280; }
 
 .tabs-salas { display: flex; gap: 6px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; flex-wrap: wrap; }
-.tab-btn { padding: 13px 26px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #64748b; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
-.tab-btn:hover { color: #1e3a8a; }
-.tab-btn.ativo { color: #1e3a8a; border-bottom-color: #1e3a8a; }
+.tab-btn { padding: 13px 26px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #cbd5e1; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+.tab-btn:hover { color: #fff; }
+.tab-btn.ativo { color: #fff; border-bottom-color: #fff; }
 .tab-conteudo { display: none; }
 .tab-conteudo.ativo { display: block; }
 
@@ -29,14 +29,14 @@
 .sala-card { background: white; border-radius: 8px; padding: 22px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 3px solid #e2e8f0; transition: all 0.3s; position: relative; }
 .sala-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
 .sala-card.livre { border-color: #22c55e; background: #f0fdf4; }
-.sala-card.ocupado { border-color: #dc2626; background: #fef2f2; }
+.sala-card.ocupado { border-color: #b91c1c; background: #fef2f2; }
 .sala-card.reservado { border-color: #f59e0b; background: #fefce8; }
 .sala-card.manutencao { border-color: #6b7280; background: #f3f4f6; }
 .sala-card .sala-numero { font-size: 36px; font-weight: 800; color: #0a1f44; display: flex; justify-content: space-between; align-items: center; }
 .sala-card .sala-status { display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; }
-.sala-card.livre .sala-status { background: #dcfce7; color: #16a34a; }
-.sala-card.ocupado .sala-status { background: #fef2f2; color: #dc2626; }
-.sala-card.reservado .sala-status { background: #fefce8; color: #d97706; }
+.sala-card.livre .sala-status { background: #dcfce7; color: #15803d; }
+.sala-card.ocupado .sala-status { background: #fef2f2; color: #b91c1c; }
+.sala-card.reservado .sala-status { background: #fefce8; color: #b45309; }
 .sala-card.manutencao .sala-status { background: #f3f4f6; color: #6b7280; }
 .sala-card .sala-info { margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; }
 .sala-card .sala-info p { margin: 6px 0; font-size: 13px; color: #64748b; display: flex; align-items: center; gap: 8px; }
@@ -58,10 +58,10 @@
 .btn { padding: 11px 22px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; white-space: nowrap; }
 .btn-primary { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; box-shadow: 0 4px 12px rgba(30,58,138,0.2); }
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(30,58,138,0.3); }
-.btn-success { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; }
+.btn-success { background: #15803d; color: white; }
 .btn-warning { background: #f59e0b; color: #0f172a; }
 .btn-danger { background: #dc2626; color: white; }
-.btn-info { background: #0891b2; color: white; }
+.btn-info { background: #0e7490; color: white; }
 .btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 8px; }
 .btn-xs { padding: 5px 10px; font-size: 11px; border-radius: 8px; }
 
@@ -73,9 +73,9 @@
 .tabela-salas tbody tr:hover { background: #f8fafc; }
 
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; }
-.badge-livre { background: #dcfce7; color: #16a34a; }
-.badge-ocupado { background: #fef2f2; color: #dc2626; }
-.badge-reservado { background: #fefce8; color: #d97706; }
+.badge-livre { background: #dcfce7; color: #15803d; }
+.badge-ocupado { background: #fef2f2; color: #b91c1c; }
+.badge-reservado { background: #fefce8; color: #b45309; }
 .badge-manutencao { background: #f3f4f6; color: #6b7280; }
 
 .search-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }

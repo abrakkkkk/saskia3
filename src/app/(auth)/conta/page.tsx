@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -188,9 +188,9 @@ export default function ContaPage() {
           </div>
 
           <div className="form-grupo">
-            <label htmlFor="conta-email" style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>
+            <label htmlFor="conta-email" style={{ color: '#475569', fontSize: 12, fontWeight: 600 }}>
               <i className="las la-envelope"></i> E-mail
-              <span style={{ marginLeft: 8, background: '#f1f5f9', padding: '2px 8px', borderRadius: 6, color: '#64748b' }}>Não editável</span>
+              <span style={{ marginLeft: 8, background: '#f1f5f9', padding: '2px 8px', borderRadius: 6, color: '#475569' }}>Não editável</span>
             </label>
             <input
               id="conta-email"

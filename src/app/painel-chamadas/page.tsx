@@ -250,7 +250,7 @@ export default function PainelChamadasTV() {
               </div>
               
               <div className="bg-blue-600 rounded-2xl sm:rounded-[2rem] w-full max-w-2xl p-5 sm:p-6 shadow-2xl border-b-4 sm:border-b-8 border-blue-800 flex flex-col items-center shrink-0 text-center">
-                <p className="text-sm sm:text-base lg:text-lg font-bold text-blue-100 uppercase tracking-[0.18em] sm:tracking-[0.3em] mb-2">Dirija-se Para</p>
+                <p className="text-sm sm:text-base lg:text-lg font-bold text-white uppercase tracking-[0.18em] sm:tracking-[0.3em] mb-2">Dirija-se Para</p>
                 <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
                   <DoorOpen aria-hidden="true" className="w-9 h-9 sm:w-12 sm:h-12 text-white shrink-0" />
                   <span className="text-2xl sm:text-3xl xl:text-4xl leading-tight font-black text-white uppercase drop-shadow-md break-words max-w-full">

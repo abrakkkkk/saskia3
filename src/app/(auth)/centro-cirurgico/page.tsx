@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -431,7 +431,7 @@ export default function CentroCirurgicoPage() {
                 </thead>
                 <tbody>
                   {cirurgiasFiltradas.length === 0 ? (
-                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Nenhuma cirurgia encontrada</td></tr>
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Nenhuma cirurgia encontrada</td></tr>
                   ) : (
                     cirurgiasFiltradas.slice(0, 50).map(c => (
                       <tr key={c.id}>

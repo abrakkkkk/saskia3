@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { Tabs } from '@/components/ui'
@@ -131,11 +131,11 @@ export default function ManutencaoPage() {
             <div className="stat-label">Total de OS</div>
           </div>
           <div className="stat-card">
-            <div className="stat-numero" style={{ color: '#d97706' }}>{abertas}</div>
+            <div className="stat-numero" style={{ color: '#b45309' }}>{abertas}</div>
             <div className="stat-label">Em Aberto</div>
           </div>
           <div className="stat-card">
-            <div className="stat-numero" style={{ color: '#16a34a' }}>{concluidas}</div>
+            <div className="stat-numero" style={{ color: '#15803d' }}>{concluidas}</div>
             <div className="stat-label">Concluídas</div>
           </div>
         </div>

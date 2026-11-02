@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
@@ -284,7 +284,7 @@ export default function PontoPage() {
                   {!dadosCarregados ? (
                     <tr><td colSpan={3} role="status" style={{textAlign:'center', padding:'30px', color:'#64748b'}}>{carregandoRegistros ? 'Carregando registros...' : 'Registros indisponíveis. Tente novamente.'}</td></tr>
                   ) : registrosHoje.length === 0 ? (
-                  <tr><td colSpan={3} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhum registro hoje</td></tr>
+                  <tr><td colSpan={3} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Nenhum registro hoje</td></tr>
                 ) : (
                     [...registrosHoje].reverse().map(r => {
                     const icones: Record<string, string> = {
@@ -331,7 +331,7 @@ export default function PontoPage() {
                 </thead>
                 <tbody>
                   {historicoFiltrado.length === 0 ? (
-                    <tr><td colSpan={4} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhum registro encontrado</td></tr>
+                    <tr><td colSpan={4} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Nenhum registro encontrado</td></tr>
                   ) : (
                     historicoFiltrado.slice(0, 100).map(r => (
                       <tr key={r.id}>

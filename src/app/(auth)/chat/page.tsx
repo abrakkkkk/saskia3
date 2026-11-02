@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
@@ -241,7 +241,7 @@ export default function ChatPage() {
               >
                 <div style={{
                   width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0,
-                  background: c.cor + '20', color: c.cor,
+                  background: c.cor + '20', color: `color-mix(in srgb, ${c.cor} 50%, black)`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontWeight: 700, fontSize: '14px'
                 }}>
@@ -260,9 +260,9 @@ export default function ChatPage() {
       {/* MAIN AREA */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f0f2f5', overflow: 'hidden' }}>
         {!ativo ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', gap: '12px' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#475569', gap: '12px' }}>
             <MessageSquare size={48} aria-hidden="true" style={{ opacity: 0.3 }} />
-            <div style={{ fontSize: '18px', fontWeight: 600, color: '#64748b' }}>Chat Interno — Saskia Saúde</div>
+            <div style={{ fontSize: '18px', fontWeight: 600, color: '#475569' }}>Chat Interno — Saskia Saúde</div>
             <div style={{ fontSize: '14px' }}>Selecione um profissional para iniciar</div>
           </div>
         ) : (
@@ -275,7 +275,7 @@ export default function ChatPage() {
             }}>
               <div style={{
                 width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
-                background: ativo.cor + '20', color: ativo.cor,
+                background: ativo.cor + '20', color: `color-mix(in srgb, ${ativo.cor} 50%, black)`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontWeight: 700, fontSize: '14px'
               }}>
@@ -293,7 +293,7 @@ export default function ChatPage() {
               {carregandoMensagens ? (
                 <div role="status" style={{ margin: 'auto', color: '#64748b' }}>Carregando conversa...</div>
               ) : conversa.length === 0 ? (
-                <div style={{ margin: 'auto', textAlign: 'center', color: '#94a3b8' }}>
+                <div style={{ margin: 'auto', textAlign: 'center', color: '#475569' }}>
                   <MessageSquare size={28} aria-hidden="true" style={{ opacity: 0.4, marginBottom: '8px' }} />
                   <div style={{ fontSize: '14px' }}>Nenhuma mensagem ainda. Envie a primeira!</div>
                 </div>

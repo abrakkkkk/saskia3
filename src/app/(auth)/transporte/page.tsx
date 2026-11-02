@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Tabs } from '@/components/ui';
@@ -157,7 +157,7 @@ export default function TransportePage() {
             <div className="stat-label">Solicitações Hoje</div>
           </div>
           <div className="stat-card" style={{borderLeftColor: '#d97706'}}>
-            <div className="stat-numero" style={{color: '#d97706'}}>{statPendentes}</div>
+            <div className="stat-numero" style={{color: '#b45309'}}>{statPendentes}</div>
             <div className="stat-label">Pendentes</div>
           </div>
         </div>
@@ -235,7 +235,7 @@ export default function TransportePage() {
               </thead>
               <tbody>
                 {transportes.length === 0 ? (
-                  <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#94a3b8'}}>Nenhuma solicitação</td></tr>
+                  <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Nenhuma solicitação</td></tr>
                 ) : (
                   transportes.map(t => (
                     <tr key={t.id}>

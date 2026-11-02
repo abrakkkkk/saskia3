@@ -38,8 +38,8 @@
 .mnt-container .btn { min-height:42px; padding:10px 18px; border:0; border-radius:9px; cursor:pointer; font:inherit; font-size:14px; font-weight:650; display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:background-color .18s ease,box-shadow .18s ease,transform .18s ease; }
 .mnt-container .btn-primary { background:#1e3a8a; color:#fff; }
 .mnt-container .btn-primary:hover { background:#1e40af; transform:translateY(-1px); }
-.mnt-container .btn-success { background:#16a34a; color:#fff; }
-.mnt-container .btn-success:hover { background:#15803d; transform:translateY(-1px); box-shadow:0 4px 10px rgba(22,163,74,.2); }
+.mnt-container .btn-success { background: #15803d; color:#fff; }
+.mnt-container .btn-success:hover { background: #166534; transform:translateY(-1px); box-shadow:0 4px 10px rgba(22,163,74,.2); }
 .mnt-container .btn-sm { min-height:36px; padding:7px 12px; font-size:12px; }
 .mnt-container .mnt-load,.mnt-container .mnt-error { padding:12px 15px; border-radius:10px; margin:0 0 16px; font-size:14px; line-height:1.5; }
 .mnt-container .mnt-load { color:#334155; background:#f8fafc; border:1px solid var(--mnt-line); }

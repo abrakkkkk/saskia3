@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
@@ -62,10 +62,10 @@ function toIsoDateTime(date: string, time: string) {
 }
 
 const TIPO_INFO = {
-  consulta: { label: 'Consulta', icon: Stethoscope, color: 'text-blue-600 bg-blue-100' },
+  consulta: { label: 'Consulta', icon: Stethoscope, color: 'text-blue-800 bg-blue-100' },
   medicacao: { label: 'Registro antigo', icon: Pill, color: 'text-slate-600 bg-slate-100' },
-  exame: { label: 'Exame', icon: Activity, color: 'text-purple-600 bg-purple-100' },
-  cirurgia: { label: 'Cirurgia', icon: Activity, color: 'text-orange-600 bg-orange-100' },
+  exame: { label: 'Exame', icon: Activity, color: 'text-purple-800 bg-purple-100' },
+  cirurgia: { label: 'Cirurgia', icon: Activity, color: 'text-orange-800 bg-orange-100' },
   pessoal: { label: 'Pessoal', icon: User, color: 'text-slate-600 bg-slate-100' }
 };
 
@@ -382,7 +382,7 @@ export default function LembretesPage() {
             {carregando ? (
               <div role="status" className="flex h-full items-center justify-center text-slate-500">Carregando lembretes...</div>
             ) : listaFiltrada.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4">
+              <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-4">
                 <Bell aria-hidden="true" className="w-16 h-16 opacity-30" />
                 <p>Nenhum lembrete encontrado</p>
               </div>

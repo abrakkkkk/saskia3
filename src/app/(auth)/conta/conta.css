@@ -140,7 +140,7 @@
 
 /* ==================== BOTÃO SALVAR ==================== */
 .conta-page .btn-salvar-conta {
-    background: linear-gradient(135deg, #16a34a, #22c55e);
+    background: #15803d;
     color: white;
     border: none;
     padding: 13px 28px;
@@ -236,7 +236,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    color: var(--conta-ink);
+    color: #fff;
     font-size: clamp(1.35rem, 2vw, 1.65rem);
     font-weight: 750;
     letter-spacing: -0.025em;

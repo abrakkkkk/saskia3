@@ -51,7 +51,7 @@ body {
 }
 .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(30,58,138,0.4); }
 
-.erro-msg { background: #fef2f2; color: #dc2626; padding: 12px; border-radius: 8px; text-align: center; font-size: 14px; margin-top: 15px; display: none; }
+.erro-msg { background: #fef2f2; color: #b91c1c; padding: 12px; border-radius: 8px; text-align: center; font-size: 14px; margin-top: 15px; display: none; }
 .info-msg { background: #eff6ff; color: #1e3a8a; padding: 12px; border-radius: 8px; text-align: center; font-size: 13px; margin-top: 15px; }
 .link-admin { text-align: center; margin-top: 20px; font-size: 14px; color: #64748b; }
 .link-admin a { color: #1e3a8a; font-weight: 600; text-decoration: none; }
