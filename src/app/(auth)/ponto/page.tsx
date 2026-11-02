@@ -1,7 +1,8 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { estadoApos, minutosTrabalhados, normalizarTipo, PROXIMOS } from '@/lib/ponto';
 import './ponto.css';
 
 interface RegistroPonto {
@@ -23,6 +24,7 @@ export default function PontoPage() {
   const [tabAtiva, setTabAtiva] = useState('hoje');
   const [erroApi, setErroApi] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [agoraMs, setAgoraMs] = useState(0);
   const [carregandoRegistros, setCarregandoRegistros] = useState(true);
   const [dadosCarregados, setDadosCarregados] = useState(false);
 
@@ -46,16 +48,11 @@ export default function PontoPage() {
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error('A resposta do servidor de ponto é inválida.');
       setErroApi('');
-      const mapped = data.flatMap((r: any) => {
-          const dt = new Date(r?.dataHora);
+      const mapped = data.flatMap((r: { id?: unknown; dataHora?: unknown; tipo?: unknown; usuario?: { id?: unknown; nome?: unknown } } | null) => {
+          const dt = new Date(r?.dataHora as string);
           if (!r || typeof r.id !== 'string' || typeof r.usuario?.id !== 'string'
             || typeof r.tipo !== 'string' || Number.isNaN(dt.getTime())) return [];
-          const tipo = r.tipo.toLocaleUpperCase('pt-BR');
-          const tipoNormalizado = tipo === 'SAIDA' ? 'SAÍDA'
-            : tipo === 'INICIO INTERVALO' || tipo === 'ALMOÇO - INÍCIO' || tipo === 'ALMOCO - INICIO' || tipo === 'PAUSA - INÍCIO'
-              ? 'INÍCIO INTERVALO'
-              : tipo === 'ALMOÇO - RETORNO' || tipo === 'ALMOCO - RETORNO' || tipo === 'PAUSA - RETORNO'
-                ? 'FIM INTERVALO' : tipo;
+          const tipoNormalizado = normalizarTipo(r.tipo) ?? r.tipo.toLocaleUpperCase('pt-BR');
           return [{
             id: r.id,
             data: dt.toLocaleDateString('pt-BR'),
@@ -77,12 +74,13 @@ export default function PontoPage() {
   }, []);
 
   useEffect(() => {
-    if (sessionStatus === 'authenticated') void fetchRegistros();
+    if (sessionStatus === 'authenticated') void Promise.resolve().then(() => { fetchRegistros(); });
   }, [sessionStatus, fetchRegistros]);
 
   useEffect(() => {
     const atualizarRelogio = () => {
       const agora = new Date();
+      setAgoraMs(agora.getTime());
       setHoraAtual(agora.toLocaleTimeString('pt-BR'));
       setDataAtual(agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
     };
@@ -106,7 +104,7 @@ export default function PontoPage() {
         throw new Error(payload?.error || 'O servidor não confirmou o registro de ponto.');
       }
       await fetchRegistros();
-      alert('Registro de ponto confirmado pelo servidor.');
+      alert('Registro de ponto confirmado pelo servidor com sucesso.');
     } catch (error) {
       setErroApi(error instanceof Error ? error.message : 'Falha ao registrar o ponto.');
     } finally {
@@ -121,50 +119,29 @@ export default function PontoPage() {
   const usuarioId = session?.user?.id;
   const registrosHoje = registros.filter(r => r.data === hojeStr && r.usuarioId === usuarioId);
   
-  const temEntrada = registrosHoje.some(r => r.tipo === 'ENTRADA');
-  const temSaida = registrosHoje.some(r => r.tipo === 'SAÍDA');
-  const temInicioIntervalo = registrosHoje.some(r => r.tipo === 'INÍCIO INTERVALO');
-  const temFimIntervalo = registrosHoje.some(r => r.tipo === 'FIM INTERVALO');
-  const ultimoRegistroHoje = [...registrosHoje].sort((a, b) => a.timestamp - b.timestamp).at(-1);
-  const emIntervalo = ultimoRegistroHoje?.tipo === 'INÍCIO INTERVALO';
-
-  let btnEntradaDisabled = true;
-  let btnSaidaDisabled = true;
-  let btnInicioIntervaloDisabled = true;
-  let btnFimIntervaloDisabled = true;
-  let statusTexto = '';
-  let statusClasse = 'status-ponto status-finalizado';
-
-  if (!temEntrada) {
-    btnEntradaDisabled = false;
-    statusTexto = 'Jornada não iniciada';
-  } else if (temEntrada && temSaida) {
-    statusTexto = 'Jornada concluída';
-  } else if (emIntervalo) {
-    btnFimIntervaloDisabled = false;
-    statusClasse = 'status-ponto status-intervalo';
-    statusTexto = 'Em intervalo';
-  } else {
-    // Trabalhando
-    btnSaidaDisabled = false;
-    btnInicioIntervaloDisabled = temInicioIntervalo;
-    statusClasse = 'status-ponto status-trabalhando';
-    statusTexto = 'Em jornada';
-  }
+  // Estado vem do ÚLTIMO registro do usuário, não do dia: plantão noturno continua "em jornada" após a meia-noite.
+  const meus = registros.filter(r => r.usuarioId === usuarioId).sort((a, b) => a.timestamp - b.timestamp);
+  const ultimoRegistro = meus.at(-1);
+  const estado = estadoApos(ultimoRegistro?.tipo);
+  const permitidos = PROXIMOS[estado];
+  const btnEntradaDisabled = !permitidos.includes('ENTRADA');
+  const btnSaidaDisabled = !permitidos.includes('SAÍDA');
+  const btnInicioIntervaloDisabled = !permitidos.includes('INÍCIO INTERVALO');
+  const btnFimIntervaloDisabled = !permitidos.includes('FIM INTERVALO');
+  const temEntrada = estado !== 'FORA';
+  const temSaida = estado === 'FORA' && ultimoRegistro?.tipo === 'SAÍDA';
+  let statusTexto = estado === 'FORA' ? (temSaida ? 'Jornada encerrada' : 'Jornada não iniciada') : estado === 'EM_INTERVALO' ? 'Em intervalo' : 'Em jornada';
+  const statusClasse = estado === 'FORA' ? 'status-ponto status-finalizado' : estado === 'EM_INTERVALO' ? 'status-ponto status-intervalo' : 'status-ponto status-trabalhando';
   if (!dadosCarregados) {
     statusTexto = carregandoRegistros ? 'Carregando status...' : 'Status indisponível';
   }
-
   // Cards Hoje
-  const regEntrada = registrosHoje.find(r => r.tipo === 'ENTRADA');
-  const regSaida = registrosHoje.find(r => r.tipo === 'SAÍDA');
-  let horasTrabalhadas = '00:00';
-
-  if (regEntrada && regSaida) {
-    const diff = new Date(regSaida.timestamp).getTime() - new Date(regEntrada.timestamp).getTime();
-    horasTrabalhadas = String(Math.floor(diff/3600000)).padStart(2,'0') + ':' + String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
-  }
-
+  const indiceEntrada = meus.map(r => r.tipo).lastIndexOf('ENTRADA');
+  const jornadaAtual = indiceEntrada >= 0 ? meus.slice(indiceEntrada) : [];
+  const regEntrada = jornadaAtual[0];
+  const regSaida = jornadaAtual.find(r => r.tipo === 'SAÍDA');
+  const minutosJornada = minutosTrabalhados(jornadaAtual, estado === 'FORA' || !agoraMs ? undefined : agoraMs);
+  const horasTrabalhadas = String(Math.floor(minutosJornada / 60)).padStart(2, '0') + ':' + String(minutosJornada % 60).padStart(2, '0');
   const mesAtual = new Date().getMonth() + 1;
   const anoAtual = new Date().getFullYear();
   const diasTrabalhadosMes = [...new Set(registros.filter(r => {
@@ -191,18 +168,8 @@ export default function PontoPage() {
 
   const diasMes = [...new Set(regMes.filter(r => r.tipo === 'ENTRADA').map(r => r.data))];
   const totalIntervalos = regMes.filter(r => r.tipo === 'INÍCIO INTERVALO').length;
-  let totalMin = 0;
-  
-  diasMes.forEach(data => {
-    const entradas = regMes.filter(r => r.data === data && r.tipo === 'ENTRADA');
-    const saidas = regMes.filter(r => r.data === data && r.tipo === 'SAÍDA');
-    entradas.forEach((e, i) => {
-      if (saidas[i]) {
-        totalMin += (new Date(saidas[i].timestamp).getTime() - new Date(e.timestamp).getTime()) / 60000;
-      }
-    });
-  });
-  const expHorasStr = String(Math.floor(totalMin/60)).padStart(2,'0') + ':' + String(Math.floor(totalMin%60)).padStart(2,'0');
+  const totalMin = minutosTrabalhados([...regMes].sort((a, b) => a.timestamp - b.timestamp));
+  const expHorasStr = String(Math.floor(totalMin / 60)).padStart(2,'0') + ':' + String(totalMin % 60).padStart(2,'0');
 
   const getBadgeClass = (tipo: string) => {
     if (tipo === 'ENTRADA') return 'badge-success';
@@ -238,8 +205,8 @@ export default function PontoPage() {
       <div className="ponto-container">
         <div className="banner-ponto">
           <div>
-            <h1><i className="las la-clock"></i> Registro de Ponto Eletrônico</h1>
-            <p>Controle de jornada de trabalho</p>
+            <h1><i className="las la-clock"></i> Meu ponto (registro interno)</h1>
+            <p>Registro interno de entradas, intervalos e saídas. Não substitui o ponto oficial da instituição.</p>
           </div>
         </div>
 
@@ -272,17 +239,17 @@ export default function PontoPage() {
           <div className="status-card">
             <div className="card-icon" style={{color:'#16a34a'}}><i className="las la-sign-in-alt"></i></div>
             <div className="card-numero">{regEntrada ? regEntrada.hora : '--:--'}</div>
-            <div className="card-label">Entrada Hoje</div>
+            <div className="card-label">Entrada da jornada</div>
           </div>
           <div className="status-card">
             <div className="card-icon" style={{color:'#dc2626'}}><i className="las la-sign-out-alt"></i></div>
             <div className="card-numero">{regSaida ? regSaida.hora : '--:--'}</div>
-            <div className="card-label">Saída Hoje</div>
+            <div className="card-label">Saída da jornada</div>
           </div>
           <div className="status-card">
             <div className="card-icon" style={{color:'#f59e0b'}}><i className="las la-hourglass-half"></i></div>
             <div className="card-numero">{horasTrabalhadas}</div>
-            <div className="card-label">Horas Hoje</div>
+            <div className="card-label">Horas na jornada</div>
           </div>
           <div className="status-card">
             <div className="card-icon" style={{color:'#1e3a8a'}}><i className="las la-calendar-check"></i></div>

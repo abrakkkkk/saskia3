@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
@@ -63,7 +63,7 @@ function toIsoDateTime(date: string, time: string) {
 
 const TIPO_INFO = {
   consulta: { label: 'Consulta', icon: Stethoscope, color: 'text-blue-600 bg-blue-100' },
-  medicacao: { label: 'Medicação', icon: Pill, color: 'text-red-600 bg-red-100' },
+  medicacao: { label: 'Registro antigo', icon: Pill, color: 'text-slate-600 bg-slate-100' },
   exame: { label: 'Exame', icon: Activity, color: 'text-purple-600 bg-purple-100' },
   cirurgia: { label: 'Cirurgia', icon: Activity, color: 'text-orange-600 bg-orange-100' },
   pessoal: { label: 'Pessoal', icon: User, color: 'text-slate-600 bg-slate-100' }
@@ -71,7 +71,7 @@ const TIPO_INFO = {
 
 export default function LembretesPage() {
   const { data: session, status: sessionStatus } = useSession();
-  const hospitalId = (session?.user as any)?.hospitalId;
+  const hospitalId = session?.user?.hospitalId;
   
   const [lembretes, setLembretes] = useState<Lembrete[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -103,7 +103,7 @@ export default function LembretesPage() {
       if (!res.ok) throw new Error(await getErrorMessage(res, 'Não foi possível carregar os lembretes.'));
       const data: unknown = await res.json();
       if (!Array.isArray(data)) throw new Error('A resposta de lembretes está inválida.');
-      const mapData = data.map((d: any) => ({
+      const mapData = (data as (Lembrete & { dataHora?: string })[]).map(d => ({
         ...d,
         data: d.dataHora ? dateForInput(d.dataHora) : (d.data || ''),
         hora: d.dataHora ? timeForInput(d.dataHora) : (d.hora || '')
@@ -122,7 +122,8 @@ export default function LembretesPage() {
   useEffect(() => {
     if (sessionStatus === 'loading') return;
     if (!hospitalId) {
-      setLembretes([]);
+      void Promise.resolve().then(() => { setLembretes([]); });
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- estado inicial/reinício dependente da sessão e da busca
       setCarregando(false);
       setErroCarga(sessionStatus === 'unauthenticated'
         ? 'Sua sessão expirou. Entre novamente para ver seus lembretes.'
@@ -277,11 +278,11 @@ export default function LembretesPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
             <Bell aria-hidden="true" className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-blue-900" />
-            Lembretes e Notificações
+            Meus lembretes (agenda pessoal)
           </h2>
-          <p className="text-slate-500 mt-1">Gerencie seus compromissos, tarefas e alertas.</p>
+          <p className="text-slate-200 mt-1">Esta agenda pessoal não emite alertas nem notificações: só você a vê, ao abrir esta tela. Não use para medicação, exames ou qualquer prazo clínico.</p>
         </div>
         <button 
           onClick={() => abrirModal()}
@@ -460,11 +461,11 @@ export default function LembretesPage() {
                 <select 
                   id="lembrete-tipo"
                   value={form.tipo}
-                  onChange={e => setForm({...form, tipo: e.target.value as any})}
+                  onChange={e => setForm({...form, tipo: e.target.value as Lembrete['tipo']})}
                   className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm bg-white"
                 >
                   <option value="consulta"> Consulta</option>
-                  <option value="medicacao"> Medicação</option>
+                  
                   <option value="exame"> Exame</option>
                   <option value="cirurgia"> Cirurgia</option>
                   <option value="pessoal"> Pessoal</option>

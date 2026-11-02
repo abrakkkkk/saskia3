@@ -1,75 +1,61 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { isRecord } from '@/lib/request-validation';
+import { NextResponse } from 'next/server'
+import { exigir, lerJson, LIMITE_LISTA } from '@/lib/api-guard'
+import { prisma } from '@/lib/db'
 
 export async function GET() {
+  const { ator, negado } = await exigir('operacao:ler')
+  if (negado) return negado
+
   try {
-    const session = await auth();
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-
-    const hospitalId = session.user.hospitalId;
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
-    
     const transportes = await prisma.transportePaciente.findMany({
-      where: { hospitalId },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    return NextResponse.json(transportes);
-  } catch (error) {
-    return NextResponse.json({ error: 'Erro ao buscar transportes' }, { status: 500 });
+      where: { hospitalId: ator.hospitalId },
+      orderBy: { createdAt: 'desc' },
+      take: LIMITE_LISTA,
+    })
+    return NextResponse.json(transportes)
+  } catch {
+    return NextResponse.json({ error: 'Erro ao buscar transportes' }, { status: 500 })
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
+  const { ator, negado } = await exigir('operacao:abrir')
+  if (negado) return negado
+
+  const body = await lerJson(request)
+  if (!body) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+  const { pacienteId, origem, destino, tipo, data } = body
+  const campoValido = (valor: unknown): valor is string => typeof valor === 'string' && !!valor.trim() && valor.length <= 200
+  if (typeof pacienteId !== 'string' || !pacienteId.trim() || pacienteId.length > 64
+    || !campoValido(origem) || !campoValido(destino) || !campoValido(tipo) || !campoValido(data)
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(data) || Number.isNaN(new Date(`${data}:00-03:00`).getTime())) {
+    return NextResponse.json({ error: 'Preencha os dados obrigatórios do transporte' }, { status: 400 })
+  }
+  if (origem.trim() === destino.trim()) {
+    return NextResponse.json({ error: 'Origem e destino precisam ser diferentes' }, { status: 400 })
+  }
+
   try {
-    const session = await auth();
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-
-    const hospitalId = session.user.hospitalId;
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
-    }
-    if (!isRecord(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
-    if (typeof body.pacienteId !== 'string' || !body.pacienteId.trim() || body.pacienteId.length > 64 ||
-      ['origem', 'destino', 'tipo', 'data'].some(key => typeof body[key] !== 'string' || !(body[key] as string).trim() || (body[key] as string).length > 200) ||
-      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(body.data as string)) {
-      return NextResponse.json({ error: 'Preencha os dados obrigatórios do transporte' }, { status: 400 });
-    }
-
-    const [data, hora] = (body.data as string).split('T');
-    const inicio = new Date(`${data}T${hora}:00`);
-    if (Number.isNaN(inicio.getTime()) || inicio.getFullYear() !== Number(data.slice(0, 4)) ||
-      inicio.getMonth() + 1 !== Number(data.slice(5, 7)) || inicio.getDate() !== Number(data.slice(8, 10)) ||
-      inicio.getHours() !== Number(hora.slice(0, 2)) || inicio.getMinutes() !== Number(hora.slice(3, 5))) {
-      return NextResponse.json({ error: 'Data e hora inválidas' }, { status: 400 });
-    }
     const paciente = await prisma.paciente.findFirst({
-      where: { id: body.pacienteId.trim(), hospitalId, arquivadoEm: null },
-      select: { id: true, nome: true },
-    });
-    if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado neste hospital' }, { status: 404 });
+      where: { id: pacienteId.trim(), hospitalId: ator.hospitalId, arquivadoEm: null },
+      select: { nome: true },
+    })
+    if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado neste hospital' }, { status: 404 })
 
     const transporte = await prisma.transportePaciente.create({
       data: {
-        hospitalId,
+        hospitalId: ator.hospitalId,
         paciente: paciente.nome,
-        origem: (body.origem as string).trim(),
-        destino: (body.destino as string).trim(),
-        tipo: (body.tipo as string).trim(),
-        solicitante: session.user.name || session.user.email || 'Profissional autenticado',
-        data: (body.data as string).trim(),
-        status: 'Pendente'
-      }
-    });
-
-    return NextResponse.json(transporte, { status: 201 });
+        origem: origem.trim(),
+        destino: destino.trim(),
+        tipo: tipo.trim(),
+        solicitante: ator.nome,
+        data,
+        status: 'Pendente',
+      },
+    })
+    return NextResponse.json(transporte, { status: 201 })
   } catch {
-    return NextResponse.json({ error: 'Erro ao criar transporte' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao criar transporte' }, { status: 500 })
   }
 }

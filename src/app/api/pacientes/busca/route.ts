@@ -1,37 +1,40 @@
-import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { exigir, LIMITE_LISTA } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
+import { pode } from '@/lib/permissions'
+import { filtroPacientes } from '@/lib/pacientes'
 
-export async function GET() {
+// Busca avançada: contato e identificação só para quem atende ou cadastra o paciente.
+export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    const { ator, negado } = await exigir('paciente:listar')
+    if (negado) return negado
 
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
+    const completa = pode(ator.cargo, 'paciente:cadastrar') || pode(ator.cargo, 'prontuario:ler')
+    const where = filtroPacientes(request.nextUrl.searchParams, ator.hospitalId, { arquivados: false, completa })
 
-    const pacientes = await prisma.paciente.findMany({
-      where: { hospitalId, arquivadoEm: null },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        nome: true,
-        cpf: true,
-        nascimento: true,
-        sexo: true,
-        telefone: true,
-        endereco: true,
-        mae: true,
-        status: true,
-        classificacao: true,
-      },
-    })
+    const [pacientes, total] = await Promise.all([
+      prisma.paciente.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: LIMITE_LISTA,
+        select: {
+          id: true,
+          nome: true,
+          nascimento: true,
+          status: true,
+          classificacao: true,
+          ...(completa ? { cpf: true, sexo: true, telefone: true, endereco: true, mae: true } : {}),
+        },
+      }),
+      prisma.paciente.count({ where }),
+    ])
 
     return NextResponse.json(pacientes, {
-      headers: { 'Cache-Control': 'private, no-store, max-age=0' },
+      headers: { 'Cache-Control': 'private, no-store, max-age=0', 'X-Total-Count': String(total) },
     })
   } catch (error) {
-    console.error('Erro ao buscar pacientes para a pesquisa avançada:', error)
+    console.error('Erro na busca avançada de pacientes:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Erro ao buscar pacientes' }, { status: 500 })
   }
 }

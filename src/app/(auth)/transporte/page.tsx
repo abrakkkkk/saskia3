@@ -1,6 +1,7 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { Tabs } from '@/components/ui';
 import './transporte.css';
 
 interface Transporte {
@@ -14,6 +15,8 @@ interface Transporte {
   status: string;
 }
 
+const ABAS = [{ id: 'solicitar', label: 'Solicitar', icon: 'las la-plus-circle' }, { id: 'lista', label: 'Lista', icon: 'las la-list' }] as const;
+
 export default function TransportePage() {
   const { data: session, status: statusSessao } = useSession();
   const [activeTab, setActiveTab] = useState<'solicitar'|'lista'>('solicitar');
@@ -22,7 +25,7 @@ export default function TransportePage() {
   const [isSaving, setIsSaving] = useState(false);
   
   const [transportes, setTransportes] = useState<Transporte[]>([]);
-  const [pacientes, setPacientes] = useState<any[]>([]);
+  const [pacientes, setPacientes] = useState<{ id: string; nome: string }[]>([]);
 
   // Form State
   const [transpPaciente, setTranspPaciente] = useState('');
@@ -61,6 +64,7 @@ export default function TransportePage() {
   useEffect(() => {
     if (statusSessao === 'loading') return;
     if (statusSessao !== 'authenticated') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- estado inicial/reinício dependente da sessão e da busca
       setTransportes([]);
       setPacientes([]);
       setLoading(false);
@@ -100,8 +104,8 @@ export default function TransportePage() {
       alert(" Transporte solicitado!");
       setActiveTab('lista');
       await carregarDados();
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro inesperado.');
     } finally {
       setIsSaving(false);
     }
@@ -118,8 +122,8 @@ export default function TransportePage() {
         const data = await res.json().catch(() => null);
         if (!res.ok) throw new Error(data?.error || 'Erro ao concluir transporte');
         await carregarDados();
-      } catch (error: any) {
-        alert(error.message);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Erro inesperado.');
       }
     }
   };
@@ -158,14 +162,7 @@ export default function TransportePage() {
           </div>
         </div>
 
-        <div className="tabs-transp">
-          <button className={`tab-btn ${activeTab === 'solicitar' ? 'ativo' : ''}`} onClick={() => setActiveTab('solicitar')}>
-            <i className="las la-plus-circle"></i> Solicitar
-          </button>
-          <button className={`tab-btn ${activeTab === 'lista' ? 'ativo' : ''}`} onClick={() => setActiveTab('lista')}>
-            <i className="las la-list"></i> Lista
-          </button>
-        </div>
+        <Tabs label="Seções de transporte" tabs={ABAS} active={activeTab} onChange={setActiveTab} />
 
         {activeTab === 'solicitar' && (
           <div className="form-panel">

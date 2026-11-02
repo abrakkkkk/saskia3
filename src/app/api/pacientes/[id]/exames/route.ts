@@ -1,42 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auditar, exigir, lerJson } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
+import { pacienteAtivo, registrarEvento } from '@/lib/pacientes'
 
-export async function POST (request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+const TIPOS = ['laboratorio', 'imagem']
+
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-
+    const { ator, negado } = await exigir('exame:solicitar')
+    if (negado) return negado
     const { id } = await params
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-    const body = await request.json()
-    if (!body || typeof body !== 'object' || Array.isArray(body)
-      || typeof body.nome !== 'string' || !body.nome.trim() || body.nome.length > 160
-      || (body.resultado != null && (typeof body.resultado !== 'string' || body.resultado.length > 5000))) {
-      return NextResponse.json({ error: 'Dados do exame inválidos' }, { status: 400 })
+    const { bloqueio } = await pacienteAtivo(id, ator.hospitalId)
+    if (bloqueio) return bloqueio
+
+    const body = await lerJson(request)
+    const nome = typeof body?.nome === 'string' ? body.nome.trim() : ''
+    if (!body || !nome || nome.length > 160) return NextResponse.json({ error: 'Dados do exame inválidos' }, { status: 400 })
+    if (body.resultado !== undefined && body.resultado !== null && body.resultado !== '') {
+      return NextResponse.json({ error: 'Resultado não é informado na solicitação: use o módulo de Exames' }, { status: 400 })
     }
-    const paciente = await prisma.paciente.findFirst({
-      where: { id, hospitalId },
-      select: { id: true },
-    })
-    if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
+    const tipo = body.tipo === undefined ? 'laboratorio' : body.tipo
+    if (typeof tipo !== 'string' || !TIPOS.includes(tipo)) return NextResponse.json({ error: 'Tipo de exame inválido' }, { status: 400 })
 
-    const exame = await prisma.exame.create({
-      data: {
-        pacienteId: id,
-        hospitalId,
-        tipo: 'Laboratorial',
-        nome: body.nome.trim(),
-        resultado: typeof body.resultado === 'string' ? body.resultado.trim() : null,
-        status: 'SOLICITADO',
-        profissional: session.user?.name || 'Sistema'
-      }
+    const exame = await prisma.$transaction(async tx => {
+      const criado = await tx.exame.create({
+        data: { pacienteId: id, hospitalId: ator.hospitalId, tipo, nome, status: 'SOLICITADO', profissional: ator.nome, usuarioId: ator.id },
+      })
+      await registrarEvento(tx, ator, id, 'Exame', `Solicitado: ${nome}`)
+      return criado
     })
 
+    await auditar(ator, 'SOLICITAR_EXAME', 'Exame', exame.id, { pacienteId: id })
     return NextResponse.json(exame, { status: 201 })
   } catch (error) {
-    console.error(error);
+    console.error('Erro ao registrar exame:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Erro ao registrar exame' }, { status: 500 })
   }
 }

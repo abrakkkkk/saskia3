@@ -1,7 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
+import { pode } from '@/lib/permissions';
+import '../setores.css';
 import './ccih.css';
 
 // ── tipos ──────────────────────────────────────────────
@@ -31,17 +33,18 @@ interface ATM {
 }
 
 // ── API helpers ────────────────────────────────────────
-async function loadFromAPI(tipo: string): Promise<any[]> {
+type Item = Record<string, unknown>;
+async function loadFromAPI<T>(tipo: string): Promise<T[]> {
   const res = await fetch(`/api/ccih?tipo=${tipo}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Não foi possível carregar os registros de CCIH.');
   if (!Array.isArray(data)) throw new Error('Resposta de CCIH inválida.');
-  return data.map((r: any) => {
+  return data.map((r: { id: string; status?: string; dados?: Item }) => {
     const isTratado = r.status === 'TRATADO' || r.status === 'Tratada' || r.dados?.status === 'Tratada';
-    return { ...r.dados, id: r.id, _registroId: r.id, status: isTratado ? 'Tratada' : (r.dados?.status || 'Ativa') };
+    return { ...r.dados, id: r.id, _registroId: r.id, status: isTratado ? 'Tratada' : (r.dados?.status || 'Ativa') } as T;
   });
 }
-async function saveToAPI(tipo: string, item: any): Promise<any> {
+async function saveToAPI(tipo: string, item: Item): Promise<unknown> {
   const res = await fetch('/api/ccih', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -58,7 +61,7 @@ async function saveToAPI(tipo: string, item: any): Promise<any> {
   if (!res.ok) throw new Error(data.error || 'Não foi possível registrar o evento de CCIH.');
   return data;
 }
-async function updateAPIStatus(id: string, status: string, dados?: any): Promise<void> {
+async function updateAPIStatus(id: string, status: string, dados?: Item): Promise<void> {
   const res = await fetch(`/api/ccih/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -85,16 +88,17 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Ag
 // ── componente principal ───────────────────────────────
 export default function CcihPage() {
   const { data: session } = useSession();
-  const hospitalId = (session?.user as any)?.hospitalId || '';
+  const hospitalId = session?.user?.hospitalId || '';
+  const podeGerir = pode(session?.user?.cargo, 'ccih:gerir');
   const nomeUsuario = session?.user?.name || '';
 
   // carregar dados
   const reloadAll = async () => {
     const [irasData, culturasData, hmData, atmData] = await Promise.all([
-      loadFromAPI('IRAS'),
-      loadFromAPI('CULTURA'),
-      loadFromAPI('HM'),
-      loadFromAPI('ATM')
+      loadFromAPI<IRAS>('IRAS'),
+      loadFromAPI<Cultura>('CULTURA'),
+      loadFromAPI<HMObs>('HM'),
+      loadFromAPI<ATM>('ATM')
     ]);
     setIras(irasData);
     setCulturas(culturasData);
@@ -168,11 +172,10 @@ export default function CcihPage() {
       .then(d => {
         const lista = Array.isArray(d) ? d : d?.pacientes;
         if (!Array.isArray(lista)) throw new Error('Resposta da lista de pacientes inválida.');
-        setPacientes(lista.map((p: any) => ({ id: p.id, nome: p.nome })));
+        setPacientes(lista.map((p: { id: string; nome: string }) => ({ id: p.id, nome: p.nome })));
         setErroPacientes('');
       })
       .catch(error => setErroPacientes(error instanceof Error ? error.message : 'Não foi possível carregar a lista de pacientes.'));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hospitalId]);
 
   const msg = (texto: string) => { setAviso(texto); setTimeout(() => setAviso(''), 3000); };
@@ -184,12 +187,11 @@ export default function CcihPage() {
   const simHM        = hmObs.filter(o => o.realizou === 'Sim').length;
   const taxaHM       = totalHM > 0 ? Math.round((simHM / totalHM) * 100) : 0;
   const atmEmUso     = antimicrobianos.filter(a => a.status === 'Em uso').length;
-  const taxaInfec    = pacientes.length > 0 ? Math.round((irasAtivas / pacientes.length) * 100) : 0;
 
   const notificarIRAS = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fPaciente || !fTipo) { msg('Preencha paciente e tipo!'); return; }
-    const nova: any = {
+    const nova: Item = {
       paciente: fPaciente, tipo: fTipo, data: fData,
       local: fLocal, gravidade: fGrav, material: fMaterial,
       microorganismo: fMicro, antibiotico: fAtb, obs: fObs,
@@ -201,7 +203,7 @@ export default function CcihPage() {
       await saveToAPI('IRAS', nova);
 
       if (fMaterial !== 'Não coletado') {
-        const novaCultura: any = {
+        const novaCultura: Item = {
           paciente: fPaciente, material: fMaterial,
           microorganismo: fMicro, antibiotico: fAtb,
           sensibilidade: 'Aguardando', status: 'Pendente', data: fData,
@@ -235,7 +237,7 @@ export default function CcihPage() {
 
   const registrarHM = async (e: React.FormEvent) => {
     e.preventDefault();
-    const nova: any = { data: new Date().toISOString(), setor: hmSetor, categoria: hmCategoria, momento: hmMomento, realizou: hmRealizou };
+    const nova: Item = { data: new Date().toISOString(), setor: hmSetor, categoria: hmCategoria, momento: hmMomento, realizou: hmRealizou };
     setIsSaving(true);
     setErroCarga('');
     try {
@@ -249,17 +251,17 @@ export default function CcihPage() {
     }
   };
 
-  const prescreverATM = async (e: React.FormEvent) => {
+  const monitorarATM = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!atmPaciente || !atmNome) { msg('Preencha paciente e antimicrobiano!'); return; }
-    const novo: any = { paciente: atmPaciente, nome: atmNome, dose: atmDose, via: atmVia, frequencia: atmFreq, inicio: atmInicio, duracao: atmDuracao, indicacao: atmIndicacao, status: 'Em uso' };
+    const novo: Item = { paciente: atmPaciente, nome: atmNome, dose: atmDose, via: atmVia, frequencia: atmFreq, inicio: atmInicio, duracao: atmDuracao, indicacao: atmIndicacao, status: 'Em uso' };
     setIsSaving(true);
     setErroCarga('');
     try {
       await saveToAPI('ATM', novo);
       await reloadAll();
       setAtmNome(''); setAtmDose(''); setAtmFreq('');
-      msg('Antimicrobiano prescrito!');
+      msg('Antimicrobiano registrado para monitoramento.');
     } catch (error) {
       setErroCarga(error instanceof Error ? error.message : 'Não foi possível registrar o antimicrobiano.');
     } finally {
@@ -269,7 +271,7 @@ export default function CcihPage() {
 
   // ── IRAS filtradas ───────────────────────────────────
   const irasFiltradas = useMemo(() => {
-    let l = [...iras].reverse();
+    let l = [...iras];
     if (filtroGravidade !== 'todos') l = l.filter(i => i.gravidade === filtroGravidade);
     if (buscarIRAS) { const q = buscarIRAS.toLowerCase(); l = l.filter(i => i.paciente.toLowerCase().includes(q) || i.tipo.toLowerCase().includes(q) || i.microorganismo.toLowerCase().includes(q)); }
     return l;
@@ -303,9 +305,9 @@ export default function CcihPage() {
           <h1><i className="las la-shield-virus"></i> CCIH — Controle de Infecção Hospitalar</h1>
           <p>Monitoramento, notificação e prevenção de Infecções Relacionadas à Assistência à Saúde (IRAS)</p>
         </div>
-        <button className="btn btn-success" onClick={() => setTab('notificacao')}>
-          <i className="las la-plus-circle"></i> Notificar IRAS
-        </button>
+        {podeGerir && <button type="button" className="btn btn-success" onClick={() => setTab('notificacao')}>
+          <i className="las la-plus-circle" aria-hidden="true"></i> Notificar IRAS
+        </button>}
       </div>
 
       {/* AVISO */}
@@ -338,11 +340,6 @@ export default function CcihPage() {
           <div className="ind-label">Culturas Solic.</div>
         </div>
         <div className="ind-card">
-          <div className="ind-icon"><i className="las la-percent"></i></div>
-          <div className="ind-valor">{taxaInfec}%</div>
-          <div className="ind-label">Taxa de Infecção</div>
-        </div>
-        <div className="ind-card">
           <div className="ind-icon"><i className="las la-hand-sparkles"></i></div>
           <div className="ind-valor">{totalHM > 0 ? `${taxaHM}%` : 'N/A'}</div>
           <div className="ind-label">Adesão Hig. Mãos</div>
@@ -369,7 +366,9 @@ export default function CcihPage() {
       </div>
 
       {/* ── ABA: NOTIFICAÇÃO ── */}
-      {tab === 'notificacao' && (
+      {!podeGerir && <p role="status" className="sc-nota sc-nota-superficie">Seu cargo pode consultar os registros da CCIH, mas não criar nem alterar.</p>}
+
+      {tab === 'notificacao' && podeGerir && (
         <div className="form-panel">
           <h3><i className="las la-biohazard"></i> Notificar Nova IRAS</h3>
           <form onSubmit={notificarIRAS}>
@@ -475,7 +474,7 @@ export default function CcihPage() {
                 {i.antibiotico    && <p className="ira-info"><i className="las la-capsules"></i> {i.antibiotico}</p>}
                 <div className="ira-acoes">
                   <span className={`badge ${i.status === 'Ativa' ? 'badge-danger' : 'badge-success'}`}>{i.status}</span>
-                  {i.status === 'Ativa' && (
+                  {podeGerir && i.status === 'Ativa' && (
                     <button className="btn btn-sm btn-success" disabled={isSaving} onClick={() => tratarIRAS(i.id)}>
                       <i className="las la-check"></i> Tratar
                     </button>
@@ -501,7 +500,7 @@ export default function CcihPage() {
             <tbody>
               {culturas.length === 0 ? (
                 <tr><td colSpan={7} style={{ textAlign:'center', padding:30, color:'#94a3b8' }}>Nenhuma cultura registrada</td></tr>
-              ) : [...culturas].reverse().map(c => (
+              ) : culturas.map(c => (
                 <tr key={c.id}>
                   <td>{fmtData(c.data)}</td>
                   <td>{c.paciente}</td>
@@ -520,7 +519,7 @@ export default function CcihPage() {
       {/* ── ABA: HIGIENE DE MÃOS ── */}
       {tab === 'higienemaos' && (
         <>
-          <div className="form-panel">
+          {podeGerir && <div className="form-panel">
             <h3><i className="las la-hand-sparkles"></i> Auditoria de Higiene de Mãos</h3>
             <form onSubmit={registrarHM}>
               <div className="form-grid">
@@ -558,13 +557,13 @@ export default function CcihPage() {
                 <i className="las la-save"></i> {isSaving ? 'Salvando...' : 'Registrar Observação'}
               </button>
             </form>
-          </div>
+          </div>}
           {/* Resumo de adesão */}
           <div style={{ background:'white', borderRadius:16, padding:28, textAlign:'center', boxShadow:'0 2px 10px rgba(0,0,0,0.06)' }}>
             <h4 style={{ color:'#0a1f44', marginBottom:12 }}>Resumo de Adesão — OMS 5 Momentos</h4>
             <div style={{ fontSize:56, fontWeight:800, color: taxaHM >= 70 ? '#16a34a' : '#dc2626' }}>{totalHM > 0 ? `${taxaHM}%` : 'N/A'}</div>
             <p style={{ color:'#64748b', marginTop:8 }}>{simHM} de {totalHM} observações com higiene adequada</p>
-            <small style={{ color:'#94a3b8' }}>Meta: ≥ 70% | OMS</small>
+            <small style={{ color:'#64748b' }}>Meta de referência a validar pela CCIH do hospital</small>
           </div>
         </>
       )}
@@ -572,9 +571,10 @@ export default function CcihPage() {
       {/* ── ABA: ANTIMICROBIANOS ── */}
       {tab === 'antimicrobianos' && (
         <>
-          <div className="form-panel">
-            <h3><i className="las la-capsules"></i> Controle de Antimicrobianos</h3>
-            <form onSubmit={prescreverATM}>
+          {podeGerir && <div className="form-panel">
+            <h3><i className="las la-capsules"></i> Monitoramento de Antimicrobianos</h3>
+            <p className="sc-muted">Registro de vigilância. Não é prescrição: a prescrição é feita pelo médico no prontuário.</p>
+            <form onSubmit={monitorarATM}>
               <div className="form-grid">
                 <div className="form-grupo">
                   <label htmlFor="ccih-atm-paciente">Paciente *</label>
@@ -617,10 +617,10 @@ export default function CcihPage() {
                 </div>
               </div>
               <button type="submit" className="btn btn-warning" disabled={isSaving} style={{ width:'100%', marginTop:15, justifyContent:'center', padding:14 }}>
-                <i className="las la-save"></i> {isSaving ? 'Salvando...' : 'Prescrever Antimicrobiano'}
+                <i className="las la-save"></i> {isSaving ? 'Salvando...' : 'Monitorar antimicrobiano'}
               </button>
             </form>
-          </div>
+          </div>}
           <div style={{ background:'white', borderRadius:20, overflowX:'auto', boxShadow:'0 4px 15px rgba(0,0,0,0.06)' }}>
             <table className="tabela-ccih">
               <thead>
@@ -628,8 +628,8 @@ export default function CcihPage() {
               </thead>
               <tbody>
                 {antimicrobianos.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign:'center', padding:30, color:'#94a3b8' }}>Nenhum antimicrobiano prescrito</td></tr>
-                ) : [...antimicrobianos].reverse().map(a => (
+                  <tr><td colSpan={7} style={{ textAlign:'center', padding:30, color:'#94a3b8' }}>Nenhum antimicrobiano em monitoramento</td></tr>
+                ) : antimicrobianos.map(a => (
                   <tr key={a.id}>
                     <td>{a.paciente}</td>
                     <td><strong>{a.nome}</strong><br /><small style={{ color:'#94a3b8' }}>{a.frequencia}</small></td>

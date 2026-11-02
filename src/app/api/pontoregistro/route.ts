@@ -1,98 +1,69 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { isRecord } from '@/lib/request-validation';
+import { NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
+import { exigir, lerJson, LIMITE_LISTA } from '@/lib/api-guard'
+import { prisma } from '@/lib/db'
+import { estadoApos, normalizarTipo, PROXIMOS } from '@/lib/ponto'
+
+const CAMPOS = {
+  id: true, tipo: true, dataHora: true, localizacao: true,
+  usuario: { select: { id: true, nome: true } },
+} as const
 
 export async function GET() {
+  const { ator, negado } = await exigir('autenticado')
+  if (negado) return negado
+
   try {
-    const session = await auth();
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    const hospitalId = session.user.hospitalId;
-    const usuarioId = session.user.id;
-    if (!hospitalId || !usuarioId) {
-      return NextResponse.json({ error: 'Sessão inválida' }, { status: 403 });
-    }
-
     const data = await prisma.pontoRegistro.findMany({
-      where: {
-        hospitalId,
-        usuarioId,
-      },
-      select: {
-        id: true,
-        tipo: true,
-        dataHora: true,
-        usuario: {
-          select: {
-            id: true,
-            nome: true,
-          }
-        }
-      },
+      where: { hospitalId: ator.hospitalId, usuarioId: ator.id },
+      select: CAMPOS,
       orderBy: { dataHora: 'desc' },
-    });
-
-    return NextResponse.json(data, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
-  } catch (error) {
-    console.error('Erro ao buscar registros de ponto:', error);
-    return NextResponse.json({ error: 'Erro ao buscar dados' }, { status: 500 });
+      take: LIMITE_LISTA,
+    })
+    return NextResponse.json(data, { headers: { 'Cache-Control': 'private, no-store' } })
+  } catch {
+    return NextResponse.json({ error: 'Erro ao buscar dados' }, { status: 500 })
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
+  const { ator, negado } = await exigir('autenticado')
+  if (negado) return negado
+
+  const body = await lerJson(request)
+  const tipo = typeof body?.tipo === 'string' ? normalizarTipo(body.tipo) : null
+  const localizacao = body?.localizacao
+  if (!tipo || (localizacao !== undefined && localizacao !== null && (typeof localizacao !== 'string' || localizacao.length > 200))) {
+    return NextResponse.json({ error: 'Tipo de ponto inválido' }, { status: 400 })
+  }
+
   try {
-    const session = await auth();
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    const resultado = await prisma.$transaction(async tx => {
+      const ultimo = await tx.pontoRegistro.findFirst({
+        where: { hospitalId: ator.hospitalId, usuarioId: ator.id },
+        orderBy: { dataHora: 'desc' },
+        select: { tipo: true },
+      })
+      if (!PROXIMOS[estadoApos(ultimo?.tipo)].includes(tipo)) return null
+      return tx.pontoRegistro.create({
+        data: {
+          hospitalId: ator.hospitalId,
+          usuarioId: ator.id,
+          tipo,
+          // Horário do servidor: o relógio do cliente não é aceito.
+          dataHora: new Date(),
+          localizacao: typeof localizacao === 'string' && localizacao.trim() ? localizacao.trim() : null,
+        },
+        select: CAMPOS,
+      })
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
 
-    const hospitalId = session.user.hospitalId;
-    const usuarioId = session.user.id;
-    if (!hospitalId || !usuarioId) {
-      return NextResponse.json({ error: 'Sessão inválida' }, { status: 403 });
-    }
-
-    let body: unknown;
-    try { body = await request.json(); } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }); }
-    if (!isRecord(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
-    const tipo = body.tipo;
-    const localizacao = body.localizacao;
-
-    const tiposValidos = ['ENTRADA', 'SAÍDA', 'SAIDA', 'INÍCIO INTERVALO', 'INICIO INTERVALO', 'FIM INTERVALO'];
-    if (typeof tipo !== 'string' || !tiposValidos.includes(tipo.toUpperCase()) || (localizacao !== undefined && localizacao !== null && (typeof localizacao !== 'string' || localizacao.length > 200))) {
-      return NextResponse.json({ error: 'Tipo de ponto inválido' }, { status: 400 });
-    }
-
-    // Horário oficial do servidor (previne adulteração do relógio do cliente)
-    const agora = new Date();
-
-    const data = await prisma.pontoRegistro.create({
-      data: {
-        hospitalId,
-        usuarioId,
-        tipo: tipo.toUpperCase(),
-        dataHora: agora,
-        localizacao: typeof localizacao === 'string' && localizacao.trim() ? localizacao.trim() : null
-      },
-      select: {
-        id: true,
-        tipo: true,
-        dataHora: true,
-        usuario: {
-          select: {
-            id: true,
-            nome: true,
-          }
-        }
-      }
-    });
-
-    return NextResponse.json(data, { status: 201, headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
+    if (!resultado) return NextResponse.json({ error: 'Este registro não é válido para a situação atual da sua jornada. Atualize a tela.' }, { status: 409 })
+    return NextResponse.json(resultado, { status: 201 })
   } catch (error) {
-    console.error('Erro ao registrar ponto:', error);
-    return NextResponse.json({ error: 'Erro ao registrar ponto' }, { status: 500 });
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2034') {
+      return NextResponse.json({ error: 'Registro simultâneo detectado. Atualize a tela.' }, { status: 409 })
+    }
+    return NextResponse.json({ error: 'Erro ao registrar ponto' }, { status: 500 })
   }
 }

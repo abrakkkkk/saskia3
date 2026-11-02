@@ -1,115 +1,177 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
-import { auth } from '@/lib/auth'
+import { auditar, exigir, lerJson, LIMITE_LISTA } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
+import { pode, type Permissao } from '@/lib/permissions'
+import { isStatusPaciente, isTerminal, STATUS_DESFECHO, transicaoValida } from '@/lib/paciente-status'
+import { cpfEmUso, isUniqueConstraintError, registrarEvento, SELECT_CADASTRO, validarDadosPaciente } from '@/lib/pacientes'
 
-export async function GET (_: NextRequest, { params }: { params: Promise <{ id: string }> }) {
+type Contexto = { params: Promise<{ id: string }> }
+
+const recentes = { orderBy: { createdAt: 'desc' }, take: LIMITE_LISTA } as const
+
+// Quem pode alterar cada campo. O que não está aqui é cadastro comum.
+const PERMISSAO_DO_CAMPO: Record<string, Permissao> = {
+  alergias: 'prontuario:dados-vitais',
+  tipoSanguineo: 'prontuario:dados-vitais',
+  classificacao: 'prontuario:dados-vitais',
+  queixaPrincipal: 'prontuario:dados-vitais',
+  leitoTipo: 'paciente:encaminhar',
+  leitoNumero: 'paciente:encaminhar',
+  consultorio: 'paciente:encaminhar',
+}
+
+export async function GET(_: NextRequest, { params }: Contexto) {
   try {
-    const session = await auth()
-    if (!session) return NextResponse.json ({ error: 'Não autorizado' }, { status: 401 })
-
+    const { ator, negado } = await exigir('paciente:listar')
+    if (negado) return negado
     const { id } = await params
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-    const paciente = await prisma.paciente.findFirst ({
-      where: { id, hospitalId, arquivadoEm: null },
-      include: { 
-        triagens: { orderBy: { createdAt: 'desc' } }, 
-        evolucoes: { orderBy: { createdAt: 'desc' } }, 
-        prescricoes: { orderBy: { createdAt: 'desc' } },
-        exames: { orderBy: { createdAt: 'desc' } },
-        sinaisVitais: { orderBy: { createdAt: 'desc' } },
-        escoresClinicos: { orderBy: { createdAt: 'desc' } },
-        avaliacoesNutri: { orderBy: { createdAt: 'desc' } },
-        avaliacoesMedicas: { orderBy: { createdAt: 'desc' } },
-        anotacoesEnf: { orderBy: { createdAt: 'desc' } },
-        timelineEvents: { orderBy: { createdAt: 'desc' } }
-      }
+    const where = { id, hospitalId: ator.hospitalId, arquivadoEm: null }
+
+    if (!pode(ator.cargo, 'prontuario:ler')) {
+      const cadastro = await prisma.paciente.findFirst({ where, select: SELECT_CADASTRO })
+      if (!cadastro) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
+      return NextResponse.json({ ...cadastro, acesso: 'cadastro' })
+    }
+
+    const paciente = await prisma.paciente.findFirst({
+      where,
+      include: {
+        triagens: recentes,
+        evolucoes: recentes,
+        prescricoes: recentes,
+        exames: recentes,
+        sinaisVitais: recentes,
+        escoresClinicos: recentes,
+        avaliacoesNutri: recentes,
+        avaliacoesMedicas: recentes,
+        anotacoesEnf: recentes,
+        timelineEvents: recentes,
+      },
     })
+    if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
 
-    if (!paciente) return NextResponse.json ({ error: 'Paciente não encontrado' }, { status: 404 })
-
-    return NextResponse.json (paciente)
-  } catch {
-    return NextResponse.json ({ error: 'Erro interno' }, { status: 500 })
+    await auditar(ator, 'LER_PRONTUARIO', 'Paciente', paciente.id)
+    return NextResponse.json({ ...paciente, acesso: 'clinico' })
+  } catch (error) {
+    console.error('Erro ao ler paciente:', error instanceof Error ? error.name : 'erro')
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
 
-export async function PUT (request: NextRequest, { params }: { params: Promise <{ id: string }> }) {
-  try {
-    const session = await auth()
-    if (!session) return NextResponse.json ({ error: 'Não autorizado' }, { status: 401 })
+function paraAuditoria(valor: unknown): Prisma.InputJsonValue | null {
+  if (valor instanceof Date) return valor.toISOString()
+  return (valor ?? null) as Prisma.InputJsonValue | null
+}
 
+export async function PUT(request: NextRequest, { params }: Contexto) {
+  try {
+    const { ator, negado } = await exigir('autenticado')
+    if (negado) return negado
     const { id } = await params
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-    const body: unknown = await request.json()
-    if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
-    const input = body as Record<string, unknown>
+    const hospitalId = ator.hospitalId
+
+    const input = await lerJson(request)
+    if (!input) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
 
     if (Object.hasOwn(input, 'arquivadoEm')) {
       if (input.arquivadoEm !== null) return NextResponse.json({ error: 'Use null para restaurar o paciente' }, { status: 400 })
-      if (session.user.cargo !== 'ADMIN') return NextResponse.json({ error: 'Apenas ADMIN pode restaurar pacientes' }, { status: 403 })
+      if (!pode(ator.cargo, 'paciente:arquivar')) return NextResponse.json({ error: 'Sem permissão para restaurar pacientes' }, { status: 403 })
       const restaurado = await prisma.paciente.updateMany({
         where: { id, hospitalId, arquivadoEm: { not: null } },
         data: { arquivadoEm: null },
       })
       if (!restaurado.count) return NextResponse.json({ error: 'Paciente arquivado não encontrado' }, { status: 404 })
+      await auditar(ator, 'RESTAURAR_PACIENTE', 'Paciente', id)
       return NextResponse.json({ success: true, arquivado: false })
     }
-    
-    const pacienteExistente = await prisma.paciente.findFirst({ where: { id, hospitalId, arquivadoEm: null } })
-    if (!pacienteExistente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
 
-    const fields = [
-      'nome', 'cpf', 'rg', 'nascimento', 'sexo', 'telefone', 'email', 'endereco',
-      'convenio', 'numConvenio', 'mae', 'pai', 'profissao', 'estadoCivil', 'nacionalidade',
-      'naturalidade', 'religiao', 'etnia', 'tipoSanguineo', 'alergias', 'status',
-      'classificacao', 'leitoTipo', 'leitoNumero', 'consultorio', 'queixaPrincipal',
-    ] as const
-    const safeData = Object.fromEntries(fields.filter(field => input[field] !== undefined).map(field => [field, input[field]])) as Prisma.PacienteUpdateManyMutationInput
-    const nascimento = input.nascimento
-    if (nascimento !== undefined && nascimento !== null) {
-      if (typeof nascimento !== 'string' || Number.isNaN(new Date(nascimento).getTime())) {
-        return NextResponse.json({ error: 'Data de nascimento inválida' }, { status: 400 })
+    const atual = await prisma.paciente.findFirst({ where: { id, hospitalId } })
+    if (!atual) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
+    if (atual.arquivadoEm) return NextResponse.json({ error: 'Paciente arquivado: restaure antes de editar' }, { status: 409 })
+    if (isTerminal(atual.status)) return NextResponse.json({ error: 'Paciente em Óbito: prontuário somente leitura' }, { status: 409 })
+
+    const validado = validarDadosPaciente(input, atual)
+    if (validado.erro !== undefined) return NextResponse.json({ error: validado.erro }, { status: 400 })
+    const { dados } = validado
+
+    let novoStatus: string | null = null
+    if (input.status !== undefined && input.status !== atual.status) {
+      if (input.status === 'Óbito') return NextResponse.json({ error: 'Óbito é registrado apenas no módulo de Óbitos' }, { status: 400 })
+      if (!isStatusPaciente(input.status)) return NextResponse.json({ error: 'Status inválido' }, { status: 400 })
+      if (!pode(ator.cargo, 'paciente:encaminhar')) return NextResponse.json({ error: 'Sem permissão para encaminhar pacientes' }, { status: 403 })
+      if (STATUS_DESFECHO.includes(input.status) && !pode(ator.cargo, 'prontuario:desfecho')) {
+        return NextResponse.json({ error: 'Somente médico registra alta ou transferência' }, { status: 403 })
       }
-      safeData.nascimento = new Date(nascimento)
+      if (!transicaoValida(atual.status, input.status)) {
+        return NextResponse.json({ error: `Transição inválida: ${atual.status} para ${input.status}` }, { status: 409 })
+      }
+      novoStatus = input.status
     }
-    if (safeData.leitoNumero !== undefined && safeData.leitoNumero !== null && !Number.isInteger(Number(safeData.leitoNumero))) {
-      return NextResponse.json({ error: 'Número do leito inválido' }, { status: 400 })
+
+    const campos = Object.keys(dados) as (keyof typeof dados)[]
+    for (const campo of campos) {
+      if (!pode(ator.cargo, PERMISSAO_DO_CAMPO[campo] ?? 'paciente:cadastrar')) {
+        return NextResponse.json({ error: `Sem permissão para alterar ${campo}` }, { status: 403 })
+      }
     }
-    if (safeData.leitoNumero !== undefined && safeData.leitoNumero !== null) safeData.leitoNumero = Number(safeData.leitoNumero)
-    if (Object.keys(safeData).length === 0) return NextResponse.json({ error: 'Nenhuma alteração permitida informada' }, { status: 400 })
-    
-    const atualizado = await prisma.paciente.updateMany({ where: { id, hospitalId, arquivadoEm: null }, data: safeData })
-    if (atualizado.count === 0) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
-    const paciente = await prisma.paciente.findFirst({ where: { id, hospitalId, arquivadoEm: null } })
-    return NextResponse.json (paciente)
-  } catch {
-    return NextResponse.json ({ error: 'Erro ao atualizar' }, { status: 500 })
+
+    if (campos.length === 0 && !novoStatus) {
+      return NextResponse.json(await prisma.paciente.findFirst({ where: { id, hospitalId }, select: SELECT_CADASTRO }))
+    }
+
+    if (dados.cpf && await cpfEmUso(hospitalId, dados.cpf, id)) {
+      return NextResponse.json({ error: 'Já existe paciente com este CPF neste hospital' }, { status: 409 })
+    }
+
+    // O status na condição barra alteração concorrente sobre um estado já vencido.
+    const paciente = await prisma.$transaction(async tx => {
+      const atualizado = await tx.paciente.updateMany({
+        where: { id, hospitalId, arquivadoEm: null, status: atual.status },
+        data: { ...dados, ...(novoStatus ? { status: novoStatus } : {}) } as Prisma.PacienteUpdateManyMutationInput,
+      })
+      if (atualizado.count === 0) return null
+      if (novoStatus) await registrarEvento(tx, ator, id, 'Status', `${atual.status} para ${novoStatus}`)
+      if (dados.classificacao !== undefined) {
+        await registrarEvento(tx, ator, id, 'Classificação', `${atual.classificacao ?? 'Não classificado'} para ${dados.classificacao ?? 'Não classificado'}`)
+      }
+      return tx.paciente.findFirst({ where: { id, hospitalId }, select: SELECT_CADASTRO })
+    })
+    if (!paciente) return NextResponse.json({ error: 'O paciente foi alterado por outra pessoa. Recarregue a ficha.' }, { status: 409 })
+
+    const alteracoes: Record<string, { de: Prisma.InputJsonValue | null; para: Prisma.InputJsonValue | null }> = {}
+    for (const campo of campos) {
+      alteracoes[campo] = { de: paraAuditoria(atual[campo as keyof typeof atual]), para: paraAuditoria(dados[campo]) }
+    }
+    if (novoStatus) alteracoes.status = { de: atual.status, para: novoStatus }
+    await auditar(ator, 'ATUALIZAR_PACIENTE', 'Paciente', id, { alteracoes } as Prisma.InputJsonValue)
+
+    return NextResponse.json(paciente)
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return NextResponse.json({ error: 'Já existe paciente com este CPF neste hospital' }, { status: 409 })
+    }
+    console.error('Erro ao atualizar paciente:', error instanceof Error ? error.name : 'erro')
+    return NextResponse.json({ error: 'Erro ao atualizar' }, { status: 500 })
   }
 }
 
-export async function DELETE (_: NextRequest, { params }: { params: Promise <{ id: string }> }) {
+export async function DELETE(_: NextRequest, { params }: Contexto) {
   try {
-    const session = await auth()
-    if (!session) return NextResponse.json ({ error: 'Não autorizado' }, { status: 401 })
-    if (session.user.cargo !== 'ADMIN') return NextResponse.json({ error: 'Apenas ADMIN pode arquivar pacientes' }, { status: 403 })
-
+    const { ator, negado } = await exigir('paciente:arquivar')
+    if (negado) return negado
     const { id } = await params
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-    
-    const pacienteExistente = await prisma.paciente.findFirst({ where: { id, hospitalId, arquivadoEm: null }, select: { id: true } })
-    if (!pacienteExistente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
 
     const arquivado = await prisma.paciente.updateMany({
-      where: { id, hospitalId, arquivadoEm: null },
+      where: { id, hospitalId: ator.hospitalId, arquivadoEm: null },
       data: { arquivadoEm: new Date() },
     })
     if (arquivado.count === 0) return NextResponse.json({ error: 'Paciente não encontrado ou já arquivado' }, { status: 404 })
+
+    await auditar(ator, 'ARQUIVAR_PACIENTE', 'Paciente', id)
     return NextResponse.json({ success: true, arquivado: true })
-  } catch {
-    return NextResponse.json ({ error: 'Erro ao excluir' }, { status: 500 })
+  } catch (error) {
+    console.error('Erro ao arquivar paciente:', error instanceof Error ? error.name : 'erro')
+    return NextResponse.json({ error: 'Erro ao arquivar' }, { status: 500 })
   }
 }

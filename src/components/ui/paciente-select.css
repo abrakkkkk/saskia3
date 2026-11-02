@@ -1,0 +1,6 @@
+.pac-select { min-width: 0; }
+.pac-select input { margin-bottom: 8px; }
+.pac-select select { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+.pac-select-erro { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--ui-danger); font-size: 14px; }
+.pac-select-identificacao { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; padding: 8px 12px; border-radius: 8px; background: var(--ui-surface-muted); color: var(--ui-text); font-size: 13px; }
+.pac-select-identificacao span { color: var(--ui-text-muted); }

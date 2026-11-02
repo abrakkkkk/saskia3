@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
@@ -41,8 +41,8 @@ interface Ticket {
 
 export default function SuportePage() {
   const { data: session, status: sessionStatus } = useSession();
-  const hospitalId = (session?.user as any)?.hospitalId;
-  const usuario = session?.user as any;
+  const hospitalId = session?.user?.hospitalId;
+  const usuario = session?.user;
   const isAdmin = usuario?.cargo === 'ADMIN';
   
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -62,15 +62,24 @@ export default function SuportePage() {
   // Alerts
   const [alertMsg, setAlertMsg] = useState<{ texto: string, tipo: 'sucesso' | 'erro' } | null>(null);
 
+  const mapStatus = (s: string) => {
+    const m: Record<string, string> = { 'ENVIADO': 'Enviado', 'EM_ANALISE': 'Em Análise', 'RESOLVIDO': 'Concluído', 'FECHADO': 'Finalizado' };
+    return (m[s] || s) as Ticket['status'];
+  };
+  const mapPrioridade = (p: string) => {
+    const m: Record<string, string> = { 'BAIXA': 'Baixa', 'MEDIA': 'Média', 'ALTA': 'Alta', 'URGENTE': 'Urgente' };
+    return (m[p] || p) as Ticket['prioridade'];
+  };
+
   // Carregar Tickets
   const carregarTickets = useCallback(async () => {
     setCarregando(true);
     try {
       const response = await fetch('/api/tickets');
       const data: unknown = await response.json().catch(() => null);
-      if (!response.ok) throw new Error((data as any)?.error || 'Não foi possível carregar os tickets.');
+      if (!response.ok) throw new Error((data as { error?: string } | null)?.error || 'Não foi possível carregar os tickets.');
       if (!Array.isArray(data)) throw new Error('A resposta dos tickets é inválida.');
-      const mapped = data.map((t: any) => ({
+      const mapped = (data as { id: string; numero?: number | string; titulo: string; descricao: string; status: string; prioridade: string; createdAt: string; solicitante: string; respostas?: unknown }[]).map(t => ({
         id: String(t.id),
         numero: `SUP-${t.numero || String(t.id).slice(0, 6)}`,
         titulo: t.titulo,
@@ -91,14 +100,6 @@ export default function SuportePage() {
     }
   }, []);
 
-  const mapStatus = (s: string) => {
-    const m: Record<string, string> = { 'ENVIADO': 'Enviado', 'EM_ANALISE': 'Em Análise', 'RESOLVIDO': 'Concluído', 'FECHADO': 'Finalizado' };
-    return (m[s] || s) as any;
-  };
-  const mapPrioridade = (p: string) => {
-    const m: Record<string, string> = { 'BAIXA': 'Baixa', 'MEDIA': 'Média', 'ALTA': 'Alta', 'URGENTE': 'Urgente' };
-    return (m[p] || p) as any;
-  };
   const mapPrioridadeToEnum = (p: string) => {
     const m: Record<string, string> = { 'Baixa': 'BAIXA', 'Média': 'MEDIA', 'Alta': 'ALTA', 'Urgente': 'URGENTE' };
     return m[p] || 'MEDIA';
@@ -107,7 +108,8 @@ export default function SuportePage() {
   useEffect(() => {
     if (sessionStatus === 'loading') return;
     if (!hospitalId) {
-      setTickets([]);
+      void Promise.resolve().then(() => { setTickets([]); });
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- estado inicial/reinício dependente da sessão e da busca
       setCarregando(false);
       return;
     }
@@ -188,12 +190,12 @@ export default function SuportePage() {
   };
 
   const andamentoCount = tickets.filter(t => !t.arquivado && t.status !== 'Finalizado' && t.status !== 'Concluído').length;
-  const arquivadosCount = tickets.filter(t => t.arquivado).length;
+  const arquivadosCount = tickets.filter(t => t.arquivado || t.status === 'Concluído').length;
 
   const ticketsFiltrados = tickets.filter(t => 
     filtroAtual === 'andamento' 
       ? (!t.arquivado && t.status !== 'Finalizado' && t.status !== 'Concluído') 
-      : t.arquivado
+      : (t.arquivado || t.status === 'Concluído')
   );
 
   const getStatusColor = (status: string) => {
@@ -231,11 +233,11 @@ export default function SuportePage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
             <Headset aria-hidden="true" className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-blue-900" />
             Tickets de Suporte
           </h2>
-          <p className="text-slate-500 mt-1">Gerencie todas as solicitações de suporte da sua conta.</p>
+          <p className="text-slate-200 mt-1">Gerencie todas as solicitações de suporte da sua conta.</p>
         </div>
         <button 
           onClick={() => setIsModalNovoOpen(true)}
@@ -261,7 +263,7 @@ export default function SuportePage() {
           onClick={() => setFiltroAtual('arquivados')}
           className={`min-h-11 shrink-0 flex items-center gap-2 px-4 sm:px-6 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-700 ${filtroAtual === 'arquivados' ? 'border-blue-900 text-blue-900' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
         >
-          <Archive aria-hidden="true" className="w-4 h-4" /> Arquivados ({arquivadosCount})
+          <Archive aria-hidden="true" className="w-4 h-4" /> Concluídos e arquivados ({arquivadosCount})
         </button>
       </div>
 
@@ -274,7 +276,7 @@ export default function SuportePage() {
           <div className="flex flex-col items-center justify-center py-16 sm:py-20 text-slate-500 gap-4 text-center">
             <Inbox aria-hidden="true" className="w-14 h-14 opacity-40" />
             <p className="text-lg">Nenhum ticket encontrado</p>
-            <p className="text-sm">Clique em "Nova Solicitação" para abrir um chamado</p>
+            <p className="text-sm">Clique em &quot;Nova Solicitação&quot; para abrir um chamado</p>
           </div>
         ) : (
           ticketsFiltrados.map(ticket => (

@@ -2,14 +2,13 @@
 
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { Volume2, VolumeX, Bell, Clock, DoorOpen, ActivitySquare, Users, AlertCircle, CheckCircle2, UserCheck, Timer } from 'lucide-react';
+import { Volume2, VolumeX, Bell, Clock, DoorOpen, ActivitySquare, Timer } from 'lucide-react';
 
 interface Paciente {
   id: string;
-  nome: string;
   status: string;
   classificacao: string | null;
-  createdAt: string;
+  esperaDesde: string;
 }
 
 interface Chamada {
@@ -33,28 +32,29 @@ export default function PainelChamadasTV() {
   const [chamadas, setChamadas] = useState<Chamada[]>([]);
   const [erroCarga, setErroCarga] = useState('');
   const [carregando, setCarregando] = useState(true);
-  const [horaAtual, setHoraAtual] = useState(new Date());
-  const [mounted, setMounted] = useState(false);
+  const [horaAtual, setHoraAtual] = useState<Date | null>(null);
+  const mounted = horaAtual !== null;
   
   // Áudio Controls
   const [audioPermitido, setAudioPermitido] = useState(false);
   const [vozAtivada, setVozAtivada] = useState(true);
   
-  const audioCtxRef = useRef<any>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const ultimaChamadaIdRef = useRef<string>('');
   const chamadasInicializadasRef = useRef(false);
   const fetchSequenceRef = useRef(0);
 
   useEffect(() => {
-    setMounted(true);
-    const timer = setInterval(() => setHoraAtual(new Date()), 1000);
-    return () => clearInterval(timer);
+    const tick = () => setHoraAtual(new Date());
+    const primeiro = setTimeout(tick, 0);
+    const timer = setInterval(tick, 1000);
+    return () => { clearTimeout(primeiro); clearInterval(timer); };
   }, []);
 
   useEffect(() => {
     const permitirAudio = () => {
       if (!audioPermitido) {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
         if(AudioContextClass) {
           audioCtxRef.current = new AudioContextClass();
           if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
@@ -131,25 +131,20 @@ export default function PainelChamadasTV() {
     if (sessionStatus === 'loading') return;
     if (sessionStatus !== 'authenticated' || !session?.user) {
       fetchSequenceRef.current++;
-      setPacientes([]);
-      setChamadas([]);
       chamadasInicializadasRef.current = false;
       ultimaChamadaIdRef.current = '';
-      setCarregando(false);
       return;
     }
-    setPacientes([]);
-    setChamadas([]);
-    setErroCarga('');
     chamadasInicializadasRef.current = false;
     ultimaChamadaIdRef.current = '';
-    setCarregando(true);
-    void fetchDados();
+    const sequencia = fetchSequenceRef;
+    const primeiro = setTimeout(() => void fetchDados(), 0);
     const interval = setInterval(() => void fetchDados(), 3000);
     const handleStorage = () => void fetchDados();
     window.addEventListener('storage', handleStorage);
     return () => {
-      fetchSequenceRef.current++;
+      sequencia.current++;
+      clearTimeout(primeiro);
       clearInterval(interval);
       window.removeEventListener('storage', handleStorage);
     };
@@ -166,13 +161,15 @@ export default function PainelChamadasTV() {
         falarMensagem(ultima.pacienteNome, ultima.consultorio);
       }
     }
+    // tocarBeep e falarMensagem só leem audioPermitido e vozAtivada, já listados.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chamadas, audioPermitido, vozAtivada]);
 
   // LÓGICA DE FILA
   const pacientesAtivos = pacientes.filter(p => !["Finalizado", "Alta Médica", "Evasão", "Transferido", "Óbito"].includes(p.status));
   const filaComChamadas: PacienteFila[] = pacientesAtivos.map(p => {
-    const chamada = chamadas.find(c => c.pacienteId === p.id || (!c.pacienteId && c.pacienteNome === p.nome));
-    const dataRef = p.createdAt || new Date().toISOString();
+    const chamada = chamadas.find(c => c.pacienteId === p.id);
+    const dataRef = p.esperaDesde || new Date().toISOString();
     const tempoEsperaMin = Math.floor((new Date().getTime() - new Date(dataRef).getTime()) / 60000);
     return { ...p, foiChamado: !!chamada, dadosChamada: chamada, tempoEsperaMin };
   });

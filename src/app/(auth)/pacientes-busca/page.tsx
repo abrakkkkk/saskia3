@@ -1,7 +1,12 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { Badge } from '@/components/ui';
+import { STATUS_PACIENTE } from '@/lib/paciente-status';
+import { pode } from '@/lib/permissions';
+import { formatarCPF, formatarNascimento, nascimentoParaInput, STATUS_TOM } from '@/lib/utils';
+import { erroDaApi, useCargo } from '../pacientes/componentes';
 import styles from './pacientes-busca.module.css';
 
 interface Paciente {
@@ -40,22 +45,39 @@ export default function BuscarPacientesPage() {
 
   const [ordenacao, setOrdenacao] = useState<{ campo: keyof Paciente, direcao: 'asc'|'desc' }>({ campo: 'nome', direcao: 'asc' });
 
+  const cargo = useCargo();
+  const buscaCompleta = pode(cargo, 'paciente:cadastrar') || pode(cargo, 'prontuario:ler');
+  const podeExportar = pode(cargo, 'paciente:cadastrar');
+  const [total, setTotal] = useState(0);
+  const [exportando, setExportando] = useState(false);
+
+  // Filtros exatos vão ao servidor (limite de lista). Nome, mãe e endereço ficam no cliente porque
+  // ignoram acentos; o aviso de resultado parcial orienta quando o limite for atingido.
+  const consultaServidor = useMemo(() => {
+    const params = new URLSearchParams();
+    const cpf = filtros.cpf.replace(/\D/g, '');
+    if (cpf) params.set('cpf', cpf);
+    if (filtros.status) params.set('status', filtros.status);
+    if (filtros.nascimento) params.set('nascimento', filtros.nascimento);
+    if (filtros.sexo) params.set('sexo', filtros.sexo);
+    return params.toString();
+  }, [filtros.cpf, filtros.status, filtros.nascimento, filtros.sexo]);
+
   useEffect(() => {
     const controller = new AbortController();
     const carregar = async () => {
-      setCarregando(true);
-      setErroCarga('');
       try {
-        const response = await fetch('/api/pacientes/busca', { signal: controller.signal });
-        if (!response.ok) {
-          const body = await response.json().catch(() => null);
-          throw new Error(typeof body?.error === 'string' ? body.error : 'Não foi possível carregar os pacientes.');
-        }
+        await new Promise(resolve => setTimeout(resolve, 250));
+        if (controller.signal.aborted) return;
+        const response = await fetch(`/api/pacientes/busca${consultaServidor ? `?${consultaServidor}` : ''}`, { signal: controller.signal });
+        if (!response.ok) throw new Error(await erroDaApi(response, 'Não foi possível carregar os pacientes.'));
         const data: unknown = await response.json();
         if (!Array.isArray(data)) throw new Error('A resposta de pacientes está inválida.');
         setPacientes(data.filter((item): item is Paciente => Boolean(item)
           && typeof item.id === 'string' && typeof item.nome === 'string'
           && typeof item.status === 'string'));
+        setTotal(Number(response.headers.get('X-Total-Count')) || data.length);
+        setErroCarga('');
       } catch (error) {
         if (controller.signal.aborted) return;
         setErroCarga(error instanceof Error ? error.message : 'Não foi possível carregar os pacientes.');
@@ -66,7 +88,7 @@ export default function BuscarPacientesPage() {
     };
     void carregar();
     return () => controller.abort();
-  }, []);
+  }, [consultaServidor]);
 
   const limparFiltros = () => {
     setFiltros({
@@ -87,12 +109,7 @@ export default function BuscarPacientesPage() {
     if (filtros.sexo && p.sexo !== filtros.sexo) return false;
     if (enderecoFiltro && !normalizarBusca(p.endereco || '').includes(enderecoFiltro)) return false;
     if (filtros.status && p.status !== filtros.status) return false;
-    if (filtros.nascimento) {
-      const dataFiltro = filtros.nascimento.split('T')[0];
-      const nascimento = p.nascimento ? new Date(p.nascimento) : null;
-      const dataPac = nascimento && Number.isFinite(nascimento.getTime()) ? nascimento.toISOString().slice(0, 10) : '';
-      if (dataFiltro !== dataPac) return false;
-    }
+    if (filtros.nascimento && filtros.nascimento !== nascimentoParaInput(p.nascimento)) return false;
     return true;
   }).sort((a, b) => {
     const valA = String(a[ordenacao.campo] ?? '');
@@ -108,41 +125,34 @@ export default function BuscarPacientesPage() {
     }));
   };
 
-  const exportarCSV = () => {
-    const csvCell = (value: string) => {
-      const neutralizado = /^[\u0000-\u0020]*[=+@-]/.test(value) ? `'${value}` : value;
-      return `"${neutralizado.replace(/"/g, '""')}"`;
-    };
-    const cabecalho = ['Nome', 'CPF', 'Nascimento', 'Sexo', 'Status', 'Classificação'].map(csvCell).join(',') + '\n';
-    const linhas = pacientesFiltrados.map(p => 
-      [p.nome, p.cpf || '', p.nascimento ? new Date(p.nascimento).toLocaleDateString('pt-BR') : '', p.sexo || '', p.status, p.classificacao || '']
-        .map(csvCell).join(',')
-    ).join("\n");
-    const blob = new Blob(['\uFEFF', cabecalho + linhas], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "busca_pacientes.csv";
-    a.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // Geração e auditoria no servidor. Filtros de texto vão junto para o arquivo refletir a tela.
+  const exportarCSV = async () => {
+    setExportando(true);
+    try {
+      const params = new URLSearchParams(consultaServidor);
+      if (filtros.nome.trim()) params.set('nome', filtros.nome.trim());
+      if (filtros.mae.trim()) params.set('mae', filtros.mae.trim());
+      if (filtros.endereco.trim()) params.set('endereco', filtros.endereco.trim());
+      if (filtros.telefone.trim()) params.set('telefone', filtros.telefone.trim());
+      const response = await fetch(`/api/pacientes/exportar?${params}`);
+      if (!response.ok) {
+        alert(await erroDaApi(response, 'Não foi possível exportar.'));
+        return;
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'busca_pacientes.csv';
+      a.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      alert('Falha de conexão ao exportar.');
+    } finally {
+      setExportando(false);
+    }
   };
 
-  const statusDisponiveis = Array.from(new Set(pacientes.map(p => p.status).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-
-  const STATUS_CORES: Record<string, string> = {
-    'Recepção': 'bg-slate-100 text-slate-700',
-    'Aguardando Triagem': 'bg-amber-100 text-amber-700',
-    'Aguardando Médico': 'bg-amber-100 text-amber-700',
-    'Em Triagem': 'bg-blue-100 text-blue-700',
-    'Em Atendimento Médico': 'bg-blue-100 text-blue-700',
-    'Internado': 'bg-pink-100 text-pink-700',
-    'Alta Médica': 'bg-green-100 text-green-700',
-    'Óbito': 'bg-slate-800 text-slate-100',
-    'Evasão': 'bg-red-100 text-red-700',
-    'Transferido': 'bg-orange-100 text-orange-700',
-    'Finalizado': 'bg-green-100 text-green-700',
-    'Retorno': 'bg-purple-100 text-purple-700'
-  };
+  const statusDisponiveis = [...STATUS_PACIENTE];
 
   return (
     <div className={styles.page}>
@@ -154,9 +164,11 @@ export default function BuscarPacientesPage() {
           <p>Pesquise pacientes ativos por nome, documentos, contato e status</p>
         </div>
         <div className={styles.bannerActions}>
-          <button onClick={exportarCSV} className={styles.exportButton} disabled={carregando || pacientesFiltrados.length === 0}>
-            <i className="las la-download" aria-hidden="true"></i> Exportar resultados ({pacientesFiltrados.length})
-          </button>
+          {podeExportar && (
+            <button type="button" onClick={exportarCSV} className={styles.exportButton} disabled={carregando || exportando || pacientesFiltrados.length === 0}>
+              <i className="las la-download" aria-hidden="true"></i> {exportando ? 'Exportando...' : `Exportar resultados (${pacientesFiltrados.length})`}
+            </button>
+          )}
         </div>
       </div>
 
@@ -171,34 +183,45 @@ export default function BuscarPacientesPage() {
             <label htmlFor="busca-paciente-nome"><i className="las la-user" aria-hidden="true"></i> Nome</label>
             <input id="busca-paciente-nome" type="text" className={styles.control} value={filtros.nome} onChange={e => setFiltros({...filtros, nome: e.target.value})} placeholder="Nome completo ou parte" />
           </div>
-          <div className={styles.field}>
-            <label htmlFor="busca-paciente-cpf"><i className="las la-id-card" aria-hidden="true"></i> CPF</label>
-            <input id="busca-paciente-cpf" type="text" inputMode="numeric" className={styles.control} value={filtros.cpf} onChange={e => setFiltros({...filtros, cpf: e.target.value})} placeholder="000.000.000-00" />
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="busca-paciente-mae"><i className="las la-female" aria-hidden="true"></i> Nome da Mãe</label>
-            <input id="busca-paciente-mae" type="text" className={styles.control} value={filtros.mae} onChange={e => setFiltros({...filtros, mae: e.target.value})} placeholder="Nome da mãe" />
-          </div>
+          {buscaCompleta && (
+            <div className={styles.field}>
+              <label htmlFor="busca-paciente-cpf"><i className="las la-id-card" aria-hidden="true"></i> CPF</label>
+              <input id="busca-paciente-cpf" type="text" inputMode="numeric" className={styles.control} value={filtros.cpf} onChange={e => setFiltros({...filtros, cpf: e.target.value})} placeholder="000.000.000-00" />
+            </div>
+          )}
+          {buscaCompleta && (
+            <div className={styles.field}>
+              <label htmlFor="busca-paciente-mae"><i className="las la-female" aria-hidden="true"></i> Nome da Mãe</label>
+              <input id="busca-paciente-mae" type="text" className={styles.control} value={filtros.mae} onChange={e => setFiltros({...filtros, mae: e.target.value})} placeholder="Nome da mãe" />
+            </div>
+          )}
           <div className={styles.field}>
             <label htmlFor="busca-paciente-nascimento"><i className="las la-calendar" aria-hidden="true"></i> Nascimento</label>
             <input id="busca-paciente-nascimento" type="date" className={styles.control} value={filtros.nascimento} onChange={e => setFiltros({...filtros, nascimento: e.target.value})} />
           </div>
-          <div className={styles.field}>
-            <label htmlFor="busca-paciente-telefone"><i className="las la-phone" aria-hidden="true"></i> Telefone</label>
-            <input id="busca-paciente-telefone" type="tel" inputMode="tel" className={styles.control} value={filtros.telefone} onChange={e => setFiltros({...filtros, telefone: e.target.value})} placeholder="(00) 00000-0000" />
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="busca-paciente-sexo"><i className="las la-venus-mars" aria-hidden="true"></i> Sexo</label>
-            <select id="busca-paciente-sexo" className={styles.control} value={filtros.sexo} onChange={e => setFiltros({...filtros, sexo: e.target.value})}>
-              <option value="">Todos</option>
-              <option value="Masculino">Masculino</option>
-              <option value="Feminino">Feminino</option>
-            </select>
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="busca-paciente-endereco"><i className="las la-map-marker" aria-hidden="true"></i> Cidade/Endereço</label>
-            <input id="busca-paciente-endereco" type="text" className={styles.control} value={filtros.endereco} onChange={e => setFiltros({...filtros, endereco: e.target.value})} placeholder="Cidade ou rua" />
-          </div>
+          {buscaCompleta && (
+            <div className={styles.field}>
+              <label htmlFor="busca-paciente-telefone"><i className="las la-phone" aria-hidden="true"></i> Telefone</label>
+              <input id="busca-paciente-telefone" type="tel" inputMode="tel" className={styles.control} value={filtros.telefone} onChange={e => setFiltros({...filtros, telefone: e.target.value})} placeholder="(00) 00000-0000" />
+            </div>
+          )}
+          {buscaCompleta && (
+            <div className={styles.field}>
+              <label htmlFor="busca-paciente-sexo"><i className="las la-venus-mars" aria-hidden="true"></i> Sexo</label>
+              <select id="busca-paciente-sexo" className={styles.control} value={filtros.sexo} onChange={e => setFiltros({...filtros, sexo: e.target.value})}>
+                <option value="">Todos</option>
+                <option value="Masculino">Masculino</option>
+                <option value="Feminino">Feminino</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+          )}
+          {buscaCompleta && (
+            <div className={styles.field}>
+              <label htmlFor="busca-paciente-endereco"><i className="las la-map-marker" aria-hidden="true"></i> Cidade/Endereço</label>
+              <input id="busca-paciente-endereco" type="text" className={styles.control} value={filtros.endereco} onChange={e => setFiltros({...filtros, endereco: e.target.value})} placeholder="Cidade ou rua" />
+            </div>
+          )}
           <div className={styles.field}>
             <label htmlFor="busca-paciente-status"><i className="las la-flag" aria-hidden="true"></i> Status</label>
             <select id="busca-paciente-status" className={styles.control} value={filtros.status} onChange={e => setFiltros({...filtros, status: e.target.value})}>
@@ -221,6 +244,7 @@ export default function BuscarPacientesPage() {
       {/* Resultados */}
       <div className={styles.resultSummary} aria-live="polite">
         <div><i className="las la-users" aria-hidden="true"></i> <strong>{pacientesFiltrados.length}</strong> paciente(s) encontrado(s)</div>
+        {total > pacientes.length && <div>Resultado parcial: {pacientes.length} de {total} analisados. Combine CPF, status, sexo ou nascimento para ampliar.</div>}
       </div>
 
       {erroCarga && <p className={styles.loadError} role="alert">{erroCarga}</p>}
@@ -257,15 +281,11 @@ export default function BuscarPacientesPage() {
                       </div>
                       {p.nome}
                     </td>
-                    <td style={{ padding: '14px', fontSize: '13px', color: '#334155' }}>{p.cpf || 'N/I'}</td>
-                    <td style={{ padding: '14px', fontSize: '13px', color: '#334155' }}>{p.sexo || 'N/I'}</td>
-                    <td style={{ padding: '14px', fontSize: '13px', color: '#334155' }}>{p.nascimento ? new Date(p.nascimento).toLocaleDateString('pt-BR') : 'N/I'}</td>
-                    <td style={{ padding: '14px' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: 700 }} className={STATUS_CORES[p.status] || 'bg-slate-100 text-slate-700'}>
-                        {p.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px' }}>
+                    <td>{p.cpf ? formatarCPF(p.cpf) : 'N/I'}</td>
+                    <td>{p.sexo || 'N/I'}</td>
+                    <td>{formatarNascimento(p.nascimento) || 'N/I'}</td>
+                    <td><Badge tone={STATUS_TOM[p.status] ?? 'neutral'}>{p.status}</Badge></td>
+                    <td>
                       <Link href={`/pacientes/${p.id}`} className={styles.recordLink}>
                         <i className="las la-folder-open" aria-hidden="true"></i> Ficha
                       </Link>

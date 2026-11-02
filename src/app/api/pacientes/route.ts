@@ -1,68 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
-import { auth } from '@/lib/auth'
+import { auditar, exigir, lerJson, LIMITE_LISTA } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
+import { pode } from '@/lib/permissions'
+import {
+  comEspera, cpfEmUso, filtroPacientes, isUniqueConstraintError, SELECT_REFERENCIA_ESPERA, validarDadosPaciente,
+} from '@/lib/pacientes'
+import { STATUS_SAIDA } from '@/lib/utils'
 
-const limits = {
-  nome: 160, cpf: 20, rg: 30, sexo: 40, telefone: 40, email: 254, endereco: 300,
-  convenio: 120, numConvenio: 80, mae: 160, pai: 160, profissao: 120, estadoCivil: 60,
-  nacionalidade: 80, naturalidade: 120, religiao: 80, etnia: 80, tipoSanguineo: 20,
-  alergias: 2000, status: 60, classificacao: 40, leitoTipo: 40, consultorio: 120,
-  queixaPrincipal: 2000,
-} as const
+const STATUS_ENTRADA = new Set(['Recepção', 'Internado'])
 
-const camposTexto = Object.keys(limits) as (keyof typeof limits)[]
-const statusPermitidos = new Set(['Recepção', 'Internado'])
-const classificacoesPermitidas = new Set(['Azul', 'Verde', 'Amarelo', 'Vermelho'])
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function parseNascimento(value: string): Date | null {
-  const datePart = value.slice(0, 10)
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return null
-  const dateOnly = new Date(`${datePart}T12:00:00.000Z`)
-  if (Number.isNaN(dateOnly.getTime()) || dateOnly.toISOString().slice(0, 10) !== datePart) return null
-
-  if (value.length > 10) {
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/.test(value)) return null
-    const parsed = new Date(value)
-    if (Number.isNaN(parsed.getTime()) || parsed.toISOString() !== new Date(value).toISOString()) return null
-    return dateOnly
-  }
-  return dateOnly
-}
-
-function isUniqueConstraintError(error: unknown) {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002'
+function inteiroDaQuery(valor: string | null, padrao: number, maximo: number) {
+  const numero = Number.parseInt(valor ?? '', 10)
+  return Number.isNaN(numero) || numero < 0 ? padrao : Math.min(numero, maximo)
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    const params = request.nextUrl.searchParams
 
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-    const archived = request.nextUrl.searchParams.get('arquivados') === '1'
-    if (archived && session.user.cargo !== 'ADMIN') {
-      return NextResponse.json({ error: 'Apenas ADMIN pode consultar pacientes arquivados' }, { status: 403 })
-    }
-
-    if (request.nextUrl.searchParams.get('visao') === 'painel-chamadas') {
+    if (params.get('visao') === 'painel-chamadas') {
+      const { ator, negado } = await exigir('chamada:ler')
+      if (negado) return negado
       const fila = await prisma.paciente.findMany({
-        where: { hospitalId, arquivadoEm: null },
+        where: { hospitalId: ator.hospitalId, arquivadoEm: null, status: { notIn: [...STATUS_SAIDA] } },
         orderBy: { createdAt: 'desc' },
-        select: { id: true, nome: true, status: true, classificacao: true, createdAt: true },
+        take: LIMITE_LISTA,
+        select: { id: true, status: true, classificacao: true, ...SELECT_REFERENCIA_ESPERA },
       })
-      return NextResponse.json(fila)
+      return NextResponse.json(fila.map(comEspera))
     }
 
-    if (request.nextUrl.searchParams.get('visao') === 'servico-social') {
+    if (params.get('visao') === 'servico-social') {
+      const { ator, negado } = await exigir('social:ler')
+      if (negado) return negado
       const pacientes = await prisma.paciente.findMany({
-        where: { hospitalId, arquivadoEm: null },
+        where: { hospitalId: ator.hospitalId, arquivadoEm: null },
         orderBy: { createdAt: 'desc' },
+        take: LIMITE_LISTA,
         select: { id: true, nome: true },
       })
       return NextResponse.json(pacientes, {
@@ -70,98 +45,90 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const pacientes = await prisma.paciente.findMany({
-      where: { hospitalId, arquivadoEm: archived ? { not: null } : null },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true, nome: true, cpf: true, nascimento: true,
-        status: true, classificacao: true, leitoTipo: true, leitoNumero: true,
-        createdAt: true,
-      },
-    })
-    return NextResponse.json(pacientes)
+    const { ator, negado } = await exigir('paciente:listar')
+    if (negado) return negado
+
+    const arquivados = params.get('arquivados') === '1'
+    if (arquivados && !pode(ator.cargo, 'paciente:arquivar')) {
+      return NextResponse.json({ error: 'Sem permissão para consultar pacientes arquivados' }, { status: 403 })
+    }
+
+    // CPF só para quem atende ou cadastra o paciente. A busca por contato fica em /api/pacientes/busca.
+    const veIdentificacao = pode(ator.cargo, 'paciente:cadastrar') || pode(ator.cargo, 'prontuario:ler')
+    const where = filtroPacientes(params, ator.hospitalId, { arquivados, completa: false })
+    const take = inteiroDaQuery(params.get('take') ?? params.get('limit'), LIMITE_LISTA, LIMITE_LISTA) || 1
+    const skip = inteiroDaQuery(params.get('skip'), 0, Number.MAX_SAFE_INTEGER)
+
+    const [pacientes, total] = await Promise.all([
+      prisma.paciente.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+        select: {
+          id: true, nome: true, cpf: veIdentificacao, nascimento: true,
+          status: true, classificacao: true, leitoTipo: true, leitoNumero: true,
+          ...SELECT_REFERENCIA_ESPERA,
+        },
+      }),
+      prisma.paciente.count({ where }),
+    ])
+
+    return NextResponse.json(pacientes.map(comEspera), { headers: { 'X-Total-Count': String(total) } })
   } catch (error) {
-    console.error('Erro ao buscar pacientes:', error)
+    console.error('Erro ao buscar pacientes:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Erro ao buscar pacientes' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    const { ator, negado } = await exigir('paciente:cadastrar')
+    if (negado) return negado
 
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
+    const body = await lerJson(request)
+    if (!body) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
 
-    let body: unknown
-    try {
-      body = await request.json()
-    } catch {
-      return NextResponse.json({ error: 'JSON inválido' }, { status: 400 })
+    const nome = typeof body.nome === 'string' ? body.nome.trim() : ''
+    if (!nome) return NextResponse.json({ error: 'O nome é obrigatório. Para não identificado, use "Desconhecido".' }, { status: 400 })
+    if (body.classificacao !== undefined && body.classificacao !== null && body.classificacao !== '') {
+      return NextResponse.json({ error: 'A classificação de risco é definida apenas na triagem' }, { status: 400 })
     }
-    if (!isRecord(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
-
-    for (const field of camposTexto) {
-      const value = body[field]
-      if (value !== undefined && value !== null && (typeof value !== 'string' || value.length > limits[field])) {
-        return NextResponse.json({ error: `Campo ${field} inválido` }, { status: 400 })
-      }
-    }
-
-    for (const field of ['nome', 'cpf', 'rg', 'tipoSanguineo', 'alergias'] as const) {
-      if (typeof body[field] !== 'string' || !body[field].trim()) {
-        return NextResponse.json({ error: `O campo ${field} é obrigatório` }, { status: 400 })
-      }
-    }
-    if (typeof body.email === 'string' && body.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email.trim())) {
-      return NextResponse.json({ error: 'E-mail inválido' }, { status: 400 })
-    }
-    if (body.status !== undefined && (typeof body.status !== 'string' || !statusPermitidos.has(body.status))) {
+    if (body.status !== undefined && (typeof body.status !== 'string' || !STATUS_ENTRADA.has(body.status))) {
       return NextResponse.json({ error: 'Status de entrada inválido' }, { status: 400 })
     }
-    if (body.classificacao !== undefined && (typeof body.classificacao !== 'string' || !classificacoesPermitidas.has(body.classificacao))) {
-      return NextResponse.json({ error: 'Classificação inválida' }, { status: 400 })
+
+    const validado = validarDadosPaciente({ ...body, classificacao: undefined })
+    if (validado.erro !== undefined) return NextResponse.json({ error: validado.erro }, { status: 400 })
+    const { dados } = validado
+
+    if (dados.cpf && await cpfEmUso(ator.hospitalId, dados.cpf)) {
+      return NextResponse.json({ error: 'Já existe paciente com este CPF neste hospital' }, { status: 409 })
     }
 
-    let nascimento: Date | undefined
-    if (typeof body.nascimento !== 'string' || !body.nascimento.trim() || body.nascimento.length > 40) {
-      return NextResponse.json({ error: 'Data de nascimento inválida' }, { status: 400 })
-    }
-    const nascimentoValidado = parseNascimento(body.nascimento)
-    if (!nascimentoValidado || body.nascimento.slice(0, 10) > new Date().toISOString().slice(0, 10)) {
-      return NextResponse.json({ error: 'Data de nascimento inválida' }, { status: 400 })
-    }
-    nascimento = nascimentoValidado
+    const paciente = await prisma.$transaction(async tx => {
+      const criado = await tx.paciente.create({
+        data: {
+          ...dados,
+          nome,
+          hospitalId: ator.hospitalId,
+          ...(typeof body.status === 'string' ? { status: body.status } : {}),
+        } as Prisma.PacienteUncheckedCreateInput,
+        select: { id: true, nome: true, status: true },
+      })
+      await tx.timelineEvent.create({
+        data: { pacienteId: criado.id, tipo: 'Cadastro', descricao: `Paciente cadastrado com status ${criado.status}`, user: ator.nome, usuarioId: ator.id },
+      })
+      return criado
+    })
 
-    let leitoNumero: number | null | undefined
-    if (body.leitoNumero !== undefined && body.leitoNumero !== null && body.leitoNumero !== '') {
-      if ((typeof body.leitoNumero !== 'number' && typeof body.leitoNumero !== 'string') ||
-        (typeof body.leitoNumero === 'string' && !/^\d+$/.test(body.leitoNumero))) {
-        return NextResponse.json({ error: 'Número do leito inválido' }, { status: 400 })
-      }
-      leitoNumero = Number(body.leitoNumero)
-      if (!Number.isSafeInteger(leitoNumero) || leitoNumero < 1 || leitoNumero > 2_147_483_647) {
-        return NextResponse.json({ error: 'Número do leito inválido' }, { status: 400 })
-      }
-    }
-
-    const data = Object.fromEntries(
-      camposTexto.filter(field => body[field] !== undefined).map(field => [
-        field,
-        typeof body[field] === 'string' && body[field].trim() ? body[field].trim() : null,
-      ]),
-    ) as unknown as Prisma.PacienteUncheckedCreateInput
-    if (nascimento !== undefined) data.nascimento = nascimento
-    if (leitoNumero !== undefined) data.leitoNumero = leitoNumero
-
-    const paciente = await prisma.paciente.create({ data: { ...data, hospitalId } })
+    await auditar(ator, 'CADASTRAR_PACIENTE', 'Paciente', paciente.id)
     return NextResponse.json(paciente, { status: 201 })
   } catch (error: unknown) {
     if (isUniqueConstraintError(error)) {
       return NextResponse.json({ error: 'Já existe paciente com este CPF neste hospital' }, { status: 409 })
     }
-    console.error('Erro ao criar paciente:', error)
+    console.error('Erro ao criar paciente:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Erro ao criar paciente' }, { status: 500 })
   }
 }

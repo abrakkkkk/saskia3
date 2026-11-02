@@ -1,629 +1,298 @@
 'use client';
-import { getSessionUser } from '@/lib/session';
 
-
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { calcularIdade, getIniciais, STATUS_CORES, MANCHESTER_CORES } from '@/lib/utils';
-import { useCallSystem } from '@/contexts/CallContext';
-import './pacientes.css';
+import { EmptyState, ErrorState, LoadingState, PageHeader, Panel, SearchInput, StatCard, StatGrid, Tabs } from '@/components/ui';
+import { isTerminal } from '@/lib/paciente-status';
+import { pode } from '@/lib/permissions';
+import { calcularIdade, compararFilaClinica, formatarCPF, getIniciais, MANCHESTER_CORES, ORDEM_MANCHESTER } from '@/lib/utils';
+import { erroDaApi, EsperaBadge, ManchesterBadge, ModalChamada, ModalNovoPaciente, StatusBadge, useAgora, useCargo } from './componentes';
 
 interface Paciente {
   id: string;
   nome: string;
-  cpf: string | null;
+  cpf?: string | null;
   nascimento: string | null;
   status: string;
   classificacao: string | null;
   leitoTipo: string | null;
   leitoNumero: number | null;
+  createdAt: string;
+  esperaDesde: string;
 }
 
 const ITENS_POR_PAGINA = 15;
 
-const INITIAL_FORM_PACIENTE = { 
-  nome: '', cpf: '', rg: '', nascimento: '', tipoSanguineo: '', alergias: '', classificacao: 'Verde', status: 'Recepção' 
-};
+const STATUS_FILTRO = [
+  { id: 'todos', label: 'Todos' },
+  { id: 'Recepção', label: 'Recepção' },
+  { id: 'Aguardando Triagem', label: 'Aguardando' },
+  { id: 'Em Triagem', label: 'Triagem' },
+  { id: 'Aguardando Médico', label: 'Ag. Médico' },
+  { id: 'Em Atendimento Médico', label: 'Atendimento' },
+  { id: 'Internado', label: 'Internados' },
+  { id: 'Internado - UTI', label: 'UTI' },
+  { id: 'Alta Médica', label: 'Alta' },
+  { id: 'Evasão', label: 'Evasão' },
+  { id: 'Óbito', label: 'Óbito' },
+] as const;
 
 export default function PacientesPage() {
+  const cargo = useCargo();
+  const agora = useAgora();
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
-  const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [total, setTotal] = useState(0);
+  const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [filtroManchester, setFiltroManchester] = useState('todos');
   const [busca, setBusca] = useState('');
+  const [buscaAplicada, setBuscaAplicada] = useState('');
   const [pagina, setPagina] = useState(1);
   const [loading, setLoading] = useState(true);
   const [erroCarga, setErroCarga] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
   const [mostrarArquivados, setMostrarArquivados] = useState(false);
-  const [modalAberto, setModalAberto] = useState(false);
-  const [salvandoPaciente, setSalvandoPaciente] = useState(false);
-  const { chamarPaciente } = useCallSystem();
-  const [modalChamada, setModalChamada] = useState<{ aberto: boolean, paciente: Paciente | null, consultorio: string }>({ aberto: false, paciente: null, consultorio: 'Consultório 1' });
-  const [salasCadastradas, setSalasCadastradas] = useState<any[]>([]);
-  const [formPaciente, setFormPaciente] = useState<{
-    nome: string; cpf: string; rg: string; nascimento: string; sexo?: string;
-    telefone?: string; email?: string; endereco?: string;
-    mae?: string; convenio?: string; tipoSanguineo: string; alergias: string;
-    status: string; classificacao: string; queixaPrincipal?: string;
-  }>(INITIAL_FORM_PACIENTE);
+  const [recarga, setRecarga] = useState(0);
+  const [modalNovo, setModalNovo] = useState(false);
+  const [chamando, setChamando] = useState<Paciente | null>(null);
+  const [exportando, setExportando] = useState(false);
 
-  const fetchPacientes = async () => {
-    setLoading(true);
-    setErroCarga('');
-    try {
-      const response = await fetch(`/api/pacientes${mostrarArquivados ? '?arquivados=1' : ''}`);
-      const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Não foi possível carregar os pacientes.');
-      if (!Array.isArray(data)) throw new Error('A resposta de pacientes é inválida.');
-      setPacientes(data);
-    } catch (error) {
-      setPacientes([]);
-      setErroCarga(error instanceof Error ? error.message : 'Não foi possível carregar os pacientes.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const podeArquivar = pode(cargo, 'paciente:arquivar');
+  const podeCadastrar = pode(cargo, 'paciente:cadastrar');
+  const podeChamar = pode(cargo, 'chamada:emitir');
 
   useEffect(() => {
-    setIsAdmin(getSessionUser()?.cargo === 'ADMIN');
-    // Load salas
-    fetch('/api/salas')
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) setSalasCadastradas(data);
-      })
-      .catch(console.error);
-  }, []);
+    const timer = setTimeout(() => setBuscaAplicada(busca.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [busca]);
+
+  const consulta = useMemo(() => {
+    const params = new URLSearchParams();
+    if (mostrarArquivados) params.set('arquivados', '1');
+    if (buscaAplicada) params.set('q', buscaAplicada);
+    return params.toString();
+  }, [mostrarArquivados, buscaAplicada]);
 
   useEffect(() => {
-    void fetchPacientes();
-  }, [mostrarArquivados]);
-
-  const criarPaciente = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (salvandoPaciente) return;
-    setSalvandoPaciente(true);
-    try {
-      const res = await fetch('/api/pacientes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formPaciente,
-          nascimento: formPaciente.nascimento
-        })
-      });
-      if (res.ok) {
-        setModalAberto(false);
-        setFormPaciente(INITIAL_FORM_PACIENTE);
-        void fetchPacientes();
-        alert('Paciente cadastrado com sucesso!');
-      } else {
-        const errorData = await res.json().catch(() => null);
-        alert(errorData?.error || 'Erro ao cadastrar paciente.');
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const res = await fetch(`/api/pacientes${consulta ? `?${consulta}` : ''}`, { signal: controller.signal });
+        if (!res.ok) throw new Error(await erroDaApi(res, 'Não foi possível carregar os pacientes.'));
+        const dados: unknown = await res.json();
+        if (!Array.isArray(dados)) throw new Error('A resposta de pacientes é inválida.');
+        setPacientes(dados as Paciente[]);
+        setTotal(Number(res.headers.get('X-Total-Count')) || dados.length);
+        setErroCarga('');
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setPacientes([]);
+        setErroCarga(error instanceof Error ? error.message : 'Não foi possível carregar os pacientes.');
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
-    } catch (error) {
-      alert('Falha na conexão com o servidor.');
-    } finally {
-      setSalvandoPaciente(false);
-    }
-  };
+    })();
+    return () => controller.abort();
+  }, [consulta, recarga]);
 
-  const termoBusca = busca.trim().toLocaleLowerCase('pt-BR');
-  const cpfBusca = termoBusca.replace(/\D/g, '');
-  const filtrados = pacientes.filter(p => {
-    const matchStatus = filtroStatus === 'todos' || p.status === filtroStatus;
-    const matchBusca = !termoBusca ||
-      p.nome?.toLocaleLowerCase('pt-BR').includes(termoBusca) ||
-      (cpfBusca.length > 0 && (p.cpf || '').replace(/\D/g, '').includes(cpfBusca));
-    const matchManchester = filtroManchester === 'todos' || (p.classificacao && p.classificacao.toLowerCase() === filtroManchester.toLowerCase());
-    return matchStatus && matchBusca && matchManchester;
-  });
+  const recarregar = useCallback(() => setRecarga(n => n + 1), []);
 
-  const exportarCSV = () => {
-    const csvCell = (value: unknown) => {
-      let texto = String(value ?? '');
-      if (/^[\t\r\n ]*[=+\-@]/.test(texto)) texto = `'${texto}`;
-      return `"${texto.replace(/"/g, '""')}"`;
-    };
-    const cabecalho = ['Nome', 'CPF', 'Status', 'Classificação', 'Idade'].map(csvCell).join(',');
-    const linhas = filtrados.map(p => [p.nome, p.cpf, p.status, p.classificacao, calcularIdade(p.nascimento)].map(csvCell).join(','));
-    const blob = new Blob(['\uFEFF', cabecalho, '\n', linhas.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'pacientes.csv';
-    a.click();
-  };
+  const filtrados = useMemo(() => pacientes
+    .filter(p => (filtroStatus === 'todos' || p.status === filtroStatus)
+      && (filtroManchester === 'todos' || p.classificacao === filtroManchester))
+    .sort(compararFilaClinica), [pacientes, filtroStatus, filtroManchester]);
 
   const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
   const paginaAtual = Math.min(pagina, totalPaginas);
   const paginados = filtrados.slice((paginaAtual - 1) * ITENS_POR_PAGINA, paginaAtual * ITENS_POR_PAGINA);
 
-  const statusList = ['todos', 'Recepção', 'Aguardando Triagem', 'Em Triagem', 'Aguardando Médico', 'Em Atendimento Médico', 'Internado', 'Alta Médica', 'Evasão'];
-  const statusLabels: Record<string, string> = {
-    'todos': 'Todos', 'Recepção': 'Recepção', 'Aguardando Triagem': 'Aguardando',
-    'Em Triagem': 'Triagem', 'Aguardando Médico': 'Ag. Médico',
-    'Em Atendimento Médico': 'Atendimento', 'Internado': 'Internados',
-    'Alta Médica': 'Alta', 'Evasão': 'Evasão',
+  const contar = (status: string[]) => pacientes.filter(p => status.includes(p.status)).length;
+
+  const exportarCSV = async () => {
+    setExportando(true);
+    try {
+      const params = new URLSearchParams(consulta);
+      if (filtroStatus !== 'todos') params.set('status', filtroStatus);
+      if (filtroManchester !== 'todos') params.set('classificacao', filtroManchester);
+      const res = await fetch(`/api/pacientes/exportar?${params}`);
+      if (!res.ok) {
+        alert(await erroDaApi(res, 'Não foi possível exportar.'));
+        return;
+      }
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'pacientes.csv';
+      a.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      alert('Falha de conexão ao exportar.');
+    } finally {
+      setExportando(false);
+    }
   };
 
-  const stats = {
-    total: pacientes.length,
-    aguardando: pacientes.filter(p => ['Aguardando Triagem', 'Aguardando Médico'].includes(p.status)).length,
-    atendimento: pacientes.filter(p => ['Em Triagem', 'Em Atendimento Médico'].includes(p.status)).length,
-    internados: pacientes.filter(p => p.status === 'Internado').length,
+  const arquivar = async (p: Paciente) => {
+    if (!await confirm(`Arquivar ${p.nome}? O paciente sairá desta lista, mas o prontuário e os registros clínicos serão preservados.`)) return;
+    try {
+      const res = await fetch(`/api/pacientes/${p.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        alert(await erroDaApi(res, 'Não foi possível arquivar o paciente.'));
+        return;
+      }
+      recarregar();
+    } catch {
+      alert('Falha de conexão ao arquivar.');
+    }
+  };
+
+  const restaurar = async (p: Paciente) => {
+    try {
+      const res = await fetch(`/api/pacientes/${p.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ arquivadoEm: null }),
+      });
+      if (!res.ok) {
+        alert(await erroDaApi(res, 'Não foi possível restaurar o paciente.'));
+        return;
+      }
+      recarregar();
+    } catch {
+      alert('Falha de conexão ao restaurar.');
+    }
   };
 
   return (
-    <div>
-      {/* Header and Actions in one row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-        <h2 style={{ margin: 0, fontSize: '24px', color: '#f1f5f9' }}><i className="las la-user-injured"></i> Pacientes</h2>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {isAdmin && <button className="btn btn-outline" onClick={() => { setMostrarArquivados(value => !value); setPagina(1); }} style={{ borderRadius: 8, padding: '8px 16px', fontSize: 14 }}>
-            <i className={`las ${mostrarArquivados ? 'la-users' : 'la-archive'}`} aria-hidden="true"></i> {mostrarArquivados ? 'Pacientes ativos' : 'Arquivados'}
-          </button>}
-          {!mostrarArquivados && <button className="btn btn-primary" onClick={() => setModalAberto(true)} style={{ borderRadius: '8px', padding: '8px 16px', fontSize: '14px' }}>
-            <i className="las la-plus"></i> Novo Paciente
-          </button>}
-          <button className="btn" onClick={exportarCSV} style={{ background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '14px' }}>
-            <i className="las la-file-csv"></i> Exportar CSV
-          </button>
-          <Link href="/gestao-salas" className="btn btn-purple" style={{ borderRadius: '8px', padding: '8px 16px', fontSize: '14px' }}><i className="las la-door-open"></i> Gerenciar Salas</Link>
-        </div>
-      </div>
-
-      {erroCarga && <p role="alert" style={{ color: '#b91c1c', background: '#fef2f2', borderRadius: 8, padding: 12, margin: '0 0 16px' }}>{erroCarga}</p>}
-
-      {/* Stats - Compact Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-        <div style={{ background: '#ffffff', borderRadius: '8px', padding: '20px 16px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 15px -3px rgba(0,0,0,0.1)' }}>
-          <div style={{ background: '#eff6ff', color: '#3b82f6', width: '40px', height: '40px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}><i className="las la-users"></i></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{stats.total}</div><div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Total</div></div>
-        </div>
-        <div style={{ background: '#ffffff', borderRadius: '8px', padding: '20px 16px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 15px -3px rgba(0,0,0,0.1)' }}>
-          <div style={{ background: '#fff7ed', color: '#f97316', width: '40px', height: '40px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}><i className="las la-hourglass-half"></i></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{stats.aguardando}</div><div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Aguardando</div></div>
-        </div>
-        <div style={{ background: '#ffffff', borderRadius: '8px', padding: '20px 16px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 15px -3px rgba(0,0,0,0.1)' }}>
-          <div style={{ background: '#f3e8ff', color: '#a855f7', width: '40px', height: '40px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}><i className="las la-procedures"></i></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{stats.atendimento}</div><div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Atendimento</div></div>
-        </div>
-        <div style={{ background: '#ffffff', borderRadius: '8px', padding: '20px 16px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 15px -3px rgba(0,0,0,0.1)' }}>
-          <div style={{ background: '#fef2f2', color: '#ef4444', width: '40px', height: '40px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}><i className="las la-bed"></i></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{stats.internados}</div><div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Internados</div></div>
-        </div>
-      </div>
-
-      {/* Busca and Filtros in one row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ position: 'relative', flex: '1 1 250px', maxWidth: '350px' }}>
-          <i className="las la-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '18px' }}></i>
-          <input
-            aria-label="Buscar paciente por nome ou CPF"
-            value={busca} 
-            onChange={(e) => { setBusca(e.target.value); setPagina(1); }} 
-            placeholder="Buscar por nome ou CPF..." 
-            style={{ width: '100%', padding: '10px 10px 10px 38px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', outline: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', backgroundColor: '#ffffff', color: '#0f172a' }} 
-          />
-        </div>
-        
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', flex: '3 1 auto' }}>
-          {statusList.map(s => (
-            <button
-              key={s}
-              type="button"
-              aria-pressed={filtroStatus === s}
-              onClick={() => { setFiltroStatus(s); setPagina(1); }}
-              style={{ 
-                padding: '6px 12px', borderRadius: '8px', border: filtroStatus === s ? '1px solid #1e3a8a' : '1px solid #cbd5e1', 
-                background: filtroStatus === s ? '#1e3a8a' : '#ffffff', 
-                color: filtroStatus === s ? '#ffffff' : '#475569', 
-                fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
-                boxShadow: filtroStatus === s ? '0 4px 6px -1px rgba(30, 58, 138, 0.4)' : '0 1px 2px rgba(0,0,0,0.05)',
-                transition: 'all 0.2s'
-              }}
-            >
-              {statusLabels[s]}
-              <span style={{ 
-                background: filtroStatus === s ? 'rgba(255,255,255,0.2)' : '#f1f5f9', 
-                color: filtroStatus === s ? '#ffffff' : '#64748b',
-                padding: '2px 6px', borderRadius: '8px', fontSize: '10px' 
-              }}>
-                {s === 'todos' ? pacientes.length : pacientes.filter(p => p.status === s).length}
-              </span>
+    <div className="pac-pagina">
+      <PageHeader
+        icon="las la-user-injured"
+        title="Pacientes"
+        subtitle="Fila clínica por gravidade e tempo de espera"
+        actions={<>
+          {podeArquivar && (
+            <button type="button" className="btn pac-btn-sec" onClick={() => { setMostrarArquivados(v => !v); setPagina(1); setLoading(true); }}>
+              <i className={`las ${mostrarArquivados ? 'la-users' : 'la-archive'}`} aria-hidden="true"></i> {mostrarArquivados ? 'Pacientes ativos' : 'Arquivados'}
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Filtro Rápido Manchester */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap', padding: '8px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-        <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '4px' }}>
-          Prioridade Manchester:
-        </span>
-        <button
-          type="button"
-          aria-pressed={filtroManchester === 'todos'}
-          onClick={() => { setFiltroManchester('todos'); setPagina(1); }}
-          style={{
-            padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-            border: filtroManchester === 'todos' ? '1px solid #1e3a8a' : '1px solid #cbd5e1',
-            background: filtroManchester === 'todos' ? '#1e3a8a' : '#ffffff',
-            color: filtroManchester === 'todos' ? '#ffffff' : '#475569',
-            boxShadow: filtroManchester === 'todos' ? '0 2px 4px rgba(30, 58, 138, 0.3)' : '0 1px 2px rgba(0,0,0,0.05)',
-            transition: 'all 0.2s'
-          }}
-        >
-          Todas
-        </button>
-        {Object.entries(MANCHESTER_CORES).map(([cor, info]) => {
-          const count = pacientes.filter(p => p.classificacao && p.classificacao.toLowerCase() === cor.toLowerCase()).length;
-          const isSelected = filtroManchester.toLowerCase() === cor.toLowerCase();
-          return (
-            <button
-              key={cor}
-              type="button"
-              aria-pressed={isSelected}
-              onClick={() => { setFiltroManchester(isSelected ? 'todos' : cor); setPagina(1); }}
-              style={{
-                padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: '6px',
-                border: isSelected ? `2px solid ${info.text}` : `1px solid ${info.border}`,
-                background: isSelected ? info.text : info.bg,
-                color: isSelected ? '#ffffff' : info.text,
-                boxShadow: isSelected ? `0 2px 8px ${info.text}55` : '0 1px 2px rgba(0,0,0,0.05)',
-                transition: 'all 0.2s'
-              }}
-            >
-              <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: '50%', background: info.markerColor }} />
-              <span>{cor}</span>
-              <span style={{
-                background: isSelected ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.06)',
-                padding: '1px 5px', borderRadius: '4px', fontSize: '10px'
-              }}>
-                {count}
-              </span>
+          )}
+          {podeCadastrar && !mostrarArquivados && (
+            <button type="button" className="btn btn-primary" onClick={() => setModalNovo(true)}>
+              <i className="las la-plus" aria-hidden="true"></i> Novo paciente
             </button>
-          );
-        })}
-      </div>
-
-      {/* Tabela */}
-      <div className="tabela-wrapper" style={{ border: '1px solid #334155', borderRadius: '8px', overflow: 'hidden' }}>
-        <table className="tabela">
-          <thead>
-            <tr>
-              <th>Paciente</th><th>CPF</th><th>Idade</th><th>Classificação</th>
-              <th>Status</th><th>Leito</th><th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 50 }}>Carregando...</td></tr>
-            ) : paginados.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 50, color: '#94a3b8' }}>Nenhum paciente encontrado</td></tr>
-            ) : (
-              paginados.map((p) => {
-                const idade = calcularIdade(p.nascimento);
-                const statusCor = STATUS_CORES[p.status] || { bg: '#f1f5f9', text: '#475569' };
-                const manch = p.classificacao ? MANCHESTER_CORES[p.classificacao] : null;
-
-                return (
-                  <tr key={p.id}>
-                    <td>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: '#0a1f44' }}>
-                        <span style={{
-                          width: 36, height: 36, borderRadius: 6,
-                          background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: '#1e3a8a', fontWeight: 700, fontSize: 14, border: '1px solid #bfdbfe'
-                        }}>
-                          {getIniciais(p.nome)}
-                        </span>
-                        {p.nome || '-'}
-                      </span>
-                    </td>
-                    <td>{p.cpf || '-'}</td>
-                    <td>{idade}</td>
-                    <td>
-                      {manch ? (
-                        <span className="manchester-badge" style={{ background: manch.bg, color: manch.text, border: `1px solid ${manch.border}` }}>
-                          <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: manch.text, display: 'inline-block' }}></span> {p.classificacao}
-                        </span>
-                      ) : <span style={{ color: '#94a3b8' }}>—</span>}
-                    </td>
-                    <td>
-                      <span className="status-badge" style={{ background: statusCor.bg, color: statusCor.text }}>
-                        {p.status}
-                      </span>
-                    </td>
-                    <td>
-                      {p.leitoTipo ? (
-                        <span style={{
-                          padding: '5px 12px', borderRadius: 15, fontSize: 11, fontWeight: 600,
-                          background: p.leitoTipo === 'vermelha' ? '#fef2f2' : '#fefce8',
-                          color: p.leitoTipo === 'vermelha' ? '#dc2626' : '#b45309',
-                        }}>
-                          Sala {p.leitoTipo === 'vermelha' ? 'Vermelha' : 'Amarela'} - {p.leitoNumero}
-                        </span>
-                      ) : <span style={{ color: '#94a3b8' }}>—</span>}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <button type="button" className="btn btn-xs" style={{ background: '#10b981', color: 'white' }} title="Chamar no Painel" aria-label={`Chamar ${p.nome} no painel`} onClick={() => setModalChamada({ aberto: true, paciente: p, consultorio: 'Consultório 1' })}>
-                          <i className="las la-bullhorn"></i>
-                        </button>
-                        {!mostrarArquivados && <Link href={`/pacientes/${p.id}`} className="btn btn-primary btn-xs" aria-label={`Abrir ficha de ${p.nome}`}>
-                          <i className="las la-eye"></i>
-                        </Link>}
-                        {isAdmin && (mostrarArquivados ? <button type="button" className="btn btn-primary btn-xs" title="Restaurar paciente" onClick={async () => {
-                          const response = await fetch(`/api/pacientes/${p.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ arquivadoEm: null }) });
-                          if (!response.ok) {
-                            const result = await response.json().catch(() => ({}));
-                            alert(result.error || 'Não foi possível restaurar o paciente.');
-                            return;
-                          }
-                          setPacientes(prev => prev.filter(x => x.id !== p.id));
-                        }}><i className="las la-undo" aria-hidden="true"></i> Restaurar</button> : <button type="button" className="btn btn-danger btn-xs" title="Arquivar paciente" aria-label={`Arquivar ${p.nome}`} onClick={async () => {
-                          const confirmado = await confirm(`Arquivar ${p.nome}? O paciente sairá desta lista, mas o prontuário e os registros clínicos serão preservados.`);
-                          if (!confirmado) return;
-                          const response = await fetch(`/api/pacientes/${p.id}`, { method: 'DELETE' });
-                          if (!response.ok) {
-                            const result = await response.json().catch(() => ({}));
-                            alert(result.error || 'Não foi possível arquivar o paciente.');
-                            return;
-                          }
-                          setPacientes(prev => prev.filter(x => x.id !== p.id));
-                        }}>
-                          <i className="las la-archive" aria-hidden="true"></i> Arquivar
-                        </button>)}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-
-        {/* Paginação */}
-        {totalPaginas > 1 && (
-          <div className="paginacao">
-            <button type="button" className="pag-btn" aria-label="Página anterior" onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={paginaAtual === 1}>
-              <i className="las la-angle-left"></i>
+          )}
+          {podeCadastrar && (
+            <button type="button" className="btn pac-btn-sec" onClick={exportarCSV} disabled={exportando}>
+              <i className="las la-file-csv" aria-hidden="true"></i> {exportando ? 'Exportando...' : 'Exportar CSV'}
             </button>
-            {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(n => (
-              <button type="button" key={n} className={`pag-btn ${paginaAtual === n ? 'ativo' : ''}`} aria-current={paginaAtual === n ? 'page' : undefined} onClick={() => setPagina(n)}>
-                {n}
-              </button>
+          )}
+          <Link href="/gestao-salas" className="btn pac-btn-sec"><i className="las la-door-open" aria-hidden="true"></i> Salas</Link>
+        </>}
+      />
+
+      <StatGrid>
+        <StatCard icon="las la-users" value={total} label="Total" />
+        <StatCard icon="las la-hourglass-half" tone="warning" value={contar(['Aguardando Triagem', 'Aguardando Médico'])} label="Aguardando" />
+        <StatCard icon="las la-stethoscope" value={contar(['Em Triagem', 'Em Atendimento Médico'])} label="Em atendimento" />
+        <StatCard icon="las la-bed" tone="danger" value={contar(['Internado', 'Internado - UTI'])} label="Internados" />
+      </StatGrid>
+
+      <Tabs
+        label="Filtrar por status"
+        active={filtroStatus}
+        onChange={id => { setFiltroStatus(id); setPagina(1); }}
+        tabs={STATUS_FILTRO.map(s => ({ id: s.id as string, label: `${s.label} (${s.id === 'todos' ? pacientes.length : contar([s.id])})` }))}
+      />
+
+      <Panel>
+        <div className="pac-filtros">
+          <SearchInput value={busca} onChange={v => { setBusca(v); setPagina(1); }} placeholder="Buscar por nome ou CPF..." label="Buscar paciente por nome ou CPF" />
+          <select aria-label="Filtrar por classificação de risco" value={filtroManchester} onChange={e => { setFiltroManchester(e.target.value); setPagina(1); }}>
+            <option value="todos">Todas as classificações</option>
+            {ORDEM_MANCHESTER.filter(cor => MANCHESTER_CORES[cor]).map(cor => (
+              <option key={cor} value={cor}>{cor} ({pacientes.filter(p => p.classificacao === cor).length})</option>
             ))}
-            <button type="button" className="pag-btn" aria-label="Próxima página" onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={paginaAtual === totalPaginas}>
-              <i className="las la-angle-right"></i>
-            </button>
-          </div>
+          </select>
+        </div>
+        {total > pacientes.length && (
+          <p className="pac-aviso" role="status">Mostrando {pacientes.length} de {total} pacientes. Refine a busca para encontrar os demais.</p>
         )}
-      </div>
+      </Panel>
 
-      {/* Modal Novo Paciente */}
-      {modalAberto && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-          <div className="card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', margin: '20px', animation: 'fadeIn 0.2s ease-out', border: '1px solid #334155', borderRadius: '8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
-              <h3 style={{ fontSize: '20px', color: '#1e293b', margin: 0 }}><i className="las la-user-plus text-blue-600"></i> Ficha Completa de Cadastro</h3>
-              <button type="button" aria-label="Fechar cadastro" onClick={() => setModalAberto(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', color: '#64748b', cursor: 'pointer' }}><i className="las la-times" aria-hidden="true"></i></button>
-            </div>
-            
-            <form onSubmit={criarPaciente} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
-              {/* Seção: Dados Pessoais */}
-              <div>
-                <h4 style={{ fontSize: '14px', color: '#2563eb', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <i className="las la-id-card"></i> Dados Pessoais
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Nome Completo *</label>
-                    <input required type="text" className="input-field" placeholder="Ex: Maria da Silva" value={formPaciente.nome} onChange={e => setFormPaciente({...formPaciente, nome: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                  </div>
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>CPF</label>
-                    <input required type="text" className="input-field" placeholder="000.000.000-00" value={formPaciente.cpf} onChange={e => setFormPaciente({...formPaciente, cpf: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>RG</label>
-                    <input required type="text" className="input-field" placeholder="00.000.000-0" value={formPaciente.rg} onChange={e => setFormPaciente({...formPaciente, rg: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Data de Nascimento *</label>
-                    <input required type="date" className="input-field" value={formPaciente.nascimento} onChange={e => setFormPaciente({...formPaciente, nascimento: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Sexo</label>
-                    <select className="input-field" value={formPaciente.sexo || ''} onChange={e => setFormPaciente({...formPaciente, sexo: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                      <option value="">Selecione...</option>
-                      <option value="Masculino">Masculino</option>
-                      <option value="Feminino">Feminino</option>
-                      <option value="Outro">Outro</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção: Contato & Endereço */}
-              <div>
-                <h4 style={{ fontSize: '14px', color: '#2563eb', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <i className="las la-phone"></i> Contato e Endereço
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Telefone / WhatsApp</label>
-                    <input type="text" className="input-field" placeholder="(00) 00000-0000" value={formPaciente.telefone || ''} onChange={e => setFormPaciente({...formPaciente, telefone: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>E-mail</label>
-                    <input type="email" className="input-field" placeholder="email@exemplo.com" value={formPaciente.email || ''} onChange={e => setFormPaciente({...formPaciente, email: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                  </div>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Endereço Completo</label>
-                    <input type="text" className="input-field" placeholder="Rua, Número, Bairro, Cidade - UF" value={formPaciente.endereco || ''} onChange={e => setFormPaciente({...formPaciente, endereco: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção: Filiação & Outros */}
-              <div>
-                <h4 style={{ fontSize: '14px', color: '#2563eb', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <i className="las la-users"></i> Informações Adicionais
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Nome da Mãe</label>
-                    <input type="text" className="input-field" placeholder="Nome completo da mãe" value={formPaciente.mae || ''} onChange={e => setFormPaciente({...formPaciente, mae: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Convênio</label>
-                    <input type="text" className="input-field" placeholder="Ex: Unimed, SUS, Bradesco" value={formPaciente.convenio || ''} onChange={e => setFormPaciente({...formPaciente, convenio: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Tipo Sanguíneo</label>
-                    <select required className="input-field" value={formPaciente.tipoSanguineo} onChange={e => setFormPaciente({...formPaciente, tipoSanguineo: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                      <option value="">Desconhecido</option>
-                      <option value="A+">A+</option><option value="A-">A-</option>
-                      <option value="B+">B+</option><option value="B-">B-</option>
-                      <option value="AB+">AB+</option><option value="AB-">AB-</option>
-                      <option value="O+">O+</option><option value="O-">O-</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Alergias</label>
-                    <input required type="text" className="input-field" placeholder="Ex: Penicilina, Frutos do mar, ou 'Nenhuma'" value={formPaciente.alergias} onChange={e => setFormPaciente({...formPaciente, alergias: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção: Atendimento Atual */}
-              <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <h4 style={{ fontSize: '14px', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <i className="las la-hospital"></i> Atendimento Atual
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Status de Entrada</label>
-                    <select className="input-field" value={formPaciente.status} onChange={e => setFormPaciente({...formPaciente, status: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white' }}>
-                      <option value="Recepção">Recepção (Aguardando Triagem)</option>
-                      <option value="Internado">Internação Direta</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Risco Inicial</label>
-                    <select className="input-field" value={formPaciente.classificacao} onChange={e => setFormPaciente({...formPaciente, classificacao: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white' }}>
-                      <option value="Azul">Não Urgente (Azul)</option>
-                      <option value="Verde">Pouco Urgente (Verde)</option>
-                      <option value="Amarelo">Urgente (Amarelo)</option>
-                      <option value="Vermelho">Emergência (Vermelho)</option>
-                    </select>
-                  </div>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'block', fontSize: '13px', color: '#64748b', marginBottom: '5px', fontWeight: 600 }}>Queixa Principal / Motivo</label>
-                    <input type="text" className="input-field" placeholder="Descreva brevemente o motivo da vinda ao hospital..." value={formPaciente.queixaPrincipal || ''} onChange={e => setFormPaciente({...formPaciente, queixaPrincipal: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white' }} />
-                  </div>
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '15px' }}>
-                <button type="button" onClick={() => setModalAberto(false)} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#64748b', fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={salvandoPaciente}>{salvandoPaciente ? 'Salvando...' : 'Salvar Ficha Completa'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Chamar Paciente */}
-      {modalChamada.aberto && modalChamada.paciente && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '400px', margin: '20px', padding: '20px', animation: 'fadeIn 0.2s ease-out', border: '1px solid #334155', borderRadius: '8px' }}>
-            <h3 style={{ fontSize: '18px', color: '#1e293b', marginBottom: '15px' }}>Chamar Paciente na TV</h3>
-            <p style={{ marginBottom: '15px' }}>Para onde <strong>{modalChamada.paciente.nome}</strong> deve se dirigir?</p>
-            
-            <div style={{ marginBottom: '15px' }}>
-              <input 
-                type="text"
-                className="input-field" 
-                placeholder="Digite o consultório ou selecione abaixo"
-                value={modalChamada.consultorio}
-                onChange={(e) => setModalChamada({ ...modalChamada, consultorio: e.target.value })}
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', fontSize: '15px' }}
-              />
-            </div>
-            
-            <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px', paddingRight: '5px' }}>
-              {salasCadastradas.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '15px', color: '#94a3b8', fontSize: '13px' }}>
-                  Nenhuma sala cadastrada. Use o campo acima para digitar o consultório.
-                </div>
-              ) : (
-                salasCadastradas.map((s) => {
-                  const isLivre = String(s.status).toUpperCase() === 'LIVRE';
-                  const isSelected = modalChamada.consultorio === s.nome;
-                  return (
-                    <button
-                      type="button"
-                      aria-pressed={isSelected}
-                      key={s.id}
-                      onClick={() => setModalChamada({ ...modalChamada, consultorio: s.nome })}
-                      style={{ 
-                        display: 'flex', alignItems: 'center', padding: '12px', borderRadius: '8px', 
-                        border: isSelected ? '2px solid #1e3a8a' : '1px solid #e2e8f0', 
-                        background: isSelected ? '#eff6ff' : 'white', color: '#0f172a', cursor: 'pointer', transition: 'all 0.2s', width: '100%', textAlign: 'left'
-                      }}
-                    >
-                      <div style={{ 
-                        width: '40px', height: '40px', borderRadius: '8px', 
-                        background: isLivre ? '#dcfce7' : '#fee2e2', 
-                        color: isLivre ? '#16a34a' : '#ef4444', 
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', marginRight: '15px'
-                      }}>
-                        <i className="las la-door-open"></i>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>{s.nome}</div>
-                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                          {s.setor || ''}{s.andar ? ` - ${s.andar}` : ''} | {isLivre ? ' Livre' : ' Em uso'}
+      <Panel>
+        {loading ? (
+          <LoadingState message="Carregando pacientes..." />
+        ) : erroCarga ? (
+          <ErrorState message={erroCarga} onRetry={recarregar} />
+        ) : paginados.length === 0 ? (
+          <EmptyState icon="las la-user-slash" message="Nenhum paciente encontrado." />
+        ) : (
+          <>
+            <div className="tabela-wrapper">
+              <table className="tabela">
+                <thead>
+                  <tr>
+                    <th scope="col">Paciente</th><th scope="col">Identificação</th><th scope="col">Classificação</th>
+                    <th scope="col">Status</th><th scope="col">Leito</th><th scope="col">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginados.map(p => (
+                    <tr key={p.id}>
+                      <td>
+                        <span className="pac-nome">
+                          <span className="pac-avatar" aria-hidden="true">{getIniciais(p.nome)}</span>
+                          {p.nome}
+                        </span>
+                      </td>
+                      <td>
+                        {p.cpf ? formatarCPF(p.cpf) : 'CPF não informado'}
+                        <span className="pac-sub">{p.nascimento ? `${calcularIdade(p.nascimento)} anos` : 'Idade não informada'}</span>
+                      </td>
+                      <td><ManchesterBadge classificacao={p.classificacao} /></td>
+                      <td>
+                        <StatusBadge status={p.status} />
+                        <EsperaBadge status={p.status} desde={p.esperaDesde} agora={agora} />
+                      </td>
+                      <td>{p.leitoTipo ? `${p.leitoTipo} ${p.leitoNumero ?? ''}` : '-'}</td>
+                      <td>
+                        <div className="pac-acoes">
+                          {podeChamar && !mostrarArquivados && !isTerminal(p.status) && (
+                            <button type="button" className="btn btn-success btn-xs" aria-label={`Chamar ${p.nome} no painel`} title="Chamar no painel" onClick={() => setChamando(p)}>
+                              <i className="las la-bullhorn" aria-hidden="true"></i>
+                            </button>
+                          )}
+                          {!mostrarArquivados && (
+                            <Link href={`/pacientes/${p.id}`} className="btn btn-primary btn-xs" aria-label={`Abrir ficha de ${p.nome}`} title="Abrir ficha">
+                              <i className="las la-eye" aria-hidden="true"></i>
+                            </Link>
+                          )}
+                          {podeArquivar && (mostrarArquivados ? (
+                            <button type="button" className="btn btn-primary btn-xs" onClick={() => restaurar(p)}>
+                              <i className="las la-undo" aria-hidden="true"></i> Restaurar
+                            </button>
+                          ) : (
+                            <button type="button" className="btn btn-danger btn-xs" onClick={() => arquivar(p)}>
+                              <i className="las la-archive" aria-hidden="true"></i> Arquivar
+                            </button>
+                          ))}
                         </div>
-                      </div>
-                      <i className="las la-chevron-right" style={{ color: isSelected ? '#1e3a8a' : '#94a3b8' }}></i>
-                    </button>
-                  )
-                })
-              )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+            {totalPaginas > 1 && (
+              <nav className="pac-paginacao" aria-label="Paginação">
+                <button type="button" aria-label="Página anterior" disabled={paginaAtual === 1} onClick={() => setPagina(paginaAtual - 1)}><i className="las la-angle-left" aria-hidden="true"></i></button>
+                <span>Página {paginaAtual} de {totalPaginas}</span>
+                <button type="button" aria-label="Próxima página" disabled={paginaAtual === totalPaginas} onClick={() => setPagina(paginaAtual + 1)}><i className="las la-angle-right" aria-hidden="true"></i></button>
+              </nav>
+            )}
+          </>
+        )}
+      </Panel>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setModalChamada({ aberto: false, paciente: null, consultorio: '' })} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#64748b', cursor: 'pointer' }}>Cancelar</button>
-              <button 
-                className="btn btn-primary"
-                onClick={() => {
-                  chamarPaciente({
-                    pacienteId: modalChamada.paciente!.id,
-                    nome: modalChamada.paciente!.nome,
-                    cpf: modalChamada.paciente!.cpf || '',
-                    consultorio: modalChamada.consultorio,
-                    status: modalChamada.paciente!.status
-                  });
-                  setModalChamada({ aberto: false, paciente: null, consultorio: '' });
-                }}
-              >
-                <i className="las la-bullhorn"></i> Chamar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {modalNovo && <ModalNovoPaciente permitirInternacao onFechar={() => setModalNovo(false)} onCriado={() => { setModalNovo(false); recarregar(); }} />}
+      {chamando && <ModalChamada paciente={chamando} onFechar={() => setChamando(null)} />}
     </div>
   );
 }

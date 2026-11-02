@@ -1,82 +1,83 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 export interface ChamadaData {
-  pacienteId?: string;
+  pacienteId: string;
   nome: string;
-  cpf: string;
   consultorio: string;
   status: string;
 }
 
+export type ResultadoChamada = { ok: true } | { ok: false; erro: string };
+
 interface CallContextType {
   chamadaAtiva: ChamadaData | null;
-  chamarPaciente: (dados: ChamadaData) => Promise<void>;
+  chamarPaciente: (dados: ChamadaData) => Promise<ResultadoChamada>;
   fecharChamada: () => void;
 }
 
 const CallContext = createContext<CallContextType | undefined>(undefined);
 
+function tocarSino() {
+  try {
+    const Contexto = window.AudioContext
+      ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Contexto) return;
+    const ctx = new Contexto();
+    const beep = (freq: number, delay: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + duration);
+    };
+    beep(880, 0, 0.2);
+    beep(1100, 0.25, 0.2);
+    beep(880, 0.5, 0.2);
+    beep(1100, 0.75, 0.2);
+  } catch {
+    // Som é reforço: a chamada já foi registrada.
+  }
+}
+
 export function CallProvider({ children }: { children: ReactNode }) {
   const [chamadaAtiva, setChamadaAtiva] = useState<ChamadaData | null>(null);
 
-  const chamarPaciente = async (dados: ChamadaData) => {
-    setChamadaAtiva(dados);
-    
+  // Sino e confirmação só depois que o servidor aceitou a chamada.
+  const chamarPaciente = useCallback(async (dados: ChamadaData): Promise<ResultadoChamada> => {
     try {
-      await fetch('/api/chamadas', {
+      const res = await fetch('/api/chamadas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pacienteId: dados.pacienteId,
-          pacienteNome: dados.nome,
-          cpf: dados.cpf,
-          consultorio: dados.consultorio
-        })
+        body: JSON.stringify({ pacienteId: dados.pacienteId, consultorio: dados.consultorio }),
       });
-      // Optionally trigger local storage event for instant feedback on the same browser if needed
-      window.dispatchEvent(new Event('storage'));
-    } catch(e) {
-      console.error("Erro ao registrar chamada na API", e);
-    }
-    
-    // Tocar sino (SASKIA_T1 logic)
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContextClass) {
-        const ctx = new AudioContextClass();
-        const beep = (freq: number, delay: number, duration: number) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'square';
-          osc.frequency.value = freq;
-          gain.gain.setValueAtTime(0.15, ctx.currentTime + delay);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(ctx.currentTime + delay);
-          osc.stop(ctx.currentTime + delay + duration);
-        };
-        beep(880, 0, 0.2);
-        beep(1100, 0.25, 0.2);
-        beep(880, 0.5, 0.2);
-        beep(1100, 0.75, 0.2);
+      if (!res.ok) {
+        const corpo: unknown = await res.json().catch(() => null);
+        const erro = corpo && typeof corpo === 'object' && 'error' in corpo && typeof corpo.error === 'string'
+          ? corpo.error
+          : 'Não foi possível registrar a chamada.';
+        return { ok: false, erro };
       }
-    } catch (e) {
-      console.log('Audio error:', e);
+    } catch {
+      return { ok: false, erro: 'Falha de conexão: a chamada não foi registrada.' };
     }
-  };
+    setChamadaAtiva(dados);
+    window.dispatchEvent(new Event('storage'));
+    tocarSino();
+    return { ok: true };
+  }, []);
 
-  const fecharChamada = () => {
-    setChamadaAtiva(null);
-  };
+  const fecharChamada = useCallback(() => setChamadaAtiva(null), []);
 
-  return (
-    <CallContext.Provider value={{ chamadaAtiva, chamarPaciente, fecharChamada }}>
-      {children}
-    </CallContext.Provider>
-  );
+  const valor = useMemo(() => ({ chamadaAtiva, chamarPaciente, fecharChamada }), [chamadaAtiva, chamarPaciente, fecharChamada]);
+
+  return <CallContext.Provider value={valor}>{children}</CallContext.Provider>;
 }
 
 export function useCallSystem() {

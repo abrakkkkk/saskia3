@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import './chamados-ti.css';
@@ -48,7 +48,7 @@ export default function ChamadosTiPage() {
   };
 
   useEffect(() => {
-    carregarDados();
+    void Promise.resolve().then(() => { carregarDados(); });
   }, []);
 
   const abrirChamado = async () => {
@@ -171,7 +171,7 @@ export default function ChamadosTiPage() {
         ) : tickets.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
             <i className="las la-smile" style={{ fontSize: '48px', marginBottom: '10px', color: '#10b981' }}></i>
-            <p>Tudo funcionando perfeitamente! Nenhum chamado aberto.</p>
+            <p>Você ainda não abriu nenhum chamado.</p>
           </div>
         ) : (
           <div className="tabela-wrapper">

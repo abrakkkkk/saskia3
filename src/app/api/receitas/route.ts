@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import sanitizeHtml from 'sanitize-html'
 import { isRecord } from '@/lib/request-validation'
+import { auditar, exigir, lerJson } from '@/lib/api-guard'
+import { alergiasCitadas } from '@/lib/alergias'
+import { isTerminal } from '@/lib/paciente-status'
+
+const JANELA_DUPLICIDADE_MS = 30_000
+const LIMITE_HISTORICO = 50
 
 function sanitizeRecipeHtml(value: string) {
   return sanitizeHtml(value, {
@@ -16,50 +21,49 @@ function sanitizeRecipeHtml(value: string) {
   });
 }
 
-export async function GET() {
+const SELECT_RECEITA = {
+  id: true, pacienteId: true, medicamentos: true, observacoes: true,
+  profissional: true, usuarioId: true, createdAt: true,
+} satisfies Prisma.ReceitaSelect
+
+/** Histórico sempre por paciente, junto das alergias que a tela precisa destacar. */
+export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    if (!['MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'TECNICO_ENFERMAGEM', 'FARMACEUTICO'].includes(session.user.cargo)) {
-      return NextResponse.json({ error: 'Acesso restrito à equipe clínica' }, { status: 403 })
+    const { ator, negado } = await exigir('prescricao:ler')
+    if (negado) return negado
+
+    const pacienteId = request.nextUrl.searchParams.get('pacienteId')?.trim()
+    if (!pacienteId || pacienteId.length > 64) {
+      return NextResponse.json({ error: 'Selecione o paciente para consultar o histórico' }, { status: 400 })
     }
 
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
+    const paciente = await prisma.paciente.findFirst({
+      where: { id: pacienteId, hospitalId: ator.hospitalId },
+      select: { id: true, nome: true, alergias: true },
+    })
+    if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
+
     const receitas = await prisma.receita.findMany({
-      where: { hospitalId },
-      include: {
-        paciente: {
-          select: { nome: true }
-        }
-      },
+      where: { hospitalId: ator.hospitalId, pacienteId },
+      select: SELECT_RECEITA,
       orderBy: { createdAt: 'desc' },
-      take: 20
+      take: LIMITE_HISTORICO,
     })
 
-    return NextResponse.json(receitas)
+    return NextResponse.json({ paciente, receitas })
   } catch (error) {
-    console.error('Erro ao buscar receitas:', error)
+    console.error('Erro ao buscar receitas:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Erro ao buscar prescrições' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    if (session.user.cargo !== 'MEDICO') return NextResponse.json({ error: 'Apenas médicos podem registrar prescrições' }, { status: 403 })
+    const { ator, negado } = await exigir('prescricao:registrar')
+    if (negado) return negado
 
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-    let body: unknown
-    try {
-      body = await request.json()
-    } catch {
-      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
-    }
-
-    if (!isRecord(body) || typeof body.pacienteId !== 'string' || !body.pacienteId.trim() || body.pacienteId.length > 64 || !Array.isArray(body.medicamentos) || body.medicamentos.length < 1 || body.medicamentos.length > 100) {
+    const body = await lerJson(request)
+    if (!body || typeof body.pacienteId !== 'string' || !body.pacienteId.trim() || body.pacienteId.length > 64 || !Array.isArray(body.medicamentos) || body.medicamentos.length < 1 || body.medicamentos.length > 100) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }
     if (body.medicamentos.some((item) => !isRecord(item) || typeof item.viaUso !== 'string' || !item.viaUso.trim() || item.viaUso.length > 80 || typeof item.conteudo !== 'string' || !item.conteudo.trim() || item.conteudo.length > 4000)) {
@@ -68,39 +72,64 @@ export async function POST(request: NextRequest) {
     if (body.observacoes !== undefined && body.observacoes !== null && (typeof body.observacoes !== 'string' || body.observacoes.length > 1000)) {
       return NextResponse.json({ error: 'Observações inválidas' }, { status: 400 })
     }
-    
-    // IDOR protection: Verify the patient belongs to this hospital
+
     const pacienteId = body.pacienteId.trim()
     const paciente = await prisma.paciente.findFirst({
-      where: { id: pacienteId, hospitalId, arquivadoEm: null },
-      select: { id: true },
+      where: { id: pacienteId, hospitalId: ator.hospitalId, arquivadoEm: null },
+      select: { id: true, status: true, alergias: true },
     })
-    
-    if (!paciente) {
-      return NextResponse.json({ error: 'Paciente não encontrado ou não autorizado' }, { status: 403 })
+    if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado ou não autorizado' }, { status: 403 })
+    if (isTerminal(paciente.status)) return NextResponse.json({ error: 'Paciente com óbito registrado não pode receber prescrição' }, { status: 409 })
+
+    const medicamentos = (body.medicamentos as { viaUso: string; conteudo: string }[])
+      .map(item => ({ viaUso: item.viaUso.trim(), conteudo: sanitizeRecipeHtml(item.conteudo) }))
+    if (medicamentos.some((item) => !item.conteudo.replace(/<[^>]+>/g, '').trim())) {
+      return NextResponse.json({ error: 'Cada item deve conter texto de prescrição' }, { status: 400 })
     }
 
-    const medicamentos = body.medicamentos.map((item) => ({ viaUso: item.viaUso.trim(), conteudo: sanitizeRecipeHtml(item.conteudo) }));
-    if (medicamentos.some((item) => !item.conteudo.replace(/<[^>]+>/g, '').trim())) {
-      return NextResponse.json({ error: 'Cada item deve conter texto de prescrição' }, { status: 400 });
+    const citadas = alergiasCitadas(paciente.alergias, medicamentos.map(item => item.conteudo).join(' '))
+    if (citadas.length > 0 && body.alergiaConfirmada !== true) {
+      return NextResponse.json({
+        error: `A prescrição cita alergia registrada do paciente: ${citadas.join(', ')}. Confirme para salvar.`,
+        codigo: 'ALERGIA_NAO_CONFIRMADA',
+        alergias: citadas,
+      }, { status: 409 })
     }
+
+    // Duplo clique ou reenvio: mesmo autor, paciente e conteúdo em poucos segundos devolve a receita já salva.
+    const recentes = await prisma.receita.findMany({
+      where: {
+        hospitalId: ator.hospitalId, pacienteId, usuarioId: ator.id,
+        createdAt: { gte: new Date(Date.now() - JANELA_DUPLICIDADE_MS) },
+      },
+      select: SELECT_RECEITA,
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    })
+    const conteudo = JSON.stringify(medicamentos)
+    const repetida = recentes.find(receita => JSON.stringify(receita.medicamentos) === conteudo)
+    if (repetida) return NextResponse.json(repetida)
+
     const receita = await prisma.receita.create({
       data: {
-        hospitalId,
+        hospitalId: ator.hospitalId,
         pacienteId,
         medicamentos: medicamentos as Prisma.InputJsonValue,
         observacoes: typeof body.observacoes === 'string' ? body.observacoes : null,
-        profissional: session.user.name || 'Médico',
-        usuarioId: session.user.id || null
+        profissional: ator.nome,
+        usuarioId: ator.id,
       },
-      include: {
-        paciente: true
-      }
+      select: SELECT_RECEITA,
     })
 
+    await auditar(ator, 'RECEITA_CRIADA', 'Receita', receita.id, {
+      pacienteId,
+      itens: medicamentos.length,
+      ...(citadas.length > 0 ? { alergiaConfirmada: citadas } : {}),
+    })
     return NextResponse.json(receita, { status: 201 })
   } catch (error: unknown) {
-    console.error('Erro ao criar receita:', error)
+    console.error('Erro ao criar receita:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Erro ao criar prescrição' }, { status: 500 })
   }
 }

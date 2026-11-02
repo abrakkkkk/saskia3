@@ -1,47 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { isBooleanRecord } from '@/lib/request-validation';
+import { NextResponse } from 'next/server'
+import { auditar, exigir, lerJson } from '@/lib/api-guard'
+import { prisma } from '@/lib/db'
+import { isBooleanRecord } from '@/lib/request-validation'
 
 export async function GET() {
+  const { ator, negado } = await exigir('autenticado')
+  if (negado) return negado
+
   try {
-    const session = await auth();
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-
-    const hospitalId = session.user.hospitalId;
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
-    const config = await prisma.configDashboard.findUnique({
-      where: { hospitalId }
-    });
-
-    return NextResponse.json(config ? config.config : {});
+    const config = await prisma.configDashboard.findUnique({ where: { hospitalId: ator.hospitalId } })
+    return NextResponse.json(config ? config.config : {})
   } catch {
-    return NextResponse.json({ error: 'Erro ao buscar configuração do dashboard' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao buscar configuração do dashboard' }, { status: 500 })
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
+  const { ator, negado } = await exigir('admin:acesso')
+  if (negado) return negado
+
+  const body = await lerJson(request)
+  if (!isBooleanRecord(body)) return NextResponse.json({ error: 'Configuração inválida' }, { status: 400 })
+
   try {
-    const session = await auth();
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    if (session.user.cargo !== 'ADMIN') return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
-
-    const hospitalId = session.user.hospitalId;
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
-    let body: unknown;
-    try { body = await request.json(); } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }); }
-    if (!isBooleanRecord(body)) {
-      return NextResponse.json({ error: 'Configuração inválida' }, { status: 400 });
-    }
-
     const config = await prisma.configDashboard.upsert({
-      where: { hospitalId },
+      where: { hospitalId: ator.hospitalId },
       update: { config: body },
-      create: { hospitalId, config: body }
-    });
-
-    return NextResponse.json(config.config);
+      create: { hospitalId: ator.hospitalId, config: body },
+    })
+    await auditar(ator, 'ATUALIZAR', 'ConfigDashboard', config.id)
+    return NextResponse.json(config.config)
   } catch {
-    return NextResponse.json({ error: 'Erro ao salvar configuração do dashboard' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao salvar configuração do dashboard' }, { status: 500 })
   }
 }

@@ -1,35 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma, type CargoUsuario } from '@prisma/client'
-import { auth } from '@/lib/auth'
+import { auditar, exigir, lerJson } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
 import { hashSenha, isSenhaValida, MENSAGEM_SENHA_INVALIDA } from '@/lib/password'
 import { CARGOS } from '@/lib/permissions'
 
 const cargosPermitidos = new Set<string>(CARGOS)
+const CONFLITO = 'Os usuários foram alterados em paralelo. Atualize a lista e tente novamente.'
 
-function isUniqueConstraintError(error: unknown) {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002'
-}
-
-function isSerializationConflict(error: unknown) {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2034'
+function codigo(error: unknown) {
+  return typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { ator, negado } = await exigir('admin:acesso')
+  if (negado) return negado
+  const hospitalId = ator.hospitalId
+
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    if (session.user.cargo !== 'ADMIN') return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 })
-
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-
     const { id } = await params
-    let body: unknown
-    try { body = await request.json() } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }) }
-    if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
-    }
+    const body = await lerJson(request)
+    if (!body) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
 
     const updateData: Prisma.UsuarioUpdateInput = {}
     if ('nome' in body) {
@@ -54,27 +45,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (!body.ativo) updateData.sessionVersion = { increment: 1 }
     }
     if ('senha' in body && body.senha !== '') {
-      if (!isSenhaValida(body.senha)) {
-        return NextResponse.json({ error: MENSAGEM_SENHA_INVALIDA }, { status: 400 })
-      }
+      if (!isSenhaValida(body.senha)) return NextResponse.json({ error: MENSAGEM_SENHA_INVALIDA }, { status: 400 })
       updateData.senha = await hashSenha(body.senha)
       updateData.sessionVersion = { increment: 1 }
     }
     if (Object.keys(updateData).length === 0) return NextResponse.json({ error: 'Nenhuma alteração informada' }, { status: 400 })
 
     const resultado = await prisma.$transaction(async tx => {
-      const existing = await tx.usuario.findFirst({
-        where: { id, hospitalId },
-        select: { id: true, cargo: true, ativo: true },
-      })
-      if (!existing) return { error: 'nao_encontrado' as const }
+      const existente = await tx.usuario.findFirst({ where: { id, hospitalId }, select: { id: true, cargo: true, ativo: true } })
+      if (!existente) return { error: 'nao_encontrado' as const }
 
-      const willLoseAdminAccess = existing.cargo === 'ADMIN' && existing.ativo &&
-        (updateData.ativo === false || (updateData.cargo !== undefined && updateData.cargo !== 'ADMIN'))
-      if (willLoseAdminAccess) {
-        if (existing.id === session.user.id) return { error: 'proprio_admin' as const }
-        const activeAdmins = await tx.usuario.count({ where: { hospitalId, cargo: 'ADMIN', ativo: true } })
-        if (activeAdmins <= 1) return { error: 'ultimo_admin' as const }
+      const perdeAdmin = existente.cargo === 'ADMIN' && existente.ativo
+        && (updateData.ativo === false || (updateData.cargo !== undefined && updateData.cargo !== 'ADMIN'))
+      if (perdeAdmin) {
+        if (existente.id === ator.id) return { error: 'proprio_admin' as const }
+        const admins = await tx.usuario.count({ where: { hospitalId, cargo: 'ADMIN', ativo: true } })
+        if (admins <= 1) return { error: 'ultimo_admin' as const }
       }
 
       const atualizado = await tx.usuario.updateMany({ where: { id, hospitalId }, data: updateData })
@@ -91,38 +77,40 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (resultado.error === 'ultimo_admin') return NextResponse.json({ error: 'O hospital precisa manter ao menos um administrador ativo' }, { status: 409 })
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
     }
+
+    // Nunca registra valores de senha ou e-mail na trilha: só o que mudou.
+    const alterados = Object.keys(body).filter(campo => campo !== 'senha' || body.senha !== '')
+    await auditar(ator, 'ATUALIZAR', 'Usuario', id, { campos: alterados, cargo: resultado.usuario?.cargo ?? null })
     return NextResponse.json(resultado.usuario)
   } catch (error) {
-    if (isUniqueConstraintError(error)) return NextResponse.json({ error: 'Este e-mail já está cadastrado' }, { status: 409 })
-    if (isSerializationConflict(error)) return NextResponse.json({ error: 'Os usuários foram alterados em paralelo. Atualize a lista e tente novamente.' }, { status: 409 })
+    if (codigo(error) === 'P2002') return NextResponse.json({ error: 'Este e-mail já está cadastrado' }, { status: 409 })
+    if (codigo(error) === 'P2034') return NextResponse.json({ error: CONFLITO }, { status: 409 })
     return NextResponse.json({ error: 'Erro ao atualizar usuário' }, { status: 500 })
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { ator, negado } = await exigir('admin:acesso')
+  if (negado) return negado
+  const hospitalId = ator.hospitalId
+
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    if (session.user.cargo !== 'ADMIN') return NextResponse.json({ error: 'Acesso restrito a administradores' }, { status: 403 })
-
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-
     const { id } = await params
     const resultado = await prisma.$transaction(async tx => {
-      const existing = await tx.usuario.findFirst({
-        where: { id, hospitalId },
-        select: { id: true, cargo: true, ativo: true },
-      })
-      if (!existing) return { error: 'nao_encontrado' as const }
-      if (existing.id === session.user.id) return { error: 'proprio_usuario' as const }
+      const existente = await tx.usuario.findFirst({ where: { id, hospitalId }, select: { id: true, cargo: true, ativo: true } })
+      if (!existente) return { error: 'nao_encontrado' as const }
+      if (existente.id === ator.id) return { error: 'proprio_usuario' as const }
 
-      if (existing.cargo === 'ADMIN' && existing.ativo) {
-        const activeAdmins = await tx.usuario.count({ where: { hospitalId, cargo: 'ADMIN', ativo: true } })
-        if (activeAdmins <= 1) return { error: 'ultimo_admin' as const }
+      if (existente.cargo === 'ADMIN' && existente.ativo) {
+        const admins = await tx.usuario.count({ where: { hospitalId, cargo: 'ADMIN', ativo: true } })
+        if (admins <= 1) return { error: 'ultimo_admin' as const }
       }
 
-      const desativado = await tx.usuario.updateMany({ where: { id, hospitalId }, data: { ativo: false } })
+      // Desativar também derruba as sessões abertas do usuário.
+      const desativado = await tx.usuario.updateMany({
+        where: { id, hospitalId },
+        data: { ativo: false, sessionVersion: { increment: 1 } },
+      })
       if (desativado.count === 0) return { error: 'nao_encontrado' as const }
       return { success: true }
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
@@ -132,9 +120,10 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
       if (resultado.error === 'ultimo_admin') return NextResponse.json({ error: 'O hospital precisa manter ao menos um administrador ativo' }, { status: 409 })
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
     }
+    await auditar(ator, 'DESATIVAR', 'Usuario', id)
     return NextResponse.json({ success: true, ativo: false })
   } catch (error) {
-    if (isSerializationConflict(error)) return NextResponse.json({ error: 'Os usuários foram alterados em paralelo. Atualize a lista e tente novamente.' }, { status: 409 })
+    if (codigo(error) === 'P2034') return NextResponse.json({ error: CONFLITO }, { status: 409 })
     return NextResponse.json({ error: 'Erro ao desativar usuário' }, { status: 500 })
   }
 }

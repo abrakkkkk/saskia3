@@ -1,172 +1,120 @@
 'use client';
 
-import React, { createContext, useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import './alert-provider.css';
 
-// Exportando o contexto apenas caso seja necessário num futuro (o override global do window.alert é o mecanismo principal)
-export const AlertContext = createContext<unknown>(null);
+type TipoToast = 'sucesso' | 'erro' | 'aviso' | 'info';
+type Toast = { id: number; tipo: TipoToast; texto: string };
+type Confirmacao = { texto: string; resolver: (valor: boolean) => void };
 
+const ROTULO: Record<TipoToast, string> = { sucesso: 'Sucesso', erro: 'Erro', aviso: 'Atenção', info: 'Informação' };
+const ICONE: Record<TipoToast, string> = {
+  sucesso: 'las la-check-circle',
+  erro: 'las la-times-circle',
+  aviso: 'las la-exclamation-triangle',
+  info: 'las la-info-circle',
+};
+
+// As chamadas existentes de alert() só trazem texto: o tipo é inferido do conteúdo, de forma conservadora.
+// Mensagem de recusa do servidor ("insuficiente", "não foi possível"...) é tratada como erro.
+function classificar(texto: string): TipoToast {
+  const t = texto.toLocaleLowerCase('pt-BR');
+  if (/(erro|falha|n[aã]o foi poss|n[aã]o foi|inv[aá]lid|insuficiente|negad|sem permiss|n[aã]o autorizado|incorret|j[aá] existe|indispon)/.test(t)) return 'erro';
+  if (/(preencha|aten[cç][aã]o|digite|selecione|informe|descreva|obrigat|confira)/.test(t)) return 'aviso';
+  if (/(sucesso|salv|confirmad|enviad|registrad|criad|cadastrad|conclu[ií]d|atualizad|liberad|cancelad)/.test(t)) return 'sucesso';
+  return 'info';
+}
+
+/**
+ * Substitui window.alert por toasts acessíveis (região aria-live) e window.confirm por um diálogo modal.
+ * `await confirm(...)` continua funcionando; chamadas sem await seguem sempre verdadeiras (Promise),
+ * por isso todas as chamadas do sistema precisam de await.
+ */
 export default function AlertProvider() {
-  const [alertState, setAlertState] = useState({ 
-    isOpen: false, 
-    message: '', 
-    type: 'info' // info, success, warning, error
-  });
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [confirmacao, setConfirmacao] = useState<Confirmacao | null>(null);
+  const proximoId = useRef(1);
+  const origemFoco = useRef<HTMLElement | null>(null);
+  const botaoCancelar = useRef<HTMLButtonElement>(null);
+  const dialogo = useRef<HTMLDivElement>(null);
 
-  const [confirmState, setConfirmState] = useState<{
-    isOpen: boolean;
-    message: string;
-    resolve: ((value: boolean) => void) | null;
-  }>({
-    isOpen: false,
-    message: '',
-    resolve: null
-  });
+  const remover = useCallback((id: number) => setToasts(atual => atual.filter(t => t.id !== id)), []);
 
   useEffect(() => {
-    // Salvando a referência original
-    const originalAlert = window.alert;
-    const originalConfirm = window.confirm;
+    const alertOriginal = window.alert;
+    const confirmOriginal = window.confirm;
 
-    // Sobrescrevendo alert
-    window.alert = (message?: unknown) => {
-      const msgStr = String(message || '');
-      let type = 'info';
-      
-      // Detecção de tipo baseada no conteúdo da string original
-      if (msgStr.toLowerCase().includes('sucesso')) {
-        type = 'success';
-      } else if (msgStr.toLowerCase().includes('atenção') || msgStr.toLowerCase().includes('preencha')) {
-        type = 'warning';
-      } else if (msgStr.toLowerCase().includes('erro') || msgStr.toLowerCase().includes('falha')) {
-        type = 'error';
-      }
-
-      setAlertState({
-        isOpen: true,
-        message: msgStr,
-        type
-      });
+    window.alert = (mensagem?: unknown) => {
+      const texto = String(mensagem ?? '').trim();
+      if (!texto) return;
+      const id = proximoId.current++;
+      const tipo = classificar(texto);
+      setToasts(atual => [...atual.slice(-3), { id, tipo, texto }]);
+      // Erros ficam mais tempo na tela.
+      window.setTimeout(() => remover(id), tipo === 'erro' ? 9000 : 5000);
     };
 
-    // Sobrescrevendo confirm para retornar uma Promise
-    window.confirm = (message?: string) => {
-      return new Promise<boolean>((resolve) => {
-        setConfirmState({
-          isOpen: true,
-          message: String(message || ''),
-          resolve
-        });
-      }) as unknown as boolean; // Cast necessário para enganar o TS onde é esperado um boolean síncrono
-    };
+    // O contrato de confirm() é boolean síncrono; aqui devolve Promise<boolean>, exigindo await.
+    window.confirm = ((mensagem?: string) => new Promise<boolean>(resolver => {
+      origemFoco.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setConfirmacao({ texto: String(mensagem ?? ''), resolver });
+    })) as unknown as typeof window.confirm;
 
-    // Cleanup caso o componente seja desmontado
     return () => {
-      window.alert = originalAlert;
-      window.confirm = originalConfirm;
+      window.alert = alertOriginal;
+      window.confirm = confirmOriginal;
     };
+  }, [remover]);
+
+  const responder = useCallback((valor: boolean) => {
+    setConfirmacao(atual => {
+      atual?.resolver(valor);
+      return null;
+    });
+    origemFoco.current?.focus();
   }, []);
 
-  const closeAlert = () => {
-    setAlertState((prev) => ({ ...prev, isOpen: false }));
-  };
-
-  const handleConfirm = (value: boolean) => {
-    if (confirmState.resolve) {
-      confirmState.resolve(value);
-    }
-    setConfirmState({ isOpen: false, message: '', resolve: null });
-  };
-
-  // Ícones e cores dinâmicas baseadas no tipo
-  const getModalConfig = () => {
-    switch (alertState.type) {
-      case 'success':
-        return { icon: 'las la-check-circle', color: '#10b981', title: 'Sucesso' };
-      case 'warning':
-        return { icon: 'las la-exclamation-triangle', color: '#f59e0b', title: 'Atenção' };
-      case 'error':
-        return { icon: 'las la-times-circle', color: '#ef4444', title: 'Erro' };
-      default:
-        return { icon: 'las la-info-circle', color: '#3b82f6', title: 'Informação' };
-    }
-  };
-
-  const config = getModalConfig();
+  useEffect(() => {
+    if (!confirmacao) return;
+    botaoCancelar.current?.focus();
+    const aoTeclar = (evento: KeyboardEvent) => {
+      if (evento.key === 'Escape') {
+        evento.preventDefault();
+        responder(false);
+        return;
+      }
+      if (evento.key !== 'Tab' || !dialogo.current) return;
+      const focaveis = dialogo.current.querySelectorAll<HTMLElement>('button:not([disabled])');
+      if (focaveis.length === 0) return;
+      const primeiro = focaveis[0];
+      const ultimo = focaveis[focaveis.length - 1];
+      if (evento.shiftKey && document.activeElement === primeiro) { evento.preventDefault(); ultimo.focus(); }
+      else if (!evento.shiftKey && document.activeElement === ultimo) { evento.preventDefault(); primeiro.focus(); }
+    };
+    document.addEventListener('keydown', aoTeclar);
+    return () => document.removeEventListener('keydown', aoTeclar);
+  }, [confirmacao, responder]);
 
   return (
     <>
-      {/* Modal Customizado de Alert */}
-      {alertState.isOpen && (
-        <div className="modal-overlay show" style={{ zIndex: 99999 }}>
-          <div className="modal-content" style={{ textAlign: 'center', maxWidth: '420px' }}>
-            <div style={{ fontSize: '64px', marginBottom: '15px', color: config.color }}>
-              <i className={config.icon}></i>
-            </div>
-            <h3 style={{ color: '#0f172a', marginBottom: '15px', fontSize: '20px' }}>
-              {config.title}
-            </h3>
-            <p style={{ color: '#475569', fontSize: '15px', marginBottom: '25px', lineHeight: '1.5' }}>
-              {alertState.message}
-            </p>
-            <button 
-              onClick={closeAlert}
-              style={{
-                padding: '12px 25px', border: 'none', borderRadius: '8px', cursor: 'pointer',
-                fontWeight: 'bold', fontSize: '14px', color: 'white',
-                background: config.color, width: '100%',
-                transition: 'opacity 0.2s',
-                boxShadow: `0 4px 12px ${config.color}40`
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.opacity = '0.9')}
-              onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
-            >
-              ENTENDIDO
-            </button>
+      <div className="alp-toasts" role="region" aria-label="Avisos do sistema" aria-live="polite">
+        {toasts.map(toast => (
+          <div key={toast.id} className={`alp-toast alp-${toast.tipo}`} role={toast.tipo === 'erro' ? 'alert' : 'status'}>
+            <i className={ICONE[toast.tipo]} aria-hidden="true"></i>
+            <p><strong>{ROTULO[toast.tipo]}.</strong> {toast.texto}</p>
+            <button type="button" aria-label="Fechar aviso" onClick={() => remover(toast.id)}>&times;</button>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
-      {/* Modal Customizado de Confirm */}
-      {confirmState.isOpen && (
-        <div className="modal-overlay show" style={{ zIndex: 99999 }}>
-          <div className="modal-content" style={{ textAlign: 'center', maxWidth: '420px' }}>
-            <div style={{ fontSize: '64px', marginBottom: '15px', color: '#f59e0b' }}>
-              <i className="las la-question-circle"></i>
-            </div>
-            <h3 style={{ color: '#0f172a', marginBottom: '15px', fontSize: '20px' }}>
-              Confirmação
-            </h3>
-            <p style={{ color: '#475569', fontSize: '15px', marginBottom: '25px', lineHeight: '1.5' }}>
-              {confirmState.message}
-            </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <button 
-                onClick={() => handleConfirm(false)}
-                style={{
-                  padding: '10px 20px', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer',
-                  fontWeight: 'bold', fontSize: '14px', color: '#475569',
-                  background: 'white', flex: 1,
-                  transition: 'background 0.2s'
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
-                onMouseOut={(e) => (e.currentTarget.style.background = 'white')}
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={() => handleConfirm(true)}
-                style={{
-                  padding: '10px 20px', border: 'none', borderRadius: '8px', cursor: 'pointer',
-                  fontWeight: 'bold', fontSize: '14px', color: 'white',
-                  background: '#f59e0b', flex: 1,
-                  transition: 'opacity 0.2s',
-                  boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)'
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.opacity = '0.9')}
-                onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
-              >
-                Confirmar
-              </button>
+      {confirmacao && (
+        <div className="alp-overlay" onMouseDown={evento => { if (evento.target === evento.currentTarget) responder(false); }}>
+          <div ref={dialogo} className="alp-dialogo" role="alertdialog" aria-modal="true" aria-labelledby="alp-titulo" aria-describedby="alp-texto">
+            <h2 id="alp-titulo">Confirmação</h2>
+            <p id="alp-texto">{confirmacao.texto}</p>
+            <div className="alp-acoes">
+              <button ref={botaoCancelar} type="button" className="alp-cancelar" onClick={() => responder(false)}>Cancelar</button>
+              <button type="button" className="alp-confirmar" onClick={() => responder(true)}>Confirmar</button>
             </div>
           </div>
         </div>

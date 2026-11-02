@@ -1,4 +1,6 @@
 'use client';
+/* Os adesivos são arquivos estáticos pequenos de /public/adesivos; next/image não agrega aqui. */
+/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -63,15 +65,9 @@ function StickerGrid({
           <img
             src={`/adesivos/${adesivo.pasta}/${adesivo.arquivo}`}
             alt={adesivo.nome}
-            onError={event => {
-              event.currentTarget.style.display = 'none';
-              event.currentTarget.nextElementSibling?.setAttribute(
-                'style',
-                'display:block;font-size:48px;color:#1e3a8a;margin-bottom:8px;',
-              );
-            }}
+            onError={event => event.currentTarget.classList.add('adesivo-img-falhou')}
           />
-          <i className={adesivo.icone} aria-hidden="true" style={{ display: 'none' }} />
+          <i className={adesivo.icone} aria-hidden="true" />
           <span>{adesivo.nome}</span>
         </button>
       ))}
@@ -207,19 +203,18 @@ export default function AdesivosManager({
 
       {modalAberto && (
         <div
-          className="modal-adesivos"
-          style={{ display: 'flex' }}
+          className="adesivos-modal"
           onClick={event => {
             if (event.target === event.currentTarget) onModalAbertoChange(false);
           }}
           role="presentation"
         >
-          <section className="modal-content" role="dialog" aria-modal="true" aria-labelledby="adesivos-modal-title">
-            <div className="modal-header">
+          <section className="adesivos-modal-conteudo" role="dialog" aria-modal="true" aria-labelledby="adesivos-modal-title">
+            <div className="adesivos-modal-topo">
               <span id="adesivos-modal-title"><i className="las la-smile" aria-hidden="true" /> Inserir Elemento Visual</span>
               <button onClick={() => onModalAbertoChange(false)} type="button" aria-label="Fechar">&times;</button>
             </div>
-            <div className="modal-body">
+            <div className="adesivos-modal-corpo">
               <div className="acesso-rapido">
                 {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'mg', 'ml', 'h', ' '].map(value => (
                   <button className="acesso-numero" key={value || 'space'} onClick={() => onInsertText(value)} type="button">

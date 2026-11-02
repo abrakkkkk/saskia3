@@ -1,18 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import './recepcao.css';
+import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, SearchInput, StatCard, StatGrid, Tabs } from '@/components/ui';
+import { pode } from '@/lib/permissions';
+import { proximosStatus } from '@/lib/paciente-status';
+import { formatarCPF, formatarDataHora, formatarNascimento } from '@/lib/utils';
+import { erroDaApi, EsperaBadge, ModalNovoPaciente, StatusBadge, useAgora, useCargo } from '../pacientes/componentes';
 
 interface Paciente {
   id: string;
   nome: string;
-  cpf: string | null;
+  cpf?: string | null;
   status: string;
   classificacao: string | null;
   nascimento: string | null;
-  dataCadastro?: string;
-  createdAt?: string;
+  createdAt: string;
+  esperaDesde?: string;
 }
 
 interface Visitante {
@@ -27,588 +31,292 @@ interface Visitante {
   status: string;
 }
 
+type Aba = 'pacientes' | 'visitantes';
+
+const normalizar = (texto: string) => texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR').trim();
+
 export default function RecepcaoPage() {
+  const cargo = useCargo();
+  const agora = useAgora();
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [loading, setLoading] = useState(true);
   const [erroPacientes, setErroPacientes] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
-  const [formPaciente, setFormPaciente] = useState({ nome: '', cpf: '', rg: '', nascimento: '', telefone: '', tipoSanguineo: '', alergias: '' });
   const [busca, setBusca] = useState('');
-  const [resultadoBusca, setResultadoBusca] = useState<Paciente | null>(null);
-  const [buscou, setBuscou] = useState(false);
+  const [resultados, setResultados] = useState<Paciente[] | null>(null);
+  const [buscando, setBuscando] = useState(false);
+  const [erroBusca, setErroBusca] = useState('');
 
-  // Visitantes
   const [visitantes, setVisitantes] = useState<Visitante[]>([]);
   const [erroVisitantes, setErroVisitantes] = useState('');
   const [modalVisitante, setModalVisitante] = useState(false);
   const [formVisitante, setFormVisitante] = useState({ nome: '', documento: '', destino: '' });
-  const [abaAtiva, setAbaAtiva] = useState<'pacientes' | 'visitantes'>('pacientes');
+  const [erroFormVisitante, setErroFormVisitante] = useState('');
+  const [abaAtiva, setAbaAtiva] = useState<Aba>('pacientes');
 
-  const fetchPacientes = async () => {
+  const podeCadastrar = pode(cargo, 'paciente:cadastrar');
+  const podeEncaminhar = pode(cargo, 'paciente:encaminhar');
+
+  const carregarPacientes = useCallback(async () => {
     try {
       const res = await fetch('/api/pacientes');
-      const data: unknown = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : 'Não foi possível carregar os pacientes.');
-      if (!Array.isArray(data)) throw new Error('A resposta de pacientes é inválida.');
-      setPacientes(data);
+      if (!res.ok) throw new Error(await erroDaApi(res, 'Não foi possível carregar os pacientes.'));
+      const dados: unknown = await res.json();
+      if (!Array.isArray(dados)) throw new Error('A resposta de pacientes é inválida.');
+      setPacientes(dados as Paciente[]);
       setErroPacientes('');
     } catch (error) {
       setErroPacientes(error instanceof Error ? error.message : 'Não foi possível carregar os pacientes.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchVisitantes = async () => {
+  const carregarVisitantes = useCallback(async () => {
     try {
       const res = await fetch('/api/visitantes');
-      const data: unknown = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : 'Não foi possível carregar os visitantes.');
-      if (!Array.isArray(data)) throw new Error('A resposta de visitantes é inválida.');
-      setVisitantes(data);
+      if (!res.ok) throw new Error(await erroDaApi(res, 'Não foi possível carregar os visitantes.'));
+      const dados: unknown = await res.json();
+      if (!Array.isArray(dados)) throw new Error('A resposta de visitantes é inválida.');
+      setVisitantes(dados as Visitante[]);
       setErroVisitantes('');
     } catch (error) {
       setErroVisitantes(error instanceof Error ? error.message : 'Não foi possível carregar os visitantes.');
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchPacientes();
-    fetchVisitantes();
-    const interval = setInterval(() => { fetchPacientes(); fetchVisitantes(); }, 10000);
-    return () => clearInterval(interval);
-  }, []);
+    const inicial = setTimeout(() => { void carregarPacientes(); void carregarVisitantes(); }, 0);
+    const interval = setInterval(() => { void carregarPacientes(); void carregarVisitantes(); }, 10000);
+    return () => { clearTimeout(inicial); clearInterval(interval); };
+  }, [carregarPacientes, carregarVisitantes]);
+
+  // Todos os homônimos: servidor (além do limite da lista) somado à lista local (ignora acentos).
+  const buscarPaciente = async (e?: FormEvent) => {
+    e?.preventDefault();
+    const termo = busca.trim();
+    if (!termo) {
+      setResultados(null);
+      setErroBusca('');
+      return;
+    }
+    setBuscando(true);
+    setErroBusca('');
+    try {
+      const res = await fetch(`/api/pacientes?q=${encodeURIComponent(termo)}`);
+      if (!res.ok) throw new Error(await erroDaApi(res, 'Não foi possível buscar.'));
+      const dados = (await res.json()) as Paciente[];
+      const alvo = normalizar(termo);
+      const digitos = termo.replace(/\D/g, '');
+      const locais = pacientes.filter(p => normalizar(p.nome).includes(alvo) || (digitos && (p.cpf ?? '').replace(/\D/g, '').includes(digitos)));
+      setResultados([...new Map([...dados, ...locais].map(p => [p.id, p])).values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
+    } catch (error) {
+      setResultados(null);
+      setErroBusca(error instanceof Error ? error.message : 'Não foi possível buscar.');
+    } finally {
+      setBuscando(false);
+    }
+  };
 
   const enviarParaTriagem = async (id: string) => {
     try {
       const res = await fetch(`/api/pacientes/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Aguardando Triagem' })
+        body: JSON.stringify({ status: 'Aguardando Triagem' }),
       });
-      const resposta: unknown = await res.json().catch(() => null);
-      if (!res.ok) {
-        const mensagem = resposta && typeof resposta === 'object' && 'error' in resposta && typeof resposta.error === 'string'
-          ? resposta.error
-          : 'Erro ao enviar paciente para triagem';
-        throw new Error(mensagem);
-      }
-      fetchPacientes();
-      if (resultadoBusca && resultadoBusca.id === id) {
-        setResultadoBusca({ ...resultadoBusca, status: 'Aguardando Triagem' });
-      }
+      if (!res.ok) throw new Error(await erroDaApi(res, 'Erro ao enviar paciente para triagem.'));
+      void carregarPacientes();
+      setResultados(atual => atual?.map(p => p.id === id ? { ...p, status: 'Aguardando Triagem' } : p) ?? null);
       alert('Paciente enviado para triagem!');
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Erro ao enviar para triagem');
-    }
-  };
-
-  const criarPaciente = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await fetch('/api/pacientes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome: formPaciente.nome,
-          cpf: formPaciente.cpf,
-          rg: formPaciente.rg,
-          nascimento: formPaciente.nascimento ? new Date(formPaciente.nascimento).toISOString() : null,
-          telefone: formPaciente.telefone,
-          tipoSanguineo: formPaciente.tipoSanguineo,
-          alergias: formPaciente.alergias,
-          status: 'Recepção'
-        })
-      });
-      if (res.ok) {
-        setModalAberto(false);
-        setFormPaciente({ nome: '', cpf: '', rg: '', nascimento: '', telefone: '', tipoSanguineo: '', alergias: '' });
-        fetchPacientes();
-        alert('Paciente cadastrado com sucesso!');
-      } else {
-        const errorData: unknown = await res.json().catch(() => null);
-        const message = errorData && typeof errorData === 'object' && 'error' in errorData && typeof errorData.error === 'string'
-          ? errorData.error
-          : 'Erro ao cadastrar paciente.';
-        alert(message);
-      }
     } catch (error) {
-      console.error(error);
-      alert('Falha ao comunicar com o servidor.');
+      alert(error instanceof Error ? error.message : 'Erro ao enviar para triagem.');
     }
   };
 
-  const criarVisitante = async (e: React.FormEvent) => {
+  const criarVisitante = async (e: FormEvent) => {
     e.preventDefault();
+    setErroFormVisitante('');
     try {
       const res = await fetch('/api/visitantes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome: formVisitante.nome,
-          documento: formVisitante.documento || null,
-          destino: formVisitante.destino || null
-        })
+        body: JSON.stringify({ nome: formVisitante.nome, documento: formVisitante.documento || null, destino: formVisitante.destino || null }),
       });
-      if (res.ok) {
-        setModalVisitante(false);
-        setFormVisitante({ nome: '', documento: '', destino: '' });
-        fetchVisitantes();
-        alert('Visitante registrado com sucesso!');
-      } else {
-        const errorData: unknown = await res.json().catch(() => null);
-        const message = errorData && typeof errorData === 'object' && 'error' in errorData && typeof errorData.error === 'string'
-          ? errorData.error
-          : 'Erro ao registrar visitante.';
-        alert(message);
+      if (!res.ok) {
+        setErroFormVisitante(await erroDaApi(res, 'Erro ao registrar visitante.'));
+        return;
       }
-    } catch (error) {
-      console.error(error);
-      alert('Falha ao comunicar com o servidor.');
+      setModalVisitante(false);
+      setFormVisitante({ nome: '', documento: '', destino: '' });
+      void carregarVisitantes();
+    } catch {
+      setErroFormVisitante('Falha de conexão: o visitante não foi registrado.');
     }
   };
 
   const darSaidaVisitante = async (id: string) => {
     if (!await confirm('Confirmar saída deste visitante?')) return;
     try {
-      const res = await fetch(`/api/visitantes/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'SAIU' })
-      });
-      const data: unknown = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : 'Erro ao registrar saída.');
-      fetchVisitantes();
+      const res = await fetch(`/api/visitantes/${id}`, { method: 'PUT' });
+      if (!res.ok) throw new Error(await erroDaApi(res, 'Erro ao registrar saída.'));
+      void carregarVisitantes();
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Erro ao registrar saída.');
     }
   };
 
-  const buscarPaciente = () => {
-    if (!busca.trim()) {
-      setResultadoBusca(null);
-      setBuscou(false);
-      return;
-    }
-    const termo = busca.toLowerCase();
-    const encontrado = pacientes.find(p =>
-      (p.nome && p.nome.toLowerCase().includes(termo)) ||
-      (p.cpf && p.cpf.includes(termo))
-    );
-    setResultadoBusca(encontrado || null);
-    setBuscou(true);
-  };
-
-  const stats = {
-    recepcao: pacientes.filter(p => p.status === 'Recepção').length,
-    aguardandoTriagem: pacientes.filter(p => p.status === 'Aguardando Triagem').length,
-    aguardandoMedico: pacientes.filter(p => p.status === 'Aguardando Médico').length,
-    internados: pacientes.filter(p => p.status === 'Internado').length
-  };
-
-  const hoje = new Date().toDateString();
+  const contar = (status: string) => pacientes.filter(p => p.status === status).length;
+  const hoje = new Date(agora).toDateString();
   const visitantesDentro = visitantes.filter(v => v.status === 'DENTRO');
-  const visitantesHojeSairam = visitantes.filter(v => v.status === 'SAIU' && v.saida && new Date(v.saida).toDateString() === hoje);
+  const sairamHoje = visitantes.filter(v => v.status === 'SAIU' && v.saida && new Date(v.saida).toDateString() === hoje);
+  const recentes = pacientes.slice(0, 10);
+  const podeIrTriagem = (p: Paciente) => podeEncaminhar && proximosStatus(p.status).includes('Aguardando Triagem');
 
-  const recentes = [...pacientes].sort((a, b) => {
-    const dataA = (a.createdAt || a.dataCadastro) ? new Date(a.createdAt || a.dataCadastro!).getTime() : 0;
-    const dataB = (b.createdAt || b.dataCadastro) ? new Date(b.createdAt || b.dataCadastro!).getTime() : 0;
-    return dataB - dataA;
-  }).slice(0, 10);
-
-  const formatChegada = (p: Paciente) => {
-    const raw = p.createdAt || p.dataCadastro;
-    if (!raw) return '-';
-    try {
-      const dt = new Date(raw);
-      if (isNaN(dt.getTime())) return '-';
-      const horaStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      const agora = new Date();
-      if (dt.toDateString() === agora.toDateString()) {
-        const diffMin = Math.round((agora.getTime() - dt.getTime()) / 60000);
-        if (diffMin < 2) return `Agora (${horaStr})`;
-        if (diffMin < 60) return `há ${diffMin} min (${horaStr})`;
-        return horaStr;
-      }
-      return `${dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${horaStr}`;
-    } catch {
-      return '-';
-    }
-  };
-
-  const formatHora = (d: string) => {
-    const date = new Date(d);
-    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatDataHora = (d: string) => {
-    const date = new Date(d);
-    return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  };
+  const botaoTriagem = (p: Paciente) => podeIrTriagem(p) && (
+    <button type="button" className="btn btn-primary btn-xs" onClick={() => enviarParaTriagem(p.id)}>
+      <i className="las la-stethoscope" aria-hidden="true"></i> Triagem
+    </button>
+  );
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
-        <h2 style={{ fontSize: '26px', color: '#0a1f44', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
-          <i className="las la-user-nurse"></i> Recepção
-        </h2>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={() => setModalVisitante(true)} style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(99,102,241,0.3)', transition: 'all 0.2s' }}>
-            <i className="las la-walking"></i> Registrar Visitante
-          </button>
-          <button onClick={() => setModalAberto(true)} style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(22,163,74,0.3)', transition: 'all 0.2s' }}>
-            <i className="las la-user-plus"></i> Novo Paciente
-          </button>
-        </div>
-      </div>
+    <div className="pac-pagina">
+      <PageHeader
+        icon="las la-user-nurse"
+        title="Recepção"
+        subtitle="Cadastro, encaminhamento e controle de visitantes"
+        actions={<>
+          <button type="button" className="btn pac-btn-sec" onClick={() => setModalVisitante(true)}><i className="las la-walking" aria-hidden="true"></i> Registrar visitante</button>
+          {podeCadastrar && <button type="button" className="btn btn-primary" onClick={() => setModalAberto(true)}><i className="las la-user-plus" aria-hidden="true"></i> Novo paciente</button>}
+        </>}
+      />
 
-      {/* Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '25px' }}>
-        <div style={{ background: 'linear-gradient(135deg, #f8fafc, #e2e8f0)', padding: '18px', borderRadius: '8px', textAlign: 'center', borderLeft: '4px solid #64748b', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '60px', opacity: 0.06 }}><i className="las la-clipboard-list"></i></div>
-          <h3 style={{ fontSize: '11px', color: '#666', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Na Recepção</h3>
-          <div style={{ fontSize: '30px', fontWeight: '800', color: '#64748b' }}>{stats.recepcao}</div>
-        </div>
-        <div style={{ background: 'linear-gradient(135deg, #fffbeb, #fef3c7)', padding: '18px', borderRadius: '8px', textAlign: 'center', borderLeft: '4px solid #f59e0b', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '60px', opacity: 0.06 }}><i className="las la-hourglass-half"></i></div>
-          <h3 style={{ fontSize: '11px', color: '#666', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Aguard. Triagem</h3>
-          <div style={{ fontSize: '30px', fontWeight: '800', color: '#f59e0b' }}>{stats.aguardandoTriagem}</div>
-        </div>
-        <div style={{ background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', padding: '18px', borderRadius: '8px', textAlign: 'center', borderLeft: '4px solid #3b82f6', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '60px', opacity: 0.06 }}><i className="las la-user-md"></i></div>
-          <h3 style={{ fontSize: '11px', color: '#666', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Aguard. Médico</h3>
-          <div style={{ fontSize: '30px', fontWeight: '800', color: '#3b82f6' }}>{stats.aguardandoMedico}</div>
-        </div>
-        <div style={{ background: 'linear-gradient(135deg, #fdf2f8, #fce7f3)', padding: '18px', borderRadius: '8px', textAlign: 'center', borderLeft: '4px solid #ec4899', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '60px', opacity: 0.06 }}><i className="las la-bed"></i></div>
-          <h3 style={{ fontSize: '11px', color: '#666', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Internados</h3>
-          <div style={{ fontSize: '30px', fontWeight: '800', color: '#ec4899' }}>{stats.internados}</div>
-        </div>
-        <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', padding: '18px', borderRadius: '8px', textAlign: 'center', borderLeft: '4px solid #6366f1', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '60px', opacity: 0.06 }}><i className="las la-walking"></i></div>
-          <h3 style={{ fontSize: '11px', color: '#666', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Visitantes Dentro</h3>
-          <div style={{ fontSize: '30px', fontWeight: '800', color: '#6366f1' }}>{visitantesDentro.length}</div>
-        </div>
-        <div style={{ background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', padding: '18px', borderRadius: '8px', textAlign: 'center', borderLeft: '4px solid #10b981', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '60px', opacity: 0.06 }}><i className="las la-sign-out-alt"></i></div>
-          <h3 style={{ fontSize: '11px', color: '#666', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Saíram Hoje</h3>
-          <div style={{ fontSize: '30px', fontWeight: '800', color: '#10b981' }}>{visitantesHojeSairam.length}</div>
-        </div>
-      </div>
+      <StatGrid>
+        <StatCard icon="las la-clipboard-list" tone="neutral" value={contar('Recepção')} label="Na recepção" />
+        <StatCard icon="las la-hourglass-half" tone="warning" value={contar('Aguardando Triagem')} label="Aguard. triagem" />
+        <StatCard icon="las la-user-md" value={contar('Aguardando Médico')} label="Aguard. médico" />
+        <StatCard icon="las la-bed" tone="danger" value={contar('Internado') + contar('Internado - UTI')} label="Internados" />
+        <StatCard icon="las la-walking" value={visitantesDentro.length} label="Visitantes dentro" />
+        <StatCard icon="las la-sign-out-alt" tone="success" value={sairamHoje.length} label="Saíram hoje" />
+      </StatGrid>
 
-      {/* Busca */}
-      <div style={{ background: 'white', borderRadius: '8px', padding: '22px', marginBottom: '25px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-        <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0a1f44' }}><i className="las la-search"></i> Buscar Paciente</h3>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <input
-            type="text"
-            aria-label="Buscar paciente por nome ou CPF"
-            placeholder="Digite nome ou CPF..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && buscarPaciente()}
-            style={{ flex: 1, padding: '12px 16px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', transition: 'border 0.2s', outline: 'none' }}
-          />
-          <button onClick={buscarPaciente} style={{ background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '13px' }}>
-            <i className="las la-search"></i> Buscar
-          </button>
-        </div>
-
-        {buscou && (
-          <div style={{ marginTop: '18px' }}>
-            {resultadoBusca ? (
-              <div style={{ background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', border: '1px solid #86efac', borderRadius: '8px', padding: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-                <div>
-                  <h4 style={{ margin: '0 0 5px 0', color: '#1e3a8a', fontSize: '15px' }}><i className="las la-user-circle"></i> {resultadoBusca.nome}</h4>
-                  <p style={{ margin: 0, color: '#666', fontSize: '12px' }}><i className="las la-id-card"></i> CPF: {resultadoBusca.cpf || "Não informado"}</p>
-                  <p style={{ margin: 0, color: '#666', fontSize: '12px' }}><i className="las la-flag"></i> Status: {resultadoBusca.status || "Recepção"}</p>
-                </div>
-                <button
-                  onClick={() => enviarParaTriagem(resultadoBusca.id)}
-                  style={{ background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '13px' }}
-                >
-                  <i className="las la-stethoscope"></i> Iniciar Triagem
-                </button>
-              </div>
-            ) : (
-              <div role="status" style={{ textAlign: 'center', padding: '25px', color: '#64748b', background: '#f8fafc', borderRadius: '8px' }}>
-                <i className="las la-user-slash" style={{ fontSize: '40px', marginBottom: '8px' }}></i>
-                <p style={{ margin: '0 0 10px 0' }}>Paciente não encontrado</p>
-                <button onClick={() => setModalAberto(true)} style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '13px' }}>
-                  <i className="las la-user-plus"></i> Cadastrar novo paciente
-                </button>
-              </div>
-            )}
-          </div>
+      <Panel title="Buscar paciente" icon="las la-search">
+        <form className="pac-filtros" onSubmit={buscarPaciente}>
+          <SearchInput value={busca} onChange={setBusca} placeholder="Digite nome ou CPF..." label="Buscar paciente por nome ou CPF" />
+          <button type="submit" className="btn btn-primary" disabled={buscando}><i className="las la-search" aria-hidden="true"></i> {buscando ? 'Buscando...' : 'Buscar'}</button>
+        </form>
+        {erroBusca && <p className="pac-erro" role="alert">{erroBusca}</p>}
+        {resultados && (
+          resultados.length === 0 ? (
+            <EmptyState
+              icon="las la-user-slash"
+              message="Paciente não encontrado."
+              action={podeCadastrar ? <button type="button" className="btn btn-primary" onClick={() => setModalAberto(true)}>Cadastrar novo paciente</button> : undefined}
+            />
+          ) : (
+            <>
+              <p className="pac-sub" role="status" style={{ margin: '12px 0' }}>{resultados.length} resultado(s). Confira dois identificadores antes de encaminhar.</p>
+              {resultados.map(p => (
+                <article key={p.id} className="pac-cartao">
+                  <div className="pac-cartao-topo">
+                    <strong>{p.nome}</strong>
+                    <StatusBadge status={p.status} />
+                  </div>
+                  <p className="pac-sub">Nascimento: {formatarNascimento(p.nascimento) || 'não informado'} | CPF: {p.cpf ? formatarCPF(p.cpf) : 'não informado'}</p>
+                  <div className="pac-acoes" style={{ marginTop: 8 }}>
+                    <Link href={`/pacientes/${p.id}`} className="btn pac-btn-sec btn-xs">Ficha</Link>
+                    {botaoTriagem(p)}
+                  </div>
+                </article>
+              ))}
+            </>
+          )
         )}
-      </div>
+      </Panel>
 
-      {/* Abas */}
-      <div style={{ display: 'flex', gap: '0', marginBottom: '0' }}>
-        <button
-          type="button"
-          aria-pressed={abaAtiva === 'pacientes'}
-          onClick={() => setAbaAtiva('pacientes')}
-          style={{
-            padding: '12px 28px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px',
-            borderRadius: '12px 12px 0 0',
-            background: abaAtiva === 'pacientes' ? 'white' : '#e2e8f0',
-            color: abaAtiva === 'pacientes' ? '#1e3a8a' : '#64748b',
-            boxShadow: abaAtiva === 'pacientes' ? '0 -2px 8px rgba(0,0,0,0.06)' : 'none',
-            transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px'
-          }}
-        >
-          <i className="las la-user-injured"></i> Pacientes Recentes
-        </button>
-        <button
-          type="button"
-          aria-pressed={abaAtiva === 'visitantes'}
-          onClick={() => setAbaAtiva('visitantes')}
-          style={{
-            padding: '12px 28px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px',
-            borderRadius: '12px 12px 0 0',
-            background: abaAtiva === 'visitantes' ? 'white' : '#e2e8f0',
-            color: abaAtiva === 'visitantes' ? '#6366f1' : '#64748b',
-            boxShadow: abaAtiva === 'visitantes' ? '0 -2px 8px rgba(0,0,0,0.06)' : 'none',
-            transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px'
-          }}
-        >
-          <i className="las la-walking"></i> Controle de Visitantes
-          {visitantesDentro.length > 0 && (
-            <span aria-label={`${visitantesDentro.length} visitantes dentro`} style={{ background: '#6366f1', color: 'white', borderRadius: '50%', width: '22px', height: '22px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '800' }}>
-              {visitantesDentro.length}
-            </span>
-          )}
-        </button>
-      </div>
+      <Tabs<Aba>
+        label="Seções da recepção"
+        active={abaAtiva}
+        onChange={setAbaAtiva}
+        tabs={[
+          { id: 'pacientes', label: 'Pacientes recentes', icon: 'las la-user-injured' },
+          { id: 'visitantes', label: `Visitantes (${visitantesDentro.length} dentro)`, icon: 'las la-walking' },
+        ]}
+      />
 
-      {/* Conteúdo da Aba */}
-      <div style={{ background: 'white', borderRadius: '0 14px 14px 14px', padding: '25px', marginBottom: '30px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-
-        {abaAtiva === 'pacientes' && (
-          <>
-            <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0a1f44' }}><i className="las la-history" aria-hidden="true"></i> Últimos cadastros de pacientes</h3>
-            {erroPacientes && <p role="alert" style={{ color: '#b91c1c' }}>{erroPacientes}</p>}
-            {loading ? (
-              <p style={{ textAlign: 'center', padding: '20px' }}>Carregando...</p>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', padding: '12px 14px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Paciente</th>
-                      <th style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', padding: '12px 14px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>CPF</th>
-                      <th style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', padding: '12px 14px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Chegada</th>
-                      <th style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', padding: '12px 14px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
-                      <th style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: 'white', padding: '12px 14px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentes.length === 0 ? (
-                      <tr><td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Nenhum paciente cadastrado</td></tr>
-                    ) : (
-                      recentes.map((p, idx) => (
-                        <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#fafbfc' : 'white', transition: 'background 0.15s' }}>
-                          <td style={{ padding: '12px 14px', fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>{p.nome}</td>
-                          <td style={{ padding: '12px 14px', fontSize: '13px', color: '#475569' }}>{p.cpf || '-'}</td>
-                          <td style={{ padding: '12px 14px', fontSize: '13px', color: '#475569' }}>
-                            <span style={{ fontWeight: 600, color: '#1e293b' }}>{formatChegada(p)}</span>
-                          </td>
-                          <td style={{ padding: '12px 14px', fontSize: '13px' }}>
-                            <span style={{
-                              display: 'inline-block', padding: '4px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold',
-                              background: p.status === 'Recepção' ? '#64748b' : p.status === 'Aguardando Triagem' ? '#f59e0b' : p.status === 'Em Triagem' ? '#3b82f6' : '#8b5cf6',
-                              color: 'white'
-                            }}>
-                              {p.status}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px 14px' }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <Link href={`/pacientes/${p.id}`} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a', cursor: 'pointer', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }} title="Ver Prontuário / Ficha">
-                                <i className="las la-eye"></i>
-                                <span>Ficha</span>
-                              </Link>
-                              {p.status === 'Recepção' && (
-                                <button
-                                  onClick={() => enviarParaTriagem(p.id)}
-                                  style={{
-                                    background: '#dcfce7', border: '1px solid #86efac', color: '#16a34a',
-                                    cursor: 'pointer', padding: '6px 10px', borderRadius: '6px', fontSize: '12px',
-                                    fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                    boxShadow: '0 1px 2px rgba(22, 163, 74, 0.15)', transition: 'all 0.15s'
-                                  }}
-                                  title="Encaminhar paciente para Triagem e Classificação de Manchester"
-                                >
-                                  <span>Triagem</span>
-                                  <i className="las la-arrow-right"></i>
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
-        )}
-
-        {abaAtiva === 'visitantes' && (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', color: '#0a1f44' }}><i className="las la-walking"></i> Visitantes — Controle de Acesso</h3>
-              <button onClick={() => setModalVisitante(true)} style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', border: 'none', padding: '8px 18px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <i className="las la-plus-circle"></i> Novo Visitante
-              </button>
-            </div>
-            {erroVisitantes && <p role="alert" style={{ color: '#b91c1c' }}>{erroVisitantes}</p>}
-
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: 'white', padding: '12px 14px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nome</th>
-                    <th style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: 'white', padding: '12px 14px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Documento</th>
-                    <th style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: 'white', padding: '12px 14px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Destino</th>
-                    <th style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: 'white', padding: '12px 14px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Entrada</th>
-                    <th style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: 'white', padding: '12px 14px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Saída</th>
-                    <th style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: 'white', padding: '12px 14px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
-                    <th style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: 'white', padding: '12px 14px', textAlign: 'center', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ação</th>
-                  </tr>
-                </thead>
+      {abaAtiva === 'pacientes' && (
+        <Panel title="Últimos cadastros de pacientes" icon="las la-history">
+          {loading ? <LoadingState /> : erroPacientes ? <ErrorState message={erroPacientes} onRetry={() => void carregarPacientes()} /> : recentes.length === 0 ? <EmptyState message="Nenhum paciente cadastrado." /> : (
+            <div className="tabela-wrapper">
+              <table className="tabela">
+                <thead><tr><th scope="col">Paciente</th><th scope="col">Nascimento</th><th scope="col">CPF</th><th scope="col">Cadastro</th><th scope="col">Status</th><th scope="col">Ações</th></tr></thead>
                 <tbody>
-                  {visitantes.length === 0 ? (
-                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                      <i className="las la-door-open" aria-hidden="true" style={{ fontSize: '40px', display: 'block', marginBottom: '8px' }}></i>
-                      Nenhum visitante registrado.
-                    </td></tr>
-                  ) : (
-                    visitantes.map((v, idx) => (
-                      <tr key={v.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#fafbfc' : 'white', transition: 'background 0.15s' }}>
-                        <td style={{ padding: '12px 14px', fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{
-                              width: '32px', height: '32px', borderRadius: '50%',
-                              background: v.status === 'DENTRO' ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : '#94a3b8',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              color: 'white', fontSize: '13px', fontWeight: '800', flexShrink: 0
-                            }}>
-                              {v.nome.charAt(0).toUpperCase()}
-                            </div>
-                            {v.nome}
-                          </div>
-                        </td>
-                        <td style={{ padding: '12px 14px', fontSize: '13px', color: '#475569' }}>{v.documento || '-'}</td>
-                        <td style={{ padding: '12px 14px', fontSize: '13px', color: '#475569' }}>{v.destino || '-'}</td>
-                        <td style={{ padding: '12px 14px', fontSize: '13px', color: '#475569' }}>{formatDataHora(v.entrada)}</td>
-                        <td style={{ padding: '12px 14px', fontSize: '13px', color: '#475569' }}>{v.saida ? formatDataHora(v.saida) : '-'}</td>
-                        <td style={{ padding: '12px 14px' }}>
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '5px',
-                            padding: '4px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold',
-                            background: v.status === 'DENTRO' ? '#dcfce7' : '#f1f5f9',
-                            color: v.status === 'DENTRO' ? '#16a34a' : '#64748b'
-                          }}>
-                            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: v.status === 'DENTRO' ? '#16a34a' : '#94a3b8', display: 'inline-block' }}></span>
-                            {v.status === 'DENTRO' ? 'Dentro' : 'Saiu'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                          {v.status === 'DENTRO' ? (
-                            <button
-                              onClick={() => darSaidaVisitante(v.id)}
-                              style={{ background: 'linear-gradient(135deg, #ef4444, #f87171)', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 6px rgba(239,68,68,0.3)' }}
-                              title="Registrar Saída"
-                            >
-                              <i className="las la-sign-out-alt"></i> Dar Saída
-                            </button>
-                          ) : (
-                            <span style={{ color: '#94a3b8', fontSize: '12px' }}> Concluído</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
+                  {recentes.map(p => (
+                    <tr key={p.id}>
+                      <td><strong>{p.nome}</strong></td>
+                      <td>{formatarNascimento(p.nascimento) || '-'}</td>
+                      <td>{p.cpf ? formatarCPF(p.cpf) : '-'}</td>
+                      <td>{formatarDataHora(p.createdAt)}</td>
+                      <td><StatusBadge status={p.status} /><EsperaBadge status={p.status} desde={p.esperaDesde} agora={agora} /></td>
+                      <td>
+                        <div className="pac-acoes">
+                          <Link href={`/pacientes/${p.id}`} className="btn pac-btn-sec btn-xs" aria-label={`Abrir ficha de ${p.nome}`}><i className="las la-eye" aria-hidden="true"></i> Ficha</Link>
+                          {botaoTriagem(p)}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-          </>
-        )}
-      </div>
-
-      {/* Modal Novo Paciente */}
-      {modalAberto && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-          <div role="dialog" aria-modal="true" aria-label="Novo paciente" style={{ background: 'white', width: '450px', maxWidth: '90%', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', color: 'white', padding: '18px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}><i className="las la-user-plus"></i> Novo Paciente</span>
-              <button type="button" aria-label="Fechar cadastro de paciente" onClick={() => setModalAberto(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
-            </div>
-            <div style={{ padding: '25px' }}>
-              <form onSubmit={criarPaciente}>
-                <label htmlFor="recepcao-paciente-nome" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-user" aria-hidden="true"></i> Nome completo *</label>
-                <input id="recepcao-paciente-nome" required type="text" maxLength={160} placeholder="Nome completo" value={formPaciente.nome} onChange={e => setFormPaciente({...formPaciente, nome: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }} />
-
-                <label htmlFor="recepcao-paciente-cpf" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-id-card" aria-hidden="true"></i> CPF *</label>
-                <input id="recepcao-paciente-cpf" required type="text" maxLength={20} placeholder="000.000.000-00" value={formPaciente.cpf} onChange={e => setFormPaciente({...formPaciente, cpf: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
-
-                <label htmlFor="recepcao-paciente-rg" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-id-card" aria-hidden="true"></i> RG *</label>
-                <input id="recepcao-paciente-rg" required type="text" maxLength={30} placeholder="00.000.000-0" value={formPaciente.rg} onChange={e => setFormPaciente({...formPaciente, rg: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
-
-                <label htmlFor="recepcao-paciente-tipo-sanguineo" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-tint" aria-hidden="true"></i> Tipo Sanguíneo *</label>
-                <select id="recepcao-paciente-tipo-sanguineo" required value={formPaciente.tipoSanguineo} onChange={e => setFormPaciente({...formPaciente, tipoSanguineo: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none', background: 'white' }}>
-                  <option value="">Selecione...</option>
-                  <option value="A+">A+</option><option value="A-">A-</option>
-                  <option value="B+">B+</option><option value="B-">B-</option>
-                  <option value="AB+">AB+</option><option value="AB-">AB-</option>
-                  <option value="O+">O+</option><option value="O-">O-</option>
-                </select>
-
-                <label htmlFor="recepcao-paciente-alergias" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-allergies" aria-hidden="true"></i> Alergias *</label>
-                <input id="recepcao-paciente-alergias" required type="text" maxLength={2000} placeholder="Ex: Penicilina, Frutos do mar, ou 'Nenhuma'" value={formPaciente.alergias} onChange={e => setFormPaciente({...formPaciente, alergias: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
-
-                <label htmlFor="recepcao-paciente-nascimento" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-calendar" aria-hidden="true"></i> Data de Nascimento *</label>
-                <input id="recepcao-paciente-nascimento" required type="date" value={formPaciente.nascimento} onChange={e => setFormPaciente({...formPaciente, nascimento: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
-
-                <label htmlFor="recepcao-paciente-telefone" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-phone" aria-hidden="true"></i> Telefone</label>
-                <input id="recepcao-paciente-telefone" type="text" maxLength={40} placeholder="(00) 00000-0000" value={formPaciente.telefone} onChange={e => setFormPaciente({...formPaciente, telefone: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '20px', boxSizing: 'border-box', outline: 'none' }} />
-
-                <button type="submit" style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: 'white', border: 'none', padding: '13px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(22,163,74,0.3)' }}>
-                  <i className="las la-save"></i> Cadastrar e Iniciar Atendimento
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
+          )}
+        </Panel>
       )}
 
-      {/* Modal Registrar Visitante */}
+      {abaAtiva === 'visitantes' && (
+        <Panel title="Visitantes: controle de acesso" icon="las la-walking">
+          {erroVisitantes ? <ErrorState message={erroVisitantes} onRetry={() => void carregarVisitantes()} /> : visitantes.length === 0 ? <EmptyState icon="las la-door-open" message="Nenhum visitante registrado." /> : (
+            <div className="tabela-wrapper">
+              <table className="tabela">
+                <thead><tr><th scope="col">Nome</th><th scope="col">Documento</th><th scope="col">Destino</th><th scope="col">Entrada</th><th scope="col">Saída</th><th scope="col">Status</th><th scope="col">Ação</th></tr></thead>
+                <tbody>
+                  {visitantes.map(v => (
+                    <tr key={v.id}>
+                      <td><strong>{v.nome}</strong></td>
+                      <td>{v.documento || '-'}</td>
+                      <td>{v.destino || '-'}</td>
+                      <td>{formatarDataHora(v.entrada)}</td>
+                      <td>{v.saida ? formatarDataHora(v.saida) : '-'}</td>
+                      <td><Badge tone={v.status === 'DENTRO' ? 'success' : 'neutral'}>{v.status === 'DENTRO' ? 'Dentro' : 'Saiu'}</Badge></td>
+                      <td>{v.status === 'DENTRO' ? <button type="button" className="btn btn-danger btn-xs" onClick={() => darSaidaVisitante(v.id)}><i className="las la-sign-out-alt" aria-hidden="true"></i> Dar saída</button> : 'Concluído'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
+      )}
+
+      {modalAberto && <ModalNovoPaciente onFechar={() => setModalAberto(false)} onCriado={() => { setModalAberto(false); void carregarPacientes(); }} />}
+
       {modalVisitante && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
-          <div role="dialog" aria-modal="true" aria-label="Registrar visitante" style={{ background: 'white', width: '450px', maxWidth: '90%', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <div style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white', padding: '18px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}><i className="las la-walking"></i> Registrar Visitante</span>
-              <button type="button" aria-label="Fechar cadastro de visitante" onClick={() => setModalVisitante(false)} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
+        <div className="pac-modal-fundo">
+          <div className="pac-modal pac-modal-estreito" role="dialog" aria-modal="true" aria-labelledby="visitante-titulo">
+            <div className="pac-modal-topo">
+              <h2 id="visitante-titulo">Registrar visitante</h2>
+              <button type="button" className="pac-icone-btn" aria-label="Fechar cadastro de visitante" onClick={() => setModalVisitante(false)}><i className="las la-times" aria-hidden="true"></i></button>
             </div>
-            <div style={{ padding: '25px' }}>
-              <form onSubmit={criarVisitante}>
-                <label htmlFor="recepcao-visitante-nome" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-user" aria-hidden="true"></i> Nome completo *</label>
-                <input id="recepcao-visitante-nome" required type="text" maxLength={160} placeholder="Nome do visitante" value={formVisitante.nome} onChange={e => setFormVisitante({...formVisitante, nome: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
-
-                <label htmlFor="recepcao-visitante-documento" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-id-card" aria-hidden="true"></i> Documento (RG/CPF)</label>
-                <input id="recepcao-visitante-documento" type="text" maxLength={40} placeholder="Documento (opcional)" value={formVisitante.documento} onChange={e => setFormVisitante({...formVisitante, documento: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '15px', boxSizing: 'border-box', outline: 'none' }} />
-
-                <label htmlFor="recepcao-visitante-destino" style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '5px', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}><i className="las la-map-marker" aria-hidden="true"></i> Destino</label>
-                <input id="recepcao-visitante-destino" type="text" maxLength={160} placeholder="Ex: Leito 104, UTI, Diretoria" value={formVisitante.destino} onChange={e => setFormVisitante({...formVisitante, destino: e.target.value})} style={{ width: '100%', padding: '11px 14px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', marginBottom: '20px', boxSizing: 'border-box', outline: 'none' }} />
-
-                <button type="submit" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', border: 'none', padding: '13px 20px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}>
-                  <i className="las la-door-open"></i> Registrar Entrada
-                </button>
-              </form>
-            </div>
+            <form onSubmit={criarVisitante}>
+              {erroFormVisitante && <p className="pac-erro" role="alert">{erroFormVisitante}</p>}
+              <div className="form-group"><label htmlFor="recepcao-visitante-nome">Nome completo *</label><input id="recepcao-visitante-nome" required maxLength={160} value={formVisitante.nome} onChange={e => setFormVisitante({ ...formVisitante, nome: e.target.value })} /></div>
+              <div className="form-group"><label htmlFor="recepcao-visitante-documento">Documento (RG/CPF)</label><input id="recepcao-visitante-documento" maxLength={40} value={formVisitante.documento} onChange={e => setFormVisitante({ ...formVisitante, documento: e.target.value })} /></div>
+              <div className="form-group"><label htmlFor="recepcao-visitante-destino">Destino</label><input id="recepcao-visitante-destino" maxLength={160} placeholder="Ex: Leito 104, UTI, Diretoria" value={formVisitante.destino} onChange={e => setFormVisitante({ ...formVisitante, destino: e.target.value })} /></div>
+              <div className="pac-rodape">
+                <button type="button" className="btn pac-btn-sec" onClick={() => setModalVisitante(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary"><i className="las la-door-open" aria-hidden="true"></i> Registrar entrada</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

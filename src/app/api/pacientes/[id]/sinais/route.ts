@@ -1,42 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auditar, exigir, lerJson } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
-import { findPatientInHospital } from '@/lib/pacientes'
-import { isRecord } from '@/lib/request-validation'
+import { pacienteAtivo, registrarEvento, textoOpcional } from '@/lib/pacientes'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    if (!['MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'TECNICO_ENFERMAGEM'].includes(session.user.cargo)) {
-      return NextResponse.json({ error: 'Cargo sem permissão para registrar sinais vitais' }, { status: 403 })
-    }
-
+    const { ator, negado } = await exigir('sinais:registrar')
+    if (negado) return negado
     const { id } = await params
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-    if (!await findPatientInHospital(id, hospitalId)) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
+    const { bloqueio } = await pacienteAtivo(id, ator.hospitalId)
+    if (bloqueio) return bloqueio
 
-    let body: unknown
-    try { body = await request.json() } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }) }
-    if (!isRecord(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    const body = await lerJson(request)
+    if (!body) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
 
-    const data: Record<string, string | null> = {}
-    for (const field of ['pressao', 'fc', 'fr', 'temp', 'satO2', 'glicemia']) {
-      const value = body[field]
-      if (value === undefined) continue
-      if (value !== null && (typeof value !== 'string' || value.length > 100)) {
-        return NextResponse.json({ error: `Valor inválido para ${field}` }, { status: 400 })
-      }
-      data[field] = value as string | null
-    }
+    const pressao = textoOpcional(body.pressao, 100)
+    const fc = textoOpcional(body.fc, 100)
+    const fr = textoOpcional(body.fr, 100)
+    const temp = textoOpcional(body.temp, 100)
+    const satO2 = textoOpcional(body.satO2, 100)
+    const glicemia = textoOpcional(body.glicemia, 100)
+    const valores = [pressao, fc, fr, temp, satO2, glicemia]
+    if (valores.some(valor => valor === undefined)) return NextResponse.json({ error: 'Valor de sinal vital inválido' }, { status: 400 })
+    if (!valores.some(Boolean)) return NextResponse.json({ error: 'Informe ao menos um sinal vital' }, { status: 400 })
 
-    const item = await prisma.sinalVital.create({
-      data: { ...data, pacienteId: id, profissional: session.user.name || 'Sistema' }
+    const item = await prisma.$transaction(async tx => {
+      const criado = await tx.sinalVital.create({
+        data: {
+          pacienteId: id,
+          pressao: pressao ?? null, fc: fc ?? null, fr: fr ?? null, temp: temp ?? null, satO2: satO2 ?? null, glicemia: glicemia ?? null,
+          profissional: ator.nome,
+          usuarioId: ator.id,
+        },
+      })
+      await registrarEvento(tx, ator, id, 'Sinais Vitais', `PA: ${pressao ?? '-'} | FC: ${fc ?? '-'}`)
+      return criado
     })
 
+    await auditar(ator, 'REGISTRAR_SINAIS', 'SinalVital', item.id, { pacienteId: id })
     return NextResponse.json(item, { status: 201 })
-  } catch {
+  } catch (error) {
+    console.error('Erro ao registrar sinais vitais:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

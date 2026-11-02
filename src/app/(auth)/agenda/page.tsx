@@ -1,7 +1,11 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import PacienteSelect from '@/components/ui/PacienteSelect';
+import { pode } from '@/lib/permissions';
+import { TRANSICOES_AGENDAMENTO } from '@/app/api/agendamentos/regras';
+import '../setores.css';
 import './agenda.css';
 
 import { inter } from '@/app/fonts'
@@ -35,15 +39,16 @@ interface Agendamento {
 
 export default function AgendaPage() {
   const { data: session } = useSession();
-  const hospitalId = (session?.user as any)?.hospitalId;
-  const usuario = session?.user as any;
-  
+  const podeGerir = pode(session?.user?.cargo, 'agenda:gerir');
+
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
-  const [pacientes, setPacientes] = useState<Array<{ id: string; nome: string }>>([]);
+  const [pacienteId, setPacienteId] = useState('');
   const [loading, setLoading] = useState(true);
   const [criando, setCriando] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  // Erro de carga troca a tabela; erro de ação aparece em aviso próprio e a tabela permanece.
   const [erro, setErro] = useState('');
+  const [erroAcao, setErroAcao] = useState('');
   
   const [filtroData, setFiltroData] = useState(dataLocalAtual);
   const [filtroEspecialidade, setFiltroEspecialidade] = useState('Todas');
@@ -74,32 +79,30 @@ export default function AgendaPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     carregarAgendamentos();
-    fetch('/api/pacientes').then(async response => {
-      if (!response.ok) throw new Error('Não foi possível carregar os pacientes.');
-      const data = await response.json();
-      setPacientes(Array.isArray(data) ? data.map((item: { id: string; nome: string }) => ({ id: item.id, nome: item.nome })) : []);
-    }).catch(error => setErro(error instanceof Error ? error.message : 'Erro ao carregar pacientes.'));
   }, []);
 
   const criarAgendamento = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formElement = event.currentTarget;
+    if (!pacienteId) { setErroAcao('Selecione o paciente.'); return; }
     setSalvando(true);
-    setErro('');
+    setErroAcao('');
     const form = new FormData(formElement);
     const dataHora = new Date(`${form.get('data')}T${form.get('hora')}:00`);
     try {
       const response = await fetch('/api/agendamentos', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pacienteId: form.get('pacienteId'), dataHora: dataHora.toISOString(), tipo: form.get('tipo'), especialidade: form.get('especialidade'), profissional: form.get('profissional') || undefined, sala: form.get('sala') || undefined, observacoes: form.get('observacoes') || undefined }),
+        body: JSON.stringify({ pacienteId, dataHora: dataHora.toISOString(), tipo: form.get('tipo'), especialidade: form.get('especialidade'), profissional: form.get('profissional') || undefined, sala: form.get('sala') || undefined, observacoes: form.get('observacoes') || undefined }),
       });
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || 'Não foi possível criar o agendamento.');
       await carregarAgendamentos();
+      setPacienteId('');
       setCriando(false);
     } catch (error) {
-      setErro(error instanceof Error ? error.message : 'Erro de conexão ao criar agendamento.');
+      setErroAcao(error instanceof Error ? error.message : 'Erro de conexão ao criar agendamento.');
     } finally {
       setSalvando(false);
     }
@@ -119,17 +122,16 @@ export default function AgendaPage() {
       });
       
       if (res.ok) {
-        carregarAgendamentos();
-        setAgendaSelecionada(null);
+        setErroAcao('');
+        void carregarAgendamentos();
       } else {
         const result = await res.json().catch(() => ({}));
-        setErro(result.error || 'Erro ao alterar o status do agendamento.');
-        setAgendaSelecionada(null);
+        setErroAcao(result.error || 'Erro ao alterar o status do agendamento.');
       }
-    } catch (error) {
-      setErro('Falha de conexão ao alterar o status do agendamento.');
-      setAgendaSelecionada(null);
+    } catch {
+      setErroAcao('Falha de conexão ao alterar o status do agendamento.');
     }
+    setAgendaSelecionada(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -179,12 +181,15 @@ export default function AgendaPage() {
         <div style={{ display: 'flex', gap: '12px' }}>
           <button 
             style={{ backgroundColor: '#0f172a', color: 'white', padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, border: '1px solid #0f172a', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}
-            onClick={() => { setErro(''); setCriando(true); }}
+            hidden={!podeGerir}
+            onClick={() => { setErroAcao(''); setCriando(true); }}
           >
             <i className="las la-plus-circle" style={{ fontSize: '18px', opacity: 0.9 }}></i> Novo Agendamento
           </button>
         </div>
       </div>
+
+      {erroAcao && !criando && <p role="alert" className="sc-erro">{erroAcao}</p>}
 
       {/* STATS */}
       <div className="agenda-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '32px' }}>
@@ -357,14 +362,15 @@ export default function AgendaPage() {
                         </span>
                       </td>
                       <td style={{ padding: '16px 24px', verticalAlign: 'middle', textAlign: 'center' }}>
-                        <button 
+                        {podeGerir && TRANSICOES_AGENDAMENTO[agenda.status].length > 0 && <button
+                          type="button"
                           style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', backgroundColor: 'transparent', border: '1px solid transparent', cursor: 'pointer', margin: '0 auto', transition: 'all 0.2s' }}
                           onClick={() => setAgendaSelecionada(agenda)}
                           title="Opções"
                           aria-label={`Abrir opções de atendimento para ${agenda.paciente.nome}`}
                         >
                           <i className="las la-ellipsis-v" style={{ fontSize: '18px' }}></i>
-                        </button>
+                        </button>}
                       </td>
                     </tr>
                   );
@@ -400,7 +406,7 @@ export default function AgendaPage() {
             <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               
               <button 
-                onClick={() => alterarStatus(agendaSelecionada.id, 'CONFIRMADO')}
+                disabled={!TRANSICOES_AGENDAMENTO[agendaSelecionada.status].includes('CONFIRMADO')} onClick={() => void alterarStatus(agendaSelecionada.id, 'CONFIRMADO')}
                 style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '8px', border: '1px solid #059669', backgroundColor: '#ecfdf5', color: '#065f46', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', cursor: 'pointer' }}
               >
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', color: '#059669' }}>
@@ -410,7 +416,7 @@ export default function AgendaPage() {
               </button>
               
               <button 
-                onClick={() => alterarStatus(agendaSelecionada.id, 'EM_ATENDIMENTO')}
+                disabled={!TRANSICOES_AGENDAMENTO[agendaSelecionada.status].includes('EM_ATENDIMENTO')} onClick={() => void alterarStatus(agendaSelecionada.id, 'EM_ATENDIMENTO')}
                 style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '8px', border: '1px solid #2563eb', backgroundColor: '#eff6ff', color: '#1e40af', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', cursor: 'pointer' }}
               >
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', color: '#2563eb' }}>
@@ -420,7 +426,7 @@ export default function AgendaPage() {
               </button>
 
               <button 
-                onClick={() => alterarStatus(agendaSelecionada.id, 'CONCLUIDO')}
+                disabled={!TRANSICOES_AGENDAMENTO[agendaSelecionada.status].includes('CONCLUIDO')} onClick={() => void alterarStatus(agendaSelecionada.id, 'CONCLUIDO')}
                 style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#ffffff', color: '#1e293b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', cursor: 'pointer' }}
               >
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', color: '#334155' }}>
@@ -432,7 +438,7 @@ export default function AgendaPage() {
               <div style={{ height: '1px', backgroundColor: '#94a3b8', margin: '4px 0' }}></div>
               
               <button 
-                onClick={() => alterarStatus(agendaSelecionada.id, 'CANCELADO')}
+                disabled={!TRANSICOES_AGENDAMENTO[agendaSelecionada.status].includes('CANCELADO')} onClick={() => void alterarStatus(agendaSelecionada.id, 'CANCELADO')}
                 style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '8px', border: '1px solid transparent', backgroundColor: 'transparent', color: '#475569', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
               >
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -450,10 +456,8 @@ export default function AgendaPage() {
         <div role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCriando(false); }} style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(15,23,42,.55)' }}>
           <form className="agenda-create-form" role="dialog" aria-modal="true" onSubmit={criarAgendamento} aria-labelledby="novo-agendamento-titulo" style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 560, padding: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 id="novo-agendamento-titulo" style={{ gridColumn: '1 / -1', margin: 0, color: '#0f172a' }}>Novo agendamento</h3>
-            {erro && <p role="alert" style={{ gridColumn: '1 / -1', color: '#b91c1c', margin: 0 }}>{erro}</p>}
-            <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>Paciente
-              <select required name="pacienteId" defaultValue="" disabled={!pacientes.length} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }}><option value="" disabled>{pacientes.length ? 'Selecione o paciente' : 'Nenhum paciente disponível'}</option>{pacientes.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select>
-            </label>
+            {erroAcao && <p role="alert" style={{ gridColumn: '1 / -1', color: '#b91c1c', margin: 0 }}>{erroAcao}</p>}
+            <div style={{ gridColumn: '1 / -1' }}><PacienteSelect required value={pacienteId} onChange={id => setPacienteId(id)} /></div>
             <label style={{ display: 'grid', gap: 6 }}>Data<input required name="data" type="date" defaultValue={filtroData} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
             <label style={{ display: 'grid', gap: 6 }}>Horário<input required name="hora" type="time" style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
             <label style={{ display: 'grid', gap: 6 }}>Tipo<input required name="tipo" defaultValue="Consulta" maxLength={80} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
@@ -461,7 +465,7 @@ export default function AgendaPage() {
             <label style={{ display: 'grid', gap: 6 }}>Profissional<input name="profissional" maxLength={120} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
             <label style={{ display: 'grid', gap: 6 }}>Sala<input name="sala" maxLength={80} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
             <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>Observações<textarea name="observacoes" maxLength={1000} rows={3} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
-            <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: 10 }}><button type="button" onClick={() => setCriando(false)} style={{ padding: '10px 16px' }}>Fechar</button><button disabled={salvando || pacientes.length === 0} type="submit" style={{ padding: '10px 16px', background: '#0f172a', color: '#fff', border: 0, borderRadius: 6 }}>{salvando ? 'Salvando…' : 'Criar agendamento'}</button></div>
+            <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: 10 }}><button type="button" onClick={() => setCriando(false)} style={{ padding: '10px 16px' }}>Fechar</button><button disabled={salvando || !pacienteId} type="submit" style={{ padding: '10px 16px', background: '#0f172a', color: '#fff', border: 0, borderRadius: 6 }}>{salvando ? 'Salvando…' : 'Criar agendamento'}</button></div>
           </form>
         </div>
       )}

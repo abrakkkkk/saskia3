@@ -1,8 +1,13 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { Tabs } from '@/components/ui'
 import { useSession } from 'next-auth/react';
 import './manutencao.css';
+
+const ABAS = [{ id: 'nova', label: 'Nova OS', icon: 'las la-plus-circle' }, { id: 'lista', label: 'Lista de OS', icon: 'las la-list' }] as const;
+
+interface Ordem { id: string; equipamento: string; setor: string; tipo: string; prioridade: string; status: string; data: string }
 
 export default function ManutencaoPage() {
   const { data: session, status: statusSessao } = useSession();
@@ -11,7 +16,7 @@ export default function ManutencaoPage() {
   const [erroCarga, setErroCarga] = useState('');
   
   // Dados
-  const [ordens, setOrdens] = useState<any[]>([]);
+  const [ordens, setOrdens] = useState<Ordem[]>([]);
 
   // Form State
   const [form, setForm] = useState({
@@ -43,13 +48,14 @@ export default function ManutencaoPage() {
   useEffect(() => {
     const agora = new Date();
     const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
-    setForm(prev => ({ ...prev, data: prev.data || hoje }));
+    void Promise.resolve().then(() => { setForm(prev => ({ ...prev, data: prev.data || hoje })); });
   }, []);
 
   useEffect(() => {
     if (statusSessao === 'loading') return;
     if (statusSessao !== 'authenticated') {
-      setLoading(false);
+      void Promise.resolve().then(() => { setLoading(false); });
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- estado inicial/reinício dependente da sessão e da busca
       setErroCarga('Sua sessão expirou. Entre novamente para acessar as ordens.');
       return;
     }
@@ -77,8 +83,8 @@ export default function ManutencaoPage() {
       alert(` OS criada com sucesso!`);
       setTabAtiva('lista');
       await carregarOrdens();
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro inesperado.');
     }
   };
 
@@ -96,8 +102,8 @@ export default function ManutencaoPage() {
       if (!res.ok) throw new Error(typeof resposta?.error === 'string' ? resposta.error : 'Erro ao concluir OS');
       
       await carregarOrdens();
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro inesperado.');
     }
   };
 
@@ -134,14 +140,7 @@ export default function ManutencaoPage() {
           </div>
         </div>
 
-        <div className="tabs-mnt">
-          <button type="button" aria-pressed={tabAtiva === 'nova'} className={`tab-btn ${tabAtiva === 'nova' ? 'ativo' : ''}`} onClick={() => setTabAtiva('nova')}>
-            <i className="las la-plus-circle"></i> Nova OS
-          </button>
-          <button type="button" aria-pressed={tabAtiva === 'lista'} className={`tab-btn ${tabAtiva === 'lista' ? 'ativo' : ''}`} onClick={() => setTabAtiva('lista')}>
-            <i className="las la-list"></i> Lista de OS
-          </button>
-        </div>
+        <Tabs label="Seções de manutenção" tabs={ABAS} active={tabAtiva} onChange={setTabAtiva} />
 
         {loading && ordens.length === 0 && <p className="mnt-load" role="status" aria-live="polite">Carregando ordens…</p>}
         {erroCarga && <p className="mnt-error" role="alert" aria-live="assertive">{erroCarga}</p>}

@@ -1,55 +1,38 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { exigir } from '@/lib/api-guard';
+
+const PASTA_ID = '1a0gzCh2yfoCIHQtQMRp-AJXuCPTAmoP6';
+const LIMITE_ARQUIVOS = 200;
+const INDISPONIVEL = { files: [], configured: false, message: 'Catálogo remoto indisponível.' };
 
 export async function GET() {
+  const { negado } = await exigir('autenticado');
+  if (negado) return negado;
+
+  const apiKey = process.env.GOOGLE_DRIVE_API_KEY;
+  if (!apiKey) return NextResponse.json(INDISPONIVEL);
+
   try {
-    const session = await auth();
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    if (!session.user.hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
-    const apiKey = process.env.GOOGLE_DRIVE_API_KEY;
-    const folderId = '1a0gzCh2yfoCIHQtQMRp-AJXuCPTAmoP6';
-
-    if (!apiKey) {
-      return NextResponse.json({ 
-        files: [], 
-        configured: false, 
-        message: 'API Key do Google Drive não configurada no ambiente.' 
-      }, { status: 200 });
-    }
-
-    // A API do Drive v3 precisa que informemos a pasta mãe (parents)
-    // Usamos trashed=false para não trazer arquivos da lixeira
-    const query = `'${folderId}' in parents and trashed=false`;
-    
-    // A query string deve ser codificada para URL
-    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size,webViewLink,webContentLink)&key=${apiKey}`;
-
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-      cache: 'no-store' 
+    const parametros = new URLSearchParams({
+      q: `'${PASTA_ID}' in parents and trashed=false`,
+      fields: 'files(id,name,mimeType,size,webViewLink,webContentLink)',
+      pageSize: String(LIMITE_ARQUIVOS),
+      key: apiKey,
     });
-
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?${parametros}`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
     if (!res.ok) {
-      console.warn("Falha ao comunicar com Google Drive API, operando com documentos locais.");
-      return NextResponse.json({ 
-        files: [], 
-        configured: false, 
-        message: 'Falha ao buscar arquivos remotos do Google Drive.' 
-      }, { status: 200 });
+      console.warn('Catálogo do Drive indisponível, status', res.status);
+      return NextResponse.json(INDISPONIVEL);
     }
 
-    const data = await res.json();
-    return NextResponse.json(data);
-
-  } catch (error: any) {
-    console.error("Erro interno na rota do Drive:", error);
-    return NextResponse.json({ 
-      files: [], 
-      configured: false, 
-      error: 'Erro interno ao consultar arquivos remotos.' 
-    }, { status: 200 });
+    const data: { files?: unknown } = await res.json();
+    const files = Array.isArray(data.files) ? data.files.slice(0, LIMITE_ARQUIVOS) : [];
+    return NextResponse.json({ files, configured: true });
+  } catch {
+    console.error('Falha ao consultar o catálogo do Drive');
+    return NextResponse.json(INDISPONIVEL);
   }
 }

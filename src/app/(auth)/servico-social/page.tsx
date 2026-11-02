@@ -1,9 +1,13 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import PacienteSelect from '@/components/ui/PacienteSelect';
+import { pode } from '@/lib/permissions';
 import './servico-social.css';
 
-function dataDoAtendimento(registro: any): Date | null {
+interface CasoSocial { id: string; pacienteNome?: string; situacao?: string; detalhe?: string; status?: string; createdAt: string }
+
+function dataDoAtendimento(registro: CasoSocial): Date | null {
   const dataInformada = typeof registro.detalhe === 'string'
     ? registro.detalhe.match(/(?:^|\n)Data do atendimento: (\d{4}-\d{2}-\d{2})(?:\n|$)/)?.[1]
     : undefined;
@@ -19,15 +23,16 @@ function dataDoAtendimento(registro: any): Date | null {
 
 export default function ServicoSocialPage() {
   const { data: session, status: sessionStatus } = useSession();
-  const [tabAtiva, setTabAtiva] = useState('atendimento');
+  const podeGerir = pode(session?.user?.cargo, 'social:gerir');
+  const [tabEscolhida, setTabAtiva] = useState('atendimento');
+  const tabAtiva = !podeGerir && tabEscolhida === 'atendimento' ? 'lista' : tabEscolhida;
   const [loading, setLoading] = useState(true);
   const [erroCarga, setErroCarga] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [feedbackAtendimento, setFeedbackAtendimento] = useState({ texto: '', erro: false });
   
   // Dados
-  const [pacientes, setPacientes] = useState<any[]>([]);
-  const [atendimentos, setAtendimentos] = useState<any[]>([]);
+  const [atendimentos, setAtendimentos] = useState<CasoSocial[]>([]);
 
   // Form State
   const [form, setForm] = useState({
@@ -47,14 +52,10 @@ export default function ServicoSocialPage() {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      const [resP, resA] = await Promise.all([
-        fetch('/api/pacientes?visao=servico-social', { cache: 'no-store' }),
-        fetch('/api/servico-social', { cache: 'no-store' }),
-      ]);
-      if (!resP.ok || !resA.ok) throw new Error('Não foi possível carregar os dados do Serviço Social. Atualize a página.');
-      const [dadosPacientes, dadosAtendimentos] = await Promise.all([resP.json(), resA.json()]);
-      if (!Array.isArray(dadosPacientes) || !Array.isArray(dadosAtendimentos)) throw new Error('A resposta do servidor está inválida.');
-      setPacientes(dadosPacientes);
+      const resA = await fetch('/api/servico-social', { cache: 'no-store' });
+      if (!resA.ok) throw new Error('Não foi possível carregar os dados do Serviço Social. Atualize a página.');
+      const dadosAtendimentos: unknown = await resA.json();
+      if (!Array.isArray(dadosAtendimentos)) throw new Error('A resposta do servidor está inválida.');
       setAtendimentos(dadosAtendimentos);
       setErroCarga('');
     } catch (e) {
@@ -67,7 +68,7 @@ export default function ServicoSocialPage() {
   useEffect(() => {
     if (sessionStatus === 'loading') return;
     if (sessionStatus !== 'authenticated' || !session?.user) {
-      setPacientes([]);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAtendimentos([]);
       setLoading(false);
       return;
@@ -109,7 +110,7 @@ export default function ServicoSocialPage() {
       setFeedbackAtendimento({ texto: 'Atendimento registrado com sucesso.', erro: false });
       await carregarDados();
       setTabAtiva('lista');
-    } catch (error: any) {
+    } catch (error) {
       setFeedbackAtendimento({ texto: error instanceof Error ? error.message : 'Não foi possível registrar o atendimento.', erro: true });
     } finally {
       setSalvando(false);
@@ -168,9 +169,9 @@ export default function ServicoSocialPage() {
           <h1><i className="las la-hands-helping" aria-hidden="true"></i> Serviço Social</h1>
             <p>Atendimento social, acolhimento e controle de demandas do paciente.</p>
           </div>
-          <button type="button" className="btn btn-success" onClick={() => setTabAtiva('atendimento')}>
+          {podeGerir && <button type="button" className="btn btn-success" onClick={() => setTabAtiva('atendimento')}>
             <i className="las la-plus-circle" aria-hidden="true"></i> Novo Atendimento
-          </button>
+          </button>}
         </div>
 
         <div className="stats-grid">
@@ -197,9 +198,9 @@ export default function ServicoSocialPage() {
         </div>
 
         <div className="tabs-ss" role="group" aria-label="Seções do Serviço Social">
-          <button type="button" aria-pressed={tabAtiva === 'atendimento'} className={`tab-btn ${tabAtiva === 'atendimento' ? 'ativo' : ''}`} onClick={() => setTabAtiva('atendimento')}>
+          {podeGerir && <button type="button" aria-pressed={tabAtiva === 'atendimento'} className={`tab-btn ${tabAtiva === 'atendimento' ? 'ativo' : ''}`} onClick={() => setTabAtiva('atendimento')}>
             <i className="las la-plus-circle" aria-hidden="true"></i> Atendimento
-          </button>
+          </button>}
           <button type="button" aria-pressed={tabAtiva === 'lista'} className={`tab-btn ${tabAtiva === 'lista' ? 'ativo' : ''}`} onClick={() => setTabAtiva('lista')}>
             <i className="las la-list" aria-hidden="true"></i> Lista Completa
           </button>
@@ -208,17 +209,11 @@ export default function ServicoSocialPage() {
           </button>
         </div>
 
-        {tabAtiva === 'atendimento' && (
+        {tabAtiva === 'atendimento' && podeGerir && (
           <div className="form-panel">
             <h3><i className="las la-hands-helping" aria-hidden="true"></i> Registrar Atendimento Social</h3>
             <div className="form-grid">
-              <div className="form-grupo">
-                <label htmlFor="social-paciente">Paciente *</label>
-                <select id="social-paciente" required value={form.pacienteId} onChange={e => setForm({...form, pacienteId: e.target.value})}>
-                  <option value="">Selecione um paciente...</option>
-                  {pacientes.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                </select>
-              </div>
+              <PacienteSelect required value={form.pacienteId} onChange={id => setForm(atual => ({ ...atual, pacienteId: id }))} />
               <div className="form-grupo">
                 <label htmlFor="social-tipo">Tipo de Atendimento *</label>
                 <select id="social-tipo" required value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>

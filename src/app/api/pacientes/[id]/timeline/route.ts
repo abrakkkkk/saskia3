@@ -1,31 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auditar, exigir, lerJson } from '@/lib/api-guard'
+import { pacienteAtivo } from '@/lib/pacientes'
 import { prisma } from '@/lib/db'
-import { findPatientInHospital } from '@/lib/pacientes'
-import { isRecord } from '@/lib/request-validation'
 
+// Eventos oficiais nascem no servidor, junto de cada registro clínico.
+// Aqui só entra anotação livre: o tipo é fixo e o corpo não consegue imitar um evento oficial.
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-
+    const { ator, negado } = await exigir('evolucao:registrar')
+    if (negado) return negado
     const { id } = await params
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-    if (!await findPatientInHospital(id, hospitalId)) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
+    const { bloqueio } = await pacienteAtivo(id, ator.hospitalId)
+    if (bloqueio) return bloqueio
 
-    let body: unknown
-    try { body = await request.json() } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }) }
-    if (!isRecord(body) || typeof body.tipo !== 'string' || !body.tipo.trim() || body.tipo.length > 100 || typeof body.descricao !== 'string' || !body.descricao.trim() || body.descricao.length > 5000) {
-      return NextResponse.json({ error: 'Tipo e descrição válidos são obrigatórios' }, { status: 400 })
-    }
+    const body = await lerJson(request)
+    const descricao = typeof body?.descricao === 'string' ? body.descricao.trim() : ''
+    if (!descricao || descricao.length > 5000) return NextResponse.json({ error: 'Descrição válida é obrigatória' }, { status: 400 })
 
     const item = await prisma.timelineEvent.create({
-      data: { tipo: body.tipo.trim(), descricao: body.descricao.trim(), pacienteId: id, user: session.user.name || 'Sistema' }
+      data: { pacienteId: id, tipo: 'Anotação', descricao, user: ator.nome, usuarioId: ator.id },
     })
 
+    await auditar(ator, 'REGISTRAR_ANOTACAO', 'TimelineEvent', item.id, { pacienteId: id })
     return NextResponse.json(item, { status: 201 })
-  } catch {
+  } catch (error) {
+    console.error('Erro ao registrar anotação:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

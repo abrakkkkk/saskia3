@@ -1,0 +1,56 @@
+/* Setores críticos e Conhecimento: complementos do Design System de globals.css (prefixo sc-) */
+
+.sc-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 0 16px; }
+.sc-form .form-group { min-width: 0; }
+.sc-form select, .sc-form input, .sc-form textarea { width: 100%; max-width: 100%; }
+.sc-completo { grid-column: 1 / -1; }
+.sc-check { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; color: var(--ui-text); font-size: 14px; }
+.sc-check input { width: 18px; height: 18px; min-height: 0; flex: none; }
+
+.sc-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sc-acoes-fim { justify-content: flex-end; margin-top: 16px; }
+.sc-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-bottom: 16px; }
+.sc-filtros .ui-search { margin-bottom: 0; }
+.sc-filtros select, .sc-filtros input[type='date'], .sc-filtros input[type='number'] {
+  min-height: 44px; padding: 8px 12px; border: 1px solid var(--ui-border); border-radius: 8px;
+  background: var(--ui-surface); color: var(--ui-text); font-size: 14px;
+}
+.sc-campo { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--ui-text-muted); }
+
+.sc-muted { color: var(--ui-text-muted); font-size: 13px; }
+.sc-nota { background: var(--ui-surface-muted); color: var(--ui-text); border: 1px solid var(--ui-border); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 14px; }
+.sc-nota-superficie { background: var(--ui-surface); }
+.sc-erro { background: #fee2e2; color: var(--ui-danger); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+.sc-historico { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 240px; font-size: 13px; }
+
+.sc-cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 16px; margin-bottom: 24px; }
+.sc-cartao { display: flex; flex-direction: column; gap: 10px; min-width: 0; background: var(--ui-surface); color: var(--ui-text); border: 1px solid var(--ui-border); border-radius: 8px; padding: 16px; }
+.sc-cartao h3 { font-size: 15px; font-weight: 600; color: var(--ui-text); overflow-wrap: anywhere; }
+.sc-cartao p { font-size: 13px; color: var(--ui-text-muted); overflow-wrap: anywhere; }
+.sc-cartao-topo { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+.sc-cartao-rodape { margin-top: auto; }
+.sc-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.sc-dados { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 10px 16px; font-size: 14px; color: var(--ui-text); }
+.sc-dados p { overflow-wrap: anywhere; }
+
+.sc-duas-colunas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 0 24px; }
+.sc-adesao { font-size: 40px; font-weight: 700; color: var(--ui-text); }
+
+.sc-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(5, 16, 36, 0.65); }
+.sc-modal-caixa { width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; background: var(--ui-surface); color: var(--ui-text); border-radius: 8px; padding: 20px; }
+.sc-modal-largo { max-width: 960px; }
+.sc-modal-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.sc-modal-topo h2 { font-size: 18px; font-weight: 600; color: var(--ui-text); overflow-wrap: anywhere; }
+.sc-modal-fechar { flex: none; width: 40px; height: 40px; border: none; border-radius: 8px; background: var(--ui-surface-muted); color: var(--ui-text); font-size: 18px; cursor: pointer; }
+.sc-visualizador { display: block; width: 100%; height: 65vh; border: 1px solid var(--ui-border); border-radius: 8px; }
+
+.sc-tabela-acoes { white-space: nowrap; }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media print {
+  body * { visibility: hidden; }
+  .sc-imprimir, .sc-imprimir * { visibility: visible; }
+  .sc-imprimir { position: absolute; inset: 0 auto auto 0; width: 100%; max-height: none; }
+  .sc-nao-imprimir { display: none !important; }
+}

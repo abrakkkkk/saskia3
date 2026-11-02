@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { exigir } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
 
 const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/
@@ -14,13 +14,13 @@ function parseDate(value: string | null, endOfDay = false) {
   return Number.isNaN(date.getTime()) ? undefined : date
 }
 
+// Só agregados: nenhum nome de paciente ou de profissional sai desta rota.
 export async function GET(request: NextRequest) {
-  try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
+  const { ator, negado } = await exigir('relatorio:ler')
+  if (negado) return negado
+  const { hospitalId } = ator
 
+  try {
     const params = request.nextUrl.searchParams
     const inicioValue = params.get('inicio')
     const fimValue = params.get('fim')
@@ -36,24 +36,24 @@ export async function GET(request: NextRequest) {
       prisma.paciente.count({ where: { hospitalId, arquivadoEm: null, status: { in: ['Internado', 'Internado - UTI'] } } }),
       prisma.obito.count({ where: { hospitalId, ...(inicioValue || fimValue ? { data: { gte: inicioValue ?? undefined, lte: fimValue ?? undefined } } : {}) } }),
       prisma.agendamento.groupBy({
-        by: ['status', 'profissional'],
+        by: ['status'],
         where: { hospitalId, ...(janela ? { dataHora: janela } : {}) },
         _count: { _all: true },
       }),
       prisma.cirurgia.count({ where: { hospitalId, ...(janela ? { dataHora: janela } : {}) } }),
-      prisma.utiLeito.findMany({ where: { hospitalId }, select: { tipo: true, status: true } }),
+      prisma.utiLeito.groupBy({ by: ['tipo', 'status'], where: { hospitalId }, _count: { _all: true } }),
     ])
 
     return NextResponse.json({
       pacientesNoPeriodo,
       internadosAgora,
       obitosNoPeriodo,
-      agendamentos: agendamentos.map(({ status, profissional, _count }) => ({ status, profissional, total: _count._all })),
       cirurgiasNoPeriodo,
-      leitos: leitos.map(({ tipo, status }) => ({ tipo, status })),
+      agendamentos: agendamentos.map(({ status, _count }) => ({ status, total: _count._all })),
+      leitos: leitos.map(({ tipo, status, _count }) => ({ tipo, status, total: _count._all })),
     }, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } })
   } catch (error) {
-    console.error('Erro ao carregar dados gerenciais:', error)
+    console.error('Erro ao carregar dados gerenciais:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Erro ao carregar dados gerenciais' }, { status: 500 })
   }
 }

@@ -1,8 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
-import { auth } from '@/lib/auth'
+import { exigir, lerJson, LIMITE_LISTA } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
-import { isRecord } from '@/lib/request-validation'
 
 function isValidDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
@@ -17,56 +16,45 @@ function isValidTime(value: string) {
 }
 
 export async function GET() {
+  const { ator, negado } = await exigir('operacao:ler')
+  if (negado) return negado
+
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-
     const reservas = await prisma.reservaSala.findMany({
-      where: { hospitalId },
+      where: { hospitalId: ator.hospitalId },
       orderBy: { data: 'desc' },
+      take: LIMITE_LISTA,
     })
-
     return NextResponse.json(reservas, { headers: { 'Cache-Control': 'private, no-store' } })
-  } catch (error) {
-    console.error('Erro ao buscar reservas de sala:', error)
+  } catch {
     return NextResponse.json({ error: 'Erro ao buscar reservas' }, { status: 500 })
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
+  const { ator, negado } = await exigir('operacao:abrir')
+  if (negado) return negado
+  const { hospitalId } = ator
+
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-
-    let body: unknown
-    try {
-      body = await request.json()
-    } catch {
-      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
-    }
-    if (!isRecord(body)
+    const body = await lerJson(request)
+    if (!body
       || typeof body.salaId !== 'string' || !body.salaId.trim()
-      || typeof body.profissional !== 'string' || !body.profissional.trim() || body.profissional.length > 160
-      || (body.paciente !== undefined && body.paciente !== null
-        && (typeof body.paciente !== 'string' || body.paciente.length > 160))
+      || (body.paciente !== undefined && body.paciente !== null && (typeof body.paciente !== 'string' || body.paciente.length > 160))
       || typeof body.data !== 'string' || !isValidDate(body.data)
       || typeof body.horaInicio !== 'string' || !isValidTime(body.horaInicio)
       || typeof body.horaFim !== 'string' || !isValidTime(body.horaFim)
       || body.horaFim <= body.horaInicio) {
-      return NextResponse.json({ error: 'Confira sala, profissional, data e horário da reserva' }, { status: 400 })
+      return NextResponse.json({ error: 'Confira sala, data e horário da reserva' }, { status: 400 })
     }
 
     const salaId = body.salaId.trim()
-    const profissional = body.profissional.trim()
+    const data = body.data
+    const horaInicio = body.horaInicio
+    const horaFim = body.horaFim
     const paciente = typeof body.paciente === 'string' && body.paciente.trim() ? body.paciente.trim() : null
-    const inicio = new Date(`${body.data}T${body.horaInicio}:00`)
-    const fim = new Date(`${body.data}T${body.horaFim}:00`)
+    const inicio = new Date(`${data}T${horaInicio}:00-03:00`)
+    const fim = new Date(`${data}T${horaFim}:00-03:00`)
     const agora = new Date()
     if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime()) || fim <= agora) {
       return NextResponse.json({ error: 'A reserva precisa terminar em um horário futuro' }, { status: 400 })
@@ -81,33 +69,29 @@ export async function POST(request: NextRequest) {
       if (!sala) return { error: 'sala' as const }
 
       const reservasDoDia = await tx.reservaSala.findMany({
-        where: { salaId, hospitalId, data: body.data as string, status: { in: ['ATIVA', 'RESERVADA'] } },
+        where: { salaId, hospitalId, data, status: { in: ['ATIVA', 'RESERVADA'] } },
         select: { horaInicio: true, horaFim: true },
       })
-      const conflito = reservasDoDia.some(item => (
-        item.horaInicio < (body.horaFim as string) && item.horaFim > (body.horaInicio as string)
-      ))
-      if (conflito) return { error: 'conflito' as const }
+      if (reservasDoDia.some(item => item.horaInicio < horaFim && item.horaFim > horaInicio)) {
+        return { error: 'conflito' as const }
+      }
 
-      const changed = await tx.sala.updateMany({
+      const alterada = await tx.sala.updateMany({
         where: { id: sala.id, hospitalId, status: sala.status },
-        data: {
-          status: statusReserva === 'ATIVA'
-            ? 'OCUPADO'
-            : sala.status === 'OCUPADO' ? 'OCUPADO' : 'RESERVADO',
-        },
+        data: { status: statusReserva === 'ATIVA' ? 'OCUPADO' : 'RESERVADO' },
       })
-      if (changed.count === 0) return { error: 'ocupada' as const }
+      if (alterada.count === 0) return { error: 'ocupada' as const }
 
       return tx.reservaSala.create({
         data: {
           hospitalId,
           salaId: sala.id,
-          profissional,
+          // Autoria vem da sessão: o nome do profissional não é aceito do cliente.
+          profissional: ator.nome,
           paciente,
-          data: body.data as string,
-          horaInicio: body.horaInicio as string,
-          horaFim: body.horaFim as string,
+          data,
+          horaInicio,
+          horaFim,
           status: statusReserva,
         },
       })
@@ -118,10 +102,8 @@ export async function POST(request: NextRequest) {
       if (reserva.error === 'conflito') return NextResponse.json({ error: 'Já existe uma reserva nesse horário' }, { status: 409 })
       return NextResponse.json({ error: 'A sala acabou de ser reservada. Atualize a tela.' }, { status: 409 })
     }
-
     return NextResponse.json(reserva, { status: 201 })
   } catch (error) {
-    console.error('Erro ao criar reserva de sala:', error)
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2034') {
       return NextResponse.json({ error: 'Conflito de reserva simultânea. Atualize a tela e tente novamente.' }, { status: 409 })
     }

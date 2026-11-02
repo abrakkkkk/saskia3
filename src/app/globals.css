@@ -2212,6 +2212,8 @@ button,
 :where(button, .btn):disabled {
   cursor: not-allowed;
   filter: saturate(0.7);
+}
+
 :focus-visible { outline: 3px solid var(--ui-blue-500); outline-offset: 2px; }
 
 .app-container { min-width: 0; }

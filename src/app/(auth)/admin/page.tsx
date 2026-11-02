@@ -1,7 +1,9 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { PageHeader } from '@/components/ui';
+import { pode } from '@/lib/permissions';
 import './admin.css';
 
 interface Ticket {
@@ -16,9 +18,13 @@ interface Ticket {
   respostas?: { data: string; resposta: string; respondente: string }[];
 }
 
+type TicketApi = { id: string; numero?: number | string; titulo: string; descricao: string; status: string; prioridade: string; createdAt: string; solicitante: string; respostas?: unknown };
+
 export default function AdminPage() {
+
+
   const { data: session, status: sessionStatus } = useSession();
-  const isAdmin = (session?.user as any)?.cargo === 'ADMIN';
+  const isAdmin = pode(session?.user?.cargo, 'admin:acesso');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [erroTickets, setErroTickets] = useState('');
   const [carregandoTickets, setCarregandoTickets] = useState(true);
@@ -53,7 +59,7 @@ export default function AdminPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Não foi possível carregar os tickets.');
       if (!Array.isArray(data)) throw new Error('Resposta de tickets inválida.');
-      setTickets(data.map((t: any) => ({
+      setTickets((data as TicketApi[]).map(t => ({
         id: t.id,
         numero: `SUP-${t.numero || t.id.slice(0,6)}`,
         titulo: t.titulo,
@@ -62,7 +68,7 @@ export default function AdminPage() {
         prioridade: mapPrioridade(t.prioridade),
         data: t.createdAt,
         solicitante: t.solicitante,
-        respostas: Array.isArray(t.respostas) ? t.respostas : []
+        respostas: Array.isArray(t.respostas) ? (t.respostas as Ticket['respostas']) : []
       })));
       setErroTickets('');
     } catch (error) {
@@ -73,11 +79,12 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    fetchTickets();
+    void Promise.resolve().then(() => { fetchTickets(); });
     const interval = setInterval(() => {
-      fetchTickets();
-    }, 5000);
+      if (document.visibilityState === 'visible') fetchTickets();
+    }, 30000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchTickets só muda com isAdmin
   }, [isAdmin]);
 
   if (sessionStatus === 'authenticated' && !isAdmin) {
@@ -105,13 +112,7 @@ export default function AdminPage() {
       return;
     }
 
-    const respostasAtuais = ticketSelecionado.respostas || [];
-    const novasRespostas = [
-      ...respostasAtuais, 
-      { data: new Date().toISOString(), resposta: respostaTexto, respondente: "Administrador" }
-    ];
-
-    setSalvandoResposta(true);
+setSalvandoResposta(true);
     setErroResposta('');
     try {
       const response = await fetch(`/api/tickets/${ticketSelecionado.id}`, {
@@ -119,7 +120,7 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           status: mapStatusToEnum(respostaStatus),
-          respostas: novasRespostas 
+          resposta: respostaTexto.trim()
         })
       });
       const result = await response.json();
@@ -134,17 +135,13 @@ export default function AdminPage() {
     }
   };
 
-  const verTicket = (ticket: Ticket) => {
-    alert(` TICKET ${ticket.numero}\n\nTítulo: ${ticket.titulo}\nDescrição: ${ticket.descricao}\nStatus: ${ticket.status}\nPrioridade: ${ticket.prioridade}\nSolicitante: ${ticket.solicitante}`);
-  };
-
-  const getPrioridadeClasse = (p: string) => {
-    const c: any = { "Baixa":"prioridade-baixa", "Média":"prioridade-media", "Alta":"prioridade-alta", "Urgente":"prioridade-urgente" };
+const getPrioridadeClasse = (p: string) => {
+    const c: Record<string, string> = { "Baixa":"prioridade-baixa", "Média":"prioridade-media", "Alta":"prioridade-alta", "Urgente":"prioridade-urgente" };
     return c[p] || "";
   };
 
   const getPrioridadeIcone = (p: string) => {
-    const i: any = { "Baixa":"", "Média":"", "Alta":"", "Urgente":"" };
+    const i: Record<string, string> = { "Baixa":"", "Média":"", "Alta":"", "Urgente":"" };
     return i[p] || "";
   };
 
@@ -154,8 +151,7 @@ export default function AdminPage() {
 
   return (
     <div className="conteudo admin-page">
-      <h2><i className="las la-hospital"></i> Painel Administrativo</h2>
-      <p>Gerencie toda a plataforma da Saskia Saúde Integrada.</p>
+      <PageHeader icon="las la-hospital" title="Painel Administrativo" subtitle="Configuração do hospital, usuários e fila de suporte." />
 
       <div className="dashboard-cards">
         <Link href="/admin-configuracao" className="card-admin">
@@ -177,11 +173,6 @@ export default function AdminPage() {
           <i className="las la-file-alt"></i>
           <h3>Modelos de Prontuários</h3>
           <p>Padronize os registros clínicos</p>
-        </Link>
-        <Link href="/admin-financeiro" className="card-admin">
-          <i className="las la-coins"></i>
-          <h3>Financeiro</h3>
-          <p>Gestão de licenças e pagamentos</p>
         </Link>
         <Link href="/admin-config-dashboard" className="card-admin">
           <i className="las la-sliders-h"></i>
@@ -249,7 +240,7 @@ export default function AdminPage() {
                       <td><span className={`status-ticket ${statusClass}`}>{t.status}</span></td>
                       <td>{new Date(t.data).toLocaleDateString('pt-BR')}</td>
                       <td>
-                        <button className="btn-ver-ticket" onClick={() => verTicket(t)} title="Ver Detalhes" aria-label={`Ver detalhes do ticket ${t.numero}`}>
+                        <button className="btn-ver-ticket" onClick={() => abrirModal(t)} title="Ver Detalhes" aria-label={`Ver detalhes do ticket ${t.numero}`}>
                           <i className="las la-eye"></i>
                         </button>
                         <button className="btn-responder" onClick={() => abrirModal(t)} title="Responder" aria-label={`Responder ao ticket ${t.numero}`}>
@@ -281,6 +272,7 @@ export default function AdminPage() {
                 <p style={{marginTop:'5px', fontSize:'13px', color:'#475569'}}>{ticketSelecionado.descricao}</p>
               </div>
               
+              {(ticketSelecionado.respostas ?? []).length > 0 && <div className="ticket-info-box"><strong>Respostas anteriores:</strong>{(ticketSelecionado.respostas ?? []).map((r, i) => <p key={i} style={{marginTop:'5px', fontSize:'13px'}}>{r.respondente}, {new Date(r.data).toLocaleString('pt-BR')}: {r.resposta}</p>)}</div>}
               <label htmlFor="admin-ticket-reply">Resposta / Atualização</label>
               <textarea 
                 id="admin-ticket-reply"

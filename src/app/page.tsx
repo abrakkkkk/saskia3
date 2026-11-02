@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 import { Hospital, Mail, Lock, LogIn, AlertTriangle } from 'lucide-react'
 import { inter } from '@/app/fonts'
 
@@ -73,7 +74,8 @@ export default function LoginPage() {
       })
 
       if (resultado?.error || !resultado?.ok) {
-        setErro('Não foi possível autenticar. Confira a unidade, o e-mail e a senha.')
+        // Mensagem única: não revela se a conta existe, está inativa ou bloqueada por excesso de tentativas.
+        setErro('Não foi possível entrar. Confira a unidade, o e-mail e a senha, ou tente novamente em alguns minutos.')
         setLoading(false)
       } else {
         router.push('/dashboard')
@@ -202,6 +204,10 @@ export default function LoginPage() {
               </button>
             </div>
           </form>
+
+          <p className="mt-6 text-center text-sm text-slate-300">
+            <Link href="/politicas-privacidade" className="underline hover:text-white">Política de Privacidade</Link>
+          </p>
 
         </div>
 

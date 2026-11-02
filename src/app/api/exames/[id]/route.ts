@@ -1,92 +1,87 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { StatusExame } from '@prisma/client'
-import { auth } from '@/lib/auth'
+import type { Prisma, StatusExame } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { isRecord } from '@/lib/request-validation'
+import { auditar, exigir, lerJson } from '@/lib/api-guard'
+import { pode, type Permissao } from '@/lib/permissions'
 
-const statusPermitidos = new Set([
-  'COLETADO',
-  'EM_ANALISE',
-  'CONCLUIDO',
-  'ALTERADO_CRITICO',
-  'CANCELADO',
-])
+const PERMISSAO_POR_STATUS: Record<string, Permissao> = {
+  COLETADO: 'exame:coletar',
+  EM_ANALISE: 'exame:coletar',
+  CONCLUIDO: 'exame:laudar',
+  ALTERADO_CRITICO: 'exame:laudar',
+  CANCELADO: 'exame:solicitar',
+}
+
+/** Só avança o status e grava o laudo em `resultado`. Os dados da solicitação nunca são alterados aqui. */
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    const { ator, negado } = await exigir('autenticado')
+    if (negado) return negado
 
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-
-    let body: unknown
-    try {
-      body = await request.json()
-    } catch {
-      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
-    }
-    if (!isRecord(body)
-      || Object.keys(body).some(key => !['status', 'resultado', 'observacoes'].includes(key))
-      || typeof body.status !== 'string' || !statusPermitidos.has(body.status)
+    const body = await lerJson(request)
+    if (!body
+      || Object.keys(body).some(key => !['status', 'resultado'].includes(key))
+      || typeof body.status !== 'string' || !PERMISSAO_POR_STATUS[body.status]
       || (body.resultado !== undefined && body.resultado !== null
-        && (typeof body.resultado !== 'string' || body.resultado.length > 5000))
-      || (body.observacoes !== undefined && body.observacoes !== null
-        && (typeof body.observacoes !== 'string' || body.observacoes.length > 2000))) {
+        && (typeof body.resultado !== 'string' || body.resultado.length > 5000))) {
       return NextResponse.json({ error: 'Dados do exame inválidos' }, { status: 400 })
+    }
+    if (!pode(ator.cargo, PERMISSAO_POR_STATUS[body.status])) {
+      return NextResponse.json({ error: 'Você não tem permissão para esta ação' }, { status: 403 })
     }
 
     const { id } = await params
-    const resultado = await prisma.$transaction(async tx => {
-      const exame = await tx.exame.findFirst({
-        where: { id, hospitalId },
-        select: { id: true, status: true },
-      })
-      if (!exame) return { erro: 'nao_encontrado' as const }
+    const novoStatus = body.status as StatusExame
+    const laudando = novoStatus === 'CONCLUIDO' || novoStatus === 'ALTERADO_CRITICO'
+    const laudo = typeof body.resultado === 'string' ? body.resultado.trim() : ''
 
-      if (exame.status === 'CANCELADO' || exame.status === 'CONCLUIDO' || exame.status === 'ALTERADO_CRITICO') {
-        return { erro: 'encerrado' as const }
-      }
-      if (body.status === 'COLETADO' && exame.status !== 'SOLICITADO' && exame.status !== 'AGENDADO') {
-        return { erro: 'transicao' as const }
-      }
-      if (body.status === 'EM_ANALISE' && exame.status !== 'COLETADO' && exame.status !== 'EM_ANALISE') {
-        return { erro: 'transicao' as const }
-      }
-      if ((body.status === 'CONCLUIDO' || body.status === 'ALTERADO_CRITICO')
-        && ((exame.status !== 'COLETADO' && exame.status !== 'EM_ANALISE')
-          || typeof body.resultado !== 'string' || !body.resultado.trim())) {
-        return { erro: 'resultado' as const }
-      }
-
-      const data: { status: StatusExame; resultado?: string | null; observacoes?: string | null } = {
-        status: body.status as StatusExame,
-      }
-      if (body.resultado !== undefined) data.resultado = typeof body.resultado === 'string' && body.resultado.trim() ? body.resultado.trim() : null
-      if (body.observacoes !== undefined) data.observacoes = typeof body.observacoes === 'string' && body.observacoes.trim() ? body.observacoes.trim() : null
-
-      const atualizado = await tx.exame.updateMany({
-        where: { id, hospitalId, status: exame.status },
-        data,
-      })
-      if (!atualizado.count) return { erro: 'conflito' as const }
-
-      return tx.exame.findFirst({
-        where: { id, hospitalId },
-        include: { paciente: { select: { nome: true, cpf: true } } },
-      })
+    const exame = await prisma.exame.findFirst({
+      where: { id, hospitalId: ator.hospitalId },
+      select: { id: true, status: true, pacienteId: true, nome: true },
     })
+    if (!exame) return NextResponse.json({ error: 'Exame não encontrado' }, { status: 404 })
 
-    if (!resultado) return NextResponse.json({ error: 'Não foi possível atualizar o exame' }, { status: 500 })
-    if ('erro' in resultado) {
-      if (resultado.erro === 'nao_encontrado') return NextResponse.json({ error: 'Exame não encontrado' }, { status: 404 })
-      if (resultado.erro === 'resultado') return NextResponse.json({ error: 'Informe o resultado antes de concluir o exame' }, { status: 400 })
-      if (resultado.erro === 'transicao') return NextResponse.json({ error: 'Transição de status inválida para este exame' }, { status: 409 })
-      if (resultado.erro === 'encerrado') return NextResponse.json({ error: 'Este exame já foi encerrado' }, { status: 409 })
+    if (exame.status === 'CANCELADO' || exame.status === 'CONCLUIDO' || exame.status === 'ALTERADO_CRITICO') {
+      return NextResponse.json({ error: 'Este exame já foi encerrado' }, { status: 409 })
+    }
+    const transicaoValida =
+      novoStatus === 'CANCELADO'
+      || (novoStatus === 'COLETADO' && (exame.status === 'SOLICITADO' || exame.status === 'AGENDADO'))
+      || (novoStatus === 'EM_ANALISE' && (exame.status === 'COLETADO' || exame.status === 'EM_ANALISE'))
+      || (laudando && (exame.status === 'COLETADO' || exame.status === 'EM_ANALISE'))
+    if (!transicaoValida) {
+      return NextResponse.json({ error: 'Transição de status inválida para este exame' }, { status: 409 })
+    }
+    if (laudando && !laudo) {
+      return NextResponse.json({ error: 'Informe o resultado antes de concluir o exame' }, { status: 400 })
+    }
+
+    const data: Prisma.ExameUncheckedUpdateManyInput = { status: novoStatus }
+    if (laudando) {
+      data.resultado = laudo
+      data.liberadoPorId = ator.id
+      data.liberadoEm = new Date()
+    }
+
+    const atualizado = await prisma.exame.updateMany({
+      where: { id, hospitalId: ator.hospitalId, status: exame.status },
+      data,
+    })
+    if (!atualizado.count) {
       return NextResponse.json({ error: 'O exame foi atualizado em paralelo. Atualize a tela.' }, { status: 409 })
     }
-    return NextResponse.json(resultado)
+
+    await auditar(ator, `EXAME_${novoStatus}`, 'Exame', id, { de: exame.status, pacienteId: exame.pacienteId, nome: exame.nome })
+    return NextResponse.json(await prisma.exame.findFirst({
+      where: { id, hospitalId: ator.hospitalId },
+      include: {
+        paciente: { select: { nome: true, nascimento: true } },
+        solicitante: { select: { nome: true } },
+        liberadoPor: { select: { nome: true } },
+      },
+    }))
   } catch (error) {
-    console.error('Erro ao atualizar exame:', error)
+    console.error('Erro ao atualizar exame:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Erro ao atualizar exame' }, { status: 500 })
   }
 }

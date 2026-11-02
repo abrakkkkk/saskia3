@@ -1,8 +1,9 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Tabs } from '@/components/ui'
 import { useSession } from 'next-auth/react'
-import { CheckCircle2, Clock3, RefreshCw, Search, ShieldAlert } from 'lucide-react'
+import { CheckCircle2, RefreshCw, Search, ShieldAlert } from 'lucide-react'
 import './equipe-seguranca.css'
 
 type Ocorrencia = {
@@ -17,13 +18,17 @@ type Ocorrencia = {
   dataResolucao: string | null
 }
 
+const ABAS = [{ id: 'ativas', label: 'Ativas', icon: 'las la-clock' }, { id: 'historico', label: 'Encerradas', icon: 'las la-check-circle' }] as const
+
 export default function EquipeSegurancaPage() {
-  const { data: session, status: sessionStatus } = useSession()
+  const { status: sessionStatus } = useSession()
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filtro, setFiltro] = useState<'ativas' | 'historico'>('ativas')
   const [busca, setBusca] = useState('')
+  const [novo, setNovo] = useState({ tipo: 'Ronda', local: '', relato: '' })
+  const [registrando, setRegistrando] = useState(false)
 
   const carregar = useCallback(async () => {
     setLoading(true)
@@ -47,13 +52,35 @@ export default function EquipeSegurancaPage() {
     }
   }, [sessionStatus])
 
-  useEffect(() => { void carregar() }, [carregar, sessionStatus])
+  useEffect(() => { void Promise.resolve().then(carregar) }, [carregar])
 
   const ativas = useMemo(() => ocorrencias.filter(item => !item.resolvido), [ocorrencias])
   const historico = useMemo(() => ocorrencias.filter(item => item.resolvido), [ocorrencias])
   const lista = (filtro === 'ativas' ? ativas : historico).filter(item =>
     `${item.tipo} ${item.local} ${item.relato} ${item.resolvidoPor ?? ''}`.toLowerCase().includes(busca.toLowerCase()),
   )
+
+  const registrar = async (evento: React.FormEvent) => {
+    evento.preventDefault()
+    if (registrando) return
+    setRegistrando(true)
+    setError('')
+    try {
+      const response = await fetch('/api/equipe-seguranca', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(novo),
+      })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(payload?.error || 'Não foi possível registrar a ocorrência.')
+      setNovo({ tipo: 'Ronda', local: '', relato: '' })
+      await carregar()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Não foi possível registrar a ocorrência.')
+    } finally {
+      setRegistrando(false)
+    }
+  }
 
   const resolver = async (id: string) => {
     setError('')
@@ -105,14 +132,29 @@ export default function EquipeSegurancaPage() {
           <span>Acionamentos de emergência estão desativados até a aprovação do fluxo institucional.</span>
         </div>
 
-        <div className="tabs-seg" role="tablist" aria-label="Registros de segurança">
-          <button className={`tab-btn ${filtro === 'ativas' ? 'ativo' : ''}`} type="button" role="tab" aria-selected={filtro === 'ativas'} onClick={() => setFiltro('ativas')}>
-            <Clock3 size={16} aria-hidden="true" /> Ativas
-          </button>
-          <button className={`tab-btn ${filtro === 'historico' ? 'ativo' : ''}`} type="button" role="tab" aria-selected={filtro === 'historico'} onClick={() => setFiltro('historico')}>
-            <CheckCircle2 size={16} aria-hidden="true" /> Encerradas
-          </button>
-        </div>
+        <form className="form-panel" onSubmit={registrar} aria-label="Registrar ocorrência">
+          <h2>Registrar ocorrência</h2>
+          <div className="form-grid">
+            <div className="form-grupo">
+              <label htmlFor="seg-tipo">Tipo</label>
+              <select id="seg-tipo" value={novo.tipo} onChange={e => setNovo({ ...novo, tipo: e.target.value })}>
+                <option>Ronda</option><option>Acesso indevido</option><option>Furto ou perda</option>
+                <option>Conflito</option><option>Dano ao patrimônio</option><option>Outro</option>
+              </select>
+            </div>
+            <div className="form-grupo">
+              <label htmlFor="seg-local">Local</label>
+              <input id="seg-local" required maxLength={160} value={novo.local} onChange={e => setNovo({ ...novo, local: e.target.value })} />
+            </div>
+            <div className="form-grupo full">
+              <label htmlFor="seg-relato">Relato</label>
+              <textarea id="seg-relato" required rows={3} maxLength={4000} value={novo.relato} onChange={e => setNovo({ ...novo, relato: e.target.value })} />
+            </div>
+          </div>
+          <button className="btn btn-primary" type="submit" disabled={registrando}>{registrando ? 'Registrando…' : 'Registrar ocorrência'}</button>
+        </form>
+
+        <Tabs label="Registros de segurança" tabs={ABAS} active={filtro} onChange={setFiltro} />
 
         <div className="search-box">
           <Search size={16} aria-hidden="true" />

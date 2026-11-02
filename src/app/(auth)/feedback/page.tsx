@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
@@ -39,6 +39,13 @@ const TIPO_LABEL: Record<TipoFeedback, string> = {
   bug: 'Bug',
 };
 
+const TIPO_PLURAL: Record<TipoFeedback, string> = {
+  sugestao: 'Sugestões',
+  elogio: 'Elogios',
+  reclamacao: 'Reclamações',
+  bug: 'Bugs',
+};
+
 const TIPO_COLORS: Record<TipoFeedback, { bg: string, text: string, border: string }> = {
   sugestao: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-500' },
   elogio: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-500' },
@@ -46,7 +53,7 @@ const TIPO_COLORS: Record<TipoFeedback, { bg: string, text: string, border: stri
   bug: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-500' },
 };
 
-function mapearFeedback(item: any): Feedback {
+function mapearFeedback(item: { id?: unknown; mensagem?: unknown; tipo?: unknown; createdAt?: unknown; status?: unknown; usuario?: { nome?: string } } | null): Feedback {
   const texto = typeof item?.mensagem === 'string' ? item.mensagem : '';
   const marcadorResposta = '\n\n[RESPOSTA DA EQUIPE]:';
   const separadorResposta = texto.indexOf(marcadorResposta);
@@ -78,9 +85,9 @@ function mapearFeedback(item: any): Feedback {
 
 export default function FeedbackPage() {
   const { data: session, status: sessionStatus } = useSession();
-  const hospitalId = (session?.user as any)?.hospitalId;
+  const hospitalId = session?.user?.hospitalId;
   const usuarioId = session?.user?.id;
-  const isAdmin = (session?.user as any)?.cargo === 'ADMIN';
+  const isAdmin = session?.user?.cargo === 'ADMIN';
   
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [filtro, setFiltro] = useState<TipoFeedback | 'todos'>('todos');
@@ -121,6 +128,7 @@ export default function FeedbackPage() {
   useEffect(() => {
     if (sessionStatus === 'loading') return;
     if (!hospitalId || !usuarioId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- estado inicial/reinício dependente da sessão e da busca
       setFeedbacks([]);
       setErro('Faça login para acessar os feedbacks.');
       setCarregando(false);
@@ -214,11 +222,11 @@ export default function FeedbackPage() {
       
       {/* Header */}
       <div>
-        <h2 className="text-2xl sm:text-[1.75rem] font-bold text-slate-800 flex items-center gap-2 leading-tight">
+        <h2 className="text-2xl sm:text-[1.75rem] font-bold text-white flex items-center gap-2 leading-tight">
           <MessageSquare aria-hidden="true" className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-blue-900" />
           Feedback / Sugestão
         </h2>
-        <p className="text-slate-500 mt-1">Ajude-nos a melhorar o sistema enviando suas observações.</p>
+        <p className="text-slate-200 mt-1">Ajude-nos a melhorar o sistema enviando suas observações.</p>
       </div>
 
       {erro && <div role="alert" aria-live="assertive" className="rounded-xl border border-red-200 border-l-4 border-l-red-600 bg-red-50 p-3 sm:p-4 text-sm text-red-800 leading-relaxed">{erro}</div>}
@@ -230,7 +238,7 @@ export default function FeedbackPage() {
           return (
             <div key={t} className={`bg-white p-3 sm:p-5 rounded-xl shadow-sm border border-slate-200 border-l-4 ${TIPO_COLORS[t].border} flex min-w-0 flex-col items-center justify-center text-center`}>
               <h4 className="text-sm font-medium text-slate-500 flex items-center gap-1.5 mb-2">
-                <Icon aria-hidden="true" className="w-4 h-4 shrink-0" /> {TIPO_LABEL[t]}s
+                <Icon aria-hidden="true" className="w-4 h-4 shrink-0" /> {TIPO_PLURAL[t]}
               </h4>
               <div className={`text-3xl font-bold ${TIPO_COLORS[t].text}`}>{stats[t]}</div>
             </div>

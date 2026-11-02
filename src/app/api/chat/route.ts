@@ -1,89 +1,82 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server'
+import { exigir, lerJson } from '@/lib/api-guard'
+import { prisma } from '@/lib/db'
+
+const PAGINA = 200
+const CAMPOS = {
+  id: true, texto: true, dataHora: true,
+  sender: { select: { email: true } },
+  recipient: { select: { email: true } },
+} as const
+
+type Registro = { id: string; texto: string; dataHora: Date; sender: { email: string } | null; recipient: { email: string } | null }
+const apresentar = (m: Registro) => ({ id: m.id, de: m.sender?.email, para: m.recipient?.email, texto: m.texto, data: m.dataHora })
 
 export async function GET(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  const hospitalId = session.user.hospitalId;
-  if (!hospitalId || !session.user.id || !session.user.email) return NextResponse.json({ error: 'Identidade ou hospital não identificado' }, { status: 403 });
-  const peerEmail = request.nextUrl.searchParams.get('para')?.trim().toLowerCase();
-  if (!peerEmail || peerEmail.length > 254) return NextResponse.json({ error: 'Destinatário obrigatório' }, { status: 400 });
+  const { ator, negado } = await exigir('autenticado')
+  if (negado) return negado
+
+  const params = request.nextUrl.searchParams
+  const email = params.get('para')?.trim().toLowerCase()
+  if (!email || email.length > 254) return NextResponse.json({ error: 'Destinatário obrigatório' }, { status: 400 })
+  const antes = params.get('antes')
+  const limite = antes ? new Date(antes) : null
+  if (limite && Number.isNaN(limite.getTime())) return NextResponse.json({ error: 'Data inválida' }, { status: 400 })
 
   try {
-    const recipient = await prisma.usuario.findFirst({
-      where: { hospitalId, email: peerEmail, ativo: true },
-      select: { id: true, email: true },
-    });
-    if (!recipient) return NextResponse.json({ error: 'Destinatário não encontrado neste hospital' }, { status: 404 });
-    if (recipient.id === session.user.id) return NextResponse.json({ error: 'Não é possível abrir conversa consigo mesmo' }, { status: 400 });
+    const contato = await prisma.usuario.findFirst({ where: { hospitalId: ator.hospitalId, email, ativo: true }, select: { id: true } })
+    if (!contato) return NextResponse.json({ error: 'Destinatário não encontrado neste hospital' }, { status: 404 })
+    if (contato.id === ator.id) return NextResponse.json({ error: 'Não é possível abrir conversa consigo mesmo' }, { status: 400 })
 
     const mensagens = await prisma.mensagemChat.findMany({
       where: {
-        hospitalId,
+        hospitalId: ator.hospitalId,
+        ...(limite ? { dataHora: { lt: limite } } : {}),
         OR: [
-          { senderId: session.user.id, recipientId: recipient.id },
-          { senderId: recipient.id, recipientId: session.user.id },
+          { senderId: ator.id, recipientId: contato.id },
+          { senderId: contato.id, recipientId: ator.id },
         ],
       },
       orderBy: { dataHora: 'desc' },
-      take: 200,
-      select: {
-        id: true, texto: true, dataHora: true,
-        sender: { select: { email: true } },
-        recipient: { select: { email: true } },
-      },
-    });
-    return NextResponse.json(mensagens.reverse().map((message) => ({
-      id: message.id,
-      de: message.sender?.email,
-      para: message.recipient?.email,
-      texto: message.texto,
-      data: message.dataHora,
-    })));
+      take: PAGINA,
+      select: CAMPOS,
+    })
+    return NextResponse.json(mensagens.reverse().map(apresentar))
   } catch {
-    return NextResponse.json({ error: 'Erro ao buscar mensagens' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao buscar mensagens' }, { status: 500 })
   }
 }
 
-export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  const hospitalId = session.user.hospitalId;
-  if (!hospitalId || !session.user.id || !session.user.email) return NextResponse.json({ error: 'Identidade ou hospital não identificado' }, { status: 403 });
+export async function POST(request: Request) {
+  const { ator, negado } = await exigir('autenticado')
+  if (negado) return negado
 
-  let body: unknown;
-  try { body = await request.json(); } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }); }
-  if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
-  const payload = body as Record<string, unknown>;
-  if (typeof payload.para !== 'string' || !payload.para.trim() || payload.para.length > 254 || typeof payload.texto !== 'string' || !payload.texto.trim() || payload.texto.length > 4000) {
-    return NextResponse.json({ error: 'Destinatário e mensagem válidos são obrigatórios' }, { status: 400 });
+  const body = await lerJson(request)
+  if (!body || typeof body.para !== 'string' || !body.para.trim() || body.para.length > 254
+    || typeof body.texto !== 'string' || !body.texto.trim() || body.texto.length > 4000) {
+    return NextResponse.json({ error: 'Destinatário e mensagem válidos são obrigatórios' }, { status: 400 })
   }
 
   try {
-    const recipient = await prisma.usuario.findFirst({
-      where: { hospitalId, email: payload.para.trim().toLowerCase(), ativo: true },
+    const contato = await prisma.usuario.findFirst({
+      where: { hospitalId: ator.hospitalId, email: body.para.trim().toLowerCase(), ativo: true },
       select: { id: true },
-    });
-    if (!recipient) return NextResponse.json({ error: 'Destinatário não encontrado neste hospital' }, { status: 404 });
-    if (recipient.id === session.user.id) return NextResponse.json({ error: 'Não é possível enviar mensagem para si mesmo' }, { status: 400 });
+    })
+    if (!contato) return NextResponse.json({ error: 'Destinatário não encontrado neste hospital' }, { status: 404 })
+    if (contato.id === ator.id) return NextResponse.json({ error: 'Não é possível enviar mensagem para si mesmo' }, { status: 400 })
 
-    const message = await prisma.mensagemChat.create({
+    const mensagem = await prisma.mensagemChat.create({
       data: {
-        hospitalId,
-        senderId: session.user.id,
-        recipientId: recipient.id,
-        remetente: session.user.name || session.user.email,
-        texto: payload.texto.trim(),
+        hospitalId: ator.hospitalId,
+        senderId: ator.id,
+        recipientId: contato.id,
+        remetente: ator.nome,
+        texto: body.texto.trim(),
       },
-      select: {
-        id: true, texto: true, dataHora: true,
-        sender: { select: { email: true } },
-        recipient: { select: { email: true } },
-      },
-    });
-    return NextResponse.json({ id: message.id, de: message.sender?.email, para: message.recipient?.email, texto: message.texto, data: message.dataHora }, { status: 201 });
+      select: CAMPOS,
+    })
+    return NextResponse.json(apresentar(mensagem), { status: 201 })
   } catch {
-    return NextResponse.json({ error: 'Erro ao enviar mensagem' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao enviar mensagem' }, { status: 500 })
   }
 }

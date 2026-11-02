@@ -15,7 +15,7 @@ export default function InstitucionalPage() {
                 <h1 id="institucional-titulo" className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4 tracking-tight">Saskia Saúde Integrada</h1>
                 <p className="text-base sm:text-lg lg:text-xl text-blue-100/90 max-w-3xl mx-auto leading-relaxed">
                     Tecnologia e humanização para uma saúde mais eficiente e acessível a todos os brasileiros. 
-                    Um ecossistema completo com mais de 40 módulos integrados.
+                    Um sistema de gestão hospitalar em evolução.
                 </p>
             </section>
 
@@ -84,11 +84,11 @@ export default function InstitucionalPage() {
                     </li>
                     <li className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-100">
                         <div className="text-3xl font-black text-blue-800 mb-3">2026</div>
-                        <p className="text-slate-600 text-sm font-medium">Primeira versão completa com mais de 40 módulos integrados de gestão hospitalar</p>
+                        <p className="text-slate-600 text-sm font-medium">Primeira versão do sistema de gestão hospitalar</p>
                     </li>
                     <li className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-100">
                         <div className="text-3xl font-black text-blue-800 mb-3">2026+</div>
-                        <p className="text-slate-600 text-sm font-medium">Reconhecimento como plataforma inovadora e início da expansão nacional</p>
+                        <p className="text-slate-600 text-sm font-medium">Evolução contínua do produto com os hospitais parceiros</p>
                     </li>
                 </ol>
             </section>
@@ -117,7 +117,7 @@ export default function InstitucionalPage() {
                         </div>
                         <div>
                             <h3 className="font-bold text-slate-800 mb-1">Integração Total</h3>
-                            <p className="text-sm text-slate-600">Módulos que conversam entre si, eliminando retrabalho e papelada.</p>
+                            <p className="text-sm text-slate-600">Módulos pensados para reduzir retrabalho e papelada.</p>
                         </div>
                     </div>
                     
@@ -127,7 +127,7 @@ export default function InstitucionalPage() {
                         </div>
                         <div>
                             <h3 className="font-bold text-slate-800 mb-1">Segurança e Ética</h3>
-                            <p className="text-sm text-slate-600">Desenvolvido com protocolos rigorosos de proteção de dados médicos.</p>
+                            <p className="text-sm text-slate-600">Acesso por cargo e isolamento de dados entre hospitais.</p>
                         </div>
                     </div>
                 </div>

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { isRecord } from '@/lib/request-validation'
+import { auditar, exigir, lerJson, LIMITE_LISTA } from '@/lib/api-guard'
 
+const SEM_CACHE = { 'Cache-Control': 'private, no-store, max-age=0' }
 const statusPermitidos = new Set(['Em Andamento', 'Aguardando Retorno', 'Concluído'])
 const tiposPermitidos = new Set([
   'Orientação Social',
@@ -30,45 +30,33 @@ function dataValida(value: string) {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
 }
 
-async function sessaoHospital() {
-  const session = await auth()
-  if (!session?.user) return { error: NextResponse.json({ error: 'Não autorizado' }, { status: 401 }) }
-  const hospitalId = session.user.hospitalId
-  if (!hospitalId) return { error: NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 }) }
-  return { session, hospitalId }
-}
-
 export async function GET() {
   try {
-    const acesso = await sessaoHospital()
-    if ('error' in acesso) return acesso.error
+    const { ator, negado } = await exigir('social:ler')
+    if (negado) return negado
 
     const casos = await prisma.casoSocial.findMany({
-      where: { hospitalId: acesso.hospitalId },
+      where: { hospitalId: ator.hospitalId },
       orderBy: { createdAt: 'desc' },
+      take: LIMITE_LISTA,
     })
-    return NextResponse.json(casos, {
-      headers: { 'Cache-Control': 'private, no-store, max-age=0' },
-    })
-  } catch (error) {
-    console.error('Erro ao buscar casos do Serviço Social:', error)
+    // Dado sensível: toda leitura fica registrada, sem copiar o conteúdo para a trilha.
+    await auditar(ator, 'servico_social.ler', 'CasoSocial', null, { total: casos.length })
+    return NextResponse.json(casos, { headers: SEM_CACHE })
+  } catch {
+    console.error('Erro ao buscar casos do Serviço Social')
     return NextResponse.json({ error: 'Erro ao buscar casos do Serviço Social' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const acesso = await sessaoHospital()
-    if ('error' in acesso) return acesso.error
+    const { ator, negado } = await exigir('social:gerir')
+    if (negado) return negado
 
-    let body: unknown
-    try {
-      body = await request.json()
-    } catch {
-      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
-    }
+    const body = await lerJson(request)
     const camposPermitidos = ['pacienteId', 'situacao', 'tipo', 'status', 'data', 'relato', 'encaminhamentos']
-    if (!isRecord(body)
+    if (!body
       || Object.keys(body).some(campo => !camposPermitidos.includes(campo))
       || typeof body.pacienteId !== 'string' || !body.pacienteId.trim() || body.pacienteId.length > 64
       || typeof body.situacao !== 'string' || !demandasPermitidas.has(body.situacao)
@@ -81,14 +69,14 @@ export async function POST(request: NextRequest) {
     }
 
     const paciente = await prisma.paciente.findFirst({
-      where: { id: body.pacienteId.trim(), hospitalId: acesso.hospitalId, arquivadoEm: null },
+      where: { id: body.pacienteId.trim(), hospitalId: ator.hospitalId, arquivadoEm: null },
       select: { id: true, nome: true },
     })
     if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado neste hospital' }, { status: 404 })
 
     const detalhe = [
       `Tipo de atendimento: ${body.tipo}`,
-      `Profissional: ${acesso.session.user.name || 'Profissional'}`,
+      `Profissional: ${ator.nome}`,
       `Data do atendimento: ${body.data}`,
       `Relato / evolução: ${body.relato.trim()}`,
       typeof body.encaminhamentos === 'string' && body.encaminhamentos.trim()
@@ -98,60 +86,69 @@ export async function POST(request: NextRequest) {
 
     const caso = await prisma.casoSocial.create({
       data: {
-        hospitalId: acesso.hospitalId,
+        hospitalId: ator.hospitalId,
         pacienteNome: paciente.nome,
         situacao: body.situacao,
         detalhe,
         status: body.status,
       },
     })
-    return NextResponse.json(caso, {
-      status: 201,
-      headers: { 'Cache-Control': 'private, no-store, max-age=0' },
-    })
-  } catch (error) {
-    console.error('Erro ao registrar atendimento social:', error)
+    await auditar(ator, 'servico_social.registrar', 'CasoSocial', caso.id, { pacienteId: paciente.id })
+    return NextResponse.json(caso, { status: 201, headers: SEM_CACHE })
+  } catch {
+    console.error('Erro ao registrar atendimento social')
     return NextResponse.json({ error: 'Erro ao registrar atendimento social' }, { status: 500 })
   }
 }
 
+// O histórico só cresce: o PATCH muda o status e acrescenta linhas, nunca reescreve `detalhe`.
 export async function PATCH(request: NextRequest) {
   try {
-    const acesso = await sessaoHospital()
-    if ('error' in acesso) return acesso.error
+    const { ator, negado } = await exigir('social:gerir')
+    if (negado) return negado
 
-    let body: unknown
-    try {
-      body = await request.json()
-    } catch {
-      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
-    }
-    if (!isRecord(body)
-      || Object.keys(body).some(campo => !['id', 'status', 'detalhe'].includes(campo))
+    const body = await lerJson(request)
+    if (!body
+      || Object.keys(body).some(campo => !['id', 'status', 'acrescimo'].includes(campo))
       || typeof body.id !== 'string' || !body.id.trim()
       || (body.status !== undefined && (typeof body.status !== 'string' || !statusPermitidos.has(body.status)))
-      || (body.detalhe !== undefined && (typeof body.detalhe !== 'string' || body.detalhe.length > 6000))
-      || (body.status === undefined && body.detalhe === undefined)) {
+      || (body.acrescimo !== undefined && (typeof body.acrescimo !== 'string' || body.acrescimo.length > 2000))) {
       return NextResponse.json({ error: 'Dados de atualização inválidos' }, { status: 400 })
     }
+    const acrescimo = typeof body.acrescimo === 'string' ? body.acrescimo.trim() : ''
+    const novoStatus = typeof body.status === 'string' ? body.status : undefined
+    if (!acrescimo && !novoStatus) return NextResponse.json({ error: 'Informe o status ou o acréscimo ao histórico' }, { status: 400 })
 
+    const { hospitalId } = ator
     const caso = await prisma.casoSocial.findFirst({
-      where: { id: body.id.trim(), hospitalId: acesso.hospitalId },
-      select: { id: true },
+      where: { id: body.id.trim(), hospitalId },
+      select: { id: true, detalhe: true, status: true },
     })
     if (!caso) return NextResponse.json({ error: 'Caso não encontrado' }, { status: 404 })
 
+    const mudouStatus = novoStatus !== undefined && novoStatus !== caso.status
+    if (!acrescimo && !mudouStatus) return NextResponse.json(await prisma.casoSocial.findFirst({ where: { id: caso.id, hospitalId } }))
+
+    const carimbo = `[${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} - ${ator.nome}]`
+    const linhas = [
+      mudouStatus ? `${carimbo} Status alterado de "${caso.status}" para "${novoStatus}".` : '',
+      acrescimo ? `${carimbo} ${acrescimo}` : '',
+    ].filter(Boolean)
+
+    // A condição sobre `detalhe` evita perder um acréscimo feito por outra pessoa no mesmo instante.
     const atualizado = await prisma.casoSocial.updateMany({
-      where: { id: caso.id, hospitalId: acesso.hospitalId },
+      where: { id: caso.id, hospitalId, detalhe: caso.detalhe },
       data: {
-        ...(body.status !== undefined ? { status: body.status } : {}),
-        ...(body.detalhe !== undefined ? { detalhe: body.detalhe } : {}),
+        detalhe: `${caso.detalhe}\n${linhas.join('\n')}`,
+        ...(mudouStatus ? { status: novoStatus } : {}),
       },
     })
-    if (!atualizado.count) return NextResponse.json({ error: 'Caso não encontrado' }, { status: 404 })
-    return NextResponse.json(await prisma.casoSocial.findFirst({ where: { id: caso.id, hospitalId: acesso.hospitalId } }))
-  } catch (error) {
-    console.error('Erro ao atualizar caso do Serviço Social:', error)
+    if (!atualizado.count) return NextResponse.json({ error: 'O caso foi atualizado por outra pessoa. Atualize a tela e tente novamente.' }, { status: 409 })
+
+    await auditar(ator, 'servico_social.atualizar', 'CasoSocial', caso.id, { mudouStatus, comAcrescimo: Boolean(acrescimo) })
+    return NextResponse.json(await prisma.casoSocial.findFirst({ where: { id: caso.id, hospitalId } }), { headers: SEM_CACHE })
+  } catch {
+    console.error('Erro ao atualizar caso do Serviço Social')
     return NextResponse.json({ error: 'Erro ao atualizar caso do Serviço Social' }, { status: 500 })
   }
 }

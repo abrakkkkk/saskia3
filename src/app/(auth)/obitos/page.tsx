@@ -1,55 +1,99 @@
-'use client';
-import { useState, useEffect, useCallback } from 'react';
+﻿'use client';
+
+import { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, StatCard, StatGrid, Tabs } from '@/components/ui';
+import PacienteSelect from '@/components/ui/PacienteSelect';
+import { pode } from '@/lib/permissions';
+import { dataLocalISO, mensagemDeErro, Modal } from '../setores-ui';
+import '../setores.css';
 import './obitos.css';
 
-function dataLocalISO(date = new Date()) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+interface Obito {
+  id: string;
+  pacienteId: string | null;
+  nome: string;
+  nascimento: string | null;
+  cpf: string | null;
+  sexo: string | null;
+  data: string;
+  hora: string;
+  local: string | null;
+  causa: string;
+  causaSec: string | null;
+  medico: string;
+  prontuario: string | null;
+  responsavel: string | null;
+  telefone: string | null;
+  observacoes: string | null;
+  registradoPor: string | null;
+  dataRegistro: string | null;
+  certidaoEmitida: boolean;
+  fichaEmitidaEm: string | null;
+}
+
+type Aba = 'registro' | 'listagem' | 'fichas';
+
+const LOCAIS = ['Hospitalar - Enfermaria', 'Hospitalar - UTI', 'Hospitalar - Emergência', 'Hospitalar - Centro Cirúrgico', 'Domiciliar', 'Via Pública', 'Outro'];
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const ABAS = [
+  { id: 'registro', label: 'Registrar', icon: 'las la-plus-circle' },
+  { id: 'listagem', label: 'Listagem', icon: 'las la-list' },
+  { id: 'fichas', label: 'Fichas internas', icon: 'las la-file-alt' },
+] as const;
+
+const formVazio = () => ({
+  pacienteId: '', semCadastro: false, nome: '', nascimento: '', cpf: '', sexo: '', data: dataLocalISO(), hora: '',
+  local: LOCAIS[0], causa: '', causaSec: '', medico: '', prontuario: '', responsavel: '', telefone: '', observacoes: '',
+});
+
+const fmtData = (valor: string) => new Date(`${valor}T00:00:00`).toLocaleDateString('pt-BR');
+const AVISO_INTERNO = 'Documento de uso interno. Não substitui a Declaração de Óbito nem a certidão emitida em cartório.';
+
+function FichaInterna({ obito }: { obito: Obito }) {
+  return (
+    <>
+      <p>
+        Registro interno: <strong>{obito.nome}</strong>, óbito em <strong>{fmtData(obito.data)}</strong> às <strong>{obito.hora}</strong>,
+        local informado: <strong>{obito.local || 'não informado'}</strong>. Causa registrada: <strong>{obito.causa}</strong>.
+      </p>
+      <p>Médico declarante: <strong>{obito.medico}</strong></p>
+      <p className="sc-muted">
+        {obito.fichaEmitidaEm
+          ? `Ficha emitida em ${new Date(obito.fichaEmitidaEm).toLocaleString('pt-BR')}.`
+          : 'Data de emissão não registrada (registro anterior a este controle).'}
+      </p>
+      <p className="sc-muted">{AVISO_INTERNO}</p>
+    </>
+  );
 }
 
 export default function ObitosPage() {
-  const { status: statusSessao } = useSession();
-  const [tabAtiva, setTabAtiva] = useState('registro');
+  const { data: session, status: statusSessao } = useSession();
+  const podeRegistrar = pode(session?.user?.cargo, 'obito:registrar');
+
+  const [abaEscolhida, setAbaEscolhida] = useState<Aba>('registro');
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [erroCarga, setErroCarga] = useState('');
-
-  // Dados
-  const [obitos, setObitos] = useState<any[]>([]);
-
-  // Form State
-  const [form, setForm] = useState({
-    nome: '',
-    nascimento: '',
-    cpf: '',
-    sexo: '',
-    data: dataLocalISO(),
-    hora: '',
-    local: 'Hospitalar - Enfermaria',
-    causa: '',
-    causaSec: '',
-    medico: '',
-    prontuario: '',
-    responsavel: '',
-    telefone: '',
-    observacoes: ''
-  });
-
-  // Filtros
-  const [buscaLista, setBuscaLista] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const [obitos, setObitos] = useState<Obito[]>([]);
+  const [versaoPacientes, setVersaoPacientes] = useState(0);
+  const [form, setForm] = useState(formVazio);
+  const [busca, setBusca] = useState('');
   const [filtroMes, setFiltroMes] = useState('todos');
+  const [visualizado, setVisualizado] = useState<Obito | null>(null);
+  const [agora] = useState(() => new Date());
 
-  // Modal
-  const [modalVisualizar, setModalVisualizar] = useState<any>(null);
+  const aba: Aba = !podeRegistrar && abaEscolhida === 'registro' ? 'listagem' : abaEscolhida;
+  const fecharModal = useCallback(() => setVisualizado(null), []);
 
   const carregarDados = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch('/api/obitos');
-      const resposta = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(resposta?.error || 'Não foi possível carregar os registros de óbito.');
-      if (!Array.isArray(resposta)) throw new Error('A resposta dos registros de óbito é inválida.');
-      setObitos(resposta);
+      if (!res.ok) throw new Error(await mensagemDeErro(res, 'Não foi possível carregar os registros de óbito.'));
+      const dados: unknown = await res.json();
+      if (!Array.isArray(dados)) throw new Error('A resposta dos registros de óbito é inválida.');
+      setObitos(dados as Obito[]);
       setErroCarga('');
     } catch (error) {
       setErroCarga(error instanceof Error ? error.message : 'Não foi possível carregar os registros de óbito.');
@@ -59,394 +103,230 @@ export default function ObitosPage() {
   }, []);
 
   useEffect(() => {
-    if (statusSessao === 'loading') return;
-    if (statusSessao !== 'authenticated') {
-      setErroCarga('Entre na sua conta para acessar os registros de óbito.');
-      setLoading(false);
-      return;
-    }
+    if (statusSessao !== 'authenticated') return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void carregarDados();
   }, [statusSessao, carregarDados]);
 
-  const registrarObito = async () => {
-    if (saving) return;
-    if (!form.nome || !form.data || !form.hora || !form.causa || !form.medico) {
-      alert(" Preencha os campos obrigatórios (*): Nome, Data, Hora, Causa Principal e Médico!");
-      return;
-    }
-
-    const payload = {
-      ...form,
-    };
-
-    setSaving(true);
+  const registrarObito = async (evento: React.FormEvent) => {
+    evento.preventDefault();
+    if (salvando) return;
+    setSalvando(true);
+    const { pacienteId, semCadastro, nome, nascimento, cpf, sexo, ...comuns } = form;
+    const corpo = semCadastro ? { semCadastro, nome, nascimento, cpf, sexo, ...comuns } : { pacienteId, ...comuns };
     try {
       const res = await fetch('/api/obitos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(corpo),
       });
-
-      const resposta = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(resposta?.error || 'Erro ao registrar óbito');
-
-      limparFormulario();
-      alert(" Óbito registrado com sucesso!");
+      if (!res.ok) throw new Error(await mensagemDeErro(res, 'Não foi possível registrar o óbito.'));
+      setForm(formVazio());
+      setVersaoPacientes(v => v + 1);
+      alert('Óbito registrado com sucesso. Leito, chamadas, agendamentos e cirurgias futuras do paciente foram encerrados.');
       await carregarDados();
-    } catch (error: any) {
-      alert(error.message);
+      setAbaEscolhida('listagem');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível registrar o óbito.');
     } finally {
-      setSaving(false);
+      setSalvando(false);
     }
   };
 
-  const limparFormulario = () => {
-    setForm({
-      nome: '',
-      nascimento: '',
-      cpf: '',
-      sexo: '',
-      data: dataLocalISO(),
-      hora: '',
-      local: 'Hospitalar - Enfermaria',
-      causa: '',
-      causaSec: '',
-      medico: '',
-      prontuario: '',
-      responsavel: '',
-      telefone: '',
-      observacoes: ''
-    });
-  };
-
-  const emitirCertidao = async (id: string) => {
-    if(!await confirm("Deseja emitir a certidão para este óbito?")) return;
-
+  const emitirFicha = async (id: string) => {
+    if (!await confirm('Emitir a ficha interna deste óbito? A data de emissão ficará registrada.')) return;
     try {
       const res = await fetch(`/api/obitos/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ certidaoEmitida: true })
+        body: JSON.stringify({ certidaoEmitida: true }),
       });
-      const resposta = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(resposta?.error || 'Erro ao emitir certidão');
-
-      alert(" Certidão emitida com sucesso!");
+      if (!res.ok) throw new Error(await mensagemDeErro(res, 'Não foi possível emitir a ficha interna.'));
       await carregarDados();
-    } catch (error: any) {
-      alert(error.message);
+      setAbaEscolhida('fichas');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível emitir a ficha interna.');
     }
   };
 
-  const imprimirObito = (o: any) => {
-    setModalVisualizar(o);
-    setTimeout(() => {
-      window.print();
-    }, 500);
-  };
-
-  // Filtros de Tabela
-  let listaFiltrada = obitos.slice();
-  if (filtroMes !== 'todos') {
-    listaFiltrada = listaFiltrada.filter(o => {
-      const mesObito = new Date(o.data + 'T00:00:00').getMonth() + 1;
-      return mesObito === parseInt(filtroMes);
-    });
-  }
-  if (buscaLista) {
-    const t = buscaLista.toLowerCase();
-    listaFiltrada = listaFiltrada.filter(o =>
-      o.nome.toLowerCase().includes(t) ||
-      o.causa.toLowerCase().includes(t) ||
-      o.medico.toLowerCase().includes(t)
-    );
-  }
-
-  const certidoesEmitidas = obitos.filter(o => o.certidaoEmitida);
-
-  // Estatísticas
-  const mesAtual = new Date().getMonth() + 1;
-  const anoAtual = new Date().getFullYear();
+  const termo = busca.toLowerCase();
+  const lista = obitos.filter(o => {
+    const mesOk = filtroMes === 'todos' || new Date(`${o.data}T00:00:00`).getMonth() + 1 === Number(filtroMes);
+    const buscaOk = !termo || [o.nome, o.causa, o.medico].some(v => v.toLowerCase().includes(termo));
+    return mesOk && buscaOk;
+  });
+  const fichas = obitos.filter(o => o.certidaoEmitida);
   const obitosMes = obitos.filter(o => {
-    const d = new Date(o.data + 'T00:00:00');
-    return (d.getMonth() + 1) === mesAtual && d.getFullYear() === anoAtual;
+    const d = new Date(`${o.data}T00:00:00`);
+    return d.getMonth() === agora.getMonth() && d.getFullYear() === agora.getFullYear();
   }).length;
 
-  const pendentes = obitos.filter(o => !o.certidaoEmitida).length;
-  const emitidasCount = obitos.filter(o => o.certidaoEmitida).length;
-
-  if (loading && obitos.length === 0) return <div>Carregando...</div>;
+  const atualizar = (campo: keyof ReturnType<typeof formVazio>) => (evento: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setForm(atual => ({ ...atual, [campo]: evento.target.value }));
+  };
 
   return (
     <div className="conteudo obitos-page">
       <div className="obitos-container">
-
-        <div className="banner-obitos">
-          <div>
-            <h1><i className="las la-cross"></i> Registro de Óbitos</h1>
-            <p>Controle e documentação de óbitos hospitalares</p>
-          </div>
-          <div>
-            <button className="btn-obitos btn-primary" onClick={() => setTabAtiva('registro')}>
-              <i className="las la-plus-circle"></i> Novo Registro
+        <PageHeader
+          icon="las la-cross"
+          title="Registro de Óbitos"
+          subtitle="Registro interno de óbitos e seus efeitos no atendimento"
+          actions={podeRegistrar && (
+            <button type="button" className="btn btn-primary" onClick={() => setAbaEscolhida('registro')}>
+              <i className="las la-plus-circle" aria-hidden="true"></i> Novo registro
             </button>
-          </div>
-        </div>
+          )}
+        />
 
-        {erroCarga && <div role="alert" className="erro-obitos"><span>{erroCarga}</span><button className="btn-obitos btn-primary" onClick={() => void carregarDados()} disabled={loading || statusSessao !== 'authenticated'}>Tentar novamente</button></div>}
+        {loading && statusSessao !== 'unauthenticated' ? <LoadingState message="Carregando registros de óbito..." /> : erroCarga ? <ErrorState message={erroCarga} onRetry={() => void carregarDados()} /> : (
+          <>
+            <StatGrid>
+              <StatCard icon="las la-cross" value={obitos.length} label="Total de óbitos" tone="neutral" />
+              <StatCard icon="las la-calendar-check" value={obitosMes} label="Neste mês" />
+              <StatCard icon="las la-file-alt" value={fichas.length} label="Fichas emitidas" tone="success" />
+              <StatCard icon="las la-clock" value={obitos.length - fichas.length} label="Fichas pendentes" tone="warning" />
+            </StatGrid>
 
-        <div className="status-cards">
-          <div className="status-card">
-            <div className="card-icon"><i className="las la-cross"></i></div>
-            <div className="card-numero">{obitos.length}</div>
-            <div className="card-label">Total de Óbitos</div>
-          </div>
-          <div className="status-card">
-            <div className="card-icon"><i className="las la-calendar-check"></i></div>
-            <div className="card-numero">{obitosMes}</div>
-            <div className="card-label">Este Mês</div>
-          </div>
-          <div className="status-card">
-            <div className="card-icon"><i className="las la-file-medical-alt"></i></div>
-            <div className="card-numero">{emitidasCount}</div>
-            <div className="card-label">Certidões Emitidas</div>
-          </div>
-          <div className="status-card">
-            <div className="card-icon" style={{color: '#f59e0b'}}><i className="las la-clock"></i></div>
-            <div className="card-numero" style={{color: '#d97706'}}>{pendentes}</div>
-            <div className="card-label">Pendentes de Emissão</div>
-          </div>
-        </div>
+            <Tabs tabs={podeRegistrar ? ABAS : ABAS.filter(a => a.id !== 'registro')} active={aba} onChange={setAbaEscolhida} label="Seções de registros de óbito" />
 
-        <div className="tabs-obitos" id="ignorePrint" role="tablist" aria-label="Seções de registros de óbito">
-          <button type="button" aria-pressed={tabAtiva === 'registro'} className={`tab-btn ${tabAtiva === 'registro' ? 'ativo' : ''}`} onClick={() => setTabAtiva('registro')}>
-            <i className="las la-plus-circle"></i> Registrar
-          </button>
-          <button type="button" aria-pressed={tabAtiva === 'listagem'} className={`tab-btn ${tabAtiva === 'listagem' ? 'ativo' : ''}`} onClick={() => setTabAtiva('listagem')}>
-            <i className="las la-list"></i> Listagem
-          </button>
-          <button type="button" aria-pressed={tabAtiva === 'certidoes'} className={`tab-btn ${tabAtiva === 'certidoes' ? 'ativo' : ''}`} onClick={() => setTabAtiva('certidoes')}>
-            <i className="las la-file-alt"></i> Certidões
-          </button>
-        </div>
+            {aba === 'registro' && (
+              <Panel title="Registrar óbito" icon="las la-cross">
+                <form onSubmit={registrarObito}>
+                  <label className="sc-check">
+                    <input
+                      type="checkbox"
+                      checked={form.semCadastro}
+                      onChange={e => setForm(atual => ({ ...atual, semCadastro: e.target.checked, pacienteId: '' }))}
+                    />
+                    Exceção: pessoa sem cadastro neste hospital
+                  </label>
 
-        {tabAtiva === 'registro' && (
-          <div className="form-obitos">
-            <h3><i className="las la-cross"></i> Registrar Novo Óbito</h3>
-            <div className="form-grid">
-              <div className="form-grupo">
-                <label htmlFor="obito-nome"><i className="las la-user" aria-hidden="true"></i> Nome Completo *</label>
-                <input id="obito-nome" type="text" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} placeholder="Nome do falecido" />
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-calendar"></i> Data Nascimento</label>
-                <input type="date" value={form.nascimento} onChange={e => setForm({...form, nascimento: e.target.value})} />
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-id-card"></i> CPF</label>
-                <input type="text" value={form.cpf} onChange={e => setForm({...form, cpf: e.target.value})} placeholder="000.000.000-00" />
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-venus-mars"></i> Sexo</label>
-                <select value={form.sexo} onChange={e => setForm({...form, sexo: e.target.value})}>
-                  <option value="">Selecione...</option>
-                  <option>Masculino</option>
-                  <option>Feminino</option>
-                </select>
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-calendar-check"></i> Data do Óbito *</label>
-                <input type="date" value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-clock"></i> Horário *</label>
-                <input type="time" value={form.hora} onChange={e => setForm({...form, hora: e.target.value})} />
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-door-open"></i> Local</label>
-                <select value={form.local} onChange={e => setForm({...form, local: e.target.value})}>
-                  <option>Hospitalar - Enfermaria</option>
-                  <option>Hospitalar - UTI</option>
-                  <option>Hospitalar - Emergência</option>
-                  <option>Hospitalar - Centro Cirúrgico</option>
-                  <option>Domiciliar</option>
-                  <option>Via Pública</option>
-                  <option>Outro</option>
-                </select>
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-procedures"></i> Causa Principal *</label>
-                <input type="text" value={form.causa} onChange={e => setForm({...form, causa: e.target.value})} placeholder="Ex: Choque Cardiogênico" />
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-stethoscope"></i> Causas Secundárias</label>
-                <input type="text" value={form.causaSec} onChange={e => setForm({...form, causaSec: e.target.value})} placeholder="Opcional" />
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-user-md"></i> Médico Declarante *</label>
-                <input type="text" value={form.medico} onChange={e => setForm({...form, medico: e.target.value})} placeholder="Nome e CRM" />
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-file-medical"></i> Prontuário</label>
-                <input type="text" value={form.prontuario} onChange={e => setForm({...form, prontuario: e.target.value})} />
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-file-upload" aria-hidden="true"></i> Documento Assinado pelo Médico</label>
-                <p role="status" style={{ color: '#64748b', margin: '8px 0' }}>O armazenamento de documentos e o cadastro do número da Declaração de Óbito ainda não estão persistidos e estão indisponíveis nesta tela.</p>
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-user-friends"></i> Responsável Familiar</label>
-                <input type="text" value={form.responsavel} onChange={e => setForm({...form, responsavel: e.target.value})} />
-              </div>
-              <div className="form-grupo">
-                <label><i className="las la-phone"></i> Telefone do Responsável</label>
-                <input type="text" value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} placeholder="(00) 00000-0000" />
-              </div>
-              <div className="form-grupo" style={{ gridColumn: '1 / -1' }}>
-                <label><i className="las la-comment-medical"></i> Observações</label>
-                <textarea rows={3} value={form.observacoes} onChange={e => setForm({...form, observacoes: e.target.value})}></textarea>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button className="btn-obitos btn-success" onClick={registrarObito} disabled={saving}>
-                <i className="las la-save"></i> {saving ? 'Salvando...' : 'Salvar Registro'}
-              </button>
-              <button className="btn-obitos btn-warning" onClick={limparFormulario}>
-                <i className="las la-eraser"></i> Limpar Formulário
-              </button>
-            </div>
-          </div>
-        )}
+                  <div className="form-grid">
+                    {form.semCadastro ? (
+                      <>
+                        <div className="form-grupo"><label htmlFor="obito-nome"><i className="las la-user" aria-hidden="true"></i> Nome completo *</label><input id="obito-nome" required maxLength={160} value={form.nome} onChange={atualizar('nome')} /></div>
+                        <div className="form-grupo"><label htmlFor="obito-nascimento"><i className="las la-calendar" aria-hidden="true"></i> Data de nascimento</label><input id="obito-nascimento" type="date" value={form.nascimento} onChange={atualizar('nascimento')} /></div>
+                        <div className="form-grupo"><label htmlFor="obito-cpf"><i className="las la-id-card" aria-hidden="true"></i> CPF</label><input id="obito-cpf" maxLength={20} value={form.cpf} onChange={atualizar('cpf')} placeholder="000.000.000-00" /></div>
+                        <div className="form-grupo">
+                          <label htmlFor="obito-sexo"><i className="las la-venus-mars" aria-hidden="true"></i> Sexo</label>
+                          <select id="obito-sexo" value={form.sexo} onChange={atualizar('sexo')}>
+                            <option value="">Selecione...</option><option>Masculino</option><option>Feminino</option>
+                          </select>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="sc-completo">
+                        <PacienteSelect key={versaoPacientes} required value={form.pacienteId} onChange={id => setForm(atual => ({ ...atual, pacienteId: id }))} />
+                      </div>
+                    )}
+                    <div className="form-grupo"><label htmlFor="obito-data"><i className="las la-calendar-check" aria-hidden="true"></i> Data do óbito *</label><input id="obito-data" type="date" required max={dataLocalISO(agora)} value={form.data} onChange={atualizar('data')} /></div>
+                    <div className="form-grupo"><label htmlFor="obito-hora"><i className="las la-clock" aria-hidden="true"></i> Horário *</label><input id="obito-hora" type="time" required value={form.hora} onChange={atualizar('hora')} /></div>
+                    <div className="form-grupo">
+                      <label htmlFor="obito-local"><i className="las la-door-open" aria-hidden="true"></i> Local</label>
+                      <select id="obito-local" value={form.local} onChange={atualizar('local')}>{LOCAIS.map(l => <option key={l}>{l}</option>)}</select>
+                    </div>
+                    <div className="form-grupo"><label htmlFor="obito-causa"><i className="las la-procedures" aria-hidden="true"></i> Causa principal *</label><input id="obito-causa" required maxLength={1000} value={form.causa} onChange={atualizar('causa')} /></div>
+                    <div className="form-grupo"><label htmlFor="obito-causa-sec"><i className="las la-stethoscope" aria-hidden="true"></i> Causas secundárias</label><input id="obito-causa-sec" maxLength={1000} value={form.causaSec} onChange={atualizar('causaSec')} /></div>
+                    <div className="form-grupo">
+                      <label htmlFor="obito-medico"><i className="las la-user-md" aria-hidden="true"></i> Médico declarante</label>
+                      <input id="obito-medico" maxLength={160} value={form.medico} onChange={atualizar('medico')} placeholder={session?.user?.name ?? 'Nome e CRM'} />
+                    </div>
+                    <div className="form-grupo"><label htmlFor="obito-prontuario"><i className="las la-file-medical" aria-hidden="true"></i> Prontuário</label><input id="obito-prontuario" maxLength={100} value={form.prontuario} onChange={atualizar('prontuario')} /></div>
+                    <div className="form-grupo"><label htmlFor="obito-responsavel"><i className="las la-user-friends" aria-hidden="true"></i> Responsável familiar</label><input id="obito-responsavel" maxLength={160} value={form.responsavel} onChange={atualizar('responsavel')} /></div>
+                    <div className="form-grupo"><label htmlFor="obito-telefone"><i className="las la-phone" aria-hidden="true"></i> Telefone do responsável</label><input id="obito-telefone" maxLength={40} value={form.telefone} onChange={atualizar('telefone')} placeholder="(00) 00000-0000" /></div>
+                    <div className="form-grupo sc-completo"><label htmlFor="obito-observacoes"><i className="las la-comment-medical" aria-hidden="true"></i> Observações</label><textarea id="obito-observacoes" rows={3} maxLength={4000} value={form.observacoes} onChange={atualizar('observacoes')} /></div>
+                  </div>
 
-        {tabAtiva === 'listagem' && (
-          <div>
-            <div className="search-box" id="painel-listagem" role="tabpanel">
-              <input type="text" aria-label="Buscar por nome, causa ou médico" placeholder="Buscar por nome, causa, médico..." value={buscaLista} onChange={e => setBuscaLista(e.target.value)} />
-              <select value={filtroMes} onChange={e => setFiltroMes(e.target.value)}>
-                <option value="todos">Todos os Meses</option>
-                <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
-                <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
-                <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
-                <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
-              </select>
-            </div>
+                  <p className="sc-nota">O número da Declaração de Óbito e o documento assinado ainda não são armazenados nesta tela.</p>
+                  <div className="sc-acoes">
+                    <button type="submit" className="btn btn-primary" disabled={salvando} aria-busy={salvando}>
+                      <i className="las la-save" aria-hidden="true"></i> {salvando ? 'Salvando...' : 'Salvar registro'}
+                    </button>
+                    <button type="button" className="btn btn-sm" onClick={() => setForm(formVazio())}>
+                      <i className="las la-eraser" aria-hidden="true"></i> Limpar
+                    </button>
+                  </div>
+                </form>
+              </Panel>
+            )}
 
-            <div>
-              {listaFiltrada.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '50px', color: '#94a3b8', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <i className="las la-cross" style={{ fontSize: '48px' }}></i>
-                  <p>{erroCarga ? 'Não foi possível carregar os registros.' : 'Nenhum registro encontrado'}</p>
+            {aba === 'listagem' && (
+              <>
+                <div className="search-box">
+                  <input type="search" aria-label="Buscar por nome, causa ou médico" placeholder="Buscar por nome, causa ou médico..." value={busca} onChange={e => setBusca(e.target.value)} />
+                  <select aria-label="Filtrar por mês" value={filtroMes} onChange={e => setFiltroMes(e.target.value)}>
+                    <option value="todos">Todos os meses</option>
+                    {MESES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                  </select>
                 </div>
-              ) : (
-                listaFiltrada.map((o) => (
-                  <div key={o.id} className="registro-card">
+                {lista.length === 0 ? <EmptyState icon="las la-cross" message="Nenhum registro encontrado." /> : lista.map(o => (
+                  <article key={o.id} className="registro-card">
                     <div className="registro-header">
-                      <h4><i className="las la-user"></i> {o.nome}</h4>
-                      <span className={`badge ${o.certidaoEmitida ? 'badge-success' : 'badge-warning'}`}>
-                        {o.certidaoEmitida ? 'Certidão Emitida' : 'Pendente Emissão'}
-                      </span>
+                      <h4><i className="las la-user" aria-hidden="true"></i> {o.nome}</h4>
+                      <Badge tone={o.certidaoEmitida ? 'success' : 'warning'}>{o.certidaoEmitida ? 'Ficha emitida' : 'Ficha pendente'}</Badge>
                     </div>
                     <div className="registro-info">
-                      <p><i className="las la-calendar-check"></i> <strong>Óbito:</strong> {new Date(o.data + 'T00:00:00').toLocaleDateString('pt-BR')} às {o.hora}</p>
-                      <p><i className="las la-procedures"></i> <strong>Causa:</strong> {o.causa}</p>
-                      <p><i className="las la-user-md"></i> <strong>Médico:</strong> {o.medico}</p>
+                      <p><strong>Óbito:</strong> {fmtData(o.data)} às {o.hora}</p>
+                      <p><strong>Causa:</strong> {o.causa}</p>
+                      <p><strong>Médico:</strong> {o.medico}</p>
+                      {!o.pacienteId && <p>Registro sem vínculo a paciente cadastrado</p>}
                     </div>
                     <div className="registro-actions">
-                      <button className="btn-obitos btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }} onClick={() => setModalVisualizar(o)}>
-                        <i className="las la-eye"></i> Visualizar
+                      <button type="button" className="btn btn-sm btn-primary" onClick={() => setVisualizado(o)}>
+                        <i className="las la-eye" aria-hidden="true"></i> Visualizar
                       </button>
-                      {!o.certidaoEmitida && (
-                        <button className="btn-obitos btn-success" style={{ padding: '8px 16px', fontSize: '12px' }} onClick={() => emitirCertidao(o.id)}>
-                          <i className="las la-file-alt"></i> Emitir Certidão
+                      {podeRegistrar && !o.certidaoEmitida && (
+                        <button type="button" className="btn btn-sm btn-primary" onClick={() => void emitirFicha(o.id)}>
+                          <i className="las la-file-alt" aria-hidden="true"></i> Emitir ficha interna
                         </button>
                       )}
-                      <button className="btn-obitos btn-warning" style={{ padding: '8px 16px', fontSize: '12px' }} onClick={() => imprimirObito(o)}>
-                        <i className="las la-print"></i> Imprimir
-                      </button>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {tabAtiva === 'certidoes' && (
-          <div>
-            {certidoesEmitidas.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '50px', color: '#94a3b8', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <i className="las la-file-alt" style={{ fontSize: '48px' }}></i>
-                <p>Nenhuma certidão emitida</p>
-              </div>
-            ) : (
-              certidoesEmitidas.map((o) => (
-                <div key={o.id} className="certidao-preview">
-                  <h4>CERTIDÃO DE ÓBITO</h4>
-                  <p style={{ lineHeight: '1.6' }}>
-                    Certifico para os devidos fins que <strong>{o.nome}</strong>, faleceu nas dependências desta instituição
-                    no dia <strong>{new Date(o.data + 'T00:00:00').toLocaleDateString('pt-BR')}</strong> às <strong>{o.hora}</strong>,
-                    tendo como causa atestada: <strong>{o.causa}</strong>.
-                  </p>
-                  <p style={{ marginTop: '10px' }}>Médico Declarante: <strong>{o.medico}</strong></p>
-                  <p style={{ textAlign: 'right', marginTop: '20px', fontSize: '12px', color: '#666' }}>
-                    Emitido pelo sistema Saskia Saúde em: {new Date().toLocaleString('pt-BR')}
-                  </p>
-                </div>
-              ))
+                  </article>
+                ))}
+              </>
             )}
-          </div>
-        )}
 
+            {aba === 'fichas' && (fichas.length === 0 ? <EmptyState icon="las la-file-alt" message="Nenhuma ficha interna emitida." /> : (
+              fichas.map(o => (
+                <Panel key={o.id} title="Ficha interna de óbito" icon="las la-file-alt">
+                  <div className="sc-dados"><FichaInterna obito={o} /></div>
+                </Panel>
+              ))
+            ))}
+          </>
+        )}
       </div>
 
-      {modalVisualizar && (
-        <div className="modal-obitos" onClick={(e) => { if(e.target === e.currentTarget) setModalVisualizar(null); }}>
-          <div className="modal-obitos-conteudo" id="printArea">
-            <h3 style={{ color: '#0a1f44', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>
-              <i className="las la-cross"></i> Ficha de Registro de Óbito
-            </h3>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <p><strong>Nome:</strong> {modalVisualizar.nome}</p>
-              <p><strong>Data Nasc.:</strong> {modalVisualizar.nascimento ? new Date(modalVisualizar.nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/I'}</p>
-              <p><strong>CPF:</strong> {modalVisualizar.cpf || 'N/I'}</p>
-              <p><strong>Sexo:</strong> {modalVisualizar.sexo || 'N/I'}</p>
-              <p><strong>Data do Óbito:</strong> {new Date(modalVisualizar.data + 'T00:00:00').toLocaleDateString('pt-BR')} às {modalVisualizar.hora}</p>
-              <p><strong>Local:</strong> {modalVisualizar.local}</p>
-              <p style={{ gridColumn: '1/-1' }}><strong>Causa Principal:</strong> {modalVisualizar.causa}</p>
-              <p style={{ gridColumn: '1/-1' }}><strong>Causas Secundárias:</strong> {modalVisualizar.causaSec || 'N/A'}</p>
-              <p><strong>Médico:</strong> {modalVisualizar.medico}</p>
-              <p><strong>Prontuário:</strong> {modalVisualizar.prontuario || 'N/I'}</p>
-              <p><strong>Responsável:</strong> {modalVisualizar.responsavel || 'N/I'}</p>
-              <p><strong>Telefone Resp.:</strong> {modalVisualizar.telefone || 'N/I'}</p>
-              <p style={{ gridColumn: '1/-1' }}><strong>Observações:</strong> {modalVisualizar.observacoes || 'Nenhuma'}</p>
-            </div>
-
-            <div style={{ marginTop: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', fontSize: '12px' }}>
-              <p><strong>Registrado por:</strong> {modalVisualizar.registradoPor} em {modalVisualizar.dataRegistro}</p>
-            </div>
-
-            <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }} id="ignorePrintActions">
-              <button className="btn-obitos btn-warning" onClick={() => window.print()}>
-                <i className="las la-print"></i> Imprimir Ficha
-              </button>
-              <button className="btn-obitos btn-primary" onClick={() => setModalVisualizar(null)}>
-                Fechar
-              </button>
-            </div>
+      {visualizado && (
+        <Modal titulo="Ficha interna de óbito" aoFechar={fecharModal} classe="sc-imprimir">
+          <div className="sc-dados">
+            <p><strong>Nome:</strong> {visualizado.nome}</p>
+            <p><strong>Nascimento:</strong> {visualizado.nascimento ? fmtData(visualizado.nascimento.slice(0, 10)) : 'Não informado'}</p>
+            <p><strong>CPF:</strong> {visualizado.cpf || 'Não informado'}</p>
+            <p><strong>Sexo:</strong> {visualizado.sexo || 'Não informado'}</p>
+            <p><strong>Óbito:</strong> {fmtData(visualizado.data)} às {visualizado.hora}</p>
+            <p><strong>Local:</strong> {visualizado.local || 'Não informado'}</p>
+            <p className="sc-completo"><strong>Causa principal:</strong> {visualizado.causa}</p>
+            <p className="sc-completo"><strong>Causas secundárias:</strong> {visualizado.causaSec || 'Não informadas'}</p>
+            <p><strong>Médico:</strong> {visualizado.medico}</p>
+            <p><strong>Prontuário:</strong> {visualizado.prontuario || 'Não informado'}</p>
+            <p><strong>Responsável:</strong> {visualizado.responsavel || 'Não informado'}</p>
+            <p><strong>Telefone:</strong> {visualizado.telefone || 'Não informado'}</p>
+            <p className="sc-completo"><strong>Observações:</strong> {visualizado.observacoes || 'Nenhuma'}</p>
+            <p className="sc-completo sc-muted">
+              Registrado por {visualizado.registradoPor || 'não identificado'}
+              {visualizado.dataRegistro ? ` em ${new Date(visualizado.dataRegistro).toLocaleString('pt-BR')}` : ''}.
+            </p>
+            <p className="sc-completo sc-muted">{AVISO_INTERNO}</p>
           </div>
-        </div>
+          <div className="sc-acoes sc-acoes-fim sc-nao-imprimir">
+            <button type="button" className="btn btn-sm btn-primary" onClick={() => window.print()}>
+              <i className="las la-print" aria-hidden="true"></i> Imprimir
+            </button>
+          </div>
+        </Modal>
       )}
-
-      <style dangerouslySetInnerHTML={{__html: `
-        @media print {
-          body * { visibility: hidden; }
-          #printArea, #printArea * { visibility: visible; }
-          #printArea { position: absolute; left: 0; top: 0; width: 100%; border: none; box-shadow: none; }
-          #ignorePrint, #ignorePrintActions { display: none !important; }
-        }
-      `}} />
-
     </div>
   );
 }

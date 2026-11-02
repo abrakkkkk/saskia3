@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { 
@@ -8,6 +8,7 @@ import {
   Eye, 
   Download 
 } from 'lucide-react';
+import { urlGoogleSegura } from '../setores-ui';
 import './curvas-crescimento.css';
 
 interface Curva {
@@ -51,7 +52,7 @@ const curvasMeninos: Curva[] = [
 
 export default function CurvasCrescimentoPage() {
   const [abaAtiva, setAbaAtiva] = useState<'meninas' | 'meninos'>('meninas');
-  const [driveFiles, setDriveFiles] = useState<any[]>([]);
+  const [driveFiles, setDriveFiles] = useState<Array<{ name?: string; webViewLink?: string; webContentLink?: string }>>([]);
 
   useEffect(() => {
     const fetchDriveFiles = async () => {
@@ -73,21 +74,10 @@ export default function CurvasCrescimentoPage() {
   const handleDriveAction = (curva: Curva, action: 'view' | 'download') => {
     const driveFile = driveFiles.find(f => f.name === curva.nome);
     
-    const remoteUrl = action === 'download' ? driveFile?.webContentLink : driveFile?.webViewLink;
-    if (typeof remoteUrl === 'string') {
-      try {
-        const parsedUrl = new URL(remoteUrl);
-        const hostPermitido = parsedUrl.hostname === 'google.com'
-          || parsedUrl.hostname.endsWith('.google.com')
-          || parsedUrl.hostname === 'googleusercontent.com'
-          || parsedUrl.hostname.endsWith('.googleusercontent.com');
-        if (parsedUrl.protocol === 'https:' && hostPermitido) {
-          window.open(parsedUrl.href, '_blank', 'noopener,noreferrer');
-          return;
-        }
-      } catch {
-        // Link remoto inválido: segue para o arquivo local.
-      }
+    const remoteUrl = urlGoogleSegura(action === 'download' ? driveFile?.webContentLink : driveFile?.webViewLink);
+    if (remoteUrl) {
+      window.open(remoteUrl, '_blank', 'noopener,noreferrer');
+      return;
     }
     
     // Suporte local seguro (offline-first para pediatria)

@@ -12,6 +12,8 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 
+import { urlGoogleSegura } from '../setores-ui';
+
 interface Documento {
   id: string;
   nome: string;
@@ -68,7 +70,7 @@ export default function BibliotecaPage() {
     { id: '6', nome: 'examelabcorrelacaoclinica1.pdf', titulo: 'Interpretação de Exames Laboratoriais e Correlação Clínica', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_6', arquivoLocal: 'examelabcorrelaçãoclinica1.pdf' },
     { id: '7', nome: 'Cuidado_com_a_populacao_de_rua.pdf', titulo: 'Cuidado com a população de rua', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_7', arquivoLocal: 'Cuidado_com_a_população_de_rua.pdf' },
     { id: '8', nome: 'Diretriz_Brasileira_de_Dislipidemias.pdf', titulo: 'Diretriz Brasileira de Dislipidemias e Prevenção da Aterosclerose 2025', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_8', arquivoLocal: 'Diretriz_Brasileira_de_Dislipidemias_e_Prevencao_da_Aterosclerose_2025.pdf' },
-    { id: '9', nome: 'Diretriz_Brasileira_Hipertensao_2025.pdf', titulo: 'Diretriz Brasileira Hipertensão 2025', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_9' },
+    { id: '9', nome: 'Diretriz_Brasileira_Hipertensao_2025.pdf', titulo: 'Diretriz Brasileira Hipertensão 2025', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_9', arquivoLocal: 'Diretriz_Brasileira_Hipertensão_2025.pdf' },
     { id: '10', nome: 'Epilepsia_Guia_Pratico.pdf', titulo: 'Epilepsia - Guia Prático', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_10', arquivoLocal: 'Epilepsia_-_Guia Prático.pdf' },
     { id: '11', nome: 'GUIA_PES_DIABETICOS.pdf', titulo: 'Guia de Cuidado com os Pés para Pacientes Diabéticos', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_11', arquivoLocal: 'GUIA_DE_CUIDADO_COM_OS_PÉS_PARA_PACIENTES_DIABÉTICOS_PACIENTE.pdf' },
     { id: '12', nome: 'Infeccoes_Sexualmente_Transmissiveis_PCDT.pdf', titulo: 'Infecções Sexualmente Transmissíveis PCDT', tipo: 'pdf', driveId: 'COLOQUE_O_ID_DO_DRIVE_AQUI_12', arquivoLocal: 'Infecções_Sexualmente_Transmissíveis_PCDT.pdf' },
@@ -84,9 +86,9 @@ export default function BibliotecaPage() {
   const handleDriveAction = (doc: Documento, action: 'view' | 'download') => {
     const driveFile = driveFiles.find(f => f.name === doc.nome);
     
-    const remoteUrl = action === 'download'
+    const remoteUrl = urlGoogleSegura(action === 'download'
       ? driveFile?.webContentLink ?? driveFile?.webViewLink
-      : driveFile?.webViewLink;
+      : driveFile?.webViewLink);
 
     if (remoteUrl) {
       window.open(remoteUrl, '_blank', 'noopener,noreferrer');
@@ -141,7 +143,7 @@ export default function BibliotecaPage() {
               <Syringe className="w-10 h-10 text-blue-600 group-hover:text-white transition-colors duration-300" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-800 group-hover:text-blue-700 transition-colors">Vacinas - Idades e Grupos</h3>
+              <h3 className="text-xl font-bold text-slate-800 group-hover:text-blue-700 transition-colors">Calendários de Vacinação</h3>
               <p className="text-slate-500 mt-1">Calendários vacinais por faixa etária</p>
             </div>
           </div>

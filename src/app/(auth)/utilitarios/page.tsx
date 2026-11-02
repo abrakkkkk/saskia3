@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useEffect, useRef, type ComponentType } from 'react';
 import {
@@ -8,7 +8,6 @@ import {
   Activity,
   List,
   FileText,
-  Calculator,
   Pill,
   Baby,
   HeartPulse,
@@ -45,8 +44,7 @@ const ferramentas: Ferramenta[] = [
   { id: '7', nome: "Pneumologia - Calculadora", categoria: "Calculadoras", descricao: "Calculadoras para área da pneumologia", link: "https://pulmao.dapi.com.br/#calculadora", icone: Activity },
   { id: '8', nome: "Calculadora Gestacional", categoria: "Calculadoras", descricao: "Cálculo de idade gestacional e data provável do parto", link: "https://calculadoragestacional.saude.df.gov.br/", icone: CalendarCheck },
   { id: '9', nome: "CKD-EPI 2021", categoria: "Calculadoras", descricao: "Calculadora de taxa de filtração glomerular (Nefrologia)", link: "https://sbn.org.br/medicos/utilidades/calculadoras-nefrologicas/ckd-epi-2021/", icone: Activity },
-  { id: '10', nome: "LDL Calculadora", categoria: "Calculadoras", descricao: "Cálculo de LDL colesterol", link: "https://insulin.ddns.net/dm/ldl/", icone: Activity },
-  { id: '11', nome: "ASCVD Risk Calculator", categoria: "Calculadoras", descricao: "Risco cardiovascular (American Heart Association)", link: "https://professional.heart.org/en/guidelines-and-statements/prevent-calculator", icone: Heart },
+  { id: '11', nome: "PREVENT Calculator", categoria: "Calculadoras", descricao: "Risco cardiovascular pela equação PREVENT (American Heart Association)", link: "https://professional.heart.org/en/guidelines-and-statements/prevent-calculator", icone: Heart },
 
   // Farmacologia e Segurança
   { id: '12', nome: "Drugs.com", categoria: "Farmacologia", descricao: "Informações sobre medicamentos, interações e bulas", link: "https://www.drugs.com/", icone: Pill },

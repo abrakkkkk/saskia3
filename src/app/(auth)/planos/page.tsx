@@ -258,12 +258,8 @@ export default function PlanosPage() {
         <div className="observacoes">
           <h4><i className="las la-info-circle"></i> Observações Importantes</h4>
           <ul>
-            <li><i className="las la-check-circle"></i> Valores baseados no mercado de licitações e contratos públicos.</li>
             <li><i className="las la-check-circle"></i> O preço final pode variar conforme número de módulos contratados, unidades de saúde e usuários.</li>
-            <li><i className="las la-check-circle"></i> Para prefeituras, recomenda-se cadastro no portal de fornecedores e participação em pregões eletrônicos.</li>
-            <li><i className="las la-check-circle"></i> Contratos abaixo de R$ 50 mil podem ser feitos por dispensa de licitação (Lei 14.133/2021).</li>
-            <li><i className="las la-check-circle"></i> Instituições filantrópicas têm desconto especial de até 40% mediante comprovação.</li>
-            <li><i className="las la-check-circle"></i> Todos os planos incluem hospedagem, manutenção e atualizações do sistema.</li>
+            <li><i className="las la-check-circle"></i> Condições comerciais e contratuais são definidas em proposta formal.</li>
           </ul>
         </div>
 

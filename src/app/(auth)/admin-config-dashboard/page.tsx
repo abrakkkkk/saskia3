@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import './config-dashboard.css';
@@ -19,7 +19,6 @@ const modulosConfigOriginal = [
   { id: "contador_altas", nome: "Contador - Altas", desc: "Total de altas", icone: "las la-check-circle", secao: "Contadores", categoria: "contadores" },
   { id: "contador_evasao", nome: "Contador - Evasão", desc: "Total de evasões", icone: "las la-exclamation-triangle", secao: "Contadores", categoria: "contadores" },
   { id: "contador_transferencias", nome: "Contador - Transferências", desc: "Total de transferências", icone: "las la-truck", secao: "Contadores", categoria: "contadores" },
-  { id: "contador_media_idade", nome: "Contador - Média Etária", desc: "Média de idade dos pacientes", icone: "las la-chart-bar", secao: "Contadores", categoria: "contadores" },
   { id: "contador_total", nome: "Contador - Total Geral", desc: "Total de pacientes cadastrados", icone: "las la-file-alt", secao: "Contadores", categoria: "contadores" },
   { id: "contador_obitos", nome: "Contador - Óbitos", desc: "Total de óbitos registrados", icone: "las la-cross", secao: "Contadores", categoria: "contadores" },
   { id: "cat_biblioteca", nome: "Categoria - Biblioteca", desc: "Acesso à biblioteca", icone: "las la-book", secao: "Categorias", categoria: "categorias" },
@@ -47,9 +46,6 @@ const modulosConfigOriginal = [
   { id: "cat_chat", nome: "Categoria - Chat Interno", desc: "Comunicação profissional", icone: "las la-comments", secao: "Categorias", categoria: "categorias" },
   { id: "cat_relatorios", nome: "Categoria - Relatórios", desc: "Indicadores gerenciais", icone: "las la-chart-bar", secao: "Categorias", categoria: "categorias" },
   { id: "grafico_status", nome: "Gráfico - Distribuição por Status", desc: "Gráfico de barras de status", icone: "las la-chart-pie", secao: "Gráficos", categoria: "graficos" },
-  { id: "grafico_resumo_mes", nome: "Gráfico - Resumo do Mês", desc: "Total de pacientes no mês", icone: "las la-chart-line", secao: "Gráficos", categoria: "graficos" },
-  { id: "btn_panico", nome: "Botão do Pânico", desc: "Acionar emergência", icone: "las la-exclamation-triangle", secao: "Emergência", categoria: "emergencia" },
-  { id: "btn_pcr", nome: "Botão PCR", desc: "Alerta de parada cardiorrespiratória", icone: "las la-heartbeat", secao: "Emergência", categoria: "emergencia" }
 ];
 
 export default function AdminConfigDashboardPage() {
@@ -105,8 +101,8 @@ export default function AdminConfigDashboardPage() {
     
     const perfis: Record<string, { desativar: string[] }> = {
       hospital: { desativar: [] },
-      clinica: { desativar: ["contador_leitos_vermelha","contador_leitos_amarela","contador_salas_cc","contador_leitos_uti","cat_centro_cirurgico","cat_uti","cat_ccih","cat_banco_sangue","cat_cssd","btn_panico","btn_pcr"] },
-      consultorio: { desativar: ["card_recepcao","contador_leitos_vermelha","contador_leitos_amarela","contador_salas_cc","contador_leitos_uti","contador_altas","contador_evasao","contador_transferencias","contador_obitos","cat_biblioteca","cat_fichas","cat_utilitarios","cat_institucional","cat_farmacia","cat_obitos","cat_ponto","cat_almoxarifado","cat_centro_cirurgico","cat_uti","cat_exames","cat_ccih","cat_banco_sangue","cat_cssd","cat_servico_social","cat_manutencao","cat_transporte","cat_ouvidoria","cat_relatorios","btn_panico","btn_pcr","grafico_status"] },
+      clinica: { desativar: ["contador_leitos_vermelha","contador_leitos_amarela","contador_salas_cc","contador_leitos_uti","cat_centro_cirurgico","cat_uti","cat_ccih","cat_banco_sangue","cat_cssd"] },
+      consultorio: { desativar: ["card_recepcao","contador_leitos_vermelha","contador_leitos_amarela","contador_salas_cc","contador_leitos_uti","contador_altas","contador_evasao","contador_transferencias","contador_obitos","cat_biblioteca","cat_fichas","cat_utilitarios","cat_institucional","cat_farmacia","cat_obitos","cat_ponto","cat_almoxarifado","cat_centro_cirurgico","cat_uti","cat_exames","cat_ccih","cat_banco_sangue","cat_cssd","cat_servico_social","cat_manutencao","cat_transporte","cat_ouvidoria","cat_relatorios","grafico_status"] },
       upa: { desativar: ["cat_biblioteca","cat_fichas","cat_ponto","cat_almoxarifado","cat_cssd","cat_servico_social","cat_manutencao","cat_transporte","cat_ouvidoria","cat_chat"] },
       todos: { desativar: [] },
       nenhum: { desativar: modulosConfigOriginal.map(m => m.id) }
@@ -193,8 +189,8 @@ export default function AdminConfigDashboardPage() {
         
         <div className="banner-conf">
           <div>
-            <h1><i className="las la-sliders-h"></i> Configurador do Dashboard</h1>
-            <p>Personalize quais módulos e cards ficarão visíveis no sistema</p>
+            <h1><i className="las la-sliders-h"></i> Atalhos e indicadores do dashboard</h1>
+            <p>Escolha quais indicadores, atalhos e gráficos aparecem no dashboard. O menu lateral não é alterado e cada usuário continua vendo só o que o cargo permite.</p>
           </div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button className="btn btn-warning" onClick={resetConfig} disabled={isSaving}><i className="las la-undo" aria-hidden="true"></i> Restaurar Padrão</button>
@@ -231,7 +227,7 @@ export default function AdminConfigDashboardPage() {
               <button type="button" aria-pressed={activeProfile === 'todos'} className={`perfil-btn ${activeProfile === 'todos' ? 'ativo' : ''}`} onClick={() => applyProfile('todos')}>
                 <i className="las la-check-double"></i> Ativar Tudo
               </button>
-              <button type="button" aria-pressed={activeProfile === 'nenhum'} className={`perfil-btn ${activeProfile === 'nenhum' ? 'ativo' : ''}`} onClick={() => applyProfile('nenhum')}>
+              <button type="button" aria-pressed={activeProfile === 'nenhum'} className={`perfil-btn ${activeProfile === 'nenhum' ? 'ativo' : ''}`} onClick={async () => { if (await confirm('Desativar todos os itens do dashboard? Nada será gravado até você salvar.')) applyProfile('nenhum'); }}>
                 <i className="las la-times-circle"></i> Desativar Tudo
               </button>
             </div>

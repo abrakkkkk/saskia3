@@ -1,99 +1,44 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { exigir } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
+import type { StatusPaciente } from '@/lib/paciente-status'
+
+// Contagens somente com os status oficiais de lib/paciente-status.
+const AGUARDANDO: StatusPaciente[] = ['Recepção', 'Aguardando Triagem', 'Aguardando Médico']
+const EM_ATENDIMENTO: StatusPaciente[] = ['Em Triagem', 'Em Atendimento Médico']
+const INTERNADOS: StatusPaciente[] = ['Internado', 'Internado - UTI']
+const EM_CURSO: StatusPaciente[] = [...AGUARDANDO, ...EM_ATENDIMENTO, ...INTERNADOS]
 
 export async function GET() {
+  const { ator, negado } = await exigir('autenticado')
+  if (negado) return negado
+
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-
-    // Resumo Geral
-    const pacientesAtivos = { hospitalId, arquivadoEm: null }
-    const totalPacientes = await prisma.paciente.count({ where: pacientesAtivos })
-
-    // Atendimentos e Aguardando
-    const aguardando = await prisma.paciente.count({
-      where: { ...pacientesAtivos, status: { in: ['Recepção', 'Aguardando Triagem', 'Aguardando Médico'] } },
-    })
-
-    const finalizados = await prisma.paciente.count({ where: { ...pacientesAtivos, status: 'Finalizado' } })
-    const pacientesAtendidos = finalizados
-
-    // Ocupação de Leitos (Lógica real baseada na classificação de risco e ocupações)
-    const ocupadosVermelha = await prisma.paciente.count({
-      where: { 
-        ...pacientesAtivos,
-        classificacao: 'Vermelho',
-        status: { notIn: ['Alta Médica', 'Evasão', 'Transferido', 'Óbito', 'Finalizado'] }
-      }
-    })
-
-    const ocupadosAmarela = await prisma.paciente.count({
-      where: { 
-        ...pacientesAtivos,
-        classificacao: 'Amarelo',
-        status: { notIn: ['Alta Médica', 'Evasão', 'Transferido', 'Óbito', 'Finalizado'] }
-      }
-    })
-
-    // Salas Cirúrgicas ocupadas
-    const salasCirurgicas = await prisma.cirurgia.count({
-      where: { hospitalId, status: 'EM_ANDAMENTO' }
-    })
-
-    // Leitos UTI Ocupados
-    const [leitosUti, totalLeitosUti] = await Promise.all([
-      prisma.utiLeito.count({ where: { hospitalId, status: 'OCUPADO' } }),
-      prisma.utiLeito.count({ where: { hospitalId } }),
+    const pacientes = { hospitalId: ator.hospitalId, arquivadoEm: null }
+    const [
+      aguardando, emAtendimento, internados, riscoVermelho, riscoAmarelo,
+      cirurgiasEmAndamento, leitosUti, totalLeitosUti, altas, evasoes, transferencias, obitos,
+    ] = await Promise.all([
+      prisma.paciente.count({ where: { ...pacientes, status: { in: AGUARDANDO } } }),
+      prisma.paciente.count({ where: { ...pacientes, status: { in: EM_ATENDIMENTO } } }),
+      prisma.paciente.count({ where: { ...pacientes, status: { in: INTERNADOS } } }),
+      prisma.paciente.count({ where: { ...pacientes, classificacao: 'Vermelho', status: { in: EM_CURSO } } }),
+      prisma.paciente.count({ where: { ...pacientes, classificacao: 'Amarelo', status: { in: EM_CURSO } } }),
+      prisma.cirurgia.count({ where: { hospitalId: ator.hospitalId, status: 'EM_ANDAMENTO' } }),
+      prisma.utiLeito.count({ where: { hospitalId: ator.hospitalId, status: 'OCUPADO' } }),
+      prisma.utiLeito.count({ where: { hospitalId: ator.hospitalId } }),
+      prisma.paciente.count({ where: { ...pacientes, status: 'Alta Médica' } }),
+      prisma.paciente.count({ where: { ...pacientes, status: 'Evasão' } }),
+      prisma.paciente.count({ where: { ...pacientes, status: 'Transferido' } }),
+      prisma.obito.count({ where: { hospitalId: ator.hospitalId } }),
     ])
 
-    // Desfechos
-    const altas = await prisma.paciente.count({ where: { ...pacientesAtivos, status: 'Alta Médica' } })
-    const evasoes = await prisma.paciente.count({ where: { ...pacientesAtivos, status: 'Evasão' } })
-    const transferencias = await prisma.paciente.count({ where: { ...pacientesAtivos, status: 'Transferido' } })
-    const obitos = await prisma.obito.count({ where: { hospitalId } })
-
-    // Média Etária
-    const pacientesComIdade = await prisma.paciente.findMany({
-      where: { ...pacientesAtivos, nascimento: { not: null } },
-      select: { nascimento: true }
-    })
-    
-    let mediaEtaria = 0
-    if (pacientesComIdade.length > 0) {
-      const hoje = new Date()
-      const somaIdades = pacientesComIdade.reduce((acc, p) => {
-        if (!p.nascimento) return acc
-        let idade = hoje.getFullYear() - p.nascimento.getFullYear()
-        const m = hoje.getMonth() - p.nascimento.getMonth()
-        if (m < 0 || (m === 0 && hoje.getDate() < p.nascimento.getDate())) {
-          idade--
-        }
-        return acc + idade
-      }, 0)
-      mediaEtaria = Math.round(somaIdades / pacientesComIdade.length)
-    }
-
     return NextResponse.json({
-      pacientesAtendidos,
-      aguardando,
-      ocupadosVermelha,
-      ocupadosAmarela,
-      salasCirurgicas,
-      leitosUti,
-      totalLeitosUti,
-      altas,
-      evasoes,
-      transferencias,
-      mediaEtaria,
-      totalPacientes,
-      obitos
+      aguardando, emAtendimento, internados, riscoVermelho, riscoAmarelo,
+      cirurgiasEmAndamento, leitosUti, totalLeitosUti, altas, evasoes, transferencias, obitos,
     })
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error)
+    console.error('Erro ao carregar indicadores:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Não foi possível carregar os indicadores do hospital' }, { status: 500 })
   }
 }

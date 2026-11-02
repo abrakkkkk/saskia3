@@ -1,3 +1,4 @@
+﻿import Image from 'next/image';
 import './sobre-nos.css';
 
 export default function SobreNosPage() {
@@ -44,13 +45,12 @@ export default function SobreNosPage() {
           <div className="card-pessoa idealizador">
             <div className="card-header">
               <div className="foto-pessoa">
-                <img src="/images/equipe/marceloff.webp" alt="Marcelo Marinho de Moura" />
+                <Image src="/images/equipe/marceloff.webp" alt="Marcelo Marinho de Moura" width={160} height={160} />
               </div>
               <div className="pessoa-header-info">
                 <h3>Marcelo Marinho de Moura</h3>
                 <span className="cargo-pessoa cargo-idealizador">Idealizador &amp; Fundador</span>
                 <div className="card-links">
-                  <a href="mailto:marcelomarinhomouraapp@gmail.com" className="contato-link"><i aria-hidden="true" className="las la-envelope"></i> E-mail</a>
                   <a href="http://lattes.cnpq.br/3238127472664737" target="_blank" rel="noreferrer" className="contato-link outline"><i aria-hidden="true" className="las la-external-link-alt"></i> Lattes</a>
                 </div>
               </div>
@@ -69,7 +69,7 @@ export default function SobreNosPage() {
           <div className="card-pessoa orientadora">
             <div className="card-header">
               <div className="foto-pessoa">
-                <img src="/images/equipe/Isabelamelo1.jpg" alt="Isabela Melo Bonfim" />
+                <Image src="/images/equipe/Isabelamelo1.jpg" alt="Isabela Melo Bonfim" width={160} height={160} />
               </div>
               <div className="pessoa-header-info">
                 <h3>Prof.ª Dr.ª Isabela Melo Bonfim</h3>
@@ -93,7 +93,7 @@ export default function SobreNosPage() {
           <div className="card-pessoa diretora">
             <div className="card-header">
               <div className="foto-pessoa">
-                <img src="/images/equipe/yasmin11.jpeg" alt="Yasmin Xavier Feitosa Macêdo" />
+                <Image src="/images/equipe/yasmin11.jpeg" alt="Yasmin Xavier Feitosa Macêdo" width={160} height={160} />
               </div>
               <div className="pessoa-header-info">
                 <h3>Yasmin Xavier Feitosa Macêdo</h3>
@@ -116,7 +116,7 @@ export default function SobreNosPage() {
           <div className="card-pessoa estrategica">
             <div className="card-header">
               <div className="foto-pessoa">
-                <img src="/images/equipe/gabis.jpeg" alt="Gabriela Saskia Pereira Custódio" />
+                <Image src="/images/equipe/gabis.jpeg" alt="Gabriela Saskia Pereira Custódio" width={160} height={160} />
               </div>
               <div className="pessoa-header-info">
                 <h3>Gabriela Saskia Pereira Custódio</h3>
@@ -139,13 +139,12 @@ export default function SobreNosPage() {
           <div className="card-pessoa analista">
             <div className="card-header">
               <div className="foto-pessoa">
-                <img src="/images/equipe/abranll.jpeg" alt="Abrahão Levy Barbosa De Lavor" />
+                <Image src="/images/equipe/abranll.jpeg" alt="Abrahão Levy Barbosa De Lavor" width={160} height={160} />
               </div>
               <div className="pessoa-header-info">
                 <h3>Abrahão Levy Barbosa De Lavor</h3>
                 <span className="cargo-pessoa cargo-analista">Analista de Dados &amp; Especialista em Business Intelligence</span>
                 <div className="card-links">
-                  <a href="tel:+5585988866471" className="contato-link analista-link"><i aria-hidden="true" className="las la-phone"></i> (85) 98886-6471</a>
                   <a href="https://www.linkedin.com/in/abrahao-levy-04b85125b/" target="_blank" rel="noreferrer" className="contato-link analista-outline"><i aria-hidden="true" className="lab la-linkedin"></i> LinkedIn</a>
                 </div>
               </div>
@@ -164,18 +163,16 @@ export default function SobreNosPage() {
           <div className="card-pessoa designer">
             <div className="card-header">
               <div className="foto-pessoa">
-                <img src="/images/equipe/alexsilva1.webp" alt="Alexsander Silva" />
+                <Image src="/images/equipe/alexsilva1.webp" alt="Alexsander Silva" width={160} height={160} />
               </div>
               <div className="pessoa-header-info">
                 <h3>Alexsander Silva</h3>
                 <span className="cargo-pessoa cargo-design">Designer Multidisciplinar</span>
                 <div className="card-links">
-                  <a href="mailto:silvazxalexsander@gmail.com" className="contato-link design-link"><i aria-hidden="true" className="las la-envelope"></i> E-mail</a>
-                  <a href="https://instagram.com/only.alexsander" target="_blank" rel="noreferrer" className="contato-link design-outline"><i aria-hidden="true" className="las la-instagram"></i> Instagram</a>
                 </div>
               </div>
             </div>
-            <p className="bio-pessoa">Designer multidisciplinar de Simão Dias/SE, com 1 ano de carreira unindo design digital e identidade de marca. Pensador criativo, solucionador de problemas e eterno aprendiz que acredita que o design é a ponte entre a tecnologia e as pessoas.</p>
+            <p className="bio-pessoa">Designer multidisciplinar, com 1 ano de carreira unindo design digital e identidade de marca. Pensador criativo, solucionador de problemas e eterno aprendiz que acredita que o design é a ponte entre a tecnologia e as pessoas.</p>
             <div className="frases-impacto"><i aria-hidden="true" className="las la-quote-left"></i> “Criar algo que una beleza e funcionalidade é o que me move. Cada pixel importa quando estamos construindo experiências que podem transformar a relação das pessoas com a saúde.”</div>
             <div className="tags-formacao">
               <span className="tag-formacao tag-design"><i aria-hidden="true" className="las la-pencil-ruler"></i> UX Design</span>

@@ -1,13 +1,21 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import PacienteSelect from '@/components/ui/PacienteSelect';
+import { pode } from '@/lib/permissions';
 import './centro-cirurgico.css';
 
 interface Paciente {
   id: string;
   nome: string;
   cpf: string | null;
+}
+
+interface Profissional {
+  id: string;
+  nome: string;
+  cargo?: string;
 }
 
 interface Cirurgia {
@@ -32,13 +40,11 @@ function dataLocalKey(date: Date) {
 
 export default function CentroCirurgicoPage() {
   const { data: session, status: sessionStatus } = useSession();
-  const cargo = (session?.user as any)?.cargo;
-  const podeGerenciar = cargo === 'ADMIN' || cargo === 'MEDICO';
+  const podeGerenciar = pode(session?.user?.cargo, 'cirurgia:gerir');
   const [activeTab, setActiveTab] = useState<'agendamento' | 'salas' | 'lista'>('agendamento');
   const [cirurgias, setCirurgias] = useState<Cirurgia[]>([]);
-  const [pacientesGerais, setPacientesGerais] = useState<Paciente[]>([]);
   const [salas, setSalas] = useState<string[]>([]);
-  const [profissionais, setProfissionais] = useState<any[]>([]);
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [loading, setLoading] = useState(true);
   const [erroCarga, setErroCarga] = useState('');
 
@@ -56,26 +62,22 @@ export default function CentroCirurgicoPage() {
 
   const carregarDados = async () => {
     try {
-      const [resCirurgias, resPacientes, resSalas, resUsuarios] = await Promise.all([
+      const [resCirurgias, resSalas, resUsuarios] = await Promise.all([
         fetch('/api/cirurgias'),
-        fetch('/api/pacientes'),
         fetch('/api/salas'),
         fetch('/api/chat/contatos')
       ]);
-      if (!resCirurgias.ok || !resPacientes.ok || !resSalas.ok) {
+      if (!resCirurgias.ok || !resSalas.ok) {
         throw new Error('Não foi possível carregar os dados do centro cirúrgico. Atualize a página e tente novamente.');
       }
+      setErroCarga('');
       if (resCirurgias.ok) {
         const dCir = await resCirurgias.json();
         setCirurgias(Array.isArray(dCir) ? dCir : []);
       }
-      if (resPacientes.ok) {
-        const dPac = await resPacientes.json();
-        setPacientesGerais(Array.isArray(dPac) ? dPac : []);
-      }
       if (resSalas.ok) {
-        const dSalas = await resSalas.json();
-        const salasNomes = Array.isArray(dSalas) ? dSalas.map((s: any) => s.nome).filter((nome: unknown): nome is string => typeof nome === 'string' && Boolean(nome.trim())) : [];
+        const dSalas: unknown = await resSalas.json();
+        const salasNomes = Array.isArray(dSalas) ? dSalas.map((s: { nome?: unknown }) => s.nome).filter((nome: unknown): nome is string => typeof nome === 'string' && Boolean(nome.trim())) : [];
         setSalas(salasNomes);
         setFormAgendamento(prev => ({ ...prev, sala: salasNomes.includes(prev.sala) ? prev.sala : (salasNomes[0] || '') }));
       }
@@ -92,12 +94,14 @@ export default function CentroCirurgicoPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFormAgendamento(f => ({ ...f, data: dataLocalKey(new Date()) }));
     carregarDados();
   }, []);
 
   useEffect(() => {
     if (sessionStatus === 'authenticated' && !podeGerenciar && activeTab === 'agendamento') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab('lista');
     }
   }, [sessionStatus, podeGerenciar, activeTab]);
@@ -122,41 +126,12 @@ export default function CentroCirurgicoPage() {
       return;
     }
     const dataHoraNova = dataHoraSelecionada.toISOString();
-    
-    // 1. Bloqueio Clínico: O mesmo paciente não pode estar agendado em 2 cirurgias no mesmo horário (Card 24)
-    const conflitoPaciente = cirurgias.find(c => 
-      c.pacienteId === pacienteId && 
-      c.dataHora && 
-      c.status !== 'CANCELADA' && 
-      c.status !== 'CONCLUIDA' &&
-      Math.abs(new Date(c.dataHora).getTime() - new Date(dataHoraNova).getTime()) < (duracaoHoras * 3600 * 1000)
-    );
 
-    if (conflitoPaciente) {
-      const horaStr = conflitoPaciente.dataHora ? new Date(conflitoPaciente.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'horário agendado';
-      alert(` Bloqueio Clínico de Segurança: O paciente selecionado já possui cirurgia agendada ("${conflitoPaciente.procedimento}" às ${horaStr} na sala ${conflitoPaciente.sala}). Não é permitido agendamento simultâneo!`);
-      return;
-    }
-
-    // 2. Conflito de ocupação da Sala Cirúrgica
-    const conflito = cirurgias.find(c => 
-      c.sala === sala && 
-      c.dataHora && 
-      c.status !== 'CANCELADA' && 
-      c.status !== 'CONCLUIDA' &&
-      Math.abs(new Date(c.dataHora).getTime() - new Date(dataHoraNova).getTime()) < (duracaoHoras * 3600 * 1000)
-    );
-
-    if (conflito) {
-      if (!await confirm(` Conflito de Agendamento: A sala "${sala}" já possui cirurgia agendada ("${conflito.procedimento}" - ${conflito.paciente?.nome || 'Paciente'}) no mesmo horário.\n\nDeseja confirmar o agendamento mesmo assim?`)) {
-        return;
-      }
-    }
-
+    // O conflito de paciente e de sala é decidido pelo servidor (intervalo real); a mensagem 409 é exibida.
     try {
       const equipe = `Cirurgião: ${cirurgiao}. Anest: ${anestesista}. Instr: ${instrumentador}. Circ: ${circulante}`;
-      const observacoes = `Prioridade: ${prioridade}. Duração Prevista: ${duracaoHoras}h. Obs: ${obs}`;
-      
+      const observacoes = `Prioridade: ${prioridade}. Obs: ${obs}`;
+
       const res = await fetch('/api/cirurgias', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -165,6 +140,7 @@ export default function CentroCirurgicoPage() {
           procedimento,
           sala,
           dataHora: dataHoraNova,
+          duracaoHoras,
           equipe,
           anestesia,
           observacoes
@@ -234,7 +210,7 @@ export default function CentroCirurgicoPage() {
 
   const cirurgiasHoje = cirurgias.filter(c => c.dataHora && dataLocalKey(new Date(c.dataHora)) === hojeISO);
 
-  let cirurgiasFiltradas = [...cirurgias].reverse();
+  let cirurgiasFiltradas = [...cirurgias];
   if (filtroStatus !== 'todos') {
     cirurgiasFiltradas = cirurgiasFiltradas.filter(c => c.status === filtroStatus);
   }
@@ -303,20 +279,14 @@ export default function CentroCirurgicoPage() {
           <button type="button" aria-pressed={activeTab === 'lista'} className={`tab-btn ${activeTab === 'lista' ? 'ativo' : ''}`} onClick={() => setActiveTab('lista')}><i className="las la-list" aria-hidden="true"></i> Lista de Cirurgias</button>
         </div>
 
-        {sessionStatus === 'authenticated' && !podeGerenciar && <div role="status" className="cc-panel" style={{ marginBottom: 16 }}>Somente ADMIN e MEDICO podem agendar cirurgias ou alterar status.</div>}
+        {sessionStatus === 'authenticated' && !podeGerenciar && <div role="status" className="cc-panel" style={{ marginBottom: 16 }}>Seu cargo pode consultar cirurgias, mas não agendar nem alterar status.</div>}
 
         {activeTab === 'agendamento' && podeGerenciar && (
           <div className="cc-grid">
             <div className="cc-panel">
               <h3><i className="las la-calendar-plus"></i> Agendar Nova Cirurgia</h3>
               <div className="form-grid">
-                <div className="form-grupo">
-                  <label>Paciente *</label>
-                  <select value={formAgendamento.pacienteId} onChange={e => setFormAgendamento({...formAgendamento, pacienteId: e.target.value})}>
-                    <option value="">Selecione...</option>
-                    {pacientesGerais.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                  </select>
-                </div>
+                <PacienteSelect required value={formAgendamento.pacienteId} onChange={id => setFormAgendamento({ ...formAgendamento, pacienteId: id })} />
                 <div className="form-grupo">
                   <label>Sala Cirúrgica *</label>
                   <select value={formAgendamento.sala} onChange={e => setFormAgendamento({...formAgendamento, sala: e.target.value})}>
@@ -392,7 +362,7 @@ export default function CentroCirurgicoPage() {
                 <div className="form-grupo"><label>Duração Prevista (h)</label><input type="number" min="0.5" step="0.5" value={formAgendamento.duracao} onChange={e => setFormAgendamento({...formAgendamento, duracao: e.target.value})} /></div>
                 <div className="form-grupo full"><label>Observações</label><textarea rows={2} value={formAgendamento.obs} onChange={e => setFormAgendamento({...formAgendamento, obs: e.target.value})}></textarea></div>
               </div>
-              <button className="btn btn-success" onClick={agendarCirurgia} disabled={!salas.length || !pacientesGerais.length || loading} style={{ width: '100%', marginTop: '15px', justifyContent: 'center', padding: '14px' }}>
+              <button className="btn btn-success" onClick={agendarCirurgia} disabled={!salas.length || loading} style={{ width: '100%', marginTop: '15px', justifyContent: 'center', padding: '14px' }}>
                 <i className="las la-save"></i> Agendar Cirurgia
               </button>
             </div>

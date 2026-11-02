@@ -1,65 +1,65 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server'
+import { auditar, exigir, lerJson, LIMITE_LISTA } from '@/lib/api-guard'
+import { prisma } from '@/lib/db'
+import { textoOpcional } from '@/lib/pacientes'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-
-    const hospitalId = session.user.hospitalId;
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
+    const { ator, negado } = await exigir('recepcao:operar')
+    if (negado) return negado
 
     const visitantes = await prisma.visitante.findMany({
-      where: { hospitalId },
+      where: { hospitalId: ator.hospitalId },
       orderBy: { entrada: 'desc' },
-      include: {
-        paciente: {
-          select: { nome: true }
-        }
-      }
-    });
+      take: LIMITE_LISTA,
+      include: { paciente: { select: { nome: true } } },
+    })
 
-    return NextResponse.json(visitantes);
+    return NextResponse.json(visitantes)
   } catch (error) {
-    console.error('Erro ao buscar visitantes:', error);
-    return NextResponse.json({ error: 'Erro ao buscar visitantes' }, { status: 500 });
+    console.error('Erro ao buscar visitantes:', error instanceof Error ? error.name : 'erro')
+    return NextResponse.json({ error: 'Erro ao buscar visitantes' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    const { ator, negado } = await exigir('recepcao:operar')
+    if (negado) return negado
 
-    const hospitalId = session.user.hospitalId;
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
-    let data: unknown;
-    try { data = await request.json(); } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }); }
-    if (!data || typeof data !== 'object' || Array.isArray(data)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
-    const { nome, documento, destino, pacienteId } = data as Record<string, unknown>;
-    if (typeof nome !== 'string' || !nome.trim() || nome.length > 160 || (documento != null && (typeof documento !== 'string' || documento.length > 40)) || (destino != null && (typeof destino !== 'string' || destino.length > 160)) || (pacienteId != null && (typeof pacienteId !== 'string' || !pacienteId))) {
-      return NextResponse.json({ error: 'Dados do visitante inválidos' }, { status: 400 });
+    const body = await lerJson(request)
+    if (!body) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    const nome = textoOpcional(body.nome, 160)
+    const documento = textoOpcional(body.documento, 40)
+    const destino = textoOpcional(body.destino, 160)
+    const pacienteId = body.pacienteId
+    if (!nome || documento === undefined || destino === undefined || (pacienteId != null && (typeof pacienteId !== 'string' || !pacienteId))) {
+      return NextResponse.json({ error: 'Dados do visitante inválidos' }, { status: 400 })
     }
+
     if (typeof pacienteId === 'string') {
-      const paciente = await prisma.paciente.findFirst({ where: { id: pacienteId, hospitalId }, select: { id: true } });
-      if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado neste hospital' }, { status: 404 });
+      const paciente = await prisma.paciente.findFirst({
+        where: { id: pacienteId, hospitalId: ator.hospitalId, arquivadoEm: null },
+        select: { id: true },
+      })
+      if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado neste hospital' }, { status: 404 })
     }
 
-    const novoVisitante = await prisma.visitante.create({
+    const visitante = await prisma.visitante.create({
       data: {
-        hospitalId,
-        nome: nome.trim(),
-        documento: typeof documento === 'string' ? documento.trim() || null : null,
-        destino: typeof destino === 'string' ? destino.trim() || null : null,
-        pacienteId: pacienteId || null,
-        status: 'DENTRO'
-      }
-    });
+        hospitalId: ator.hospitalId,
+        nome,
+        documento,
+        destino,
+        pacienteId: typeof pacienteId === 'string' ? pacienteId : null,
+        status: 'DENTRO',
+      },
+    })
 
-    return NextResponse.json(novoVisitante, { status: 201 });
+    await auditar(ator, 'REGISTRAR_VISITANTE', 'Visitante', visitante.id)
+    return NextResponse.json(visitante, { status: 201 })
   } catch (error) {
-    console.error('Erro ao criar visitante:', error);
-    return NextResponse.json({ error: 'Erro ao registrar visitante' }, { status: 500 });
+    console.error('Erro ao criar visitante:', error instanceof Error ? error.name : 'erro')
+    return NextResponse.json({ error: 'Erro ao registrar visitante' }, { status: 500 })
   }
 }

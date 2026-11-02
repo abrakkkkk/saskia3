@@ -1,39 +1,47 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server'
+import { auditar, exigir, lerJson } from '@/lib/api-guard'
+import { prisma } from '@/lib/db'
+import { anexarResposta, separarResposta, STATUS_OUVIDORIA } from '@/lib/ouvidoria'
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+const CAMPOS = {
+  id: true, protocolo: true, tipo: true, setor: true, paciente: true,
+  mensagem: true, status: true, prazo: true, createdAt: true,
+} as const
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { ator, negado } = await exigir('admin:acesso')
+  if (negado) return negado
+
   try {
-    const { id } = await params;
-    const session = await auth();
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    const { hospitalId, cargo } = session.user;
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 });
-    if (cargo !== 'ADMIN') return NextResponse.json({ error: 'Somente ADMIN pode atualizar manifestações' }, { status: 403 });
-
-    let body: unknown;
-    try { body = await request.json(); } catch { return NextResponse.json({ error: 'JSON inválido' }, { status: 400 }); }
-    if (!isRecord(body)
-      || Object.keys(body).some(key => key !== 'status')
-      || (body.status !== 'Respondida' && body.status !== 'RESPONDIDA')) {
-      return NextResponse.json({ error: 'Status inválido' }, { status: 400 });
+    const { id } = await params
+    const body = await lerJson(request)
+    const status = body?.status
+    if (typeof status !== 'string' || !(STATUS_OUVIDORIA as readonly string[]).includes(status)) {
+      return NextResponse.json({ error: 'Status inválido' }, { status: 400 })
+    }
+    const resposta = typeof body?.resposta === 'string' ? body.resposta.trim() : ''
+    if (resposta.length > 4000) return NextResponse.json({ error: 'Resposta muito longa' }, { status: 400 })
+    if (status === 'RESPONDIDA' && !resposta) {
+      return NextResponse.json({ error: 'Escreva a resposta antes de marcar como respondida' }, { status: 400 })
     }
 
+    const where = { id, hospitalId: ator.hospitalId }
+    const atual = await prisma.ouvidoriaTicket.findFirst({ where, select: { mensagem: true, status: true } })
+    if (!atual) return NextResponse.json({ error: 'Manifestação não encontrada' }, { status: 404 })
+
+    // updateMany condicionado ao status lido evita sobrescrever uma resposta simultânea.
     const atualizado = await prisma.ouvidoriaTicket.updateMany({
-      where: { id, hospitalId, status: { in: ['ABERTO', 'EM_ANALISE'] } },
-      data: { status: 'RESPONDIDA' },
-    });
+      where: { ...where, status: atual.status, mensagem: atual.mensagem },
+      data: { status, ...(resposta ? { mensagem: anexarResposta(atual.mensagem, resposta) } : {}) },
+    })
     if (atualizado.count === 0) {
-      const existente = await prisma.ouvidoriaTicket.findFirst({ where: { id, hospitalId }, select: { id: true } });
-      if (!existente) return NextResponse.json({ error: 'Manifestação não encontrada' }, { status: 404 });
-      return NextResponse.json({ error: 'Esta manifestação já foi respondida ou encerrada' }, { status: 409 });
+      return NextResponse.json({ error: 'A manifestação foi alterada. Atualize a tela e tente novamente.' }, { status: 409 })
     }
-    return NextResponse.json(await prisma.ouvidoriaTicket.findFirst({ where: { id, hospitalId } }));
+
+    await auditar(ator, 'ATUALIZAR_STATUS', 'OuvidoriaTicket', id, { status })
+    const item = await prisma.ouvidoriaTicket.findFirst({ where, select: CAMPOS })
+    return NextResponse.json(item ? { ...item, ...separarResposta(item.mensagem) } : null)
   } catch {
-    return NextResponse.json({ error: 'Erro ao atualizar manifestação' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao atualizar manifestação' }, { status: 500 })
   }
 }

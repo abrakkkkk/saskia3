@@ -1,6 +1,7 @@
-'use client';
-import { getSessionUser } from '@/lib/session';
+﻿'use client';
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { Tabs } from '@/components/ui';
 import './gestao-salas.css';
 
 function dataLocalISO(data = new Date()) {
@@ -49,7 +50,15 @@ const statusLabel: Record<string, string> = {
   MANUTENCAO: " Manutenção"
 };
 
+const ABAS = [
+  { id: 'mapa', label: 'Mapa de Salas', icon: 'las la-th-large' },
+  { id: 'cadastro', label: 'Cadastrar Sala', icon: 'las la-plus-circle' },
+  { id: 'reservas', label: 'Reservas', icon: 'las la-calendar-alt' },
+  { id: 'historico', label: 'Histórico', icon: 'las la-history' },
+] as const;
+
 export default function GestaoSalasPage() {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<'mapa' | 'cadastro' | 'reservas' | 'historico'>('mapa');
   const [loading, setLoading] = useState(true);
   const [erroCarga, setErroCarga] = useState('');
@@ -99,7 +108,7 @@ export default function GestaoSalasPage() {
   };
 
   useEffect(() => {
-    carregarDados();
+    void Promise.resolve().then(() => { carregarDados(); });
   }, []);
 
   const cadastrarSala = async () => {
@@ -128,16 +137,14 @@ export default function GestaoSalasPage() {
       setActiveTab('mapa');
       alert(" Sala cadastrada com sucesso!");
       carregarDados();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erro inesperado.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const abrirReserva = (salaId?: string) => {
-    const u = JSON.stringify(getSessionUser());
-    const usuario = u ? JSON.parse(u) : null;
     const agora = new Date();
     const horaInicio = agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
     agora.setHours(agora.getHours() + 1);
@@ -145,7 +152,7 @@ export default function GestaoSalasPage() {
 
     setFormReserva({
       salaId: salaId || '',
-      profissional: usuario?.nome || '',
+      profissional: session?.user?.name || '',
       paciente: '',
       data: dataLocalISO(),
       horaInicio,
@@ -166,7 +173,7 @@ export default function GestaoSalasPage() {
   };
 
   const confirmarReserva = async () => {
-    if(!formReserva.salaId || !formReserva.profissional || !formReserva.data || !formReserva.horaInicio || !formReserva.horaFim){
+    if(!formReserva.salaId || !formReserva.data || !formReserva.horaInicio || !formReserva.horaFim){
       alert(" Preencha todos os campos obrigatórios (*)!");
       return;
     }
@@ -177,7 +184,6 @@ export default function GestaoSalasPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           salaId: formReserva.salaId,
-          profissional: formReserva.profissional.trim(),
           paciente: formReserva.paciente.trim(),
           data: formReserva.data,
           horaInicio: formReserva.horaInicio,
@@ -191,8 +197,8 @@ export default function GestaoSalasPage() {
       setIsModalOpen(false);
       alert(" Reserva confirmada com sucesso!");
       carregarDados();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erro inesperado.');
     } finally {
       setIsSaving(false);
     }
@@ -210,8 +216,8 @@ export default function GestaoSalasPage() {
       if (!res.ok) throw new Error(resposta?.error || "Erro ao atualizar reserva");
       alert(status === 'FINALIZADA' ? " Sala liberada com sucesso!" : " Reserva cancelada com sucesso!");
       carregarDados();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erro inesperado.');
     }
   };
 
@@ -226,8 +232,8 @@ export default function GestaoSalasPage() {
       if (!res.ok) throw new Error(resposta?.error || "Erro ao atualizar status");
       alert(` Status alterado para: ${statusLabel[status]}`);
       carregarDados();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erro inesperado.');
     }
   };
 
@@ -293,12 +299,7 @@ export default function GestaoSalasPage() {
           <div className="legenda-item"><div className="legenda-cor" style={{background:'#6b7280'}}></div>  Manutenção - Indisponível temporariamente</div>
         </div>
 
-        <div className="tabs-salas">
-          <button type="button" aria-pressed={activeTab === 'mapa'} className={`tab-btn ${activeTab === 'mapa' ? 'ativo' : ''}`} onClick={() => setActiveTab('mapa')}><i aria-hidden="true" className="las la-th-large"></i> Mapa de Salas</button>
-          <button type="button" aria-pressed={activeTab === 'cadastro'} className={`tab-btn ${activeTab === 'cadastro' ? 'ativo' : ''}`} onClick={() => setActiveTab('cadastro')}><i aria-hidden="true" className="las la-plus-circle"></i> Cadastrar Sala</button>
-          <button type="button" aria-pressed={activeTab === 'reservas'} className={`tab-btn ${activeTab === 'reservas' ? 'ativo' : ''}`} onClick={() => setActiveTab('reservas')}><i aria-hidden="true" className="las la-calendar-alt"></i> Reservas</button>
-          <button type="button" aria-pressed={activeTab === 'historico'} className={`tab-btn ${activeTab === 'historico' ? 'ativo' : ''}`} onClick={() => setActiveTab('historico')}><i aria-hidden="true" className="las la-history"></i> Histórico</button>
-        </div>
+        <Tabs label="Seções de salas" tabs={ABAS} active={activeTab} onChange={setActiveTab} />
 
         {activeTab === 'mapa' && (
           <div>
@@ -493,7 +494,7 @@ export default function GestaoSalasPage() {
                   {salas.filter(s => s.status === 'LIVRE' || s.status === 'RESERVADO' || s.id === formReserva.salaId).map(s => <option key={s.id} value={s.id}>{s.nome} ({s.setor})</option>)}
                 </select>
               </div>
-              <div className="form-grupo"><label htmlFor="reserva-profissional">Profissional *</label><input id="reserva-profissional" type="text" value={formReserva.profissional} onChange={e => setFormReserva({...formReserva, profissional: e.target.value})} /></div>
+              <div className="form-grupo"><label htmlFor="reserva-profissional">Profissional (usuário logado)</label><input id="reserva-profissional" type="text" value={session?.user?.name || ''} readOnly /></div>
               <div className="form-grupo"><label htmlFor="reserva-paciente">Paciente / Evento</label><input id="reserva-paciente" type="text" value={formReserva.paciente} onChange={e => setFormReserva({...formReserva, paciente: e.target.value})} /></div>
               <div className="form-grupo"><label htmlFor="reserva-data">Data *</label><input id="reserva-data" type="date" value={formReserva.data} onChange={e => setFormReserva({...formReserva, data: e.target.value})} /></div>
               <div className="form-grupo"><label htmlFor="reserva-inicio">Horário Início *</label><input id="reserva-inicio" type="time" value={formReserva.horaInicio} onChange={e => setFormReserva({...formReserva, horaInicio: e.target.value})} /></div>

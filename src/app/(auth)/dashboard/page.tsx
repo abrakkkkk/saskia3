@@ -1,392 +1,191 @@
-'use client'
+﻿'use client'
 
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import EmergencyButtons from '@/components/EmergencyButtons'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { inter } from '@/app/fonts'
+import { ErrorState, LoadingState, StatCard, StatGrid } from '@/components/ui'
+import { menuDoCargo } from '@/lib/navigation'
+import { CARGO_LABEL, type Cargo } from '@/lib/permissions'
+import './dashboard.css'
 
 interface DashboardStats {
-  pacientesAtendidos: number
   aguardando: number
-  ocupadosVermelha: number
-  ocupadosAmarela: number
-  salasCirurgicas: number
+  emAtendimento: number
+  internados: number
+  riscoVermelho: number
+  riscoAmarelo: number
+  cirurgiasEmAndamento: number
   leitosUti: number
   totalLeitosUti: number
   altas: number
   evasoes: number
   transferencias: number
-  mediaEtaria: number
-  totalPacientes: number
   obitos: number
 }
 
-const NAV_CARDS = [
-  { id: 'card_pacientes', href: '/pacientes', icon: 'las la-user-injured', title: 'Pacientes', desc: 'Gerenciar cadastros', theme: 'blue' },
-  { id: 'card_agenda', href: '/agenda', icon: 'las la-calendar', title: 'Agenda', desc: 'Consultas e horários', theme: 'blue' },
-  { id: 'card_receituario', href: '/receituario', icon: 'las la-file-prescription', title: 'Receituário', desc: 'Prescrições médicas', theme: 'blue' },
-  { id: 'card_recepcao', href: '/recepcao', icon: 'las la-user-nurse', title: 'Recepção', desc: 'Atendimento inicial', theme: 'blue' }
+const CAMPOS: (keyof DashboardStats)[] = [
+  'aguardando', 'emAtendimento', 'internados', 'riscoVermelho', 'riscoAmarelo', 'cirurgiasEmAndamento',
+  'leitosUti', 'totalLeitosUti', 'altas', 'evasoes', 'transferencias', 'obitos',
 ]
 
-const CATEGORY_GROUPS = [
-  {
-    title: 'Assistência e Clínica',
-    items: [
-      { id: 'cat_fichas', href: '/pacientes-busca', icon: 'las la-search', title: 'Buscar Pacientes', desc: 'Pesquisa avançada', theme: 'blue' },
-      { id: 'cat_fichas', href: '/fichas-auxiliares', icon: 'las la-clipboard-list', title: 'Fichas Auxiliares', desc: 'Formulários e anexos', theme: 'blue' },
-      { id: 'cat_exames', href: '/exames', icon: 'las la-flask', title: 'Exames', desc: 'Laboratório e Imagem', theme: 'blue' },
-      { id: 'cat_farmacia', href: '/farmacia', icon: 'las la-prescription', title: 'Farmácia', desc: 'Controle de medicamentos', theme: 'green' },
-      { id: 'cat_centro_cirurgico', href: '/centro-cirurgico', icon: 'las la-cut', title: 'Centro Cirúrgico', desc: 'Agendamento e salas', theme: 'red' },
-      { id: 'cat_uti', href: '/uti', icon: 'las la-procedures', title: 'UTI', desc: 'Gestão de leitos', theme: 'red' },
-      { id: 'cat_banco_sangue', href: '/banco-sangue', icon: 'las la-tint', title: 'Banco de Sangue', desc: 'Hemoterapia', theme: 'red' },
-      { id: 'cat_obitos', href: '/obitos', icon: 'las la-cross', title: 'Óbitos', desc: 'Registro e controle', theme: 'gray' }
-    ]
-  },
-  {
-    title: 'Apoio Logístico e Operacional',
-    items: [
-      { id: 'cat_almoxarifado', href: '/almoxarifado', icon: 'las la-boxes', title: 'Almoxarifado', desc: 'Controle de estoque', theme: 'blue' },
-      { id: 'cat_cssd', href: '/cssd', icon: 'las la-recycle', title: 'CSSD', desc: 'Esterilização', theme: 'blue' },
-      { id: 'cat_manutencao', href: '/manutencao', icon: 'las la-tools', title: 'Manutenção', desc: 'Predial e equipamentos', theme: 'gray' },
-      { id: 'cat_transporte', href: '/transporte', icon: 'las la-ambulance', title: 'Transporte', desc: 'Remoção de pacientes', theme: 'orange' },
-      { id: 'cat_centro_cirurgico', href: '/gestao-salas', icon: 'las la-door-open', title: 'Gestão de Salas', desc: 'Reserva e controle', theme: 'orange' },
-      { id: 'cat_servico_social', href: '/servico-social', icon: 'las la-hands-helping', title: 'Serviço Social', desc: 'Atendimento social', theme: 'green' },
-      { id: 'cat_ccih', href: '/ccih', icon: 'las la-microscope', title: 'CCIH', desc: 'Controle de Infecção', theme: 'green' }
-    ]
-  },
-  {
-    title: 'Gestão e Administração',
-    items: [
-      { id: 'cat_usuarios', href: '/usuario', icon: 'las la-users', title: 'Usuários', desc: 'Gerenciar colaboradores', theme: 'purple' },
-      { id: 'cat_ponto', href: '/ponto', icon: 'las la-clock', title: 'Ponto', desc: 'Entrada e saída', theme: 'orange' },
-      { id: 'cat_relatorios', href: '/relatorios', icon: 'las la-chart-bar', title: 'Relatórios', desc: 'Indicadores gerenciais', theme: 'purple' },
-      { id: 'cat_ouvidoria', href: '/ouvidoria', icon: 'las la-headset', title: 'Ouvidoria', desc: 'Manifestações', theme: 'purple' },
-      { id: 'cat_chat', href: '/chat', icon: 'las la-comments', title: 'Chat Interno', desc: 'Comunicação profissional', theme: 'blue' }
-    ]
-  },
-  {
-    title: 'Institucional e Utilitários',
-    items: [
-      { id: 'cat_biblioteca', href: '/biblioteca', icon: 'las la-book', title: 'Biblioteca', desc: 'Documentação e materiais', theme: 'purple' },
-      { id: 'cat_institucional', href: '/institucional', icon: 'las la-building', title: 'Institucional', desc: 'Sobre a instituição', theme: 'blue' },
-      { id: 'cat_sobre', href: '/sobre-nos', icon: 'las la-heart', title: 'Sobre Nós', desc: 'Nossa história e missão', theme: 'pink' },
-      { id: 'cat_feedback', href: '/feedback', icon: 'las la-comment-dots', title: 'Feedback', desc: 'Envie sua opinião', theme: 'orange' },
-      { id: 'cat_privacidade', href: '/politicas-privacidade', icon: 'las la-shield-alt', title: 'Privacidade', desc: 'Proteção de dados', theme: 'gray' },
-      { id: 'cat_utilitarios', href: '/utilitarios', icon: 'las la-tools', title: 'Utilitários', desc: 'Ferramentas diversas', theme: 'gray' }
-    ]
-  }
-]
+// Cada atalho do menu pode ser ligado ou desligado em "Atalhos do dashboard" (admin-config-dashboard).
+const ID_CONFIG: Record<string, string> = {
+  '/pacientes': 'card_pacientes', '/agenda': 'card_agenda', '/receituario': 'card_receituario', '/recepcao': 'card_recepcao',
+  '/pacientes-busca': 'cat_fichas', '/fichas-auxiliares': 'cat_fichas', '/exames': 'cat_exames', '/farmacia': 'cat_farmacia',
+  '/centro-cirurgico': 'cat_centro_cirurgico', '/uti': 'cat_uti', '/banco-sangue': 'cat_banco_sangue', '/obitos': 'cat_obitos',
+  '/almoxarifado': 'cat_almoxarifado', '/cssd': 'cat_cssd', '/manutencao': 'cat_manutencao', '/transporte': 'cat_transporte',
+  '/servico-social': 'cat_servico_social', '/ccih': 'cat_ccih', '/admin-usuarios': 'cat_usuarios', '/ponto': 'cat_ponto',
+  '/relatorios': 'cat_relatorios', '/ouvidoria': 'cat_ouvidoria', '/chat': 'cat_chat', '/biblioteca': 'cat_biblioteca',
+  '/feedback': 'cat_feedback', '/utilitarios': 'cat_utilitarios',
+}
 
-const STATUS_CORES: Record <string, string> = {
-  'Aguardando': '#f59e0b', 'Em Atendimento': '#3b82f6', 'Finalizado': '#22c55e',
-  'Retorno': '#a855f7', 'Internado': '#ec4899', 'Alta Médica': '#16a34a',
-  'Óbito': '#64748b', 'Evasão': '#dc2626', 'Transferido': '#3b82f6'
+const STATUS_CORES: Record<string, string> = {
+  'Aguardando': '#b45309', 'Em atendimento': '#1d4ed8', 'Internados': '#be185d',
+  'Alta médica': '#15803d', 'Transferido': '#0e7490', 'Evasão': '#b91c1c',
 }
 
 export default function DashboardPage() {
   const { data: session } = useSession()
-  const [stats, setStats] = useState<DashboardStats>({
-    pacientesAtendidos: 0, aguardando: 0, ocupadosVermelha: 0, ocupadosAmarela: 0,
-    salasCirurgicas: 0, leitosUti: 0, totalLeitosUti: 0, altas: 0, evasoes: 0, transferencias: 0,
-    mediaEtaria: 0, totalPacientes: 0, obitos: 0
-  })
-
-  const [dashboardConfig, setDashboardConfig] = useState<Record<string, boolean>>({})
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [carregando, setCarregando] = useState(true)
   const [statsErro, setStatsErro] = useState('')
+  const [atualizadoEm, setAtualizadoEm] = useState<Date | null>(null)
+  const [dashboardConfig, setDashboardConfig] = useState<Record<string, boolean>>({})
 
-  useEffect(() => {
-    fetch('/api/dashboard/stats')
-      .then(async response => {
-        if (!response.ok) throw new Error('Não foi possível carregar os indicadores do hospital.')
-        return response.json()
-      })
-      .then(data => {
-        const valores = ['pacientesAtendidos', 'aguardando', 'ocupadosVermelha', 'ocupadosAmarela', 'salasCirurgicas', 'leitosUti', 'totalLeitosUti', 'altas', 'evasoes', 'transferencias', 'mediaEtaria', 'totalPacientes', 'obitos']
-        if (!data || valores.some(campo => typeof data[campo] !== 'number' || !Number.isFinite(data[campo]))) {
-          throw new Error('A resposta dos indicadores está incompleta.')
-        }
-        setStats(data as DashboardStats)
-        setStatsErro('')
-      })
-      .catch(error => setStatsErro(error instanceof Error ? error.message : 'Erro ao carregar indicadores.'))
-
-    fetch('/api/config-dashboard')
-      .then(r => r.json())
-      .then(data => {
-        if (data && typeof data === 'object') setDashboardConfig(data);
-      })
-      .catch(() => {})
+  const carregar = useCallback(async (sinal?: AbortSignal) => {
+    setCarregando(true)
+    try {
+      const resposta = await fetch('/api/dashboard/stats', { cache: 'no-store', signal: sinal })
+      if (!resposta.ok) throw new Error('Não foi possível carregar os indicadores do hospital.')
+      const dados: unknown = await resposta.json()
+      const registro = dados as Record<string, unknown> | null
+      if (!registro || CAMPOS.some(campo => typeof registro[campo] !== 'number' || !Number.isFinite(registro[campo]))) {
+        throw new Error('A resposta dos indicadores está incompleta.')
+      }
+      setStats(registro as unknown as DashboardStats)
+      setAtualizadoEm(new Date())
+      setStatsErro('')
+    } catch (erro) {
+      if (erro instanceof Error && erro.name === 'AbortError') return
+      setStatsErro(erro instanceof Error ? erro.message : 'Erro ao carregar indicadores.')
+    } finally {
+      if (!sinal?.aborted) setCarregando(false)
+    }
   }, [])
 
-  const isModuleActive = (id: string) => {
-    if (Object.keys(dashboardConfig).length === 0) return true; // Default behavior
-    return dashboardConfig[id] !== false;
-  }
+  useEffect(() => {
+    const controle = new AbortController()
+    void Promise.resolve().then(() => { carregar(controle.signal); });
+    // Indicadores "agora": atualiza sozinho, mas só com a aba visível.
+    const intervalo = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void carregar()
+    }, 60_000)
 
-  const user = session?.user
-  const cargoMap: Record<string, string> = {
-    diretor_geral: 'Diretor Geral (CEO)',
-    enfermeiro_assistencial: 'Enfermeiro Assistencial',
-    medico_especialista: 'Médico Especialista'
-  }
-  const cargo = cargoMap[user?.cargo || ''] || user?.cargo || 'Profissional'
+    fetch('/api/config-dashboard', { signal: controle.signal })
+      .then(resposta => (resposta.ok ? resposta.json() : null))
+      .then((dados: unknown) => {
+        if (dados && typeof dados === 'object' && !Array.isArray(dados)) setDashboardConfig(dados as Record<string, boolean>)
+      })
+      .catch(() => {})
 
-  const statusData = {
-    'Aguardando': stats.aguardando,
-    'Finalizado': stats.pacientesAtendidos,
-    'Alta Médica': stats.altas,
-    'Óbito': stats.obitos,
-    'Evasão': stats.evasoes,
-    'Transferido': stats.transferencias
-  }
+    return () => { controle.abort(); window.clearInterval(intervalo) }
+  }, [carregar])
 
-  const totalStatus = Object.values (statusData).reduce ((a, b) => a + b, 0)
-  const indicador = (valor: number) => statsErro ? '—' : valor
+  const ativo = (id: string) => dashboardConfig[id] !== false
+  const usuario = session?.user
+  const cargoRotulo = usuario?.cargo ? CARGO_LABEL[usuario.cargo as Cargo] ?? 'Profissional' : 'Profissional'
+
+  const grupos = useMemo(() => menuDoCargo(usuario?.cargo)
+    .filter(grupo => grupo.titulo !== 'Início')
+    .map(grupo => ({
+      ...grupo,
+      itens: grupo.itens.filter(item => {
+        const id = ID_CONFIG[item.href]
+        return !id || ativo(id)
+      }),
+    }))
+    .filter(grupo => grupo.itens.length > 0),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [usuario?.cargo, dashboardConfig])
+
+  const valor = (numero: number) => (statsErro && !stats ? '—' : numero)
+  const s = stats
+
+  const distribuicao = s ? [
+    ['Aguardando', s.aguardando], ['Em atendimento', s.emAtendimento], ['Internados', s.internados],
+    ['Alta médica', s.altas], ['Transferido', s.transferencias], ['Evasão', s.evasoes],
+  ] as [string, number][] : []
+  const totalDistribuicao = distribuicao.reduce((soma, [, quantidade]) => soma + quantidade, 0)
 
   return (
     <div className={inter.className}>
       <div className="perfil-profissional">
         <div className="perfil-info">
-          <div className="perfil-avatar">
-            <i className="las la-user-md"></i>
-          </div>
-
+          <div className="perfil-avatar" aria-hidden="true"><i className="las la-user-md"></i></div>
           <div className="perfil-dados">
-            <h3>{user?.name || 'Carregando...'}</h3>
-            <p><i className="las la-hospital"></i> {user?.hospitalNome || '-'}</p>
+            <h3>{usuario?.name || 'Carregando...'}</h3>
+            <p><i className="las la-hospital" aria-hidden="true"></i> {usuario?.hospitalNome || '-'}</p>
           </div>
         </div>
-
-        {(isModuleActive('btn_panico') || isModuleActive('btn_pcr')) && (
-          <EmergencyButtons />
-        )}
-
-        <div className="perfil-badge">
-          <i className="las la-briefcase"></i> {cargo}
-        </div>
+        <div className="perfil-badge"><i className="las la-briefcase" aria-hidden="true"></i> {cargoRotulo}</div>
       </div>
 
-      {statsErro && <p className="dashboard-error" role="alert" aria-live="assertive">{statsErro}</p>}
+      {carregando && !s && <LoadingState message="Carregando indicadores..." />}
+      {statsErro && <ErrorState message={statsErro} onRetry={() => void carregar()} />}
 
-      <div className="cards-nav">
-        {NAV_CARDS.filter(card => isModuleActive(card.id)).map ((card) => (
-          <Link key={card.href} href={card.href} style={{ textDecoration: 'none' }}>
-            <div className={`card-nav theme-${card.theme}`}>
-              <div className="icon-wrapper" aria-hidden="true"><i className={card.icon}></i></div>
-              <div className="nav-info">
-                <h3>{card.title}</h3>
-                <p>{card.desc}</p>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {s && (
+        <section aria-label="Indicadores do momento">
+          <StatGrid>
+            {ativo('contador_aguardando') && <StatCard icon="las la-hourglass-half" tone="warning" value={valor(s.aguardando)} label="Aguardando atendimento" hint="Recepção, triagem e médico" />}
+            {ativo('contador_atendidos') && <StatCard icon="las la-user-md" tone="info" value={valor(s.emAtendimento)} label="Em atendimento" hint="Triagem e consulta em curso" />}
+            {ativo('contador_total') && <StatCard icon="las la-procedures" tone="info" value={valor(s.internados)} label="Internados" hint="Enfermaria e UTI" />}
+            {ativo('contador_leitos_vermelha') && <StatCard icon="las la-exclamation-circle" tone="danger" value={valor(s.riscoVermelho)} label="Risco vermelho em curso" hint="Classificação de risco, não é sala" />}
+            {ativo('contador_leitos_amarela') && <StatCard icon="las la-exclamation-triangle" tone="warning" value={valor(s.riscoAmarelo)} label="Risco amarelo em curso" hint="Classificação de risco, não é sala" />}
+            {ativo('contador_salas_cc') && <StatCard icon="las la-cut" tone="neutral" value={valor(s.cirurgiasEmAndamento)} label="Cirurgias em andamento" />}
+            {ativo('contador_leitos_uti') && <StatCard icon="las la-bed" tone="neutral" value={statsErro && !stats ? '—' : `${s.leitosUti}/${s.totalLeitosUti}`} label="Leitos de UTI ocupados" hint="Ocupados / cadastrados" />}
+            {ativo('contador_altas') && <StatCard icon="las la-check-circle" tone="success" value={valor(s.altas)} label="Altas" hint="Registros ativos, sem período" />}
+            {ativo('contador_evasao') && <StatCard icon="las la-door-open" tone="danger" value={valor(s.evasoes)} label="Evasões" hint="Registros ativos, sem período" />}
+            {ativo('contador_transferencias') && <StatCard icon="las la-truck" tone="neutral" value={valor(s.transferencias)} label="Transferências" hint="Registros ativos, sem período" />}
+            {ativo('contador_obitos') && <StatCard icon="las la-cross" tone="neutral" value={valor(s.obitos)} label="Óbitos" hint="Total registrado, sem período" />}
+          </StatGrid>
+          {atualizadoEm && <p className="dashboard-atualizado" style={{ color: 'var(--ui-on-dark-muted)', fontSize: 13, margin: '-12px 0 20px' }}>Atualizado às {atualizadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Indicadores históricos e por período ficam em Relatórios.</p>}
+        </section>
+      )}
 
-      <div className="contadores">
-        
-        {isModuleActive('contador_atendidos') && (
-        <div className="card-contador">
-          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
-            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-users" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Pacientes Atendidos</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.pacientesAtendidos)}</div>
+      {grupos.map(grupo => (
+        <div key={grupo.titulo} className="categoria-section">
+          <h3 className="section-title">{grupo.titulo}</h3>
+          <div className="categorias">
+            {grupo.itens.map(item => (
+              <Link key={item.href} href={item.href}>
+                <div className="card-categoria theme-blue">
+                  <div className="icon-wrapper" aria-hidden="true"><i className={item.icon}></i></div>
+                  <div><h4>{item.label}</h4></div>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
-        )}
+      ))}
 
-        {isModuleActive('contador_aguardando') && (
-        <div className="card-contador">
-          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
-            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-hourglass-half" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Aguardando Atendimento</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.aguardando)}</div>
-          </div>
-        </div>
-        )}
-
-        {isModuleActive('contador_leitos_vermelha') && (
-        <div className="card-contador">
-          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
-            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-door-open" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Pacientes Sala Vermelha</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#dc2626' }}>{indicador(stats.ocupadosVermelha)}</div>
-          </div>
-        </div>
-        )}
-
-        {isModuleActive('contador_leitos_amarela') && (
-        <div className="card-contador">
-          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
-            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-door-closed" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Pacientes Sala Amarela</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#d97706' }}>{indicador(stats.ocupadosAmarela)}</div>
-          </div>
-        </div>
-        )}
-
-        {isModuleActive('contador_salas_cc') && (
-        <div className="card-contador">
-          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
-            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-procedures" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Cirurgias em andamento</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{indicador(stats.salasCirurgicas)}</div>
-          </div>
-        </div>
-        )}
-
-        {isModuleActive('contador_leitos_uti') && (
-        <div className="card-contador">
-          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
-            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-bed" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Leitos UTI</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{statsErro ? '—' : `${stats.leitosUti}/${stats.totalLeitosUti}`}</div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Leitos ocupados / total cadastrado</div>
-          </div>
-        </div>
-        )}
-
-        {isModuleActive('contador_altas') && (
-        <div className="card-contador">
-          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
-            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-check-circle" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Altas</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.altas)}</div>
-          </div>
-        </div>
-        )}
-
-        {isModuleActive('contador_evasao') && (
-        <div className="card-contador">
-          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
-            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-exclamation-triangle" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Evasão</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.evasoes)}</div>
-          </div>
-        </div>
-        )}
-
-        {isModuleActive('contador_transferencias') && (
-        <div className="card-contador">
-          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
-            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-truck" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Transferências</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.transferencias)}</div>
-          </div>
-        </div>
-        )}
-
-        {isModuleActive('contador_media_idade') && (
-        <div className="card-contador">
-          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
-            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-chart-bar" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Média Etária</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.mediaEtaria)}</div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>anos</div>
-          </div>
-        </div>
-        )}
-
-        {isModuleActive('contador_total') && (
-        <div className="card-contador">
-          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
-            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-file-alt" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Resumo Geral</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.totalPacientes)}</div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>pacientes cadastrados</div>
-          </div>
-        </div>
-        )}
-
-        {isModuleActive('contador_obitos') && (
-        <div className="card-contador">
-          <div className="contador-info" style={{ textAlign: 'center', width: '100%' }}>
-            <div style={{ color: '#1e3a8a', marginBottom: '10px' }}><i className="las la-cross" style={{ fontSize: '24px' }}></i></div>
-            <h3 style={{ fontSize: '13px', color: '#64748b' }}>Óbitos</h3>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e3a8a' }}>{indicador(stats.obitos)}</div>
-            <div style={{ fontSize: '11px', color: '#94a3b8' }}>registrados</div>
-          </div>
-        </div>
-        )}
-      </div>
-
-      {CATEGORY_GROUPS.map ((group, idx) => {
-        const activeItems = group.items.filter(cat => isModuleActive(cat.id));
-        if (activeItems.length === 0) return null;
-
-        return (
-          <div key={idx} className="categoria-section">
-            <h3 className="section-title">{group.title}</h3>
-            <div className="categorias">
-              {activeItems.map ((cat) => (
-                <Link key={cat.href} href={cat.href} style={{ textDecoration: 'none' }}>
-                  <div className={`card-categoria theme-${cat.theme}`}>
-                    <div className="icon-wrapper"><i className={cat.icon}></i></div>
-                    <div>
-                      <h4>{cat.title}</h4>
-                      <p>{cat.desc}</p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )
-      })}
-
-      <div className="graficos">
-        {isModuleActive('grafico_status') && (
-        <div className="card-grafico">
-          <h3><i className="las la-chart-pie"></i> Distribuição por Status</h3>
-
-          {totalStatus > 0 ? (
-            Object.entries (statusData).map (([status, qtd]) => {
-              if (qtd === 0) return null
-              const pct = Math.round ((qtd / totalStatus) * 100)
+      {s && ativo('grafico_status') && (
+        <div className="graficos">
+          <div className="card-grafico">
+            <h3><i className="las la-chart-pie" aria-hidden="true"></i> Distribuição por status</h3>
+            {totalDistribuicao > 0 ? distribuicao.map(([nome, quantidade]) => {
+              if (quantidade === 0) return null
+              const pct = Math.round((quantidade / totalDistribuicao) * 100)
               return (
-                <div className="barra-container" key={status}>
-                  <div className="barra-label">
-                    <span>{status}</span>
-                    <span>{qtd} ({pct}%)</span>
-                  </div>
-
-                  <div className="barra">
-                    <div
-                      className="barra-preenchida"
-                      style={{ width: `${pct}%`, background: STATUS_CORES[status] || '#1e3a8a' }}
-                    />
-                  </div>
+                <div className="barra-container" key={nome}>
+                  <div className="barra-label"><span>{nome}</span><span>{quantidade} ({pct}%)</span></div>
+                  <div className="barra"><div className="barra-preenchida" style={{ width: `${pct}%`, background: STATUS_CORES[nome] }} /></div>
                 </div>
               )
-            })
-          ) : (
-            <p style={{ textAlign: 'center', color: '#94a3b8', padding: 20 }}>
-              {statsErro ? 'Indicadores indisponíveis' : 'Nenhum paciente cadastrado'}
-            </p>
-          )}
-        </div>
-        )}
-
-        {isModuleActive('grafico_resumo_mes') && (
-        <div className="card-grafico">
-          <h3><i className="las la-chart-line"></i> Resumo assistencial</h3>
-          <div className="resumo-metricas">
-            <div className="metrica-box">
-              <div className="metrica-badge"><i className="las la-users"></i> Atendidos e aguardando</div>
-              <div className="valor">{indicador(stats.pacientesAtendidos + stats.aguardando)}</div>
-              <div className="label">Pacientes nos estados exibidos</div>
-            </div>
-            <div className="metrica-box">
-              <div className="metrica-badge" style={{ background: '#eff6ff', color: '#1e40af' }}>
-                <i className="las la-check-double"></i> Desfechos
-              </div>
-              <div className="valor">{indicador(stats.altas + stats.transferencias)}</div>
-              <div className="label">Altas e transferências</div>
-            </div>
+            }) : <p style={{ textAlign: 'center', color: 'var(--ui-text-muted)', padding: 20 }}>Nenhum paciente nos status exibidos.</p>}
           </div>
         </div>
-        )}
-      </div>
+      )}
     </div>
   )
 }

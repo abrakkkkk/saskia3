@@ -1,47 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auditar, exigir, lerJson } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
-import { findPatientInHospital } from '@/lib/pacientes'
-import { isRecord } from '@/lib/request-validation'
+import { pacienteAtivo, registrarEvento } from '@/lib/pacientes'
 
-export async function POST (request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    if (!['MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'TECNICO_ENFERMAGEM'].includes(session.user.cargo)) {
-      return NextResponse.json({ error: 'Cargo sem permissão para registrar evolução clínica' }, { status: 403 })
-    }
-
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
+    const { ator, negado } = await exigir('evolucao:registrar')
+    if (negado) return negado
     const { id } = await params
-    let body: unknown
-    try { body = await request.json() } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }) }
-    if (!isRecord(body) || typeof body.descricao !== 'string' || !body.descricao.trim() || body.descricao.length > 5000) {
+    const { bloqueio } = await pacienteAtivo(id, ator.hospitalId)
+    if (bloqueio) return bloqueio
+
+    const body = await lerJson(request)
+    const descricao = typeof body?.descricao === 'string' ? body.descricao.trim() : ''
+    if (!descricao || descricao.length > 5000) {
       return NextResponse.json({ error: 'Descrição da evolução é obrigatória' }, { status: 400 })
     }
-    
-    // Security: Check if patient exists and belongs to the user's hospital
-    if (!await findPatientInHospital(id, hospitalId)) {
-      return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
-    }
-    
-    // Determine the type of evolution based on user's role or body (fallback to SOAP)
-    const tipoEvolucao = session.user.cargo === 'MEDICO' ? 'Evolução Médica' : 'Evolução de Enfermagem'
 
-    const evolucao = await prisma.evolucao.create({
-      data: {
-        pacienteId: id,
-        tipo: tipoEvolucao,
-        descricao: body.descricao.trim(),
-        profissional: session.user?.name || 'Sistema',
-        usuarioId: session.user?.id || null
-      }
+    const tipo = ator.cargo === 'MEDICO' ? 'Evolução Médica' : 'Evolução de Enfermagem'
+    const evolucao = await prisma.$transaction(async tx => {
+      const criada = await tx.evolucao.create({
+        data: { pacienteId: id, tipo, descricao, profissional: ator.nome, usuarioId: ator.id },
+      })
+      await registrarEvento(tx, ator, id, 'Evolução', `${tipo} registrada`)
+      return criada
     })
-    
-    return NextResponse.json(evolucao)
+
+    await auditar(ator, 'REGISTRAR_EVOLUCAO', 'Evolucao', evolucao.id, { pacienteId: id })
+    return NextResponse.json(evolucao, { status: 201 })
   } catch (error) {
-    console.error(error);
+    console.error('Erro ao registrar evolução:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Erro ao registrar evolução' }, { status: 500 })
   }
 }

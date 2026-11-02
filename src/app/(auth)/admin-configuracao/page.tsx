@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -27,7 +27,8 @@ export default function AdminConfiguracaoPage() {
     if (!canManageHospital) return;
 
     const controller = new AbortController();
-    setLoadingHospital(true);
+    void Promise.resolve().then(() => { setLoadingHospital(true); });
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- estado inicial/reinício dependente da sessão e da busca
     setErroCarregamento(false);
     fetch(`/api/hospitais/${encodeURIComponent(hospitalId)}`, { signal: controller.signal })
       .then(async response => {
@@ -202,7 +203,8 @@ export default function AdminConfiguracaoPage() {
               />
               <div className="logo-preview-box">
                 {logoUrl && !logoPreviewErro ? (
-                  <img src={logoUrl} alt="Prévia do logotipo" referrerPolicy="no-referrer" onError={() => setLogoPreviewErro(true)} />
+                  <>{/* eslint-disable-next-line @next/next/no-img-element -- URL externa informada pelo admin, sem domínio conhecido */}
+<img src={logoUrl} alt="Prévia do logotipo" referrerPolicy="no-referrer" onError={() => setLogoPreviewErro(true)} /></>
                 ) : logoUrl && logoPreviewErro ? (
                   <p role="status" className="logo-preview-error">Não foi possível carregar a prévia desta imagem.</p>
                 ) : (

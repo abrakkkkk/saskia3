@@ -105,8 +105,8 @@ export default function VacinacaoPage() {
           <Syringe className="w-10 h-10 text-blue-50" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Vacinas - Idades e Grupos</h1>
-          <p className="text-blue-100 mt-1 font-medium">Calendários vacinais por faixa etária</p>
+          <h1 className="text-3xl font-bold tracking-tight">Calendários de Vacinação</h1>
+          <p className="text-blue-100 mt-1 font-medium">Consulta a calendários vacinais em PDF. Não registra doses aplicadas.</p>
         </div>
       </div>
 

@@ -1,42 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auditar, exigir, lerJson } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
-import { findPatientInHospital } from '@/lib/pacientes'
-import { isRecord } from '@/lib/request-validation'
+import { pacienteAtivo, registrarEvento, textoOpcional } from '@/lib/pacientes'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth()
-    if (!session?.user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    if (session.user.cargo !== 'OUTROS') {
-      return NextResponse.json({ error: 'Cargo sem permissão para registrar avaliações nutricionais' }, { status: 403 })
-    }
-
+    const { ator, negado } = await exigir('nutricao:registrar')
+    if (negado) return negado
     const { id } = await params
-    const hospitalId = session.user.hospitalId
-    if (!hospitalId) return NextResponse.json({ error: 'Hospital não identificado' }, { status: 403 })
-    if (!await findPatientInHospital(id, hospitalId)) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
+    const { bloqueio } = await pacienteAtivo(id, ator.hospitalId)
+    if (bloqueio) return bloqueio
 
-    let body: unknown
-    try { body = await request.json() } catch { return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 }) }
-    if (!isRecord(body)) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
-
-    const data: Record<string, string | null> = {}
-    for (const field of ['peso', 'altura', 'dieta', 'restricoes']) {
-      const value = body[field]
-      if (value === undefined) continue
-      if (value !== null && (typeof value !== 'string' || value.length > 5000)) {
-        return NextResponse.json({ error: `Valor inválido para ${field}` }, { status: 400 })
-      }
-      data[field] = value as string | null
+    const body = await lerJson(request)
+    if (!body) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 })
+    const peso = textoOpcional(body.peso, 20)
+    const altura = textoOpcional(body.altura, 20)
+    const dieta = textoOpcional(body.dieta, 200)
+    const restricoes = textoOpcional(body.restricoes, 5000)
+    if (peso === undefined || altura === undefined || dieta === undefined || restricoes === undefined) {
+      return NextResponse.json({ error: 'Dados da avaliação inválidos' }, { status: 400 })
     }
+    if (!peso && !altura && !dieta && !restricoes) return NextResponse.json({ error: 'Preencha a avaliação nutricional' }, { status: 400 })
 
-    const item = await prisma.avaliacaoNutricional.create({
-      data: { ...data, pacienteId: id, profissional: session.user.name || 'Sistema' }
+    const item = await prisma.$transaction(async tx => {
+      const criado = await tx.avaliacaoNutricional.create({
+        data: { pacienteId: id, peso, altura, dieta, restricoes, profissional: ator.nome, usuarioId: ator.id },
+      })
+      await registrarEvento(tx, ator, id, 'Nutrição', 'Avaliação nutricional registrada')
+      return criado
     })
 
+    await auditar(ator, 'REGISTRAR_NUTRICAO', 'AvaliacaoNutricional', item.id, { pacienteId: id })
     return NextResponse.json(item, { status: 201 })
-  } catch {
+  } catch (error) {
+    console.error('Erro ao registrar nutrição:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

@@ -1,8 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { MessageSquare, Search, Send } from 'lucide-react';
+import { CARGO_LABEL, type Cargo } from '@/lib/permissions';
 import './chat.css';
 
 interface Contato {
@@ -33,8 +34,8 @@ function formatHora(iso: string) {
 
 export default function ChatPage() {
   const { data: session, status: sessionStatus } = useSession();
-  const hospitalId = (session?.user as any)?.hospitalId;
-  const usuario = session?.user as any;
+  const hospitalId = session?.user?.hospitalId;
+  const usuario = session?.user;
   const usuarioEmail = usuario?.email;
 
   const [contatos, setContatos] = useState<Contato[]>([]);
@@ -48,10 +49,12 @@ export default function ChatPage() {
   const [enviando, setEnviando] = useState(false);
   const [carregandoMensagens, setCarregandoMensagens] = useState(false);
   const msgContainerRef = useRef<HTMLDivElement>(null);
+  const ultimoContato = useRef<string | null>(null);
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;
     let active = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- estado inicial/reinício dependente da sessão e da busca
     setContatos([]);
     setAtivo(null);
     setErroContatos('');
@@ -68,7 +71,7 @@ export default function ChatPage() {
       })
       .then(data => {
         if (!active) return;
-        const filtrados: any[] = Array.isArray(data) ? data.filter(u => u.email !== usuarioEmail) : [];
+        const filtrados: { id: string; nome?: string; email: string; cargo?: string }[] = Array.isArray(data) ? data.filter(u => u.email !== usuarioEmail) : [];
         setContatos(filtrados.map((u, i) => ({
           id: u.id,
           nome: u.nome || u.email,
@@ -86,6 +89,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!hospitalId || !ativo?.email) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- estado inicial/reinício dependente da sessão e da busca
       setMensagens([]);
       return;
     }
@@ -114,9 +118,13 @@ export default function ChatPage() {
 
   useEffect(() => {
     // Scroll apenas dentro do container de mensagens — não a página toda
-    if (msgContainerRef.current) {
-      msgContainerRef.current.scrollTop = msgContainerRef.current.scrollHeight;
-    }
+    const caixa = msgContainerRef.current;
+    if (!caixa) return;
+    // Só rola se a pessoa trocou de conversa ou já estava lendo o fim; não puxa de volta quem lê mensagens antigas.
+    const trocou = ultimoContato.current !== (ativo?.email ?? null);
+    const noFim = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 80;
+    if (trocou || noFim) caixa.scrollTop = caixa.scrollHeight;
+    ultimoContato.current = ativo?.email ?? null;
   }, [mensagens, ativo]);
 
   const conversa = [...mensagens].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
@@ -178,7 +186,7 @@ export default function ChatPage() {
             <div style={{ fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {usuario?.name || 'Usuário'}
             </div>
-            <div style={{ fontSize: '11px', opacity: 0.8 }}>{(usuario as any)?.cargo || 'Online'}</div>
+            <div style={{ fontSize: '11px', opacity: 0.8 }}>{CARGO_LABEL[usuario?.cargo as Cargo] || 'Online'}</div>
           </div>
         </div>
 
@@ -241,7 +249,7 @@ export default function ChatPage() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '13px', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nome}</div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>{c.cargo}</div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>{CARGO_LABEL[c.cargo as Cargo] || c.cargo}</div>
                 </div>
               </button>
             );
@@ -275,7 +283,7 @@ export default function ChatPage() {
               </div>
               <div>
                 <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '15px' }}>{ativo.nome}</div>
-                <div style={{ fontSize: '12px', color: '#64748b' }}>{ativo.cargo}</div>
+                <div style={{ fontSize: '12px', color: '#64748b' }}>{CARGO_LABEL[ativo.cargo as Cargo] || ativo.cargo}</div>
               </div>
             </div>
 

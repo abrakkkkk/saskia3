@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import './prontuarios.css';
@@ -18,7 +18,7 @@ interface ModeloProntuario {
 
 export default function AdminProntuariosPage() {
   const { data: session, status: statusSessao } = useSession();
-  const isAdmin = (session?.user as any)?.cargo === 'ADMIN';
+  const isAdmin = session?.user?.cargo === 'ADMIN';
   const [modelos, setModelos] = useState<ModeloProntuario[]>([]);
   const [erro, setErro] = useState('');
   const [feedback, setFeedback] = useState('');
@@ -53,6 +53,7 @@ export default function AdminProntuariosPage() {
   useEffect(() => {
     if (statusSessao === 'loading') return;
     if (!isAdmin) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- estado inicial/reinício dependente da sessão e da busca
       setModelos([]);
       setErro('');
       setCarregando(false);
@@ -180,7 +181,7 @@ export default function AdminProntuariosPage() {
   };
 
   const getTipoLabel = (tipo: string) => {
-    const tipos: any = {
+    const tipos: Record<string, string> = {
       "texto": "Texto Curto",
       "numero": "Número",
       "data": "Data",

@@ -1,6 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import PacienteSelect from '@/components/ui/PacienteSelect';
+import { pode } from '@/lib/permissions';
 import './uti.css';
 
 interface UtiLeito {
@@ -14,15 +17,20 @@ interface UtiLeito {
   updatedAt: string;
 }
 
-interface Paciente {
-  id: string;
-  nome: string;
-}
+const DESTINOS = [
+  { valor: 'Internado', rotulo: 'Permanece internado (enfermaria)' },
+  { valor: 'Alta Médica', rotulo: 'Alta médica' },
+  { valor: 'Transferido', rotulo: 'Transferência' },
+  { valor: 'Evasão', rotulo: 'Evasão' },
+];
 
 export default function UtiPage() {
+  const { data: session } = useSession();
+  const podeGerir = pode(session?.user?.cargo, 'uti:gerir');
   const [activeTab, setActiveTab] = useState<'mapa' | 'admissao' | 'pacientes'>('mapa');
   const [leitosUTI, setLeitosUTI] = useState<UtiLeito[]>([]);
-  const [pacientesGerais, setPacientesGerais] = useState<Paciente[]>([]);
+  const [liberando, setLiberando] = useState<{ id: string; nome: string | null } | null>(null);
+  const [destino, setDestino] = useState('Internado');
   const [loading, setLoading] = useState(true);
   const [erroCarga, setErroCarga] = useState('');
 
@@ -33,17 +41,11 @@ export default function UtiPage() {
 
   const carregarDados = async () => {
     try {
-      const [resLeitos, resPacientes] = await Promise.all([
-        fetch('/api/uti'),
-        fetch('/api/pacientes')
-      ]);
+      const resLeitos = await fetch('/api/uti');
       const dadosLeitos = await resLeitos.json().catch(() => null);
-      const dadosPacientes = await resPacientes.json().catch(() => null);
       if (!resLeitos.ok) throw new Error(dadosLeitos?.error || 'Não foi possível carregar os leitos.');
-      if (!resPacientes.ok) throw new Error(dadosPacientes?.error || 'Não foi possível carregar os pacientes.');
-      if (!Array.isArray(dadosLeitos) || !Array.isArray(dadosPacientes)) throw new Error('A resposta da UTI está inválida.');
+      if (!Array.isArray(dadosLeitos)) throw new Error('A resposta da UTI está inválida.');
       setLeitosUTI(dadosLeitos);
-      setPacientesGerais(dadosPacientes);
       setErroCarga('');
     } catch(e) {
       setErroCarga(e instanceof Error ? e.message : 'Não foi possível carregar os dados da UTI.');
@@ -53,6 +55,7 @@ export default function UtiPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     carregarDados();
   }, []);
 
@@ -82,30 +85,36 @@ export default function UtiPage() {
       setActiveTab('mapa');
       alert('Paciente vinculado ao leito. Registre os dados clínicos da admissão no prontuário.');
       carregarDados();
-    } catch(e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erro ao admitir paciente no leito');
     }
   };
 
-  const liberarLeito = async (leitoId: string, nome: string | null) => {
-    if (await confirm(`Liberar o leito UTI de ${nome || 'este paciente'}?`)) {
-      try {
-        const res = await fetch(`/api/uti/${leitoId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: 'LIVRE'
-          })
-        });
-        const resposta = await res.json().catch(() => null);
-        if(!res.ok) throw new Error(resposta?.error || "Erro ao dar alta do leito");
-
-        alert('Leito liberado. O paciente permanece internado no hospital.');
-        carregarDados();
-      } catch(e: any) {
-        alert(e.message);
-      }
+  const confirmarLiberacao = async () => {
+    if (!liberando) return;
+    const { id, nome } = liberando;
+    const rotulo = DESTINOS.find(d => d.valor === destino)?.rotulo ?? destino;
+    if (!await confirm(`Liberar o leito UTI de ${nome || 'este paciente'}? Destino: ${rotulo}.`)) return;
+    try {
+      const res = await fetch(`/api/uti/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'LIVRE', destino }),
+      });
+      const resposta = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(resposta?.error || 'Erro ao liberar o leito');
+      setLiberando(null);
+      setDestino('Internado');
+      alert(`Leito liberado. Destino registrado: ${rotulo}.`);
+      void carregarDados();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erro ao liberar o leito');
     }
+  };
+
+  const liberarLeito = (leitoId: string, nome: string | null) => {
+    setDestino('Internado');
+    setLiberando({ id: leitoId, nome });
   };
 
   // Indicators
@@ -135,7 +144,7 @@ export default function UtiPage() {
             <p>Monitoramento, indicadores e controle de ocupação da Unidade de Terapia Intensiva</p>
           </div>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button className="btn btn-success" onClick={() => setActiveTab('admissao')}><i className="las la-plus-circle"></i> Vincular paciente ao leito</button>
+            {podeGerir && <button type="button" className="btn btn-success" onClick={() => setActiveTab('admissao')}><i className="las la-plus-circle" aria-hidden="true"></i> Vincular paciente ao leito</button>}
           </div>
         </div>
 
@@ -170,7 +179,7 @@ export default function UtiPage() {
                         <p><i className="las la-calendar"></i> Última Att: {new Date(l.updatedAt).toLocaleDateString('pt-BR')}</p>
                       </div>
                       <div className="leito-acoes">
-                        <button className="btn btn-sm btn-warning" onClick={() => liberarLeito(l.id, l.pacienteNome)}><i className="las la-check-circle"></i> Liberar leito</button>
+                        {podeGerir && <button type="button" className="btn btn-sm btn-warning" onClick={() => liberarLeito(l.id, l.pacienteNome)}><i className="las la-check-circle" aria-hidden="true"></i> Liberar leito</button>}
                       </div>
                     </>
                   ) : (
@@ -185,18 +194,29 @@ export default function UtiPage() {
           </div>
         )}
 
-        {activeTab === 'admissao' && (
+        {liberando && (
+          <div className="form-panel">
+            <h3><i className="las la-door-open" aria-hidden="true"></i> Liberar leito de {liberando.nome || 'paciente'}</h3>
+            <div className="form-grupo">
+              <label htmlFor="uti-destino">Destino do paciente *</label>
+              <select id="uti-destino" value={destino} onChange={e => setDestino(e.target.value)}>
+                {DESTINOS.map(d => <option key={d.valor} value={d.valor}>{d.rotulo}</option>)}
+              </select>
+              <small>Óbito é registrado na tela de Óbitos, que também libera o leito.</small>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn-warning" onClick={() => void confirmarLiberacao()}>Liberar leito</button>
+              <button type="button" className="btn btn-sm" onClick={() => setLiberando(null)}>Cancelar</button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'admissao' && podeGerir && (
           <div className="form-panel">
             <h3><i className="las la-user-plus"></i> Vincular paciente cadastrado a um leito livre</h3>
             <p>Esta ação altera o status e associa o paciente ao leito. Registre os dados clínicos da admissão no prontuário.</p>
             <div className="form-grid">
-              <div className="form-grupo">
-                <label htmlFor="uti-paciente">Paciente *</label>
-                <select id="uti-paciente" value={formAdmissao.pacienteId} onChange={e => setFormAdmissao({...formAdmissao, pacienteId: e.target.value})}>
-                  <option value="">Selecione...</option>
-                  {pacientesGerais.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                </select>
-              </div>
+              <PacienteSelect required value={formAdmissao.pacienteId} onChange={id => setFormAdmissao({ ...formAdmissao, pacienteId: id })} />
               <div className="form-grupo">
                 <label htmlFor="uti-leito">Leito *</label>
                 <select id="uti-leito" value={formAdmissao.leitoId} onChange={e => setFormAdmissao({...formAdmissao, leitoId: e.target.value})}>
@@ -233,7 +253,7 @@ export default function UtiPage() {
                         <td>{l.pacienteNome}</td>
                         <td><span className="badge badge-info">{l.status}</span></td>
                         <td>
-                          {l.status === 'OCUPADO' && (
+                          {podeGerir && l.status === 'OCUPADO' && (
                             <button className="btn btn-sm btn-warning" aria-label={`Liberar leito ${l.numero}`} onClick={() => liberarLeito(l.id, l.pacienteNome)}><i className="las la-check-circle"></i></button>
                           )}
                         </td>

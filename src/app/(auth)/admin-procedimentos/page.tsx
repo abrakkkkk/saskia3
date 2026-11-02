@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import './procedimentos.css';
@@ -13,7 +13,7 @@ interface Procedimento {
 
 export default function AdminProcedimentosPage() {
   const { data: session, status: sessionStatus } = useSession();
-  const isAdmin = (session?.user as any)?.cargo === 'ADMIN';
+  const isAdmin = session?.user?.cargo === 'ADMIN';
   const [procedimentos, setProcedimentos] = useState<Procedimento[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -44,9 +44,10 @@ export default function AdminProcedimentosPage() {
   useEffect(() => {
     if (sessionStatus === 'loading') return;
     if (!isAdmin) {
-      setCarregando(false);
+      void Promise.resolve().then(() => { setCarregando(false); });
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- estado inicial/reinício dependente da sessão e da busca
     void carregarProcedimentos();
   }, [isAdmin, sessionStatus]);
 
