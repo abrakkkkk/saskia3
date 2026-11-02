@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["sanitize-html"],
+  // htmlparser2 (dependência do sanitize-html) é ESM puro: externo, o require() falha no Node da Vercel.
+  transpilePackages: ["sanitize-html", "htmlparser2", "domhandler", "domutils", "domelementtype", "entities"],
   async headers() {
     return [
       {
