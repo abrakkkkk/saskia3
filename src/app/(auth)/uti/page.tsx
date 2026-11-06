@@ -172,10 +172,10 @@ export default function UtiPage() {
             {erroCarga && <p className="mod-aviso mod-aviso-erro" role="alert">{erroCarga}</p>}
 
             <StatGrid>
-              <StatCard icon="las la-bed" value={totalLeitos} label="Leitos" />
-              <StatCard icon="las la-procedures" value={ocupados} label="Ocupados" />
-              <StatCard icon="las la-door-open" value={disponiveis} label="Livres" />
-              <StatCard icon="las la-chart-line" value={`${taxaOcupacao}%`} label="Ocupação" />
+              <StatCard icon="las la-bed" tone="info" value={totalLeitos} label="Leitos" />
+              <StatCard icon="las la-procedures" tone="violet" value={ocupados} label="Ocupados" />
+              <StatCard icon="las la-door-open" tone="success" value={disponiveis} label="Livres" />
+              <StatCard icon="las la-chart-line" tone="cyan" value={`${taxaOcupacao}%`} label="Ocupação" />
             </StatGrid>
 
             {liberando && podeGerir && (
