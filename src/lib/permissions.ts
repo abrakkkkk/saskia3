@@ -80,12 +80,17 @@ const MATRIZ = {
   'operacao:gerir': ['ADMIN', 'ENFERMEIRO_ASSISTENCIAL', 'OUTROS'],
   'seguranca:gerir': ['ADMIN', 'OUTROS'],
   'relatorio:ler': ['ADMIN'],
+  'emergencia:acionar': TODOS,
+  'emergencia:ler': TODOS,
+  'emergencia:encerrar': ['MEDICO', ...ENFERMAGEM],
   'admin:acesso': ['ADMIN'],
   'autenticado': TODOS,
 } satisfies Record<string, Cargo[]>
 
 export type Permissao = keyof typeof MATRIZ
 
+/** Decisão do dono: o ADMIN do sistema tem acesso total, a tudo e em todos os módulos. */
 export function pode(cargo: string | null | undefined, permissao: Permissao) {
+  if (cargo === 'ADMIN') return true
   return !!cargo && (MATRIZ[permissao] as string[]).includes(cargo)
 }

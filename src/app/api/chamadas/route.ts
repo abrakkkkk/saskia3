@@ -40,6 +40,14 @@ export async function POST(request: NextRequest) {
     const { paciente, bloqueio } = await pacienteAtivo(pacienteId, ator.hospitalId)
     if (bloqueio) return bloqueio
 
+    // Clique duplo ou reenvio em poucos segundos: devolve a chamada que já existe, sem anunciar duas vezes.
+    const repetida = await prisma.chamada.findFirst({
+      where: { hospitalId: ator.hospitalId, pacienteId: paciente.id, consultorio, status: 'ATIVA', createdAt: { gte: new Date(Date.now() - 10_000) } },
+      select: { id: true, pacienteId: true, pacienteNome: true, status: true, consultorio: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (repetida) return NextResponse.json(repetida, { status: 200 })
+
     const chamada = await prisma.chamada.create({
       data: { hospitalId: ator.hospitalId, pacienteId: paciente.id, pacienteNome: paciente.nome, consultorio, status: 'ATIVA' },
       select: { id: true, pacienteId: true, pacienteNome: true, status: true, consultorio: true, createdAt: true },

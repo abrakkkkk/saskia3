@@ -20,7 +20,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## 1. Domínio e Arquitetura
 - **Domínio:** Sistema de Gestão Hospitalar e Clínica (ERP Clínico/Administrativo).
 - **Multi-Tenancy Obrigatório:** Todas as entidades e operações clínicas são vinculadas a um `hospitalId`. Nunca execute queries de dados sensíveis sem associar ou validar o `hospitalId` da sessão.
-- **Controle de Acesso (RBAC):** Baseado no enum `CargoUsuario` (`ADMIN`, `MEDICO`, `ENFERMEIRO_ASSISTENCIAL`, `TECNICO_ENFERMAGEM`, `RECEPCIONISTA`, `FARMACEUTICO`, `NUTRICIONISTA`, `ASSISTENTE_SOCIAL`, `OUTROS`). A matriz cargo × permissão vive só em `@/lib/permissions`; rotas de API usam `exigir(permissao)` de `@/lib/api-guard` e o menu vem de `@/lib/navigation`. Nunca compare cargo por string solta.
+- **Controle de Acesso (RBAC):** Baseado no enum `CargoUsuario` (`ADMIN`, `MEDICO`, `ENFERMEIRO_ASSISTENCIAL`, `TECNICO_ENFERMAGEM`, `RECEPCIONISTA`, `FARMACEUTICO`, `NUTRICIONISTA`, `ASSISTENTE_SOCIAL`, `OUTROS`). A matriz cargo × permissão vive só em `@/lib/permissions`; rotas de API usam `exigir(permissao)` de `@/lib/api-guard` e o menu vem de `@/lib/navigation`. Nunca compare cargo por string solta. **O ADMIN do sistema tem acesso total a tudo, ver e agir (decisão do dono, indiscutível):** `pode()` devolve `true` para ADMIN em qualquer permissão. Não crie regra que exclua o ADMIN.
+- **Emergência (pânico e PCR):** botões no cabeçalho para todos os cargos; `POST /api/emergencias` (aciona), `GET` (alertas ativos, todos os logados e a TV), `PATCH /api/emergencias/[id]` (encerra: médico, enfermagem, ADMIN). Faixa em `EmergenciaAlertas` (layout logado) e no painel de TV. Pânico = algo muito grave no hospital; PCR = parada cardiorrespiratória.
 
 ## 2. Padrões de Stack e Código
 - **Next.js 16 + React 19:** Utilizar App Router, Server Actions e Route Handlers sob `src/app`.

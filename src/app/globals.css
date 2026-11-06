@@ -12,10 +12,11 @@
   --radius: 8px;
 }
 
-/* Reset & Base */
-*,
-*::before,
-*::after {
+/* Reset & Base. O painel de TV (.painel-tv) é feito com utilitárias Tailwind, que perdem para um reset
+   sem camada; por isso ele fica de fora (o preflight do Tailwind já cobre o reset lá). */
+*:where(:not(.painel-tv, .painel-tv *)),
+*:where(:not(.painel-tv, .painel-tv *))::before,
+*:where(:not(.painel-tv, .painel-tv *))::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;

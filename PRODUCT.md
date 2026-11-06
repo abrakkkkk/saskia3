@@ -29,7 +29,8 @@ Plataforma única, em português, desenhada para a rotina de hospitais brasileir
 ## Operating Context
 
 - Cada hospital opera um tenant; o Hospital Geral Alfa é o hospital de **teste** (sem dados reais).
-- Acesso por cargo: a matriz está em `src/lib/permissions.ts`; o menu por cargo em `src/lib/navigation.ts`. A interface nunca deve oferecer ação que o cargo não pode executar.
+- Acesso por cargo: a matriz está em `src/lib/permissions.ts`; o menu por cargo em `src/lib/navigation.ts`. A interface nunca deve oferecer ação que o cargo não pode executar. **Exceção decidida pelo dono: o ADMIN do sistema tem acesso total a tudo (ver e agir).**
+- Emergência: botões de pânico (algo muito grave no hospital) e PCR (parada cardiorrespiratória) ficam sempre visíveis no cabeçalho; o alerta aparece em todas as telas logadas e no painel de TV até alguém encerrar.
 - Tarefas em que erro ou lentidão da tela mais custa (confirmado): **triagem e classificação de risco, prescrição e medicação, UTI/centro cirúrgico/banco de sangue, recepção e cadastro**. Estado, criticidade, alergia e prazo precisam ser lidos de relance; na recepção cada clique a mais atrasa a fila.
 - Mantido por uma equipe pequena (dono do projeto e Anaylaa, parte fundamental do time).
 

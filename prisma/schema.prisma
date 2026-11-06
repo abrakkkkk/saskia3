@@ -471,11 +471,18 @@ model Emergencia {
   id           String   @id @default(uuid())
   hospitalId   String
   hospital     Hospital @relation(fields: [hospitalId], references: [id])
-  tipo         String
+  tipo         String // PANICO | PCR
   profissional String
+  local        String?
+  status       String   @default("ATIVA") // ATIVA | ENCERRADA
+  usuarioId    String?
+  encerradaEm  DateTime?
+  encerradaPorId   String?
+  encerradaPorNome String?
   createdAt    DateTime @default(now())
 
   @@index([hospitalId])
+  @@index([hospitalId, status, createdAt])
 }
 
 model EstoqueItem {

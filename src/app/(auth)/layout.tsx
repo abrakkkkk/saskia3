@@ -2,6 +2,7 @@ import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import Footer from '@/components/layout/Footer';
 import RouteGuard from '@/components/layout/RouteGuard';
+import EmergenciaAlertas from '@/components/emergencia/EmergenciaAlertas';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { CallProvider } from '@/contexts/CallContext';
@@ -19,6 +20,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   return (
     <CallProvider>
       <div className="app-layout">
+        <EmergenciaAlertas cargo={cargo} />
         <Header nome={name ?? 'Usuário'} email={email ?? ''} cargo={cargo} />
         <div className="app-container">
           <Sidebar cargo={cargo} />

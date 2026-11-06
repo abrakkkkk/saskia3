@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { pode } from '@/lib/permissions';
+import { STATUS_ESPERA } from '@/lib/utils';
 import { Volume2, VolumeX, Bell, Clock, DoorOpen, ActivitySquare, Timer } from 'lucide-react';
 import './painel-chamadas.css';
 
@@ -28,6 +29,15 @@ interface PacienteFila extends Paciente {
   tempoEsperaMin: number;
 }
 
+/** Minutos em texto legível de longe: "12 min", "1h 20min". Sem dado, traço. */
+function formatarEspera(minutos: number | null | undefined) {
+  if (minutos === null || minutos === undefined) return '--';
+  if (minutos < 60) return `${minutos} min`;
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  return m ? `${h}h ${m}min` : `${h}h`;
+}
+
 export default function PainelChamadasTV() {
   const { data: session, status: sessionStatus } = useSession();
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
@@ -37,6 +47,8 @@ export default function PainelChamadasTV() {
   const [horaAtual, setHoraAtual] = useState<Date | null>(null);
   const mounted = horaAtual !== null;
   const podeLerChamadas = pode(session?.user?.cargo, 'chamada:ler');
+  const [emergencias, setEmergencias] = useState<{ id: string; tipo: string; local: string | null }[]>([]);
+  const emergenciasVistasRef = useRef<Set<string> | null>(null);
   
   // Áudio Controls
   const [audioPermitido, setAudioPermitido] = useState(false);
@@ -130,6 +142,39 @@ export default function PainelChamadasTV() {
     }
   }, []);
 
+  // Alertas de pânico e PCR: faixa grande e voz assim que aparecem.
+  useEffect(() => {
+    if (sessionStatus !== 'authenticated') return;
+    let ativo = true;
+    const buscar = async () => {
+      try {
+        const r = await fetch('/api/emergencias', { cache: 'no-store' });
+        if (!r.ok || !ativo) return;
+        const lista: { id: string; tipo: string; local: string | null }[] = await r.json();
+        setEmergencias(lista);
+        if (emergenciasVistasRef.current === null) { emergenciasVistasRef.current = new Set(lista.map(a => a.id)); return; }
+        const conhecidos = emergenciasVistasRef.current;
+        const novos = lista.filter(a => !conhecidos.has(a.id));
+        novos.forEach(a => conhecidos.add(a.id));
+        if (novos.length > 0 && audioPermitido && vozAtivada) {
+          const a = novos[0];
+          const texto = a.tipo === 'PCR'
+            ? `Atenção. Parada cardiorrespiratória. ${a.local ?? ''}`
+            : `Atenção. Emergência. Botão do pânico acionado. ${a.local ?? ''}`;
+          const fala = new SpeechSynthesisUtterance(texto);
+          fala.lang = 'pt-BR';
+          fala.rate = 0.9;
+          window.speechSynthesis.speak(fala);
+        }
+      } catch {
+        // Sem rede neste ciclo: tenta de novo no próximo.
+      }
+    };
+    void buscar();
+    const t = setInterval(() => void buscar(), 3000);
+    return () => { ativo = false; clearInterval(t); };
+  }, [sessionStatus, audioPermitido, vozAtivada]);
+
   useEffect(() => {
     if (sessionStatus === 'loading') return;
     if (sessionStatus !== 'authenticated' || !session?.user || !pode(session.user.cargo, 'chamada:ler')) {
@@ -185,8 +230,9 @@ export default function PainelChamadasTV() {
   const temposMedios: Record<string, number | null> = { "Vermelho": null, "Laranja": null, "Amarelo": null, "Verde": null, "Azul": null };
   const temposCalc: Record<string, number[]> = { "Vermelho": [], "Laranja": [], "Amarelo": [], "Verde": [], "Azul": [] };
   
+  // Só quem ainda espera atendimento entra na média (internado ou em consulta não conta como espera).
   filaComChamadas.forEach(p => {
-    if (p.classificacao && temposCalc[p.classificacao]) {
+    if (p.classificacao && temposCalc[p.classificacao] && STATUS_ESPERA.includes(p.status)) {
       temposCalc[p.classificacao].push(p.tempoEsperaMin);
     }
   });
@@ -222,6 +268,17 @@ export default function PainelChamadasTV() {
   return (
     <div className="painel-tv min-h-screen bg-slate-900 text-slate-100 flex flex-col overflow-x-hidden overflow-y-auto lg:h-screen lg:overflow-hidden">
 
+      {emergencias.length > 0 && (
+        <div role="alert" aria-live="assertive" className="shrink-0">
+          {emergencias.map(e => (
+            <div key={e.id} className={`flex flex-wrap items-center justify-center gap-x-8 gap-y-2 px-6 xl:px-12 py-4 xl:py-6 ${e.tipo === 'PCR' ? 'bg-amber-500 text-slate-950' : 'bg-red-700 text-white'}`}>
+              <span className="text-3xl xl:text-5xl font-extrabold tracking-tight">{e.tipo === 'PCR' ? 'Alerta de PCR' : 'Botão do pânico'}</span>
+              <span className="text-2xl xl:text-4xl font-bold">{e.local ?? 'Local não informado'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Cabeçalho */}
       <header className="min-h-20 h-auto lg:h-24 bg-slate-950 border-b border-slate-700 px-4 sm:px-6 lg:px-10 py-4 lg:py-0 flex flex-wrap items-center justify-between gap-x-5 gap-y-4 shrink-0">
         <div className="flex items-center gap-3 sm:gap-4">
@@ -231,7 +288,7 @@ export default function PainelChamadasTV() {
 
         <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 lg:gap-8 w-full sm:w-auto">
           {!audioPermitido && (
-            <div className="bg-red-950 text-red-100 px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 border border-red-700 text-sm sm:text-base font-medium">
+            <div className="bg-red-950 text-red-100 px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 border border-red-700 text-sm sm:text-base xl:text-xl font-medium">
               <VolumeX aria-hidden="true" className="w-5 h-5 shrink-0" /> Áudio inativo. Toque na tela para ativar.
             </div>
           )}
@@ -239,7 +296,7 @@ export default function PainelChamadasTV() {
             <div className="painel-hora text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-none">
               {mounted ? horaAtual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
             </div>
-            <div className="painel-data text-blue-200 text-sm sm:text-base lg:text-lg font-medium mt-1">
+            <div className="painel-data text-blue-200 text-sm sm:text-base lg:text-lg xl:text-2xl font-medium mt-1">
               {mounted ? horaAtual.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) : '---'}
             </div>
           </div>
@@ -287,7 +344,7 @@ export default function PainelChamadasTV() {
             Últimas chamadas
           </h2>
 
-          <div className="flex-1 flex flex-col gap-3 sm:gap-4 xl:gap-5 justify-start overflow-y-auto overscroll-contain">
+          <div className="flex-1 flex flex-col gap-3 sm:gap-4 xl:gap-5 justify-start overflow-y-auto overscroll-contain pb-16">
             {ultimasChamadasHistorico.length === 0 ? (
               <div className="text-slate-300 text-center py-12 sm:py-16 xl:py-20 text-lg sm:text-xl xl:text-2xl font-semibold">Nenhum histórico recente.</div>
             ) : (
@@ -295,13 +352,13 @@ export default function PainelChamadasTV() {
                 <div key={i} className="bg-slate-900 rounded-xl p-3 sm:p-4 flex items-center justify-between gap-3 border border-slate-700">
                   <div className="flex-1 min-w-0 pr-4">
                     <h3 className="text-lg sm:text-xl xl:text-2xl font-semibold text-white truncate leading-tight">{c.pacienteNome}</h3>
-                    <span className="text-base text-slate-300 font-medium mt-1 flex items-center gap-2">
+                    <span className="text-base xl:text-xl text-slate-300 font-medium mt-1 flex items-center gap-2">
                       <Clock aria-hidden="true" className="w-4 h-4 text-blue-300" />
                       Chamado às {new Date(c.createdAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
                     </span>
                   </div>
                   <div className="shrink-0 flex flex-col items-end pl-3 sm:pl-4 border-l border-slate-700 max-w-[45%]">
-                    <span className="text-sm font-semibold text-slate-300 mb-1">Local</span>
+                    <span className="text-sm xl:text-xl font-semibold text-slate-300 mb-1">Local</span>
                     <span className="text-lg sm:text-xl xl:text-2xl font-bold text-blue-200 text-right break-words line-clamp-2">
                       {c.consultorio}
                     </span>
@@ -318,29 +375,29 @@ export default function PainelChamadasTV() {
 
         <div className="w-full lg:flex-1 grid grid-cols-3 items-center justify-around lg:border-r border-slate-700 lg:pr-8 xl:pr-12 h-auto lg:h-full py-0 lg:py-6 gap-2">
           <div className="flex flex-col items-center justify-center">
-            <span className="text-slate-300 text-sm sm:text-base font-semibold mb-1 text-center">Aguardando</span>
-            <span className="painel-hora text-4xl sm:text-5xl font-bold text-white leading-none">{qtdAguardando}</span>
+            <span className="text-slate-300 text-sm sm:text-base xl:text-2xl font-semibold mb-1 text-center">Aguardando</span>
+            <span className="painel-hora text-4xl sm:text-5xl xl:text-6xl font-bold text-white leading-none">{qtdAguardando}</span>
           </div>
           <div className="flex flex-col items-center justify-center">
-            <span className="text-slate-300 text-sm sm:text-base font-semibold mb-1 text-center">Atendimento</span>
-            <span className="painel-hora text-4xl sm:text-5xl font-bold text-white leading-none">{qtdAtendimento}</span>
+            <span className="text-slate-300 text-sm sm:text-base xl:text-2xl font-semibold mb-1 text-center">Atendimento</span>
+            <span className="painel-hora text-4xl sm:text-5xl xl:text-6xl font-bold text-white leading-none">{qtdAtendimento}</span>
           </div>
           <div className="flex flex-col items-center justify-center">
-            <span className="text-slate-300 text-sm sm:text-base font-semibold mb-1 text-center">Emergência</span>
-            <span className="painel-hora text-4xl sm:text-5xl font-bold text-red-300 leading-none">{qtdEmergencia}</span>
+            <span className="text-slate-300 text-sm sm:text-base xl:text-2xl font-semibold mb-1 text-center">Emergência</span>
+            <span className="painel-hora text-4xl sm:text-5xl xl:text-6xl font-bold text-red-300 leading-none">{qtdEmergencia}</span>
           </div>
         </div>
 
         <div className="w-full lg:flex-[1.5] lg:pl-8 xl:pl-12 h-auto lg:h-full py-0 lg:py-6 flex flex-col justify-center">
-          <span className="text-slate-200 text-sm sm:text-base font-semibold mb-3 flex items-center justify-center gap-2 text-center">
-            <Timer aria-hidden="true" className="w-5 h-5 text-slate-300 shrink-0" /> Tempo médio de espera (minutos)
+          <span className="text-slate-200 text-sm sm:text-base xl:text-2xl font-semibold mb-3 flex items-center justify-center gap-2 text-center">
+            <Timer aria-hidden="true" className="w-5 h-5 text-slate-300 shrink-0" /> Tempo médio de espera
           </span>
           <div className="flex flex-wrap items-center justify-center sm:justify-around gap-x-5 gap-y-3 w-full">
             {faixas.map(f => (
               <div key={f.cor} className="flex items-center gap-2">
                 <div aria-hidden="true" className={`w-4 h-4 rounded-full ${f.ponto}`}></div>
-                <span className="text-sm sm:text-base font-semibold text-slate-200">{f.cor}</span>
-                <span className="painel-hora text-xl sm:text-3xl font-bold text-slate-100">{temposMedios[f.cor] ?? '--'}</span>
+                <span className="text-sm sm:text-base xl:text-2xl font-semibold text-slate-200">{f.cor}</span>
+                <span className="painel-hora text-xl sm:text-3xl xl:text-4xl font-bold text-slate-100">{formatarEspera(temposMedios[f.cor])}</span>
               </div>
             ))}
           </div>
@@ -353,7 +410,7 @@ export default function PainelChamadasTV() {
         onClick={() => setVozAtivada(!vozAtivada)}
         aria-label={vozAtivada ? "Desativar anúncios por voz" : "Ativar anúncios por voz"}
         aria-pressed={vozAtivada}
-        className="fixed bottom-4 right-4 lg:bottom-36 lg:right-6 w-12 h-12 bg-slate-800 text-slate-200 rounded-full flex items-center justify-center hover:bg-slate-700 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 transition-colors z-50 border border-slate-600"
+        className="fixed bottom-4 right-4 lg:bottom-56 lg:right-6 w-12 h-12 bg-slate-800 text-slate-200 rounded-full flex items-center justify-center hover:bg-slate-700 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 transition-colors z-50 border border-slate-600"
         title={vozAtivada ? "Desativar voz" : "Ativar voz"}
       >
         {vozAtivada ? <Volume2 aria-hidden="true" className="w-5 h-5" /> : <VolumeX aria-hidden="true" className="w-5 h-5 text-red-300" />}
