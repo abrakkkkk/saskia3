@@ -1,11 +1,11 @@
 .pp-pagina { min-height: 100vh; padding: 24px 16px 48px; color: var(--ui-on-dark, #f8fafc); }
 .pp-topo { max-width: 860px; margin: 0 auto 16px; }
-.pp-topo a { color: var(--ui-on-dark, #f8fafc); text-decoration: underline; font-size: 14px; }
+.pp-topo a { display: inline-flex; align-items: center; min-height: 40px; color: var(--ui-on-dark, #f8fafc); text-decoration: underline; text-underline-offset: 3px; font-size: 14px; }
 .pp-doc { max-width: 860px; margin: 0 auto; padding: clamp(20px, 4vw, 40px); border-radius: 12px; background: var(--ui-surface, #fff); color: var(--ui-text, #0f172a); line-height: 1.65; }
 .pp-doc h1 { margin: 0 0 12px; font-size: clamp(1.5rem, 4vw, 2rem); color: var(--ui-text, #0f172a); }
 .pp-doc h2 { margin: 28px 0 8px; font-size: 1.15rem; color: var(--ui-text, #0f172a); }
 .pp-doc p, .pp-doc li { color: var(--ui-text, #0f172a); font-size: 15px; }
 .pp-doc ul { margin: 8px 0 8px 20px; list-style: disc; }
-.pp-aviso { margin: 16px 0; padding: 14px 16px; border-radius: 8px; border: 1px solid #f59e0b; background: #fffbeb; color: #78350f; }
-.pp-aviso p { color: #78350f; margin: 0; }
+.pp-aviso { margin: 16px 0; padding: 14px 16px; border-radius: 8px; border: 1px solid #fcd34d; background: #fef3c7; color: #713f12; }
+.pp-aviso p { color: #713f12; margin: 0; }
 .pp-meta { color: var(--ui-text-muted, #475569); font-size: 14px; }

@@ -1,10 +1,13 @@
-﻿'use client'
+'use client'
 
 import { useCallback, useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { AlertCircle, Check, LoaderCircle, Pencil, Plus, ShieldCheck, UserRound, UserRoundX, X } from 'lucide-react'
-import { EmptyState, ErrorState, LoadingState, PageHeader, SearchInput } from '@/components/ui'
+import { Check, LoaderCircle, Pencil, Plus, UserRoundX } from 'lucide-react'
+import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, SearchInput } from '@/components/ui'
+import { Modal } from '@/components/ui/Modal';
 import { CARGO_LABEL, CARGOS, pode, type Cargo } from '@/lib/permissions'
+import '@/components/ui/modulo.css'
+import '@/components/ui/ui-extras.css'
 import './usuarios.css'
 
 type Usuario = { id: string; nome: string; email: string; cargo: Cargo; ativo: boolean; createdAt: string }
@@ -48,13 +51,6 @@ export default function AdminUsuariosPage() {
     if (status === 'authenticated' && permitido) void Promise.resolve().then(loadUsers)
   }, [loadUsers, permitido, status])
 
-  useEffect(() => {
-    if (!modal) return
-    const fechar = (event: KeyboardEvent) => { if (event.key === 'Escape' && !saving) setModal(false) }
-    document.addEventListener('keydown', fechar)
-    return () => document.removeEventListener('keydown', fechar)
-  }, [modal, saving])
-
   const openCreate = () => {
     setEditing(null); setNome(''); setEmail(''); setSenha(''); setCargo('OUTROS'); setError(''); setNotice(''); setModal(true)
   }
@@ -95,59 +91,73 @@ export default function AdminUsuariosPage() {
     finally { setUpdatingUserId(null) }
   }
 
-  if (status === 'loading' || (permitido && loading)) return <main className="conteudo usuarios-page"><LoadingState message="Carregando usuários…" /></main>
-  if (!session?.user) return <main className="conteudo usuarios-page"><ErrorState message="Entre no sistema para continuar." /></main>
-  if (!permitido) return <main className="conteudo usuarios-page"><p className="usuarios-alert" role="alert"><ShieldCheck size={18} aria-hidden="true" /> Esta área é restrita ao administrador do hospital.</p></main>
+  if (status === 'loading' || (permitido && loading)) return <main className="mod-pagina"><PageHeader icon="las la-users-cog" title="Usuários" /><LoadingState message="Carregando usuários..." /></main>
+  if (!session?.user) return <main className="mod-pagina"><PageHeader icon="las la-users-cog" title="Usuários" /><ErrorState message="Entre no sistema para continuar." /></main>
+  if (!permitido) return <main className="mod-pagina"><PageHeader icon="las la-users-cog" title="Usuários" /><p className="mod-aviso mod-aviso-erro" role="alert">Esta área é restrita ao administrador do hospital.</p></main>
 
   const normalizedQuery = query.trim().toLocaleLowerCase('pt-BR')
   const filtered = usuarios.filter(user => `${user.nome} ${user.email} ${rotuloCargo(user.cargo)} ${user.cargo}`.toLocaleLowerCase('pt-BR').includes(normalizedQuery))
 
-  return <main className="conteudo usuarios-page">
+  return <main className="mod-pagina">
     <PageHeader
       icon="las la-users-cog"
       title="Usuários"
-      subtitle={`${session.user.hospitalNome ?? ''} · Gerencie os profissionais e o acesso ao sistema deste hospital.`}
-      actions={<button type="button" className="usuarios-primary" onClick={openCreate}><Plus size={18} aria-hidden="true" /> Novo usuário</button>}
+      subtitle={`${session.user.hospitalNome ? session.user.hospitalNome + ' · ' : ''}Profissionais e acesso ao sistema.`}
+      actions={<button type="button" className="btn btn-primary" onClick={openCreate}><Plus size={18} aria-hidden="true" /> Novo usuário</button>}
     />
     {loadError && <ErrorState message={loadError} onRetry={() => { setLoading(true); void loadUsers() }} />}
-    {(error || notice) && !modal && <div className={error ? 'usuarios-alert' : 'usuarios-notice'} role={error ? 'alert' : 'status'}>{error ? <AlertCircle size={18} aria-hidden="true" /> : <Check size={18} aria-hidden="true" />}{error || notice}</div>}
+    {(error || notice) && !modal && <div className={`mod-aviso ${error ? 'mod-aviso-erro' : 'mod-aviso-sucesso'}`} role={error ? 'alert' : 'status'}>{error || notice}</div>}
     {!loadError && <SearchInput value={query} onChange={setQuery} placeholder="Buscar por nome, e-mail ou cargo" label="Buscar usuários por nome, e-mail ou cargo" />}
     {!loadError && (filtered.length === 0
       ? <EmptyState icon="las la-user-friends" message={usuarios.length ? 'Nenhum resultado. Tente outra busca.' : 'Nenhum usuário cadastrado. Cadastre os profissionais autorizados deste hospital.'} />
-      : <section className="usuarios-list" aria-label="Lista de usuários">
-        {filtered.map(user => <article className={`usuarios-card ${user.ativo ? '' : 'is-inactive'}`} key={user.id}>
-          <div className="usuarios-avatar" aria-hidden="true"><UserRound size={20} /></div>
-          <div className="usuarios-details"><strong>{user.nome}</strong><span>{user.email}</span>
-            <div className="usuarios-tags"><span>{rotuloCargo(user.cargo)}</span><span className={user.ativo ? 'status-active' : 'status-inactive'}>{user.ativo ? 'Ativo' : 'Inativo'}</span></div></div>
-          <div className="usuarios-actions">
-            <button type="button" className="usuarios-icon-button" onClick={() => openEdit(user)} aria-label={`Editar ${user.nome}`} title="Editar"><Pencil size={17} aria-hidden="true" /></button>
-            <button type="button" className="usuarios-icon-button" onClick={() => void toggleActive(user)} disabled={updatingUserId !== null} aria-label={`${user.ativo ? 'Desativar' : 'Reativar'} ${user.nome}`} title={user.ativo ? 'Desativar' : 'Reativar'}>
-              {updatingUserId === user.id ? <LoaderCircle className="spin" size={17} aria-hidden="true" /> : user.ativo ? <UserRoundX size={17} aria-hidden="true" /> : <Check size={17} aria-hidden="true" />}
-            </button>
-          </div>
-        </article>)}
-      </section>)}
-    {modal && <div className="usuarios-overlay" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setModal(false) }}>
-      <section className="usuarios-dialog" role="dialog" aria-modal="true" aria-labelledby="usuarios-dialog-title">
-        <header>
-          <div><h2 id="usuarios-dialog-title">{editing ? 'Editar usuário' : 'Novo usuário'}</h2><p>Os dados ficam vinculados ao hospital da sua sessão.</p></div>
-          <button type="button" className="usuarios-icon-button" onClick={() => setModal(false)} aria-label="Fechar" disabled={saving}><X size={19} aria-hidden="true" /></button>
-        </header>
-        <form onSubmit={saveUser}>
-          <label>Nome completo<input required maxLength={160} autoComplete="name" value={nome} onChange={event => setNome(event.target.value)} /></label>
-          <label>E-mail<input required type="email" maxLength={254} autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} /></label>
-          <label>Cargo<select value={cargo} onChange={event => setCargo(event.target.value as Cargo)}>{CARGOS.map(item => <option key={item} value={item}>{CARGO_LABEL[item]}</option>)}</select></label>
-          <label>Senha {editing && <span className="usuarios-hint">(deixe em branco para manter a atual)</span>}
-            <input required={!editing} minLength={12} maxLength={72} type="password" autoComplete="new-password" value={senha} onChange={event => setSenha(event.target.value)} />
-            <span className="usuarios-hint">Mínimo de 12 caracteres.</span>
-          </label>
-          {error && <p className="usuarios-alert" role="alert"><AlertCircle size={17} aria-hidden="true" />{error}</p>}
-          <footer>
-            <button type="button" className="usuarios-secondary" onClick={() => setModal(false)} disabled={saving}>Cancelar</button>
-            <button type="submit" className="usuarios-primary" disabled={saving}>{saving && <LoaderCircle className="spin" size={17} aria-hidden="true" />}{editing ? 'Salvar alterações' : 'Criar usuário'}</button>
-          </footer>
-        </form>
-      </section>
-    </div>}
+      : <div className="tabela-wrapper">
+        <table className="tabela">
+          <thead>
+            <tr><th>Nome</th><th>E-mail</th><th>Cargo</th><th>Status</th><th>Ações</th></tr>
+          </thead>
+          <tbody>
+            {filtered.map(user => <tr key={user.id}>
+              <td><strong>{user.nome}</strong></td>
+              <td className="us-email">{user.email}</td>
+              <td>{rotuloCargo(user.cargo)}</td>
+              <td><Badge tone={user.ativo ? 'success' : 'neutral'}>{user.ativo ? 'Ativo' : 'Inativo'}</Badge></td>
+              <td>
+                <span className="ux-acoes">
+                  <button type="button" className="btn btn-secondary btn-sm ux-icon-btn" onClick={() => openEdit(user)} aria-label={`Editar ${user.nome}`} title="Editar"><Pencil size={16} aria-hidden="true" /></button>
+                  <button type="button" className="btn btn-secondary btn-sm ux-icon-btn" onClick={() => void toggleActive(user)} disabled={updatingUserId !== null} aria-label={`${user.ativo ? 'Desativar' : 'Reativar'} ${user.nome}`} title={user.ativo ? 'Desativar' : 'Reativar'}>
+                    {updatingUserId === user.id ? <LoaderCircle className="us-gira" size={16} aria-hidden="true" /> : user.ativo ? <UserRoundX size={16} aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}
+                  </button>
+                </span>
+              </td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>)}
+    {modal && <Modal title={editing ? 'Editar usuário' : 'Novo usuário'} icon="las la-user-edit" onClose={() => setModal(false)} busy={saving}>
+      <form onSubmit={saveUser}>
+        <div className="form-group">
+          <label htmlFor="us-nome">Nome completo</label>
+          <input id="us-nome" required maxLength={160} autoComplete="name" value={nome} onChange={event => setNome(event.target.value)} />
+        </div>
+        <div className="form-group">
+          <label htmlFor="us-email">E-mail</label>
+          <input id="us-email" required type="email" maxLength={254} autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} />
+        </div>
+        <div className="form-group">
+          <label htmlFor="us-cargo">Cargo</label>
+          <select id="us-cargo" value={cargo} onChange={event => setCargo(event.target.value as Cargo)}>{CARGOS.map(item => <option key={item} value={item}>{CARGO_LABEL[item]}</option>)}</select>
+        </div>
+        <div className="form-group">
+          <label htmlFor="us-senha">Senha{editing && ' (deixe em branco para manter a atual)'}</label>
+          <input id="us-senha" required={!editing} minLength={12} maxLength={72} type="password" autoComplete="new-password" aria-describedby="us-senha-dica" value={senha} onChange={event => setSenha(event.target.value)} />
+          <span id="us-senha-dica" className="ux-secundario">Mínimo de 12 caracteres.</span>
+        </div>
+        {error && <p className="mod-aviso mod-aviso-erro" role="alert">{error}</p>}
+        <div className="ui-modal-foot">
+          <button type="button" className="btn btn-secondary" onClick={() => setModal(false)} disabled={saving}>Cancelar</button>
+          <button type="submit" className="btn btn-primary" disabled={saving}>{saving && <LoaderCircle className="us-gira" size={16} aria-hidden="true" />}{editing ? 'Salvar alterações' : 'Criar usuário'}</button>
+        </div>
+      </form>
+    </Modal>}
   </main>
 }

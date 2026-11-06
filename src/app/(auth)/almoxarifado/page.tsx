@@ -2,18 +2,19 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useSession } from 'next-auth/react';
 import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, SearchInput, StatCard, StatGrid, Tabs, type Tone } from '@/components/ui';
+import { Modal } from '@/components/ui/Modal';
 import TabelaEstoque, { itensDisponiveis, quantidadeAssinada, rotuloItem, rotuloTipoMovimentacao, type ItemEstoque, type RespostaMovimentacoes } from '@/components/estoque/TabelaEstoque';
 import { estaVencido, venceEmBreve } from '@/lib/estoque';
 import { pode } from '@/lib/permissions';
 import { enviarJson, mensagemErro, textoDoErro } from '@/lib/resposta';
-import './almoxarifado.css';
+import '@/components/ui/modulo.css';
 
 const ABAS = [
   { id: 'estoque', label: 'Estoque', icon: 'las la-boxes' },
   { id: 'movimentacoes', label: 'Movimentações', icon: 'las la-exchange-alt' },
 ] as const;
 
-const TOM_TIPO: Record<string, Tone> = { ENTRADA: 'success', SAIDA: 'danger', AJUSTE: 'warning' };
+const TOM_TIPO: Record<string, Tone> = { ENTRADA: 'success', SAIDA: 'info', AJUSTE: 'warning' };
 const MOVIMENTACOES_VAZIAS: RespostaMovimentacoes = { itens: [], total: 0, entradasHoje: 0, saidasHoje: 0 };
 
 export default function AlmoxarifadoPage() {
@@ -77,15 +78,6 @@ export default function AlmoxarifadoPage() {
   // Carga inicial: o setState só ocorre depois do await da requisição.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void carregarDados(); }, [carregarDados]);
-
-  useEffect(() => {
-    if (!modal) return;
-    const fecharComEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !isSaving) setModal(null);
-    };
-    window.addEventListener('keydown', fecharComEscape);
-    return () => window.removeEventListener('keydown', fecharComEscape);
-  }, [modal, isSaving]);
 
   const abrir = (qual: 'entrada' | 'saida' | 'novo') => {
     setErroForm('');
@@ -155,10 +147,6 @@ export default function AlmoxarifadoPage() {
     if (ok) { setNovoNome(''); setNovoCodigo(''); setNovoLote(''); setNovoValidade(''); setNovoQtd(0); setNovoMinimo(10); }
   };
 
-  const fecharPeloFundo = (evento: React.MouseEvent) => {
-    if (evento.target === evento.currentTarget && !isSaving) setModal(null);
-  };
-
   const termoItem = buscarItem.trim().toLocaleLowerCase('pt-BR');
   const listaEstoque = itens.filter(i => i.nome.toLocaleLowerCase('pt-BR').includes(termoItem) || (i.codigo || '').toLocaleLowerCase('pt-BR').includes(termoItem));
 
@@ -170,132 +158,132 @@ export default function AlmoxarifadoPage() {
   const baixos = itens.filter(i => i.quantidade <= i.minimo).length;
   const alertasValidade = comSaldo.filter(i => estaVencido(i.validade) || venceEmBreve(i.validade)).length;
 
-  if (loading) return <div className="conteudo"><LoadingState message="Carregando dados do almoxarifado..." /></div>;
+  const cabecalho = (
+    <PageHeader
+      icon="las la-boxes"
+      title="Almoxarifado"
+      subtitle="Materiais, insumos e equipamentos"
+      actions={!loading && podeGerir && <>
+        <button type="button" className="btn btn-secondary" onClick={() => abrir('entrada')}><i className="las la-arrow-down" aria-hidden="true"></i> Entrada</button>
+        <button type="button" className="btn btn-secondary" onClick={() => abrir('saida')}><i className="las la-arrow-up" aria-hidden="true"></i> Saída</button>
+        <button type="button" className="btn btn-primary" onClick={() => abrir('novo')}><i className="las la-plus-circle" aria-hidden="true"></i> Novo item</button>
+      </>}
+    />
+  );
+
+  if (loading) return <div className="conteudo mod-pagina">{cabecalho}<LoadingState message="Carregando o almoxarifado..." /></div>;
 
   return (
-    <div className="conteudo">
-      <div className="almox-container">
-        <PageHeader
-          icon="las la-boxes"
-          title="Almoxarifado"
-          subtitle="Controle de materiais, insumos e equipamentos"
-          actions={podeGerir ? <>
-            <button type="button" className="btn btn-success" onClick={() => abrir('entrada')}><i className="las la-arrow-down" aria-hidden="true"></i> Entrada</button>
-            <button type="button" className="btn btn-danger" onClick={() => abrir('saida')}><i className="las la-arrow-up" aria-hidden="true"></i> Saída</button>
-            <button type="button" className="btn btn-primary" onClick={() => abrir('novo')}><i className="las la-plus-circle" aria-hidden="true"></i> Novo item</button>
-          </> : undefined}
-        />
+    <div className="conteudo mod-pagina">
+      {cabecalho}
 
-        {erroCarga && <ErrorState message={erroCarga} onRetry={() => void carregarDados()} />}
-        {sucesso && <p className="mod-aviso mod-aviso-sucesso" role="status">{sucesso}</p>}
+      {erroCarga && <ErrorState message={erroCarga} onRetry={() => void carregarDados()} />}
+      {sucesso && <p className="mod-aviso mod-aviso-sucesso" role="status">{sucesso}</p>}
 
-        <StatGrid>
-          <StatCard icon="las la-boxes" value={itens.length} label="Itens em estoque" tone="info" />
-          <StatCard icon="las la-arrow-down" value={movimentacoes.entradasHoje} label="Entradas hoje" tone="success" />
-          <StatCard icon="las la-arrow-up" value={movimentacoes.saidasHoje} label="Saídas hoje" tone="danger" />
-          <StatCard icon="las la-exclamation-triangle" value={baixos} label="Estoque baixo" tone="warning" />
-          <StatCard icon="las la-calendar-times" value={alertasValidade} label="Vencidos ou a vencer em 30 dias" tone="warning" />
-        </StatGrid>
+      <StatGrid>
+        <StatCard icon="las la-boxes" value={itens.length} label="Itens" hint="Itens cadastrados no almoxarifado" />
+        <StatCard icon="las la-arrow-down" value={movimentacoes.entradasHoje} label="Entradas hoje" />
+        <StatCard icon="las la-arrow-up" value={movimentacoes.saidasHoje} label="Saídas hoje" />
+        <StatCard icon="las la-exclamation-triangle" value={baixos} label="Estoque baixo" tone="warning" alerta hint="Itens com saldo igual ou abaixo do mínimo" />
+        <StatCard icon="las la-calendar-times" value={alertasValidade} label="Validade" tone="warning" alerta hint="Itens com saldo vencidos ou que vencem em até 30 dias" />
+      </StatGrid>
 
-        <Tabs tabs={ABAS} active={activeTab} onChange={setActiveTab} label="Seções do almoxarifado" />
+      <Tabs tabs={ABAS} active={activeTab} onChange={setActiveTab} label="Seções do almoxarifado" />
 
-        {activeTab === 'estoque' && (
-          <Panel>
-            <SearchInput value={buscarItem} onChange={setBuscarItem} placeholder="Buscar por nome ou código..." />
-            <TabelaEstoque itens={listaEstoque} podeAjustar={podeGerir} onAjustado={() => void carregarDados()} vazio="Nenhum item encontrado no estoque do almoxarifado." />
-          </Panel>
-        )}
+      {activeTab === 'estoque' && (
+        <Panel>
+          <SearchInput value={buscarItem} onChange={setBuscarItem} placeholder="Buscar por nome ou código" />
+          <TabelaEstoque itens={listaEstoque} podeAjustar={podeGerir} onAjustado={() => void carregarDados()} vazio="Nenhum item encontrado no estoque do almoxarifado." />
+        </Panel>
+      )}
 
-        {activeTab === 'movimentacoes' && (
-          <Panel>
-            <div className="mod-filtros">
-              <SearchInput value={buscarMov} onChange={setBuscarMov} placeholder="Buscar por item..." />
-              <select aria-label="Filtrar movimentações pelo tipo" value={filtroTipoMov} onChange={e => setFiltroTipoMov(e.target.value)}>
-                <option value="todos">Todos os tipos</option><option value="ENTRADA">Entradas</option><option value="SAIDA">Saídas</option><option value="AJUSTE">Ajustes</option>
-              </select>
+      {activeTab === 'movimentacoes' && (
+        <Panel>
+          <div className="mod-filtros">
+            <SearchInput value={buscarMov} onChange={setBuscarMov} placeholder="Buscar por item" />
+            <select aria-label="Filtrar movimentações pelo tipo" value={filtroTipoMov} onChange={e => setFiltroTipoMov(e.target.value)}>
+              <option value="todos">Todos os tipos</option><option value="ENTRADA">Entradas</option><option value="SAIDA">Saídas</option><option value="AJUSTE">Ajustes</option>
+            </select>
+          </div>
+          {movimentacoes.total > movimentacoes.itens.length && <p className="mod-nota">Mostrando as {movimentacoes.itens.length} movimentações mais recentes de {movimentacoes.total}.</p>}
+          {listaMov.length === 0 ? <EmptyState icon="las la-exchange-alt" message="Nenhuma movimentação encontrada." /> : (
+            <div className="tabela-wrapper">
+              <table className="tabela">
+                <caption className="sr-only">Movimentações do almoxarifado</caption>
+                <thead><tr><th scope="col">Data/hora</th><th scope="col">Tipo</th><th scope="col">Item</th><th scope="col">Qtd.</th><th scope="col">Destino ou fornecedor</th><th scope="col">Responsável</th></tr></thead>
+                <tbody>
+                  {listaMov.map(m => (
+                    <tr key={m.id}>
+                      <td>{new Date(m.createdAt).toLocaleString('pt-BR')}</td>
+                      <td><Badge tone={TOM_TIPO[m.tipo] ?? 'neutral'}>{rotuloTipoMovimentacao(m.tipo)}</Badge></td>
+                      <td>{m.item?.nome}{m.tipo === 'AJUSTE' && <span className="mod-secundario">{m.observacao}</span>}</td>
+                      <td><strong>{quantidadeAssinada(m)}</strong></td>
+                      <td>{m.setor || m.fornecedor || '-'}</td>
+                      <td>{m.responsavel}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            {movimentacoes.total > movimentacoes.itens.length && <p className="mod-nota">Mostrando as {movimentacoes.itens.length} movimentações mais recentes de {movimentacoes.total}.</p>}
-            {listaMov.length === 0 ? <EmptyState icon="las la-exchange-alt" message="Nenhuma movimentação encontrada." /> : (
-              <div className="tabela-almox-wrapper">
-                <table className="tabela-almox">
-                  <thead><tr><th>Data/Hora</th><th>Tipo</th><th>Item</th><th>Qtd.</th><th>Destino/Fornecedor</th><th>Responsável</th></tr></thead>
-                  <tbody>
-                    {listaMov.map(m => (
-                      <tr key={m.id}>
-                        <td>{new Date(m.createdAt).toLocaleString('pt-BR')}</td>
-                        <td><Badge tone={TOM_TIPO[m.tipo] ?? 'neutral'}>{rotuloTipoMovimentacao(m.tipo)}</Badge></td>
-                        <td>{m.item?.nome}{m.tipo === 'AJUSTE' && <span className="mod-secundario">{m.observacao}</span>}</td>
-                        <td><strong>{quantidadeAssinada(m)}</strong></td>
-                        <td>{m.setor || m.fornecedor || '-'}</td>
-                        <td>{m.responsavel}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Panel>
-        )}
-      </div>
+          )}
+        </Panel>
+      )}
 
       {modal === 'entrada' && (
-        <div className="modal-almox" onClick={fecharPeloFundo}>
-          <form className="modal-almox-conteudo" role="dialog" aria-modal="true" aria-labelledby="almox-entrada-title" onSubmit={confirmarEntrada}>
-            <h3 id="almox-entrada-title"><i className="las la-arrow-down" aria-hidden="true"></i> Registrar entrada</h3>
+        <Modal title="Registrar entrada" icon="las la-arrow-down" busy={isSaving} onClose={() => setModal(null)}>
+          <form onSubmit={confirmarEntrada}>
             {erroForm && <p className="mod-aviso mod-aviso-erro" role="alert">{erroForm}</p>}
             <div className="form-group"><label htmlFor="almox-entrada-item">Item *</label><select id="almox-entrada-item" value={entradaItemId} onChange={e => setEntradaItemId(e.target.value)}><option value="">Selecione...</option>{itens.map(i => <option key={i.id} value={i.id}>{rotuloItem(i)}</option>)}</select></div>
-            <div className="form-grid">
+            <div className="mod-form-grid">
               <div className="form-group"><label htmlFor="almox-entrada-quantidade">Quantidade *</label><input id="almox-entrada-quantidade" type="number" min="1" step="1" value={entradaQtd} onChange={e => setEntradaQtd(e.target.value === '' ? 0 : Number(e.target.value))} /></div>
               <div className="form-group"><label htmlFor="almox-entrada-validade">Nova validade</label><input id="almox-entrada-validade" type="date" value={entradaValidade} onChange={e => setEntradaValidade(e.target.value)} /></div>
               <div className="form-group"><label htmlFor="almox-entrada-fornecedor">Fornecedor</label><input id="almox-entrada-fornecedor" type="text" maxLength={200} value={entradaFornecedor} onChange={e => setEntradaFornecedor(e.target.value)} /></div>
             </div>
             <div className="mod-acoes">
-              <button type="button" className="btn btn-danger" onClick={() => setModal(null)} disabled={isSaving}>Cancelar</button>
-              <button type="submit" className="btn btn-success" disabled={isSaving}>{isSaving ? 'Registrando...' : 'Registrar'}</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setModal(null)} disabled={isSaving}>Cancelar</button>
+              <button type="submit" className="btn btn-primary" disabled={isSaving}>{isSaving ? 'Registrando...' : 'Registrar'}</button>
             </div>
           </form>
-        </div>
+        </Modal>
       )}
 
       {modal === 'saida' && (
-        <div className="modal-almox" onClick={fecharPeloFundo}>
-          <form className="modal-almox-conteudo" role="dialog" aria-modal="true" aria-labelledby="almox-saida-title" onSubmit={confirmarSaida}>
-            <h3 id="almox-saida-title"><i className="las la-arrow-up" aria-hidden="true"></i> Registrar saída</h3>
+        <Modal title="Registrar saída" icon="las la-arrow-up" busy={isSaving} onClose={() => setModal(null)}>
+          <form onSubmit={confirmarSaida}>
             {erroForm && <p className="mod-aviso mod-aviso-erro" role="alert">{erroForm}</p>}
             <div className="form-group"><label htmlFor="almox-saida-item">Item, lote e validade *</label><select id="almox-saida-item" value={saidaItemId} onChange={e => setSaidaItemId(e.target.value)}><option value="">Selecione...</option>{itensDisponiveis(itens).map(i => <option key={i.id} value={i.id}>{rotuloItem(i)}</option>)}</select></div>
-            <div className="form-grid">
+            <div className="mod-form-grid">
               <div className="form-group"><label htmlFor="almox-saida-quantidade">Quantidade *</label><input id="almox-saida-quantidade" type="number" min="1" step="1" value={saidaQtd} onChange={e => setSaidaQtd(e.target.value === '' ? 0 : Number(e.target.value))} /></div>
               <div className="form-group"><label htmlFor="almox-saida-setor">Setor de destino</label><select id="almox-saida-setor" value={saidaSetor} onChange={e => setSaidaSetor(e.target.value)}><option>Farmácia</option><option>UTI</option><option>Emergência</option><option>Enfermaria</option><option>Centro Cirúrgico</option><option>Outro</option></select></div>
             </div>
             <div className="mod-acoes">
-              <button type="button" className="btn btn-danger" onClick={() => setModal(null)} disabled={isSaving}>Cancelar</button>
-              <button type="submit" className="btn btn-warning" disabled={isSaving}>{isSaving ? 'Registrando...' : 'Registrar saída'}</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setModal(null)} disabled={isSaving}>Cancelar</button>
+              <button type="submit" className="btn btn-primary" disabled={isSaving}>{isSaving ? 'Registrando...' : 'Registrar saída'}</button>
             </div>
           </form>
-        </div>
+        </Modal>
       )}
 
       {modal === 'novo' && (
-        <div className="modal-almox" onClick={fecharPeloFundo}>
-          <form className="modal-almox-conteudo" role="dialog" aria-modal="true" aria-labelledby="almox-novo-title" onSubmit={confirmarNovoItem}>
-            <h3 id="almox-novo-title"><i className="las la-plus-circle" aria-hidden="true"></i> Cadastrar novo item</h3>
+        <Modal title="Novo item" icon="las la-plus-circle" busy={isSaving} onClose={() => setModal(null)}>
+          <form onSubmit={confirmarNovoItem}>
             {erroForm && <p className="mod-aviso mod-aviso-erro" role="alert">{erroForm}</p>}
-            <div className="form-grid">
+            <div className="mod-form-grid">
               <div className="form-group"><label htmlFor="almox-novo-nome">Nome *</label><input id="almox-novo-nome" type="text" maxLength={200} placeholder="Nome do item" value={novoNome} onChange={e => setNovoNome(e.target.value)} /></div>
               <div className="form-group"><label htmlFor="almox-novo-codigo">Código</label><input id="almox-novo-codigo" type="text" maxLength={100} value={novoCodigo} onChange={e => setNovoCodigo(e.target.value)} /></div>
               <div className="form-group"><label htmlFor="almox-novo-categoria">Categoria *</label><select id="almox-novo-categoria" value={novoCategoria} onChange={e => setNovoCategoria(e.target.value)}><option>Material Hospitalar</option><option>Equipamentos</option><option>Higiene e Limpeza</option><option>EPIs</option><option>Escritório</option></select></div>
               <div className="form-group"><label htmlFor="almox-novo-unidade">Unidade</label><select id="almox-novo-unidade" value={novoUnidade} onChange={e => setNovoUnidade(e.target.value)}><option>Unidade</option><option>Caixa</option><option>Pacote</option><option>Frasco</option><option>Par</option><option>Metro</option><option>Litro</option><option>Kg</option></select></div>
               <div className="form-group"><label htmlFor="almox-novo-lote">Lote</label><input id="almox-novo-lote" type="text" maxLength={100} value={novoLote} onChange={e => setNovoLote(e.target.value)} /></div>
               <div className="form-group"><label htmlFor="almox-novo-validade">Validade</label><input id="almox-novo-validade" type="date" value={novoValidade} onChange={e => setNovoValidade(e.target.value)} /></div>
-              <div className="form-group"><label htmlFor="almox-novo-quantidade">Qtd. inicial</label><input id="almox-novo-quantidade" type="number" min="0" step="1" value={novoQtd} onChange={e => setNovoQtd(e.target.value === '' ? 0 : Number(e.target.value))} /></div>
+              <div className="form-group"><label htmlFor="almox-novo-quantidade">Quantidade inicial</label><input id="almox-novo-quantidade" type="number" min="0" step="1" value={novoQtd} onChange={e => setNovoQtd(e.target.value === '' ? 0 : Number(e.target.value))} /></div>
               <div className="form-group"><label htmlFor="almox-novo-minimo">Estoque mínimo</label><input id="almox-novo-minimo" type="number" min="0" step="1" value={novoMinimo} onChange={e => setNovoMinimo(e.target.value === '' ? 0 : Number(e.target.value))} /></div>
             </div>
             <div className="mod-acoes">
-              <button type="button" className="btn btn-danger" onClick={() => setModal(null)} disabled={isSaving}>Cancelar</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setModal(null)} disabled={isSaving}>Cancelar</button>
               <button type="submit" className="btn btn-primary" disabled={isSaving}>{isSaving ? 'Cadastrando...' : 'Cadastrar'}</button>
             </div>
           </form>
-        </div>
+        </Modal>
       )}
     </div>
   );

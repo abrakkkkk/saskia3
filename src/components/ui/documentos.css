@@ -1,0 +1,26 @@
+/* Cartões de documento (Biblioteca, Vacinação, Curvas de crescimento). Só tokens --ui-*. */
+.ui-doc-secao { margin-bottom: var(--ui-space-5); }
+.ui-doc-secao > h2 { margin: 0 0 var(--ui-space-3); font-size: var(--ui-t-section); font-weight: 600; color: var(--ui-on-dark); }
+
+.ui-doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: var(--ui-space-3); margin-bottom: var(--ui-space-5); }
+.ui-doc-secao .ui-doc-grid { margin-bottom: 0; }
+
+.ui-doc {
+  display: flex; flex-direction: column; gap: var(--ui-space-3); min-width: 0;
+  padding: 14px; background: var(--ui-surface); color: var(--ui-text);
+  border: 1px solid var(--ui-border); border-radius: var(--ui-radius-card); box-shadow: var(--ui-shadow-card);
+  text-decoration: none;
+}
+.ui-doc-topo { display: flex; align-items: flex-start; gap: var(--ui-space-3); min-width: 0; }
+.ui-doc-topo > div { min-width: 0; }
+.ui-doc-icone { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: var(--ui-radius-control); background: var(--tone-bg); color: var(--tone); }
+.ui-doc h2, .ui-doc h3 { margin: 0; font-size: var(--ui-t-body); font-weight: 600; line-height: 1.35; color: var(--ui-text); overflow-wrap: anywhere; }
+.ui-doc p { margin: 2px 0 0; font-size: var(--ui-t-meta); color: var(--ui-text-muted); }
+.ui-doc-meta { margin-top: auto; }
+.ui-doc-acoes { margin-top: auto; display: flex; flex-wrap: wrap; gap: var(--ui-space-2); }
+.ui-doc-acoes .btn { flex: 1 1 96px; }
+
+.ui-doc-atalho { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.ui-doc-atalho:hover { border-color: var(--ui-blue-500); box-shadow: var(--ui-shadow-raised); }
+
+.ui-doc-aviso { margin: 0 0 var(--ui-space-4); padding: 12px 14px; background: var(--ui-surface); color: var(--ui-text); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-control); font-size: var(--ui-t-body); }

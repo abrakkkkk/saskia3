@@ -1,8 +1,10 @@
-﻿'use client';
+'use client';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ErrorState, LoadingState, PageHeader, Panel, StatCard, StatGrid, Tabs } from '@/components/ui';
+import { EmptyState, ErrorState, LoadingState, PageHeader, Panel, StatCard, StatGrid, Tabs } from '@/components/ui';
 import type { PontoLeito, PontoStatus } from './graficos-relatorio';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
 import './relatorios.css';
 
 // Gráficos em chunk separado: o recharts só é baixado depois que a tela abre.
@@ -146,73 +148,82 @@ export default function RelatoriosPage() {
   const tipos = graficoLeitos;
 
   return (
-    <div className="conteudo">
-      <div className="rel-container">
-        <PageHeader
-          icon="las la-chart-bar"
-          title="Relatórios gerenciais"
-          subtitle="Indicadores agregados do hospital. Nenhum nome de paciente ou de profissional aparece aqui."
-          actions={<>
-            <button type="button" className="btn btn-primary" onClick={exportarCsv} disabled={carregando || !carregadoUmaVez}><i className="las la-file-csv" aria-hidden="true"></i> Exportar resumo CSV</button>
-            <button type="button" className="btn btn-primary" onClick={() => window.print()}><i className="las la-print" aria-hidden="true"></i> Imprimir</button>
-          </>}
-        />
+    <div className="mod-pagina rel-pagina">
+      <PageHeader
+        icon="las la-chart-bar"
+        title="Relatórios gerenciais"
+        subtitle="Indicadores agregados do hospital, sem nomes de pacientes ou profissionais."
+        actions={<>
+          <button type="button" className="btn btn-secondary" onClick={exportarCsv} disabled={carregando || !carregadoUmaVez}><i className="las la-file-csv" aria-hidden="true"></i> Exportar CSV</button>
+          <button type="button" className="btn btn-secondary" onClick={() => window.print()}><i className="las la-print" aria-hidden="true"></i> Imprimir</button>
+        </>}
+      />
 
-        <div className="filtros-rapidos" style={{ display: 'flex', gap: 8, marginBottom: 15, flexWrap: 'wrap' }} role="group" aria-label="Período rápido">
-          {Object.keys(FILTER_LABELS).map(chave => (
-            <button key={chave} type="button" className={`filtro-rel-btn ${filtroRapido === chave ? 'ativo' : ''}`} aria-pressed={filtroRapido === chave} onClick={() => escolherPeriodo(chave)}>
-              {FILTER_LABELS[chave]}
-            </button>
-          ))}
-        </div>
-
-        <div className="filtros-periodo" style={{ display: 'flex', gap: 10, marginBottom: 25, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div className="periodo-campo"><label htmlFor="relatorio-inicio">Data inicial</label><input id="relatorio-inicio" type="date" className="periodo-input" max={fim || undefined} value={inicio} onChange={e => { setFiltroRapido(''); setPeriodo([e.target.value, fim]); }} /></div>
-          <div className="periodo-campo"><label htmlFor="relatorio-fim">Data final</label><input id="relatorio-fim" type="date" className="periodo-input" min={inicio || undefined} value={fim} onChange={e => { setFiltroRapido(''); setPeriodo([inicio, e.target.value]); }} /></div>
-          <button type="button" className="btn-atualizar" onClick={() => void gerar()} disabled={carregando || periodoInvalido}><i className="las la-sync-alt" aria-hidden="true"></i> {carregando ? 'Atualizando...' : 'Atualizar'}</button>
-        </div>
-        {periodoInvalido && <p role="alert" style={{ color: 'var(--ui-on-dark)', marginBottom: 16 }}>A data inicial deve ser anterior ou igual à data final.</p>}
-        {erro && <ErrorState message={erro} onRetry={() => void gerar()} />}
-        {carregando && !erro && <p role="status" style={{ color: 'var(--ui-on-dark-muted)', marginBottom: 16 }}>Atualizando indicadores…</p>}
-
-        <StatGrid>
-          <StatCard icon="las la-users" tone="info" value={numero(resumo.totalPacientes)} label="Pacientes cadastrados no período" />
-          <StatCard icon="las la-calendar-check" tone="success" value={numero(resumo.atendimentos)} label="Agendamentos concluídos no período" />
-          <StatCard icon="las la-procedures" tone="warning" value={numero(resumo.internacoes)} label="Internados agora" />
-          <StatCard icon="las la-cross" tone="neutral" value={numero(resumo.obitos)} label="Óbitos no período" />
-          <StatCard icon="las la-bed" tone="info" value={numero(resumo.taxaUTI)} label="Ocupação atual da UTI" />
-          <StatCard icon="las la-cut" tone="neutral" value={numero(resumo.cirurgias)} label="Cirurgias cadastradas no período" />
-        </StatGrid>
-
-        <Tabs label="Seções do relatório" tabs={ABAS} active={aba} onChange={setAba} />
-
-        {aba === 'geral' && carregadoUmaVez && <GraficosRelatorio status={graficoStatus} leitos={graficoLeitos} />}
-
-        {aba === 'leitos' && carregadoUmaVez && (
-          <Panel title="Ocupação atual por tipo de leito">
-            {tipos.length === 0 ? <p>Nenhum leito de UTI cadastrado.</p> : (
-              <div className="tabela-wrapper">
-                <table className="tabela">
-                  <thead><tr><th>Tipo de leito</th><th>Ocupados / total</th><th>Taxa de ocupação</th></tr></thead>
-                  <tbody>
-                    {tipos.map(item => {
-                      const total = item.ocupados + item.livres;
-                      const taxa = total ? Math.round((item.ocupados / total) * 100) : 0;
-                      return (
-                        <tr key={item.tipo}>
-                          <td><strong>{item.tipo}</strong></td>
-                          <td>{item.ocupados} / {total}</td>
-                          <td>{taxa}%</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Panel>
-        )}
+      <div className="rel-filtros">
+        <Panel title="Período" icon="las la-calendar">
+          <div className="ux-chips" role="group" aria-label="Período rápido">
+            {Object.keys(FILTER_LABELS).map(chave => (
+              <button key={chave} type="button" className="ux-chip" aria-pressed={filtroRapido === chave} onClick={() => escolherPeriodo(chave)}>
+                {FILTER_LABELS[chave]}
+              </button>
+            ))}
+          </div>
+          <div className="ux-barra rel-datas">
+            <div className="form-group">
+              <label htmlFor="relatorio-inicio">Data inicial</label>
+              <input id="relatorio-inicio" type="date" max={fim || undefined} value={inicio} onChange={e => { setFiltroRapido(''); setPeriodo([e.target.value, fim]); }} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="relatorio-fim">Data final</label>
+              <input id="relatorio-fim" type="date" min={inicio || undefined} value={fim} onChange={e => { setFiltroRapido(''); setPeriodo([inicio, e.target.value]); }} />
+            </div>
+            <button type="button" className="btn btn-primary rel-atualizar" onClick={() => void gerar()} disabled={carregando || periodoInvalido}><i className="las la-sync-alt" aria-hidden="true"></i> {carregando ? 'Atualizando…' : 'Atualizar'}</button>
+          </div>
+          {periodoInvalido && <p role="alert" className="mod-aviso mod-aviso-erro">A data inicial deve ser anterior ou igual à data final.</p>}
+        </Panel>
       </div>
+
+      {erro && <ErrorState message={erro} onRetry={() => void gerar()} />}
+      {carregando && !erro && <p role="status" className="ux-nota-escura">Atualizando indicadores…</p>}
+
+      <StatGrid>
+        <StatCard icon="las la-users" value={numero(resumo.totalPacientes)} label="Pacientes cadastrados no período" />
+        <StatCard icon="las la-calendar-check" tone="success" value={numero(resumo.atendimentos)} label="Agendamentos concluídos no período" />
+        <StatCard icon="las la-procedures" tone="info" value={numero(resumo.internacoes)} label="Internados agora" />
+        <StatCard icon="las la-cross" value={numero(resumo.obitos)} label="Óbitos no período" />
+        <StatCard icon="las la-bed" tone="info" value={numero(resumo.taxaUTI)} label="Ocupação atual da UTI" />
+        <StatCard icon="las la-cut" value={numero(resumo.cirurgias)} label="Cirurgias no período" />
+      </StatGrid>
+
+      <Tabs label="Seções do relatório" tabs={ABAS} active={aba} onChange={setAba} />
+
+      {aba === 'geral' && carregadoUmaVez && <GraficosRelatorio status={graficoStatus} leitos={graficoLeitos} />}
+
+      {aba === 'leitos' && carregadoUmaVez && (
+        <section aria-labelledby="rel-leitos-titulo">
+          <h2 id="rel-leitos-titulo" className="ux-titulo-secao">Ocupação atual por tipo de leito</h2>
+          {tipos.length === 0 ? <EmptyState icon="las la-bed" message="Nenhum leito de UTI cadastrado." /> : (
+            <div className="tabela-wrapper">
+              <table className="tabela">
+                <thead><tr><th>Tipo de leito</th><th>Ocupados / total</th><th>Taxa de ocupação</th></tr></thead>
+                <tbody>
+                  {tipos.map(item => {
+                    const total = item.ocupados + item.livres;
+                    const taxa = total ? Math.round((item.ocupados / total) * 100) : 0;
+                    return (
+                      <tr key={item.tipo}>
+                        <td><strong>{item.tipo}</strong></td>
+                        <td>{item.ocupados} / {total}</td>
+                        <td>{taxa}%</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

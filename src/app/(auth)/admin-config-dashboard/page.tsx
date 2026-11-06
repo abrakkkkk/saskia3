@@ -1,8 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { PageHeader, Panel, Badge, LoadingState, ErrorState } from '@/components/ui';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
 import './config-dashboard.css';
-
 
 
 const modulosConfigOriginal = [
@@ -170,11 +172,11 @@ export default function AdminConfigDashboardPage() {
   };
 
   const totalAtivos = Object.values(configState).filter(Boolean).length;
-  if (status === 'loading') return <div className="conteudo">Carregando permissões…</div>;
-  if (!session?.user) return <div className="conteudo">Entre no sistema para continuar.</div>;
-  if (session.user.cargo !== 'ADMIN') return <div className="conteudo">Acesso restrito ao administrador do hospital.</div>;
-  if (configLoading) return <div className="conteudo">Carregando configuração…</div>;
-  if (configLoadError) return <div className="conteudo"><p className="config-feedback" role="alert">{feedback}</p><button className="btn btn-primary" onClick={() => window.location.reload()}>Tentar novamente</button></div>;
+  if (status === 'loading') return <div className="mod-pagina"><PageHeader icon="las la-sliders-h" title="Dashboard" /><LoadingState message="Carregando permissões..." /></div>;
+  if (!session?.user) return <div className="mod-pagina"><PageHeader icon="las la-sliders-h" title="Dashboard" /><div role="alert" className="mod-aviso mod-aviso-atencao">Entre no sistema para continuar.</div></div>;
+  if (session.user.cargo !== 'ADMIN') return <div className="mod-pagina"><PageHeader icon="las la-sliders-h" title="Dashboard" /><div role="alert" className="mod-aviso mod-aviso-erro">Acesso restrito ao administrador do hospital.</div></div>;
+  if (configLoading) return <div className="mod-pagina"><PageHeader icon="las la-sliders-h" title="Dashboard" /><LoadingState message="Carregando configuração..." /></div>;
+  if (configLoadError) return <div className="mod-pagina"><PageHeader icon="las la-sliders-h" title="Dashboard" /><ErrorState message={feedback || 'Não foi possível carregar a configuração.'} onRetry={() => window.location.reload()} /></div>;
 
   // Agrupar seções
   const secoes: Record<string, typeof modulosConfigOriginal> = {};
@@ -183,104 +185,76 @@ export default function AdminConfigDashboardPage() {
     secoes[m.secao].push(m);
   });
 
+  const perfis = [
+    { id: 'hospital', icone: 'las la-hospital', rotulo: 'Hospital completo' },
+    { id: 'clinica', icone: 'las la-clinic-medical', rotulo: 'Clínica' },
+    { id: 'consultorio', icone: 'las la-user-md', rotulo: 'Consultório' },
+    { id: 'upa', icone: 'las la-ambulance', rotulo: 'UPA / Emergência' },
+    { id: 'todos', icone: 'las la-check-double', rotulo: 'Ativar tudo' },
+  ];
+
   return (
-    <div className="conteudo">
-      <div className="conf-container">
-        
-        <div className="banner-conf">
-          <div>
-            <h1><i className="las la-sliders-h"></i> Atalhos e indicadores do dashboard</h1>
-            <p>Escolha quais indicadores, atalhos e gráficos aparecem no dashboard. O menu lateral não é alterado e cada usuário continua vendo só o que o cargo permite.</p>
-          </div>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button className="btn btn-warning" onClick={resetConfig} disabled={isSaving}><i className="las la-undo" aria-hidden="true"></i> Restaurar Padrão</button>
-            <button className="btn btn-success" onClick={saveConfig} disabled={isSaving}><i className="las la-save" aria-hidden="true"></i> {isSaving ? 'Salvando…' : 'Salvar Configuração'}</button>
-          </div>
+    <div className="mod-pagina">
+      <PageHeader
+        icon="las la-sliders-h"
+        title="Dashboard"
+        subtitle="Escolha os indicadores, atalhos e gráficos exibidos. O menu lateral não muda."
+        actions={
+          <>
+            <button type="button" className="btn btn-secondary" onClick={resetConfig} disabled={isSaving}><i className="las la-undo" aria-hidden="true"></i> Restaurar padrão</button>
+            <button type="button" className="btn btn-primary" onClick={saveConfig} disabled={isSaving}><i className="las la-save" aria-hidden="true"></i> {isSaving ? 'Salvando…' : 'Salvar'}</button>
+          </>
+        }
+      />
+
+      <p className="mod-aviso mod-aviso-atencao"><i className="las la-exclamation-triangle" aria-hidden="true"></i> Estas alterações afetam todos os usuários do hospital.</p>
+
+      {feedback && <p className={`mod-aviso ${feedback.startsWith('Erro') || feedback.startsWith('Não foi') ? 'mod-aviso-erro' : 'mod-aviso-sucesso'}`} role="status" aria-live="polite">{feedback}</p>}
+
+      <Panel title="Perfis rápidos" icon="las la-magic" actions={<Badge tone="info">{totalAtivos} de {modulosConfigOriginal.length} ativos</Badge>}>
+        <div className="ux-chips">
+          {perfis.map(p => (
+            <button key={p.id} type="button" aria-pressed={activeProfile === p.id} className="ux-chip" onClick={() => applyProfile(p.id)}>
+              <i className={p.icone} aria-hidden="true"></i> {p.rotulo}
+            </button>
+          ))}
+          <button type="button" aria-pressed={activeProfile === 'nenhum'} className="ux-chip" onClick={async () => { if (await confirm('Desativar todos os itens do dashboard? Nada será gravado até você salvar.')) applyProfile('nenhum'); }}>
+            <i className="las la-times-circle" aria-hidden="true"></i> Desativar tudo
+          </button>
         </div>
+      </Panel>
 
-        <div className="alerta-restrito">
-          <i className="las la-shield-alt icone"></i>
-          <div>
-            <strong><i className="las la-exclamation-triangle" aria-hidden="true"></i> Área de Configuração Avançada</strong>
-            <p>Alterações aqui afetam diretamente a experiência do usuário final. Modifique com cuidado.</p>
-          </div>
-        </div>
-
-        {feedback && <p className="config-feedback" role="status" aria-live="polite">{feedback}</p>}
-
-        <div className="acoes-bar">
-          <div>
-            <strong style={{ color: '#0a1f44', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Perfis Rápidos de Instalação:</strong>
-            <div className="perfis-rapidos">
-              <button type="button" aria-pressed={activeProfile === 'hospital'} className={`perfil-btn ${activeProfile === 'hospital' ? 'ativo' : ''}`} onClick={() => applyProfile('hospital')}>
-                <i className="las la-hospital"></i> Hospital Completo
-              </button>
-              <button type="button" aria-pressed={activeProfile === 'clinica'} className={`perfil-btn ${activeProfile === 'clinica' ? 'ativo' : ''}`} onClick={() => applyProfile('clinica')}>
-                <i className="las la-clinic-medical"></i> Clínica
-              </button>
-              <button type="button" aria-pressed={activeProfile === 'consultorio'} className={`perfil-btn ${activeProfile === 'consultorio' ? 'ativo' : ''}`} onClick={() => applyProfile('consultorio')}>
-                <i className="las la-user-md"></i> Consultório
-              </button>
-              <button type="button" aria-pressed={activeProfile === 'upa'} className={`perfil-btn ${activeProfile === 'upa' ? 'ativo' : ''}`} onClick={() => applyProfile('upa')}>
-                <i className="las la-ambulance"></i> UPA / Emergência
-              </button>
-              <button type="button" aria-pressed={activeProfile === 'todos'} className={`perfil-btn ${activeProfile === 'todos' ? 'ativo' : ''}`} onClick={() => applyProfile('todos')}>
-                <i className="las la-check-double"></i> Ativar Tudo
-              </button>
-              <button type="button" aria-pressed={activeProfile === 'nenhum'} className={`perfil-btn ${activeProfile === 'nenhum' ? 'ativo' : ''}`} onClick={async () => { if (await confirm('Desativar todos os itens do dashboard? Nada será gravado até você salvar.')) applyProfile('nenhum'); }}>
-                <i className="las la-times-circle"></i> Desativar Tudo
-              </button>
-            </div>
-          </div>
-          <span className="info-text">
-            <i className="las la-check-circle" style={{ color: '#16a34a', fontSize: '18px' }}></i> 
-            {totalAtivos} de {modulosConfigOriginal.length} módulos ativos
-          </span>
-        </div>
-
-        <div className="config-grid">
-          {Object.entries(secoes).map(([secaoNome, modulos]) => {
-            const ativosNaSecao = modulos.filter(m => configState[m.id]).length;
-            
-            return (
-              <div className="config-section" key={secaoNome}>
-                <h3>
-                  <i className="las la-folder"></i> {secaoNome}
-                  <span style={{ fontSize: '11px', color: '#64748b', marginLeft: 'auto', background: '#f8fafc', padding: '4px 8px', borderRadius: '8px' }}>
-                    {ativosNaSecao}/{modulos.length} ativos
-                  </span>
-                </h3>
-                <div className="toggle-list">
-                  {modulos.map(m => {
-                    const isChecked = !!configState[m.id];
-                    return (
-                      <label className="toggle-item" key={m.id}>
-                        <div className="toggle-info">
-                          <i className={m.icone} aria-hidden="true"></i>
-                          <div>
-                            <span className="toggle-name">{m.nome}</span>
-                            <span className="toggle-desc">{m.desc}</span>
-                          </div>
-                        </div>
-                        <span className="switch">
-                          <input 
-                            type="checkbox" 
-                            checked={isChecked}
-                            aria-label={`Ativar ${m.nome}`}
-                            disabled={isSaving}
-                            onChange={() => toggleModule(m.id)}
-                          />
-                          <span className="slider"></span>
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
+      <div className="cfg-grid">
+        {Object.entries(secoes).map(([secaoNome, modulos]) => {
+          const ativosNaSecao = modulos.filter(m => configState[m.id]).length;
+          return (
+            <Panel key={secaoNome} title={secaoNome} icon="las la-folder" actions={<Badge>{ativosNaSecao}/{modulos.length} ativos</Badge>}>
+              <ul className="ux-lista cfg-lista">
+                {modulos.map(m => (
+                  <li key={m.id}>
+                    <label className="cfg-item">
+                      <i className={m.icone} aria-hidden="true"></i>
+                      <span className="cfg-texto">
+                        <strong>{m.nome}</strong>
+                        <small>{m.desc}</small>
+                      </span>
+                      <span className="ux-switch">
+                        <input
+                          type="checkbox"
+                          checked={!!configState[m.id]}
+                          aria-label={`Ativar ${m.nome}`}
+                          disabled={isSaving}
+                          onChange={() => toggleModule(m.id)}
+                        />
+                        <span className="ux-switch-trilho" aria-hidden="true"></span>
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          );
+        })}
       </div>
     </div>
   );

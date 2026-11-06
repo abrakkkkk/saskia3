@@ -1,67 +1,35 @@
-.container-receituario { display: flex; gap: 24px; min-height: calc(100vh - 150px); align-items: stretch; min-width: 0; }
-.sidebar-receita { flex: 0 0 300px; width: 300px; height: auto; max-height: calc(100vh - 120px); background: white; color: var(--ui-text); border: 1px solid #dbe4ef; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); padding: 20px; overflow-y: auto; overflow-x: hidden; position: sticky; top: 96px; }
-.main-receita { flex: 1; min-width: 0; padding: 12px 0; }
+/* Receituário e adesivos: só o que o sistema (.btn, .form-group, Panel, Modal) não cobre. */
+.rec-pagina { min-width: 0; }
 
-/* Acesso restrito: não reserve a coluna de ferramentas clínicas vazia. */
-.container-receituario.receituario-restrito { display: block; min-height: 0; }
-.receituario-restrito .sidebar-receita { display: none; }
-.receituario-restrito .main-receita { width: min(100%, 1100px); margin-inline: auto; }
+.rec-barra { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin-bottom: var(--ui-space-4); }
+.btn.rec-perigo { color: var(--ui-danger); }
+.btn.rec-icone { width: 40px; padding: 0; }
 
-.cta-button { width: 100%; min-height: 40px; background: #15803d; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px; transition: all 0.3s; }
-.cta-button:hover { background: #166534; }
-.cta-button:disabled { opacity: 0.55; cursor: not-allowed; }
-.professional-switcher { background: white; border: 1px solid #dbe4ef; border-radius: 12px; padding: 15px; margin-bottom: 20px; }
-.professional-rotulo { font-size: 12px; font-weight: bold; margin-bottom: 12px; color: #0a1f44; }
-.perfil-btn { width: 100%; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-.perfil-btn.ativo { background: #1e3a8a; color: white; border: 1px solid #1e3a8a; }
-.perfil-btn i { font-size: 18px; color: white; }
-.aviso-permissao { color: var(--ui-text-muted); font-size: 13px; line-height: 1.5; }
-
-.toolbar-receita { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; padding: 10px; background: white; color: var(--ui-text); border: 1px solid #dbe4ef; border-radius: 12px; align-items: center; }
-.tool-btn { min-height: 40px; background: #e2e8f0; color: #1e293b; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; transition: background-color 0.2s; }
-.tool-btn:hover:not(:disabled) { background: #cbd5e1; }
-.tool-btn:disabled { cursor: not-allowed; opacity: 0.55; }
-.tool-btn.danger { background: #fee2e2; color: #b91c1c; }
-.tool-btn-salvar, .tool-btn-salvar:hover:not(:disabled) { background: #15803d; color: white; }
-
-.papel-receita { background: white; color: var(--ui-text); border: 1px solid #dbe4ef; border-radius: 12px; padding: clamp(18px, 3vw, 30px); box-shadow: 0 3px 12px rgba(15, 35, 72, 0.06); margin-bottom: 20px; }
-.papel-receita h1 { text-align: center; font-size: 24px; color: #1e3a8a; margin-bottom: 5px; }
-.papel-receita h2 { color: var(--ui-text); font-size: 18px; margin-bottom: 14px; }
-.subtitulo { text-align: center; font-size: 11px; color: #475569; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px; }
-.form-campo { margin-bottom: 15px; min-width: 0; }
-.form-campo label { display: block; font-weight: bold; font-size: 12px; margin-bottom: 5px; }
-.form-campo input { width: 100%; min-height: 44px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 9px; font-size: 14px; background: white; }
-.rec-somente-leitura { background: #f8fafc; cursor: not-allowed; color: #1e293b; font-weight: 600; }
-.rec-registro { color: #0369a1; font-weight: 700; }
-
-.rec-identificacao .form-group { margin-bottom: 12px; }
-.rec-alergia { padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
-.rec-alergia-sim { background: #b91c1c; color: #fff; font-size: 15px; }
-.rec-alergia-sim strong { display: block; margin-bottom: 4px; }
-.rec-alergia-nao { background: #fef3c7; color: #713f12; }
+.rec-alergia { padding: var(--ui-space-3) var(--ui-space-4); border-radius: var(--ui-radius-control); margin-bottom: var(--ui-space-3); background: var(--ui-danger); color: #fff; font-size: 15px; }
+.rec-alergia strong { display: block; margin-bottom: 4px; }
+.rec-alergia p { margin: 0; }
 .rec-limitacao { margin-bottom: 0; }
 .rec-confirmacao { display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; cursor: pointer; }
 .rec-confirmacao input { flex: none; width: 20px; height: 20px; min-height: 20px; margin-top: 2px; }
-.rec-vazio { text-align: center; padding: 40px; color: var(--ui-text-muted); }
-.rec-vazio i { font-size: 48px; }
-.rec-historico-item { padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; overflow-wrap: anywhere; }
-.rec-historico-item ul { margin: 10px 0 0 18px; font-size: 14px; }
-.rec-historico-item img { max-width: 48px; max-height: 48px; vertical-align: middle; }
 
-.medicamentos-list { margin: 20px 0; min-height: 200px; }
-.medicamento-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 15px; padding: 15px; }
-.card-header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
-.card-header select { width: auto; max-width: 42%; min-height: 40px; padding: 5px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; }
-.card-title { font-weight: bold; flex: 1; }
-.btn-remove-card { min-height: 40px; background: none; border: none; color: #dc2626; cursor: pointer; font-size: 18px; }
-.editor-custom { min-height: 144px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 10px; background: white; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
-.editor-custom:focus-visible { border-color: #1e3a8a; outline: 3px solid rgba(96, 165, 250, 0.42); outline-offset: 2px; }
-.editor-custom img { max-width: 64px; max-height: 64px; object-fit: contain; display: inline-block; vertical-align: middle; margin: 4px; border-radius: 8px; }
-.card-footer { display: flex; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0; }
-.icon-btn { min-height: 40px; background: none; border: none; cursor: pointer; font-size: 18px; color: #475569; }
-.icon-btn:hover { color: #1e3a8a; }
-.data-receita { text-align: right; margin: 20px 0; font-size: 12px; color: #475569; }
+/* Folha da receita (documento impresso) */
+.papel-receita { background: var(--ui-surface); color: var(--ui-text); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-card); padding: clamp(18px, 3vw, 30px); box-shadow: var(--ui-shadow-card); margin-bottom: var(--ui-space-5); }
+.rec-titulo-doc { margin: 0 0 4px; text-align: center; font-size: 24px; font-weight: 700; color: var(--ui-blue-700); }
+.subtitulo { text-align: center; font-size: var(--ui-t-meta); color: var(--ui-text-muted); border-bottom: 2px solid var(--ui-blue-700); padding-bottom: 10px; margin-bottom: 20px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--ui-space-5); }
+.rec-somente-leitura { background: var(--ui-surface-muted); color: var(--ui-text); font-weight: 600; }
+.rec-registro { color: var(--ui-info); font-weight: 700; }
+
+.medicamentos-list { margin: var(--ui-space-4) 0; }
+.medicamento-card { padding: var(--ui-space-4) 0; border-top: 1px solid var(--ui-border); }
+.card-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-2); margin-bottom: var(--ui-space-3); }
+.card-title { font-weight: 600; flex: 1 1 auto; }
+.rec-via { margin: 0; width: 140px; }
+.editor-custom { min-height: 144px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: var(--ui-radius-control); background: var(--ui-surface); line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+.editor-custom:focus-visible { border-color: var(--ui-blue-700); outline: 3px solid var(--ui-blue-500); outline-offset: 2px; }
+.editor-custom img { max-width: 64px; max-height: 64px; object-fit: contain; display: inline-block; vertical-align: middle; margin: 4px; border-radius: var(--ui-radius-control); }
+.card-footer { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin-top: var(--ui-space-3); }
+.data-receita { text-align: right; margin: var(--ui-space-5) 0; font-size: var(--ui-t-meta); color: var(--ui-text-muted); }
 .assinatura-area { display: flex; justify-content: space-between; gap: 20px; margin-top: 30px; }
 .assinatura-item { width: 45%; text-align: center; }
 .assinatura-item .linha { border-bottom: 1px solid #000; height: 40px; margin-bottom: 5px; }
@@ -71,50 +39,42 @@
 .print-paciente { margin-top: 10px; font-size: 18px; }
 .print-header hr { margin: 20px 0; }
 
-.container-receituario :where(button, input, select):focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
+.rec-historico { list-style: none; margin: 0; padding: 0; }
+.rec-historico-item { padding: var(--ui-space-3) 0; border-top: 1px solid var(--ui-border); overflow-wrap: anywhere; }
+.rec-historico-item:first-child { border-top: 0; padding-top: 0; }
+.rec-historico-item ul { margin: 10px 0 0 18px; font-size: var(--ui-t-body); }
+.rec-historico-item img { max-width: 48px; max-height: 48px; vertical-align: middle; }
 
 /* Adesivos */
-.adesivos-modal { display: flex; position: fixed; inset: 0; padding: 12px; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center; }
-.adesivos-modal-conteudo { background: white; color: var(--ui-text); width: min(750px, 100%); max-height: 90vh; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
-.adesivos-modal-topo { background: #1e3a8a; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.adesivos-modal-topo button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
-.adesivos-modal-corpo { padding: 20px; overflow-y: auto; }
-.modal-tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
-.modal-tab { padding: 8px 16px; background: none; border: none; color: var(--ui-text); cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
-.modal-tab.ativo { background: #1e3a8a; color: white; border-radius: 8px; }
-.adesivos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; max-height: 400px; overflow-y: auto; }
-.adesivo-item { font: inherit; background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px 10px; text-align: center; cursor: pointer; transition: border-color 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 110px; }
-.adesivo-item:hover { border-color: #1e3a8a; }
+.rec-filtro-adesivos { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin-bottom: var(--ui-space-4); }
+.rec-filtro-adesivos .btn[aria-pressed='true'] { border-color: var(--ui-blue-700); box-shadow: inset 0 0 0 1px var(--ui-blue-700); }
+.adesivos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: var(--ui-space-3); }
+.adesivo-item { font: inherit; background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-control); padding: var(--ui-space-3) 10px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 110px; transition: border-color 0.15s ease; }
+.adesivo-item:hover { border-color: var(--ui-blue-700); }
 .adesivo-item img { width: 64px; height: 64px; object-fit: contain; margin-bottom: 8px; }
-.adesivo-item i { display: none; font-size: 48px; margin-bottom: 8px; color: #1e3a8a; }
+.adesivo-item i { display: none; font-size: 24px; margin-bottom: 8px; color: var(--ui-blue-700); }
 .adesivo-item img.adesivo-img-falhou { display: none; }
 .adesivo-item img.adesivo-img-falhou + i { display: block; }
-.adesivo-item span { font-size: 11px; display: block; word-break: break-word; line-height: 1.3; color: #333; font-weight: 500; }
-.adesivos-description { color: #475569; margin: 0 0 20px; }
-.adesivos-catalogo { max-height: 300px; margin: 0 0 30px; padding: 15px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; }
-.adesivos-catalogo .adesivos-grid { max-height: none; }
-.bandeja-adesivos h3 { margin: 0 0 15px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; }
-.adesivos-empty { color: #475569; padding: 20px; text-align: center; }
-.adesivos-tray-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-.adesivo-bandeja-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 15px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
-.adesivo-bandeja-identidade, .adesivo-bandeja-acoes { display: flex; align-items: center; gap: 15px; }
-.adesivo-bandeja-identidade { min-width: 0; font-weight: 700; font-size: 14px; }
+.adesivo-item span { font-size: var(--ui-t-meta); display: block; overflow-wrap: anywhere; line-height: 1.3; color: var(--ui-text); font-weight: 500; }
+.adesivos-catalogo { max-height: 320px; margin: 0 0 var(--ui-space-5); padding: var(--ui-space-3); overflow: auto; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-control); background: var(--ui-surface-muted); }
+.bandeja-adesivos h3 { margin: 0 0 var(--ui-space-3); font-size: 15px; font-weight: 600; }
+.adesivos-empty { color: var(--ui-text-muted); padding: var(--ui-space-4) 0; }
+.adesivos-tray-list { list-style: none; margin: 0 0 var(--ui-space-4); padding: 0; }
+.adesivo-bandeja-item { display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-4); padding: var(--ui-space-2) 0; border-top: 1px solid var(--ui-border); }
+.adesivo-bandeja-item:first-child { border-top: 0; }
+.adesivo-bandeja-identidade, .adesivo-bandeja-acoes { display: flex; align-items: center; gap: var(--ui-space-3); }
+.adesivo-bandeja-identidade { min-width: 0; font-weight: 600; font-size: var(--ui-t-body); }
 .adesivo-bandeja-identidade img { width: 40px; height: 40px; object-fit: contain; }
 .adesivo-bandeja-identidade span { overflow-wrap: anywhere; }
-.adesivo-quantidade { display: flex; align-items: center; overflow: hidden; border: 1px solid #cbd5e1; border-radius: 8px; }
-.adesivo-quantidade button { padding: 5px 12px; border: 0; background: #f1f5f9; cursor: pointer; }
-.adesivo-quantidade span { min-width: 40px; padding: 5px 15px; text-align: center; font-weight: 700; }
-.adesivo-remover { border: 0; background: transparent; color: #dc2626; cursor: pointer; font-size: 20px; }
-.acesso-rapido { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e2e8f0; }
-.acesso-numero { font: inherit; background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 14px; }
-.acesso-numero:hover { border-color: #1e3a8a; color: #1e3a8a; }
+.adesivo-quantidade { display: flex; align-items: center; gap: var(--ui-space-2); }
+.adesivo-quantidade .btn { width: 40px; padding: 0; }
+.adesivo-quantidade span { min-width: 28px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.acesso-rapido { display: flex; gap: var(--ui-space-2); flex-wrap: wrap; margin-bottom: var(--ui-space-4); }
 .print-adesivos-container { display: none; }
 
 @media (max-width: 768px) {
-  .container-receituario { flex-direction: column; }
-  .sidebar-receita { flex: 0 0 auto; width: 100%; max-height: none; position: relative; top: 0; }
-  .main-receita { width: 100%; padding: 0; }
   .form-row { grid-template-columns: 1fr; }
+  .rec-barra .btn { flex: 1 1 auto; }
 }
 
 @media (max-width: 640px) {
@@ -144,8 +104,4 @@
   body[data-print-mode="stickers"] .print-adesivo-item img { max-width: 2cm; max-height: 2cm; object-fit: contain; }
   body[data-print-mode="stickers"] .print-adesivo-item span { font-size: 8px; margin-top: 4px; line-height: 1; }
   body[data-print-mode="stickers"] #papelReceita { display: none !important; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .container-receituario *, .container-receituario *::before, .container-receituario *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

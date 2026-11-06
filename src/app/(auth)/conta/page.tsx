@@ -3,7 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { PageHeader, Panel, LoadingState } from '@/components/ui';
 import { CARGO_LABEL, type Cargo } from '@/lib/permissions';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
+import '@/components/ui/modal.css';
 import './conta.css';
 
 
@@ -81,7 +85,7 @@ export default function ContaPage() {
 
     if (novaSenha || confirmarSenha) {
       if (!senhaAtual) { setErro('Informe a senha atual para alterá-la.'); return; }
-      if (novaSenha !== confirmarSenha) { setErro('Nova senha e confirmação não coincidem!'); return; }
+      if (novaSenha !== confirmarSenha) { setErro('A nova senha e a confirmação não coincidem.'); return; }
       if (novaSenha.length < 12) { setErro('A nova senha deve ter pelo menos 12 caracteres.'); return; }
     }
 
@@ -102,7 +106,7 @@ export default function ContaPage() {
         setNome(data.nome);
         if (data.avatar) setFotoSrc(data.avatar);
         setSenhaAtual(''); setNovaSenha(''); setConfirmarSenha('');
-        setSucesso('Dados atualizados com sucesso!');
+        setSucesso('Dados atualizados.');
         setTimeout(() => setSucesso(''), 3000);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
@@ -118,9 +122,9 @@ export default function ContaPage() {
 
   if (status === 'loading') {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', flexDirection: 'column', gap: 16, color: '#64748b' }}>
-        <i className="las la-spinner la-spin" style={{ fontSize: 40, color: '#1e3a8a' }}></i>
-        <span style={{ fontSize: 16, fontWeight: 600 }}>Carregando sua conta...</span>
+      <div className="mod-pagina">
+        <PageHeader icon="las la-user-circle" title="Minha conta" />
+        <LoadingState message="Carregando sua conta..." />
       </div>
     );
   }
@@ -128,88 +132,67 @@ export default function ContaPage() {
   const cargo = dadosBanco?.cargo || session?.user?.cargo || '';
 
   return (
-    <div className="conta-page">
-      <div className="page-header conta-page-header" style={{ marginBottom: 24 }}>
-        <h2><i className="las la-user-circle"></i> Minha Conta</h2>
-      </div>
+    <div className="mod-pagina conta-page">
+      <PageHeader icon="las la-user-circle" title="Minha conta" subtitle="Seus dados, foto e senha." />
 
-      {sucesso && (
-        <div className="alert-sucesso" role="status" aria-live="polite">
-          <i className="las la-check-circle"></i> {sucesso}
-        </div>
-      )}
-      {erro && (
-        <div className="alert-erro" role="alert">
-          <i className="las la-exclamation-triangle"></i> {erro}
-        </div>
-      )}
+      {sucesso && <div className="mod-aviso mod-aviso-sucesso" role="status" aria-live="polite">{sucesso}</div>}
+      {erro && <div className="mod-aviso mod-aviso-erro" role="alert">{erro}</div>}
 
-      <div className="card-conta">
-        {/* PERFIL HEADER */}
-        <div className="perfil-header">
-          <div className="foto-perfil">
+      <Panel>
+        <div className="conta-perfil">
+          <div className="conta-foto">
             {fotoSrc
               ? <>{/* eslint-disable-next-line @next/next/no-img-element -- pré-visualização de data URL escolhida pelo usuário */}
 <img src={fotoSrc} alt="Foto de perfil" /></>
-              : <div className="placeholder-foto"><i className="las la-user-md"></i></div>
+              : <div className="conta-placeholder" aria-hidden="true"><i className="las la-user-md"></i></div>
             }
-            <label htmlFor="uploadFoto" className="btn-salvar-conta" style={{ background: '#64748b', padding: '8px 14px', fontSize: 13, marginTop: 12, cursor: 'pointer' }}>
-              <i className="las la-camera"></i> Trocar Foto
+            <label htmlFor="uploadFoto" className="btn btn-secondary btn-sm">
+              <i className="las la-camera" aria-hidden="true"></i> Trocar foto
             </label>
             <input id="uploadFoto" className="conta-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleFoto} />
           </div>
 
-          <div className="info-perfil">
-            <h2>
-              <i className="las la-user-circle"></i>
-              {dadosBanco?.nome || session?.user?.name || 'Usuário'}
-            </h2>
-            <p><i className="las la-envelope"></i> {dadosBanco?.email || session?.user?.email || '-'}</p>
-            <p><i className="las la-briefcase"></i> {CARGO_LABEL[cargo as Cargo] || cargo || 'Profissional'}</p>
+          <div className="conta-info">
+            <h2>{dadosBanco?.nome || session?.user?.name || 'Usuário'}</h2>
+            <p><i className="las la-envelope" aria-hidden="true"></i> {dadosBanco?.email || session?.user?.email || '-'}</p>
+            <p><i className="las la-briefcase" aria-hidden="true"></i> {CARGO_LABEL[cargo as Cargo] || cargo || 'Profissional'}</p>
             {dadosBanco?.hospital?.nome && (
-              <p><i className="las la-hospital"></i> {dadosBanco.hospital.nome}</p>
+              <p><i className="las la-hospital" aria-hidden="true"></i> {dadosBanco.hospital.nome}</p>
             )}
           </div>
         </div>
 
-        {/* FORMULÁRIO */}
         <form onSubmit={handleSubmit}>
-          <div className="form-grupo">
-            <label htmlFor="conta-nome"><i className="las la-user"></i> Nome completo</label>
-            <input
-              id="conta-nome"
-              type="text"
-              value={nome}
-              onChange={e => setNome(e.target.value)}
-              placeholder="Nome completo"
-              maxLength={160}
-              required
-            />
+          <div className="ux-campos">
+            <div className="form-group">
+              <label htmlFor="conta-nome">Nome completo</label>
+              <input
+                id="conta-nome"
+                type="text"
+                value={nome}
+                onChange={e => setNome(e.target.value)}
+                placeholder="Nome completo"
+                maxLength={160}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="conta-email">E-mail (não editável)</label>
+              <input
+                id="conta-email"
+                type="email"
+                value={dadosBanco?.email || session?.user?.email || ''}
+                disabled
+              />
+            </div>
           </div>
 
-          <div className="form-grupo">
-            <label htmlFor="conta-email" style={{ color: '#475569', fontSize: 12, fontWeight: 600 }}>
-              <i className="las la-envelope"></i> E-mail
-              <span style={{ marginLeft: 8, background: '#f1f5f9', padding: '2px 8px', borderRadius: 6, color: '#475569' }}>Não editável</span>
-            </label>
-            <input
-              id="conta-email"
-              type="email"
-              value={dadosBanco?.email || session?.user?.email || ''}
-              disabled
-              style={{ opacity: 0.6, cursor: 'not-allowed', background: '#f8fafc' }}
-            />
-          </div>
+          <h3 className="conta-subtitulo"><i className="las la-lock" aria-hidden="true"></i> Alterar senha</h3>
 
-          <hr style={{ margin: '24px 0', borderColor: '#e2e8f0' }} />
-
-          <h3 style={{ color: '#0a1f44', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 18 }}>
-            <i className="las la-lock"></i> Alterar Senha
-          </h3>
-
-          <div className="form-linha">
-            <div className="form-grupo">
-              <label htmlFor="conta-nova-senha">Nova Senha</label>
+          <div className="ux-campos">
+            <div className="form-group">
+              <label htmlFor="conta-nova-senha">Nova senha</label>
               <input
                 id="conta-nova-senha"
                 type="password"
@@ -219,42 +202,38 @@ export default function ContaPage() {
                 placeholder="Mínimo de 12 caracteres" minLength={12} maxLength={72}
               />
             </div>
-            <div className="form-grupo">
-              <label htmlFor="conta-confirmar-senha">Confirmar Nova Senha</label>
+            <div className="form-group">
+              <label htmlFor="conta-confirmar-senha">Confirmar nova senha</label>
               <input
                 id="conta-confirmar-senha"
                 type="password"
                 autoComplete="new-password"
                 value={confirmarSenha}
                 onChange={e => setConfirmarSenha(e.target.value)}
-                placeholder="Confirme a nova senha"
+                placeholder="Repita a nova senha"
+              />
+            </div>
+            <div className="form-group ux-largo">
+              <label htmlFor="conta-senha-atual">Senha atual (obrigatória para alterar a senha)</label>
+              <input
+                id="conta-senha-atual"
+                type="password"
+                autoComplete="current-password"
+                value={senhaAtual}
+                onChange={e => setSenhaAtual(e.target.value)}
+                placeholder="Digite sua senha atual"
               />
             </div>
           </div>
 
-          <div className="form-grupo">
-            <label htmlFor="conta-senha-atual">
-              Senha Atual{' '}
-              <span style={{ color: '#dc2626', fontWeight: 400, fontSize: 12 }}>
-                (obrigatória para alterar a senha)
-              </span>
-            </label>
-            <input
-              id="conta-senha-atual"
-              type="password"
-              autoComplete="current-password"
-              value={senhaAtual}
-              onChange={e => setSenhaAtual(e.target.value)}
-              placeholder="Digite sua senha atual"
-            />
+          <div className="ui-modal-foot">
+            <button type="submit" className="btn btn-primary" disabled={isSaving || isLoadingProfile || !dadosBanco}>
+              <i className={`las ${isSaving ? 'la-spinner la-spin' : 'la-save'}`} aria-hidden="true"></i>
+              {isSaving ? 'Salvando…' : 'Salvar alterações'}
+            </button>
           </div>
-
-          <button type="submit" className="btn-salvar-conta" disabled={isSaving || isLoadingProfile || !dadosBanco}>
-            <i className={`las ${isSaving ? 'la-spinner la-spin' : 'la-save'}`}></i>
-            {isSaving ? 'Salvando...' : 'Salvar Alterações'}
-          </button>
         </form>
-      </div>
+      </Panel>
     </div>
   );
 }

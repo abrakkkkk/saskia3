@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { MessageSquare, Search, Send } from 'lucide-react';
+import { ArrowLeft, Send } from 'lucide-react';
+import { PageHeader, SearchInput, EmptyState } from '@/components/ui';
 import { CARGO_LABEL, type Cargo } from '@/lib/permissions';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
 import './chat.css';
 
 interface Contato {
@@ -157,200 +160,107 @@ export default function ChatPage() {
   );
 
   return (
-    <div className="chat-root" style={{
-      display: 'flex',
-      height: 'calc(100vh - 80px - 60px)',
-      maxHeight: '820px',
-      background: 'white',
-      borderRadius: '8px',
-      overflow: 'hidden',
-      boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
-      border: '1px solid #e2e8f0',
-      marginTop: '-10px'
-    }}>
+    <div className="mod-pagina">
+      <PageHeader icon="las la-comments" title="Chat interno" subtitle="Conversas entre profissionais deste hospital." />
 
-      {/* SIDEBAR */}
-      <div className="chat-sidebar" style={{ width: '320px', minWidth: '320px', display: 'flex', flexDirection: 'column', borderRight: '1px solid #e2e8f0', background: '#f8fafc' }}>
+      <div className="chat-root" data-ativo={ativo ? 'true' : 'false'}>
 
-        {/* Header User */}
-        <div style={{ padding: '16px', background: 'linear-gradient(135deg, #1e3a8a, #1e40af)', color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '42px', height: '42px', borderRadius: '50%',
-            background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '15px', fontWeight: 700, color: 'white', flexShrink: 0
-          }}>
-            {usuario?.name ? getInitials(usuario.name) : usuario?.email?.[0]?.toUpperCase() || '?'}
-          </div>
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {usuario?.name || 'Usuário'}
+        <aside className="chat-sidebar" aria-label="Profissionais">
+          <div className="chat-perfil">
+            <div className="chat-avatar chat-avatar-eu" aria-hidden="true">
+              {usuario?.name ? getInitials(usuario.name) : usuario?.email?.[0]?.toUpperCase() || '?'}
             </div>
-            <div style={{ fontSize: '11px', opacity: 0.8 }}>{CARGO_LABEL[usuario?.cargo as Cargo] || 'Online'}</div>
+            <div className="chat-perfil-texto">
+              <strong>{usuario?.name || 'Usuário'}</strong>
+              <span>{CARGO_LABEL[usuario?.cargo as Cargo] || 'Online'}</span>
+            </div>
           </div>
-        </div>
 
-        {/* Search */}
-        <div style={{ padding: '10px 12px', borderBottom: '1px solid #e2e8f0', background: 'white' }}>
-          <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '8px', padding: '8px 14px', gap: '8px' }}>
-            <Search size={16} aria-hidden="true" style={{ color: '#94a3b8' }} />
-            <input
-              type="text"
-              aria-label="Pesquisar profissionais"
-              placeholder="Pesquisar contatos..."
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-              style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', color: '#475569' }}
-            />
+          <div className="chat-busca">
+            <SearchInput value={busca} onChange={setBusca} placeholder="Pesquisar profissionais" label="Pesquisar profissionais" />
           </div>
-        </div>
 
-        {/* Label */}
-        <div style={{ padding: '10px 16px 6px', fontSize: '10px', fontWeight: 800, color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '1px' }}>
-          Conversas
-        </div>
-
-        {/* Contatos */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {sessionStatus === 'loading' || carregandoContatos ? (
-            <div role="status" style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>Carregando profissionais...</div>
-          ) : erroContatos ? (
-            <div role="alert" style={{ padding: '20px', color: '#b91c1c', fontSize: '13px' }}>{erroContatos}</div>
-          ) : contatosFiltrados.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>Nenhum outro profissional ativo disponível.</div>
-          ) : contatosFiltrados.map(c => {
-            const isAtivo = ativo?.id === c.id;
-            return (
+          <div className="chat-contatos">
+            {sessionStatus === 'loading' || carregandoContatos ? (
+              <p role="status" className="chat-aviso">Carregando profissionais...</p>
+            ) : erroContatos ? (
+              <p role="alert" className="chat-aviso chat-aviso-erro">{erroContatos}</p>
+            ) : contatosFiltrados.length === 0 ? (
+              <p className="chat-aviso">Nenhum outro profissional ativo disponível.</p>
+            ) : contatosFiltrados.map(c => (
               <button
                 key={c.id}
                 type="button"
                 className="chat-contact"
                 onClick={() => setAtivo(c)}
-                aria-pressed={isAtivo}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '12px',
-                  padding: '12px 16px', cursor: 'pointer',
-                  background: isAtivo ? '#eff6ff' : 'transparent',
-                  borderLeft: `3px solid ${isAtivo ? '#1e3a8a' : 'transparent'}`,
-                  transition: 'all 0.15s',
-                  width: '100%', borderTop: 0, borderRight: 0, borderBottom: 0,
-                  textAlign: 'left', font: 'inherit'
-                }}
-                onMouseEnter={e => { if (!isAtivo) (e.currentTarget as HTMLElement).style.background = '#f1f5f9'; }}
-                onMouseLeave={e => { if (!isAtivo) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                aria-pressed={ativo?.id === c.id}
               >
-                <div style={{
-                  width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0,
-                  background: c.cor + '20', color: `color-mix(in srgb, ${c.cor} 50%, black)`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: '14px'
-                }}>
-                  {getInitials(c.nome)}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '13px', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nome}</div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>{CARGO_LABEL[c.cargo as Cargo] || c.cargo}</div>
-                </div>
+                <span className="chat-avatar" style={{ '--c': c.cor } as React.CSSProperties} aria-hidden="true">{getInitials(c.nome)}</span>
+                <span className="chat-contact-texto">
+                  <strong>{c.nome}</strong>
+                  <span>{CARGO_LABEL[c.cargo as Cargo] || c.cargo}</span>
+                </span>
               </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* MAIN AREA */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f0f2f5', overflow: 'hidden' }}>
-        {!ativo ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#475569', gap: '12px' }}>
-            <MessageSquare size={48} aria-hidden="true" style={{ opacity: 0.3 }} />
-            <div style={{ fontSize: '18px', fontWeight: 600, color: '#475569' }}>Chat Interno — Saskia Saúde</div>
-            <div style={{ fontSize: '14px' }}>Selecione um profissional para iniciar</div>
+            ))}
           </div>
-        ) : (
-          <>
-            {/* Chat Header */}
-            <div style={{
-              padding: '14px 20px', background: 'white', borderBottom: '1px solid #e2e8f0',
-              display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
-            }}>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
-                background: ativo.cor + '20', color: `color-mix(in srgb, ${ativo.cor} 50%, black)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700, fontSize: '14px'
-              }}>
-                {getInitials(ativo.nome)}
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '15px' }}>{ativo.nome}</div>
-                <div style={{ fontSize: '12px', color: '#64748b' }}>{CARGO_LABEL[ativo.cargo as Cargo] || ativo.cargo}</div>
-              </div>
-            </div>
+        </aside>
 
-            {/* Messages */}
-            <div ref={msgContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {erroMensagens && <div role="alert" style={{ color: '#b91c1c', background: '#fef2f2', padding: '10px 12px', borderRadius: 8 }}>{erroMensagens}</div>}
-              {carregandoMensagens ? (
-                <div role="status" style={{ margin: 'auto', color: '#64748b' }}>Carregando conversa...</div>
-              ) : conversa.length === 0 ? (
-                <div style={{ margin: 'auto', textAlign: 'center', color: '#475569' }}>
-                  <MessageSquare size={28} aria-hidden="true" style={{ opacity: 0.4, marginBottom: '8px' }} />
-                  <div style={{ fontSize: '14px' }}>Nenhuma mensagem ainda. Envie a primeira!</div>
+        <section className="chat-main" aria-label="Conversa">
+          {!ativo ? (
+            <EmptyState icon="las la-comments" message="Selecione um profissional para iniciar a conversa." />
+          ) : (
+            <>
+              <div className="chat-topo">
+                <button type="button" className="btn btn-secondary btn-sm ux-icon-btn chat-voltar" onClick={() => setAtivo(null)} aria-label="Voltar para a lista de profissionais">
+                  <ArrowLeft size={16} aria-hidden="true" />
+                </button>
+                <span className="chat-avatar" style={{ '--c': ativo.cor } as React.CSSProperties} aria-hidden="true">{getInitials(ativo.nome)}</span>
+                <div className="chat-contact-texto">
+                  <h2>{ativo.nome}</h2>
+                  <span>{CARGO_LABEL[ativo.cargo as Cargo] || ativo.cargo}</span>
                 </div>
-              ) : conversa.map(m => {
-                const isSent = m.de === usuario?.email;
-                return (
-                  <div key={m.id} style={{ display: 'flex', justifyContent: isSent ? 'flex-end' : 'flex-start' }}>
-                    <div style={{
-                      maxWidth: '70%', padding: '10px 14px', borderRadius: isSent ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                      background: isSent ? '#1e3a8a' : 'white',
-                      color: isSent ? 'white' : '#1e293b',
-                      fontSize: '14px', lineHeight: '1.5',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
-                    }}>
-                      <div style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{m.texto}</div>
-                      <div style={{ fontSize: '10px', opacity: 0.6, marginTop: '4px', textAlign: isSent ? 'right' : 'left' }}>
-                        {formatHora(m.data)}
+              </div>
+
+              <div ref={msgContainerRef} className="chat-mensagens" role="log" aria-live="polite" aria-label={`Conversa com ${ativo.nome}`}>
+                {erroMensagens && <p role="alert" className="mod-aviso mod-aviso-erro">{erroMensagens}</p>}
+                {carregandoMensagens ? (
+                  <p role="status" className="chat-aviso">Carregando conversa...</p>
+                ) : conversa.length === 0 ? (
+                  <p className="chat-aviso">Nenhuma mensagem ainda. Envie a primeira.</p>
+                ) : conversa.map(m => {
+                  const isSent = m.de === usuario?.email;
+                  return (
+                    <div key={m.id} className={`chat-linha ${isSent ? 'enviada' : 'recebida'}`}>
+                      <div className="chat-balao">
+                        <div className="chat-texto">{m.texto}</div>
+                        <div className="chat-hora">{formatHora(m.data)}</div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
 
-            {/* Input */}
-            <form onSubmit={enviar} style={{
-              padding: '14px 16px', background: 'white', borderTop: '1px solid #e2e8f0',
-              display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0
-            }}>
-              <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', padding: '8px 16px' }}>
+              <form onSubmit={enviar} className="chat-form">
                 <input
                   type="text"
                   aria-label="Mensagem"
-                  placeholder="Digite sua mensagem..."
+                  placeholder="Digite sua mensagem"
                   value={texto}
                   onChange={e => setTexto(e.target.value)}
                   maxLength={4000}
-                  style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '14px', color: '#334155' }}
                 />
-              </div>
-              <button
-                type="submit"
-                aria-label="Enviar mensagem"
-                disabled={!texto.trim() || enviando || carregandoMensagens}
-                style={{
-                  width: '42px', height: '42px', borderRadius: '50%', border: 'none',
-                  background: texto.trim() && !enviando ? '#1e3a8a' : '#cbd5e1',
-                  color: 'white', fontSize: '18px', cursor: texto.trim() && !enviando ? 'pointer' : 'default',
-                  transition: 'background 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0
-                }}
+                <button
+                  type="submit"
+                  className="btn btn-primary ux-icon-btn chat-enviar"
+                  aria-label="Enviar mensagem"
+                  disabled={!texto.trim() || enviando || carregandoMensagens}
                 >
-                <Send size={18} aria-hidden="true" />
-              </button>
-            </form>
-          </>
-        )}
+                  <Send size={18} aria-hidden="true" />
+                </button>
+              </form>
+            </>
+          )}
+        </section>
       </div>
     </div>
   );

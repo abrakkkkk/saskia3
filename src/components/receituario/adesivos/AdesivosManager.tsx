@@ -2,8 +2,10 @@
 /* Os adesivos são arquivos estáticos pequenos de /public/adesivos; next/image não agrega aqui. */
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Panel } from '@/components/ui';
+import { Modal } from '@/components/ui/Modal';
 import { todosAdesivos, type Adesivo } from './catalog';
 
 type AdesivoBandeja = Pick<Adesivo, 'pasta' | 'arquivo' | 'nome'> & { qtd: number };
@@ -31,11 +33,12 @@ function StickerTabs({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="modal-tabs">
+    <div className="rec-filtro-adesivos" role="group" aria-label="Categoria de adesivos">
       {categorias.map(item => (
         <button
-          className={`modal-tab ${categoria === item.id ? 'ativo' : ''}`}
+          className="btn btn-secondary btn-sm"
           key={item.id}
+          aria-pressed={categoria === item.id}
           onClick={() => onChange(item.id)}
           type="button"
         >
@@ -85,15 +88,6 @@ export default function AdesivosManager({
   const [categoria, setCategoria] = useState('todos');
   const [bandeja, setBandeja] = useState<AdesivoBandeja[]>([]);
   const [imprimindo, setImprimindo] = useState(false);
-
-  useEffect(() => {
-    if (!modalAberto) return;
-    const fecharComEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onModalAbertoChange(false);
-    };
-    window.addEventListener('keydown', fecharComEscape);
-    return () => window.removeEventListener('keydown', fecharComEscape);
-  }, [modalAberto, onModalAbertoChange]);
 
   const adesivosFiltrados = useMemo(
     () => categoria === 'todos'
@@ -155,84 +149,71 @@ export default function AdesivosManager({
 
   return (
     <>
-      {mostrarGerador && <section className="papel-receita adesivos-manager" aria-labelledby="adesivos-title">
-        <h2 id="adesivos-title"><i className="las la-tag" aria-hidden="true" /> Gerador de Adesivos</h2>
-        <p className="adesivos-description">Selecione os adesivos para montar uma cartela de impressão.</p>
+      {mostrarGerador && (
+        <Panel title="Gerador de adesivos" icon="las la-tag">
+          <p className="mod-nota">Escolha os adesivos para montar uma cartela de impressão.</p>
 
-        <StickerTabs categoria={categoria} onChange={setCategoria} />
-        <div className="adesivos-catalogo">
-          <StickerGrid stickers={adesivosFiltrados} onSelect={adicionarNaBandeja} />
-        </div>
+          <StickerTabs categoria={categoria} onChange={setCategoria} />
+          <div className="adesivos-catalogo">
+            <StickerGrid stickers={adesivosFiltrados} onSelect={adicionarNaBandeja} />
+          </div>
 
-        <div className="bandeja-adesivos">
-          <h3><i className="las la-inbox" aria-hidden="true" /> Bandeja de Impressão</h3>
-          {bandeja.length === 0 ? (
-            <p className="adesivos-empty">Nenhum adesivo selecionado.</p>
-          ) : (
-            <div className="adesivos-tray-list">
-              {bandeja.map((adesivo, index) => (
-                <div className="adesivo-bandeja-item" key={`${adesivo.pasta}/${adesivo.arquivo}`}>
-                  <div className="adesivo-bandeja-identidade">
-                    <img src={`/adesivos/${adesivo.pasta}/${adesivo.arquivo}`} alt="" />
-                    <span>{adesivo.nome}</span>
-                  </div>
-                  <div className="adesivo-bandeja-acoes">
-                    <div className="adesivo-quantidade" aria-label={`Quantidade de ${adesivo.nome}`}>
-                      <button onClick={() => alterarQuantidade(index, -1)} type="button" aria-label={`Diminuir ${adesivo.nome}`}>−</button>
-                      <span aria-live="polite">{adesivo.qtd}</span>
-                      <button onClick={() => alterarQuantidade(index, 1)} type="button" aria-label={`Aumentar ${adesivo.nome}`}>+</button>
+          <div className="bandeja-adesivos">
+            <h3>Bandeja de impressão</h3>
+            {bandeja.length === 0 ? (
+              <p className="adesivos-empty">Nenhum adesivo escolhido.</p>
+            ) : (
+              <ul className="adesivos-tray-list">
+                {bandeja.map((adesivo, index) => (
+                  <li className="adesivo-bandeja-item" key={`${adesivo.pasta}/${adesivo.arquivo}`}>
+                    <div className="adesivo-bandeja-identidade">
+                      <img src={`/adesivos/${adesivo.pasta}/${adesivo.arquivo}`} alt="" />
+                      <span>{adesivo.nome}</span>
                     </div>
-                    <button
-                      className="adesivo-remover"
-                      onClick={() => setBandeja(current => current.filter((_, itemIndex) => itemIndex !== index))}
-                      type="button"
-                      aria-label={`Remover ${adesivo.nome}`}
-                    >
-                      <i className="las la-trash" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          <button className="cta-button" onClick={imprimirCartela} disabled={bandeja.length === 0} type="button">
-            <i className="las la-print" aria-hidden="true" /> Imprimir Cartela de Adesivos
-          </button>
-        </div>
-      </section>}
+                    <div className="adesivo-bandeja-acoes">
+                      <div className="adesivo-quantidade" role="group" aria-label={`Quantidade de ${adesivo.nome}`}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => alterarQuantidade(index, -1)} type="button" aria-label={`Diminuir ${adesivo.nome}`}>-</button>
+                        <span aria-live="polite">{adesivo.qtd}</span>
+                        <button className="btn btn-secondary btn-sm" onClick={() => alterarQuantidade(index, 1)} type="button" aria-label={`Aumentar ${adesivo.nome}`}>+</button>
+                      </div>
+                      <button
+                        className="btn btn-secondary btn-sm rec-perigo"
+                        onClick={() => setBandeja(current => current.filter((_, itemIndex) => itemIndex !== index))}
+                        type="button"
+                        aria-label={`Remover ${adesivo.nome}`}
+                      >
+                        <i className="las la-trash" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button className="btn btn-primary" onClick={imprimirCartela} disabled={bandeja.length === 0} type="button">
+              <i className="las la-print" aria-hidden="true" /> Imprimir cartela
+            </button>
+          </div>
+        </Panel>
+      )}
 
       {modalAberto && (
-        <div
-          className="adesivos-modal"
-          onClick={event => {
-            if (event.target === event.currentTarget) onModalAbertoChange(false);
-          }}
-          role="presentation"
-        >
-          <section className="adesivos-modal-conteudo" role="dialog" aria-modal="true" aria-labelledby="adesivos-modal-title">
-            <div className="adesivos-modal-topo">
-              <span id="adesivos-modal-title"><i className="las la-smile" aria-hidden="true" /> Inserir Elemento Visual</span>
-              <button onClick={() => onModalAbertoChange(false)} type="button" aria-label="Fechar">&times;</button>
-            </div>
-            <div className="adesivos-modal-corpo">
-              <div className="acesso-rapido">
-                {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'mg', 'ml', 'h', ' '].map(value => (
-                  <button className="acesso-numero" key={value || 'space'} onClick={() => onInsertText(value)} type="button">
-                    {value === ' ' ? 'Espaço' : value}
-                  </button>
-                ))}
-              </div>
-              <StickerTabs categoria={categoria} onChange={setCategoria} />
-              <StickerGrid
-                stickers={adesivosFiltrados}
-                onSelect={adesivo => {
-                  onInsertSticker(adesivo);
-                  onModalAbertoChange(false);
-                }}
-              />
-            </div>
-          </section>
-        </div>
+        <Modal size="lg" title="Inserir na receita" closeLabel="Fechar" onClose={() => onModalAbertoChange(false)}>
+          <div className="acesso-rapido" role="group" aria-label="Inserção rápida">
+            {['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'mg', 'ml', 'h', ' '].map(value => (
+              <button className="btn btn-secondary btn-sm" key={value || 'space'} onClick={() => onInsertText(value)} type="button">
+                {value === ' ' ? 'Espaço' : value}
+              </button>
+            ))}
+          </div>
+          <StickerTabs categoria={categoria} onChange={setCategoria} />
+          <StickerGrid
+            stickers={adesivosFiltrados}
+            onSelect={adesivo => {
+              onInsertSticker(adesivo);
+              onModalAbertoChange(false);
+            }}
+          />
+        </Modal>
       )}
 
       {printSheet}

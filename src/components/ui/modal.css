@@ -1,0 +1,72 @@
+/* Diálogo padrão (componente Modal). Usa só tokens --ui-*. */
+.ui-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ui-space-3);
+  background: rgba(5, 16, 36, 0.62);
+  animation: ui-modal-fade 0.15s var(--ui-ease);
+}
+.ui-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: min(90vh, 820px);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  border-radius: var(--ui-radius-card);
+  box-shadow: var(--ui-shadow-raised);
+}
+.ui-modal:focus { outline: none; }
+.ui-modal-sm { width: min(440px, 100%); }
+.ui-modal-lg { width: min(760px, 100%); }
+.ui-modal-xl { width: min(960px, 100%); }
+.ui-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-4) 20px;
+  border-bottom: 1px solid var(--ui-border);
+}
+.ui-modal-head h2 {
+  margin: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--ui-t-section);
+  font-weight: 600;
+  color: var(--ui-text);
+  overflow-wrap: anywhere;
+}
+.ui-modal-head h2 i { flex: none; color: var(--ui-blue-700); font-size: 20px; }
+.btn.ui-modal-close { flex: none; width: 40px; padding: 0; }
+.ui-modal-body { padding: 20px; overflow-y: auto; min-height: 0; }
+.ui-modal-body .form-group:last-child { margin-bottom: 0; }
+.ui-modal-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--ui-space-2);
+  margin-top: var(--ui-space-4);
+}
+/* Bloco de leitura dentro do diálogo (resumo, mensagem longa) */
+.ui-modal-box {
+  padding: 12px 14px;
+  margin-bottom: var(--ui-space-4);
+  background: var(--ui-surface-muted);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-control);
+  font-size: var(--ui-t-body);
+}
+.ui-modal-box p { margin: 4px 0 0; color: var(--ui-text-muted); }
+.ui-modal-box strong { color: var(--ui-text); }
+@keyframes ui-modal-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 600px) {
+  .ui-modal-body { padding: var(--ui-space-4); }
+  .ui-modal-foot .btn { flex: 1 1 auto; }
+}

@@ -1,8 +1,12 @@
-﻿'use client';
+'use client';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Building2, Hospital, ImagePlus, Save } from 'lucide-react';
+import { ArrowLeft, ImagePlus, Save } from 'lucide-react';
+import { PageHeader, Panel, LoadingState } from '@/components/ui';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
+import '@/components/ui/modal.css';
 import './configuracao.css';
 
 export default function AdminConfiguracaoPage() {
@@ -111,121 +115,115 @@ export default function AdminConfiguracaoPage() {
   };
 
   return (
-    <div className="conteudo">
-      <div className="config-container">
-        <div className="banner-config">
-          <div>
-            <h1><Building2 aria-hidden="true" /> Configurações da Instituição</h1>
-            <p>Gerencie os dados da sua instituição, endereço e identidade visual</p>
-          </div>
-          <div>
-            <Link href="/admin" className="btn btn-secondary" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px' }}>
-              <ArrowLeft aria-hidden="true" /> Voltar
-            </Link>
-          </div>
-        </div>
+    <div className="mod-pagina">
+      <PageHeader
+        icon="las la-building"
+        title="Configurações da instituição"
+        subtitle="Dados cadastrais, endereço e logotipo."
+        actions={<Link href="/admin" className="btn btn-secondary"><ArrowLeft aria-hidden="true" size={18} /> Voltar</Link>}
+      />
 
+      <div className="cfg-inst">
         {status !== 'loading' && !canManageHospital && (
-          <p role="alert" className="config-feedback erro">Apenas o administrador do hospital pode alterar estas configurações.</p>
+          <p role="alert" className="mod-aviso mod-aviso-erro">Apenas o administrador do hospital pode alterar estas configurações.</p>
         )}
-        {feedback && <p role={feedbackErro ? 'alert' : 'status'} aria-live={feedbackErro ? 'assertive' : 'polite'} className={`config-feedback ${feedbackErro ? 'erro' : 'sucesso'}`}>{feedback}</p>}
+        {feedback && <p role={feedbackErro ? 'alert' : 'status'} aria-live={feedbackErro ? 'assertive' : 'polite'} className={`mod-aviso ${feedbackErro ? 'mod-aviso-erro' : 'mod-aviso-sucesso'}`}>{feedback}</p>}
 
-        {status === 'loading' || (canManageHospital && loadingHospital) ? <p role="status">Carregando dados da instituição…</p> : canManageHospital && erroCarregamento ? null : canManageHospital && <form className="form-panel" onSubmit={handleSalvar}>
-          <h3><Hospital aria-hidden="true" /> Dados Cadastrais</h3>
-          
-          <div className="form-grid">
-            <div className="form-grupo full">
-              <label htmlFor="instituicao-nome">Nome da Instituição *</label>
-              <input 
-                id="instituicao-nome"
-                name="nome"
-                type="text" 
-                value={nome} 
-                onChange={(e) => setNome(e.target.value)} 
-                placeholder="Ex: Saskia Saúde"
-                maxLength={160}
-                required
-              />
-            </div>
-            
-            <div className="form-grupo">
-              <label htmlFor="instituicao-cnpj">CNPJ *</label>
-              <input 
-                id="instituicao-cnpj"
-                name="cnpj"
-                type="text" 
-                inputMode="numeric"
-                value={cnpj} 
-                onChange={(e) => setCnpj(e.target.value)} 
-                placeholder="00.000.000/0001-00"
-                maxLength={20}
-                required
-              />
-            </div>
+        {status === 'loading' || (canManageHospital && loadingHospital) ? <LoadingState message="Carregando dados da instituição..." /> : canManageHospital && erroCarregamento ? null : canManageHospital && (
+          <form onSubmit={handleSalvar}>
+            <Panel title="Dados cadastrais" icon="las la-hospital">
+              <div className="ux-campos">
+                <div className="form-group ux-largo">
+                  <label htmlFor="instituicao-nome">Nome da instituição *</label>
+                  <input
+                    id="instituicao-nome"
+                    name="nome"
+                    type="text"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Ex.: Saskia Saúde"
+                    maxLength={160}
+                    required
+                  />
+                </div>
 
-            <div className="form-grupo">
-              <label htmlFor="instituicao-telefone">Telefone Principal</label>
-              <input 
-                id="instituicao-telefone"
-                name="telefone"
-                type="text" 
-                inputMode="tel"
-                value={telefone} 
-                onChange={(e) => setTelefone(e.target.value)} 
-                placeholder="(00) 0000-0000"
-                maxLength={40}
-              />
-            </div>
+                <div className="form-group">
+                  <label htmlFor="instituicao-cnpj">CNPJ *</label>
+                  <input
+                    id="instituicao-cnpj"
+                    name="cnpj"
+                    type="text"
+                    inputMode="numeric"
+                    value={cnpj}
+                    onChange={(e) => setCnpj(e.target.value)}
+                    placeholder="00.000.000/0001-00"
+                    maxLength={20}
+                    required
+                  />
+                </div>
 
-            <div className="form-grupo full">
-              <label htmlFor="instituicao-endereco">Endereço Completo</label>
-              <input 
-                id="instituicao-endereco"
-                name="endereco"
-                type="text" 
-                value={endereco} 
-                onChange={(e) => setEndereco(e.target.value)} 
-                placeholder="Rua, Número, Bairro, Cidade - UF"
-                maxLength={300}
-              />
-            </div>
+                <div className="form-group">
+                  <label htmlFor="instituicao-telefone">Telefone principal</label>
+                  <input
+                    id="instituicao-telefone"
+                    name="telefone"
+                    type="text"
+                    inputMode="tel"
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                    placeholder="(00) 0000-0000"
+                    maxLength={40}
+                  />
+                </div>
 
-            <div className="form-grupo full" style={{ marginTop: '10px' }}>
-              <label htmlFor="instituicao-logo">Logotipo (URL da Imagem)</label>
-              <input 
-                id="instituicao-logo"
-                name="logoUrl"
-                type="text" 
-                value={logoUrl} 
-                onChange={(e) => { setLogoUrl(e.target.value); setLogoPreviewErro(false); }}
-                placeholder="https://exemplo.com/logo.png"
-                maxLength={2048}
-              />
-              <div className="logo-preview-box">
-                {logoUrl && !logoPreviewErro ? (
-                  <>{/* eslint-disable-next-line @next/next/no-img-element -- URL externa informada pelo admin, sem domínio conhecido */}
+                <div className="form-group ux-largo">
+                  <label htmlFor="instituicao-endereco">Endereço completo</label>
+                  <input
+                    id="instituicao-endereco"
+                    name="endereco"
+                    type="text"
+                    value={endereco}
+                    onChange={(e) => setEndereco(e.target.value)}
+                    placeholder="Rua, número, bairro, cidade - UF"
+                    maxLength={300}
+                  />
+                </div>
+
+                <div className="form-group ux-largo">
+                  <label htmlFor="instituicao-logo">Logotipo (URL da imagem)</label>
+                  <input
+                    id="instituicao-logo"
+                    name="logoUrl"
+                    type="text"
+                    value={logoUrl}
+                    onChange={(e) => { setLogoUrl(e.target.value); setLogoPreviewErro(false); }}
+                    placeholder="https://exemplo.com/logo.png"
+                    maxLength={2048}
+                  />
+                  <div className="cfg-logo-previa">
+                    {logoUrl && !logoPreviewErro ? (
+                      <>{/* eslint-disable-next-line @next/next/no-img-element -- URL externa informada pelo admin, sem domínio conhecido */}
 <img src={logoUrl} alt="Prévia do logotipo" referrerPolicy="no-referrer" onError={() => setLogoPreviewErro(true)} /></>
-                ) : logoUrl && logoPreviewErro ? (
-                  <p role="status" className="logo-preview-error">Não foi possível carregar a prévia desta imagem.</p>
-                ) : (
-                  <>
-                    <ImagePlus aria-hidden="true" />
-                    <p>Nenhum logotipo configurado</p>
-                  </>
-                )}
+                    ) : logoUrl && logoPreviewErro ? (
+                      <p role="status" className="cfg-logo-erro">Não foi possível carregar a prévia desta imagem. Confira a URL.</p>
+                    ) : (
+                      <>
+                        <ImagePlus aria-hidden="true" />
+                        <p>Nenhum logotipo configurado</p>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="btn btn-success"
-            style={{ width: '100%', marginTop: '30px', justifyContent: 'center', padding: '16px', fontSize: '16px' }}
-          >
-            <Save aria-hidden="true" /> {saving ? 'Salvando…' : 'Salvar Configurações'}
-          </button>
-        </form>}
+              <div className="ui-modal-foot">
+                <button type="submit" disabled={saving} className="btn btn-primary">
+                  <Save aria-hidden="true" size={18} /> {saving ? 'Salvando…' : 'Salvar'}
+                </button>
+              </div>
+            </Panel>
+          </form>
+        )}
       </div>
     </div>
   );

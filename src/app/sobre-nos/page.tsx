@@ -1,4 +1,4 @@
-﻿import Image from 'next/image';
+import Image from 'next/image';
 import './sobre-nos.css';
 
 export default function SobreNosPage() {
@@ -6,7 +6,7 @@ export default function SobreNosPage() {
     <div className="sobre-nos-container">
 
       {/* BANNER */}
-      <div className="banner-sobre">
+      <header className="banner-sobre">
         <div className="banner-conteudo">
           <h1>Conheça a história por trás da Saskia</h1>
           <p className="subtitulo-banner">
@@ -14,24 +14,23 @@ export default function SobreNosPage() {
             Conheça as mentes que estão transformando o futuro da saúde no Brasil.
           </p>
         </div>
-        <i aria-hidden="true" className="las la-heart icone-coracao"></i>
-      </div>
+      </header>
 
       {/* MISSÃO VISÃO VALORES — logo abaixo do banner */}
       <div className="secao-mvv">
         <div className="card-mvv missao">
           <div className="icone-mvv"><i aria-hidden="true" className="las la-rocket"></i></div>
-          <h3>Missão</h3>
+          <h2>Missão</h2>
           <p>Promover a transformação da saúde por meio da tecnologia, oferecendo soluções acessíveis, eficientes e humanizadas.</p>
         </div>
         <div className="card-mvv visao">
           <div className="icone-mvv"><i aria-hidden="true" className="las la-eye"></i></div>
-          <h3>Visão</h3>
+          <h2>Visão</h2>
           <p>Ser referência nacional em sistemas integrados de saúde, impactando positivamente a vida de milhões de brasileiros.</p>
         </div>
         <div className="card-mvv valores">
           <div className="icone-mvv"><i aria-hidden="true" className="las la-heart"></i></div>
-          <h3>Valores</h3>
+          <h2>Valores</h2>
           <p>Ética, inovação contínua, humanização do cuidado, compromisso com a saúde pública e valorização dos profissionais.</p>
         </div>
       </div>
@@ -45,7 +44,7 @@ export default function SobreNosPage() {
           <div className="card-pessoa idealizador">
             <div className="card-header">
               <div className="foto-pessoa">
-                <Image src="/images/equipe/marceloff.webp" alt="Marcelo Marinho de Moura" width={160} height={160} />
+                <Image src="/images/equipe/marceloff.webp" alt="Marcelo Marinho de Moura" width={160} height={160} sizes="72px" />
               </div>
               <div className="pessoa-header-info">
                 <h3>Marcelo Marinho de Moura</h3>
@@ -69,7 +68,7 @@ export default function SobreNosPage() {
           <div className="card-pessoa orientadora">
             <div className="card-header">
               <div className="foto-pessoa">
-                <Image src="/images/equipe/Isabelamelo1.jpg" alt="Isabela Melo Bonfim" width={160} height={160} />
+                <Image src="/images/equipe/Isabelamelo1.jpg" alt="Isabela Melo Bonfim" width={160} height={160} sizes="72px" />
               </div>
               <div className="pessoa-header-info">
                 <h3>Prof.ª Dr.ª Isabela Melo Bonfim</h3>
@@ -93,7 +92,7 @@ export default function SobreNosPage() {
           <div className="card-pessoa diretora">
             <div className="card-header">
               <div className="foto-pessoa">
-                <Image src="/images/equipe/yasmin11.jpeg" alt="Yasmin Xavier Feitosa Macêdo" width={160} height={160} />
+                <Image src="/images/equipe/yasmin11.jpeg" alt="Yasmin Xavier Feitosa Macêdo" width={160} height={160} sizes="72px" />
               </div>
               <div className="pessoa-header-info">
                 <h3>Yasmin Xavier Feitosa Macêdo</h3>
@@ -116,7 +115,7 @@ export default function SobreNosPage() {
           <div className="card-pessoa estrategica">
             <div className="card-header">
               <div className="foto-pessoa">
-                <Image src="/images/equipe/gabis.jpeg" alt="Gabriela Saskia Pereira Custódio" width={160} height={160} />
+                <Image src="/images/equipe/gabis.jpeg" alt="Gabriela Saskia Pereira Custódio" width={160} height={160} sizes="72px" />
               </div>
               <div className="pessoa-header-info">
                 <h3>Gabriela Saskia Pereira Custódio</h3>
@@ -139,7 +138,7 @@ export default function SobreNosPage() {
           <div className="card-pessoa analista">
             <div className="card-header">
               <div className="foto-pessoa">
-                <Image src="/images/equipe/abranll.jpeg" alt="Abrahão Levy Barbosa De Lavor" width={160} height={160} />
+                <Image src="/images/equipe/abranll.jpeg" alt="Abrahão Levy Barbosa De Lavor" width={160} height={160} sizes="72px" />
               </div>
               <div className="pessoa-header-info">
                 <h3>Abrahão Levy Barbosa De Lavor</h3>
@@ -163,7 +162,7 @@ export default function SobreNosPage() {
           <div className="card-pessoa designer">
             <div className="card-header">
               <div className="foto-pessoa">
-                <Image src="/images/equipe/alexsilva1.webp" alt="Alexsander Silva" width={160} height={160} />
+                <Image src="/images/equipe/alexsilva1.webp" alt="Alexsander Silva" width={160} height={160} sizes="72px" />
               </div>
               <div className="pessoa-header-info">
                 <h3>Alexsander Silva</h3>
@@ -190,15 +189,15 @@ export default function SobreNosPage() {
           <h2><i aria-hidden="true" className="las la-history"></i> Nossa História</h2>
           <div className="linha-tempo">
             <div className="evento-timeline">
-              <h4>O Início — A Ideia do Chatbot IA</h4>
+              <h3>O Início — A Ideia do Chatbot IA</h3>
               <p>Tudo começou com a visão de criar um <strong>chatbot inteligente</strong> que auxiliasse profissionais de saúde e pacientes com conversas fluidas e individualizadas.</p>
             </div>
             <div className="evento-timeline">
-              <h4>A Evolução — Nasce o Projeto Saskia</h4>
+              <h3>A Evolução — Nasce o Projeto Saskia</h3>
               <p>Com orientação da Prof.ª Dr.ª Isabela Bonfim e uma equipe multidisciplinar, o projeto evoluiu para o ecossistema <strong>Saskia Saúde</strong>.</p>
             </div>
             <div className="evento-timeline">
-              <h4>O Presente — Transformando a Saúde</h4>
+              <h3>O Presente — Transformando a Saúde</h3>
               <p>Hoje, a Saskia une tecnologia de ponta, análise de dados inteligente e a humanização que o cuidado em saúde exige.</p>
             </div>
           </div>
@@ -209,22 +208,22 @@ export default function SobreNosPage() {
           <div className="grid-projeto">
             <div className="card-projeto">
               <div className="icone-projeto"><i aria-hidden="true" className="las la-lightbulb"></i></div>
-              <h4>Inovação na Saúde</h4>
+              <h3>Inovação na Saúde</h3>
               <p>Tecnologia acessível para clínicas, hospitais e unidades públicas.</p>
             </div>
             <div className="card-projeto">
               <div className="icone-projeto"><i aria-hidden="true" className="las la-sitemap"></i></div>
-              <h4>Organização</h4>
+              <h3>Organização</h3>
               <p>Reduzindo falhas, retrabalho e perda de informações.</p>
             </div>
             <div className="card-projeto">
               <div className="icone-projeto"><i aria-hidden="true" className="las la-user-friends"></i></div>
-              <h4>Integração</h4>
+              <h3>Integração</h3>
               <p>Conectando enfermagem, medicina, recepção e gestão.</p>
             </div>
             <div className="card-projeto">
               <div className="icone-projeto"><i aria-hidden="true" className="las la-hand-holding-heart"></i></div>
-              <h4>Humanização</h4>
+              <h3>Humanização</h3>
               <p>Permitindo que o profissional foque no paciente.</p>
             </div>
           </div>

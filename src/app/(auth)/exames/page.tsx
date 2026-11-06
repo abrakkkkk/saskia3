@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useSession } from 'next-auth/react';
 import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, SearchInput, StatCard, StatGrid, Tabs, type Tone } from '@/components/ui';
+import { Modal } from '@/components/ui/Modal';
 import PacienteSelect, { formatarNascimento } from '@/components/ui/PacienteSelect';
 import { pode } from '@/lib/permissions';
 import { enviarJson, mensagemErro, textoDoErro } from '@/lib/resposta';
@@ -52,6 +53,14 @@ function tipoNormalizado(tipo: string) {
 const rotuloTipo = (tipo: string) => (tipoNormalizado(tipo) === 'imagem' ? 'Imagem' : 'Lab');
 const nomeSolicitante = (exame: Exame) => exame.solicitante?.nome || exame.profissional || '-';
 const StatusBadge = ({ status }: { status: string }) => <Badge tone={STATUS[status]?.tom ?? 'neutral'}>{STATUS[status]?.nome ?? status}</Badge>;
+
+function Prioridade({ valor }: { valor: string | null }) {
+  if (!valor) return <>-</>;
+  const chave = valor.trim().toLocaleLowerCase('pt-BR');
+  if (chave === 'emergência' || chave === 'emergencia') return <Badge tone="danger">{valor}</Badge>;
+  if (chave === 'urgente') return <Badge tone="warning">{valor}</Badge>;
+  return <>{valor}</>;
+}
 
 function liberacao(exame: Exame) {
   if (!exame.liberadoPor) return 'Liberação sem autor registrado';
@@ -223,14 +232,19 @@ export default function ExamesPage() {
     }
   };
 
-  useEffect(() => {
-    if (!modalLaudo) return;
-    const fechar = (evento: KeyboardEvent) => { if (evento.key === 'Escape') setModalLaudo(null); };
-    window.addEventListener('keydown', fechar);
-    return () => window.removeEventListener('keydown', fechar);
-  }, [modalLaudo]);
+  const cabecalho = (
+    <PageHeader
+      icon="las la-flask"
+      title="Exames"
+      subtitle="Laboratório e imagem"
+      actions={!loading && podeSolicitar && <>
+        <button type="button" className="btn btn-secondary" onClick={() => abrirSolicitacao('imagem')}><i className="las la-x-ray" aria-hidden="true"></i> Solicitar imagem</button>
+        <button type="button" className="btn btn-primary" onClick={() => abrirSolicitacao('laboratorio')}><i className="las la-flask" aria-hidden="true"></i> Solicitar laboratório</button>
+      </>}
+    />
+  );
 
-  if (loading) return <div className="conteudo"><LoadingState message="Carregando exames..." /></div>;
+  if (loading) return <div className="conteudo mod-pagina">{cabecalho}<LoadingState message="Carregando exames..." /></div>;
 
   const contadores = dados?.contadores;
   const total = dados?.total ?? 0;
@@ -238,184 +252,181 @@ export default function ExamesPage() {
   const criticos = dados?.ultimosCriticos ?? [];
 
   return (
-    <div className="conteudo">
-      <div className="exames-container">
-        <PageHeader
-          icon="las la-flask"
-          title="Exames e Imagens"
-          subtitle="Laboratório e radiologia unificados"
-          actions={podeSolicitar ? <>
-            <button type="button" className="btn btn-success" onClick={() => abrirSolicitacao('laboratorio')}><i className="las la-flask" aria-hidden="true"></i> Solicitar laboratório</button>
-            <button type="button" className="btn btn-info" onClick={() => abrirSolicitacao('imagem')}><i className="las la-x-ray" aria-hidden="true"></i> Solicitar imagem</button>
-          </> : undefined}
-        />
+    <div className="conteudo mod-pagina">
+      {cabecalho}
 
-        {erroCarga && <ErrorState message={erroCarga} onRetry={() => void recarregar()} />}
-        {aviso && <p className="mod-aviso mod-aviso-sucesso" role="status">{aviso}</p>}
-        {erroAcao && <p className="mod-aviso mod-aviso-erro" role="alert">{erroAcao}</p>}
+      {erroCarga && <ErrorState message={erroCarga} onRetry={() => void recarregar()} />}
+      {aviso && <p className="mod-aviso mod-aviso-sucesso" role="status">{aviso}</p>}
+      {erroAcao && <p className="mod-aviso mod-aviso-erro" role="alert">{erroAcao}</p>}
 
-        {criticos.length > 0 && (
-          <section className="mod-aviso mod-aviso-erro exames-criticos" aria-label="Resultados críticos">
-            <strong><i className="las la-exclamation-triangle" aria-hidden="true"></i> {contadores?.criticos} {contadores?.criticos === 1 ? 'resultado crítico registrado' : 'resultados críticos registrados'}</strong>
-            <p>Este destaque não substitui a comunicação: o sistema não notifica ninguém automaticamente. Siga o protocolo institucional.</p>
-            <ul>
-              {criticos.map(exame => (
-                <li key={exame.id}>
-                  <button type="button" className="exames-link" onClick={() => setModalLaudo(exame)}>{exame.paciente.nome}: {exame.nome}</button>
-                  {' '}<span>({liberacao(exame)})</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+      {criticos.length > 0 && (
+        <section className="mod-aviso mod-aviso-erro exames-criticos" aria-label="Resultados críticos">
+          <strong><i className="las la-exclamation-triangle" aria-hidden="true"></i> {contadores?.criticos} {contadores?.criticos === 1 ? 'resultado crítico registrado' : 'resultados críticos registrados'}</strong>
+          <p>Este destaque não substitui a comunicação: o sistema não notifica ninguém automaticamente. Siga o protocolo institucional.</p>
+          <ul>
+            {criticos.map(exame => (
+              <li key={exame.id}>
+                <button type="button" className="exames-link" onClick={() => setModalLaudo(exame)}>{exame.paciente.nome}: {exame.nome}</button>
+                {' '}<span>({liberacao(exame)})</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-        <StatGrid>
-          <StatCard icon="las la-flask" value={contadores?.laboratorio ?? '-'} label="Exames laboratoriais" tone="info" />
-          <StatCard icon="las la-x-ray" value={contadores?.imagem ?? '-'} label="Exames de imagem" tone="neutral" />
-          <StatCard icon="las la-clock" value={contadores?.pendentes ?? '-'} label="Pendentes" tone="warning" />
-          <StatCard icon="las la-check-circle" value={contadores?.concluidosHoje ?? '-'} label="Concluídos hoje" tone="success" />
-          <StatCard icon="las la-exclamation-triangle" value={contadores?.criticos ?? '-'} label="Resultados críticos" tone="danger" />
-        </StatGrid>
+      <StatGrid>
+        <StatCard icon="las la-flask" value={contadores?.laboratorio ?? '-'} label="Laboratório" hint="Exames laboratoriais" />
+        <StatCard icon="las la-x-ray" value={contadores?.imagem ?? '-'} label="Imagem" hint="Exames de imagem" />
+        <StatCard icon="las la-clock" value={contadores?.pendentes ?? '-'} label="Pendentes" tone="warning" alerta hint="Exames aguardando coleta ou resultado" />
+        <StatCard icon="las la-check-circle" value={contadores?.concluidosHoje ?? '-'} label="Concluídos hoje" />
+        <StatCard icon="las la-exclamation-triangle" value={contadores?.criticos ?? '-'} label="Críticos" tone="danger" alerta hint="Resultados críticos registrados" />
+      </StatGrid>
 
-        <Tabs tabs={abas} active={activeTab} onChange={setActiveTab} label="Seções de exames" />
+      <Tabs tabs={abas} active={activeTab} onChange={setActiveTab} label="Seções de exames" />
 
-        {activeTab === 'solicitacao' && (
-          <Panel title={solTipo === 'imagem' ? 'Solicitar exame de imagem' : 'Solicitar exame laboratorial'} icon={solTipo === 'imagem' ? 'las la-x-ray' : 'las la-flask'}>
-            <form onSubmit={solicitarExame}>
-              <PacienteSelect value={solPacienteId} onChange={id => setSolPacienteId(id)} required />
-              <div className="form-grid">
-                <div className="form-grupo">
-                  <label htmlFor="sol-tipo">Tipo de exame *</label>
-                  <select id="sol-tipo" value={solTipo} onChange={e => { setSolTipo(e.target.value); setSolExame(''); }}>
-                    <option value="laboratorio">Laboratorial</option>
-                    <option value="imagem">Imagem / Radiologia</option>
-                  </select>
-                </div>
-                <div className="form-grupo">
-                  <label htmlFor="sol-exame">Exame específico *</label>
-                  <select id="sol-exame" value={solExame} onChange={e => setSolExame(e.target.value)}>
-                    <option value="">Selecione...</option>
-                    {(examesDisponiveis[solTipo] || []).map(e => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                </div>
-                <div className="form-grupo"><label htmlFor="sol-prioridade">Prioridade</label><select id="sol-prioridade" value={solPrioridade} onChange={e => setSolPrioridade(e.target.value)}><option>Normal</option><option>Urgente</option><option>Emergência</option></select></div>
-                <div className="form-grupo full"><label htmlFor="sol-indicacao">Indicação clínica</label><textarea id="sol-indicacao" rows={2} maxLength={2000} placeholder="Informações clínicas relevantes..." value={solIndicacao} onChange={e => setSolIndicacao(e.target.value)}></textarea></div>
+      {activeTab === 'solicitacao' && (
+        <Panel title={solTipo === 'imagem' ? 'Solicitar exame de imagem' : 'Solicitar exame laboratorial'} icon={solTipo === 'imagem' ? 'las la-x-ray' : 'las la-flask'}>
+          <form onSubmit={solicitarExame}>
+            <PacienteSelect value={solPacienteId} onChange={id => setSolPacienteId(id)} required />
+            <div className="mod-form-grid">
+              <div className="form-group">
+                <label htmlFor="sol-tipo">Tipo de exame *</label>
+                <select id="sol-tipo" value={solTipo} onChange={e => { setSolTipo(e.target.value); setSolExame(''); }}>
+                  <option value="laboratorio">Laboratorial</option>
+                  <option value="imagem">Imagem / Radiologia</option>
+                </select>
               </div>
-              <div className="mod-acoes"><button type="submit" className="btn btn-success" disabled={salvando}><i className="las la-paper-plane" aria-hidden="true"></i> {salvando ? 'Solicitando...' : 'Solicitar exame'}</button></div>
+              <div className="form-group">
+                <label htmlFor="sol-exame">Exame *</label>
+                <select id="sol-exame" value={solExame} onChange={e => setSolExame(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  {(examesDisponiveis[solTipo] || []).map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
+              <div className="form-group"><label htmlFor="sol-prioridade">Prioridade</label><select id="sol-prioridade" value={solPrioridade} onChange={e => setSolPrioridade(e.target.value)}><option>Normal</option><option>Urgente</option><option>Emergência</option></select></div>
+              <div className="form-group mod-largo"><label htmlFor="sol-indicacao">Indicação clínica</label><textarea id="sol-indicacao" rows={2} maxLength={2000} placeholder="Informações clínicas relevantes" value={solIndicacao} onChange={e => setSolIndicacao(e.target.value)}></textarea></div>
+            </div>
+            <div className="mod-acoes"><button type="submit" className="btn btn-primary" disabled={salvando}><i className="las la-paper-plane" aria-hidden="true"></i> {salvando ? 'Solicitando...' : 'Solicitar exame'}</button></div>
+          </form>
+        </Panel>
+      )}
+
+      {activeTab === 'listagem' && (
+        <Panel>
+          <div className="mod-filtros">
+            <SearchInput value={buscarExame} onChange={valor => { setBuscarExame(valor); setPagina(1); }} placeholder="Buscar paciente ou exame" />
+            <select aria-label="Filtrar por tipo" value={filtroTipo} onChange={e => { setFiltroTipo(e.target.value); setPagina(1); }}><option value="todos">Todos os tipos</option><option value="laboratorio">Laboratório</option><option value="imagem">Imagem</option></select>
+            <select aria-label="Filtrar por status" value={filtroStatus} onChange={e => { setFiltroStatus(e.target.value); setPagina(1); }}>
+              <option value="todos">Todos os status</option>
+              {Object.entries(STATUS).map(([valor, { nome }]) => <option key={valor} value={valor}>{nome}</option>)}
+            </select>
+          </div>
+          {(dados?.itens.length ?? 0) === 0 ? <EmptyState icon="las la-flask" message="Nenhum exame encontrado." /> : (
+            <div className="tabela-wrapper">
+              <table className="tabela">
+                <caption className="sr-only">Exames solicitados</caption>
+                <thead><tr><th scope="col">Data</th><th scope="col">Tipo</th><th scope="col">Paciente</th><th scope="col">Exame</th><th scope="col">Prioridade</th><th scope="col">Solicitante</th><th scope="col">Status</th><th scope="col">Ações</th></tr></thead>
+                <tbody>
+                  {dados?.itens.map(e => {
+                    const aberto = ['SOLICITADO', 'AGENDADO', 'COLETADO', 'EM_ANALISE'].includes(e.status);
+                    return (
+                      <tr key={e.id} className={e.status === 'ALTERADO_CRITICO' ? 'mod-linha-critica' : undefined}>
+                        <td>{new Date(e.createdAt).toLocaleDateString('pt-BR')}</td>
+                        <td><Badge tone="info">{rotuloTipo(e.tipo)}</Badge></td>
+                        <td><strong>{e.paciente.nome}</strong><span className="mod-secundario">{formatarNascimento(e.paciente.nascimento)}</span></td>
+                        <td>{e.nome}</td>
+                        <td><Prioridade valor={e.prioridade} /></td>
+                        <td>{nomeSolicitante(e)}</td>
+                        <td><StatusBadge status={e.status} /></td>
+                        <td>
+                          <div className="mod-acoes-tabela">
+                            <button type="button" className="btn btn-xs btn-secondary" aria-label={`Ver exame ${e.nome} de ${e.paciente.nome}`} onClick={() => setModalLaudo(e)}><i className="las la-eye" aria-hidden="true"></i> Ver</button>
+                            {podeColetar && (e.status === 'SOLICITADO' || e.status === 'AGENDADO') && <button type="button" className="btn btn-xs btn-primary" aria-label={`Coletar ${e.nome} de ${e.paciente.nome}`} onClick={() => void alterarStatus(e.id, 'COLETADO')}><i className="las la-syringe" aria-hidden="true"></i> Coletar</button>}
+                            {podeLaudar && (e.status === 'COLETADO' || e.status === 'EM_ANALISE') && <button type="button" className="btn btn-xs btn-primary" aria-label={`Resultado de ${e.nome} de ${e.paciente.nome}`} onClick={() => { selecionarParaResultado(e.id, e); setActiveTab('resultados'); }}><i className="las la-check" aria-hidden="true"></i> Resultado</button>}
+                            {podeSolicitar && aberto && <button type="button" className="btn btn-xs btn-secondary" aria-label={`Cancelar ${e.nome} de ${e.paciente.nome}`} onClick={() => void alterarStatus(e.id, 'CANCELADO')}><i className="las la-times" aria-hidden="true"></i> Cancelar</button>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <nav className="mod-paginacao" aria-label="Paginação de exames">
+            <span>{total} {total === 1 ? 'exame' : 'exames'}. Página {pagina} de {totalPaginas}.</span>
+            <span className="mod-acoes-tabela">
+              <button type="button" className="btn btn-sm btn-secondary" disabled={pagina <= 1} onClick={() => setPagina(p => p - 1)}>Anterior</button>
+              <button type="button" className="btn btn-sm btn-secondary" disabled={pagina >= totalPaginas} onClick={() => setPagina(p => p + 1)}>Próxima</button>
+            </span>
+          </nav>
+        </Panel>
+      )}
+
+      {activeTab === 'resultados' && (
+        <>
+          <Panel title="Lançar resultado" icon="las la-clipboard-check">
+            <form onSubmit={lancarResultado}>
+              <div className="mod-form-grid">
+                <div className="form-group mod-largo">
+                  <label htmlFor="res-exame">Exame coletado *</label>
+                  <select id="res-exame" value={resExameId} onChange={e => selecionarParaResultado(e.target.value)}>
+                    <option value="">{fila.length ? 'Selecione o exame...' : 'Nenhum exame aguardando resultado'}</option>
+                    {fila.map(e => <option key={e.id} value={e.id}>{e.paciente.nome} ({formatarNascimento(e.paciente.nascimento)}): {e.nome} | {STATUS[e.status]?.nome ?? e.status}</option>)}
+                  </select>
+                </div>
+                <div className="form-group"><label htmlFor="res-status">Classificação</label><select id="res-status" value={resStatus} onChange={e => setResStatus(e.target.value)}><option value="CONCLUIDO">Normal / Concluído</option><option value="ALTERADO_CRITICO">Alterado / Crítico</option></select></div>
+                <div className="form-group mod-largo"><label htmlFor="res-valor">Resultado e laudo *</label><textarea id="res-valor" rows={4} maxLength={5000} placeholder="Valores, descrição e conclusão do exame" value={resValor} onChange={e => setResValor(e.target.value)}></textarea></div>
+              </div>
+              <div className="mod-acoes"><button type="submit" className="btn btn-primary" disabled={salvando}><i className="las la-save" aria-hidden="true"></i> {salvando ? 'Salvando...' : 'Lançar resultado'}</button></div>
             </form>
           </Panel>
-        )}
 
-        {activeTab === 'listagem' && (
-          <Panel>
-            <div className="mod-filtros">
-              <SearchInput value={buscarExame} onChange={valor => { setBuscarExame(valor); setPagina(1); }} placeholder="Buscar por paciente ou exame..." />
-              <select aria-label="Filtrar por tipo" value={filtroTipo} onChange={e => { setFiltroTipo(e.target.value); setPagina(1); }}><option value="todos">Todos os tipos</option><option value="laboratorio">Laboratório</option><option value="imagem">Imagem</option></select>
-              <select aria-label="Filtrar por status" value={filtroStatus} onChange={e => { setFiltroStatus(e.target.value); setPagina(1); }}>
-                <option value="todos">Todos os status</option>
-                {Object.entries(STATUS).map(([valor, { nome }]) => <option key={valor} value={valor}>{nome}</option>)}
-              </select>
-            </div>
-            {(dados?.itens.length ?? 0) === 0 ? <EmptyState icon="las la-flask" message="Nenhum exame encontrado." /> : (
-              <div className="tabela-exames-wrapper">
-                <table className="tabela-exames">
-                  <thead><tr><th>Data</th><th>Tipo</th><th>Paciente</th><th>Exame</th><th>Prioridade</th><th>Solicitante</th><th>Status</th><th>Ações</th></tr></thead>
+          <Panel title="Resultados recentes" icon="las la-history">
+            {concluidos.length === 0 ? <EmptyState message="Nenhum resultado lançado." /> : (
+              <div className="tabela-wrapper">
+                <table className="tabela">
+                  <caption className="sr-only">Resultados lançados recentemente</caption>
+                  <thead><tr><th scope="col">Paciente</th><th scope="col">Exame</th><th scope="col">Tipo</th><th scope="col">Resultado</th><th scope="col">Liberação</th><th scope="col">Ações</th></tr></thead>
                   <tbody>
-                    {dados?.itens.map(e => {
-                      const aberto = ['SOLICITADO', 'AGENDADO', 'COLETADO', 'EM_ANALISE'].includes(e.status);
-                      return (
-                        <tr key={e.id} className={e.status === 'ALTERADO_CRITICO' ? 'mod-linha-critica' : undefined}>
-                          <td>{new Date(e.createdAt).toLocaleDateString('pt-BR')}</td>
-                          <td><Badge tone="info">{rotuloTipo(e.tipo)}</Badge></td>
-                          <td><strong>{e.paciente.nome}</strong><span className="mod-secundario">{formatarNascimento(e.paciente.nascimento)}</span></td>
-                          <td>{e.nome}</td>
-                          <td>{e.prioridade || '-'}</td>
-                          <td>{nomeSolicitante(e)}</td>
-                          <td><StatusBadge status={e.status} /></td>
-                          <td>
-                            <div className="mod-acoes-tabela">
-                              <button type="button" className="btn btn-xs btn-primary" aria-label={`Ver exame ${e.nome} de ${e.paciente.nome}`} onClick={() => setModalLaudo(e)}><i className="las la-eye" aria-hidden="true"></i></button>
-                              {podeColetar && (e.status === 'SOLICITADO' || e.status === 'AGENDADO') && <button type="button" className="btn btn-xs btn-warning" aria-label={`Registrar coleta de ${e.nome}`} onClick={() => void alterarStatus(e.id, 'COLETADO')}><i className="las la-syringe" aria-hidden="true"></i></button>}
-                              {podeLaudar && (e.status === 'COLETADO' || e.status === 'EM_ANALISE') && <button type="button" className="btn btn-xs btn-success" aria-label={`Lançar resultado de ${e.nome}`} onClick={() => { selecionarParaResultado(e.id, e); setActiveTab('resultados'); }}><i className="las la-check" aria-hidden="true"></i></button>}
-                              {podeSolicitar && aberto && <button type="button" className="btn btn-xs btn-danger" aria-label={`Cancelar ${e.nome}`} onClick={() => void alterarStatus(e.id, 'CANCELADO')}><i className="las la-times" aria-hidden="true"></i></button>}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {concluidos.map(e => (
+                      <tr key={e.id}>
+                        <td><strong>{e.paciente.nome}</strong></td>
+                        <td>{e.nome}</td>
+                        <td><Badge tone="info">{rotuloTipo(e.tipo)}</Badge></td>
+                        <td><span className="exames-resumo">{e.resultado}</span></td>
+                        <td>{liberacao(e)}</td>
+                        <td><button type="button" className="btn btn-xs btn-secondary" aria-label={`Ver detalhes de ${e.nome} de ${e.paciente.nome}`} onClick={() => setModalLaudo(e)}><i className="las la-file-alt" aria-hidden="true"></i> Detalhes</button></td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             )}
-            <nav className="mod-paginacao" aria-label="Paginação de exames">
-              <span>{total} {total === 1 ? 'exame' : 'exames'}. Página {pagina} de {totalPaginas}.</span>
-              <span className="mod-acoes-tabela">
-                <button type="button" className="btn btn-sm btn-primary" disabled={pagina <= 1} onClick={() => setPagina(p => p - 1)}>Anterior</button>
-                <button type="button" className="btn btn-sm btn-primary" disabled={pagina >= totalPaginas} onClick={() => setPagina(p => p + 1)}>Próxima</button>
-              </span>
-            </nav>
           </Panel>
-        )}
-
-        {activeTab === 'resultados' && (
-          <>
-            <Panel title="Lançar resultado" icon="las la-clipboard-check">
-              <form onSubmit={lancarResultado}>
-                <div className="form-grid">
-                  <div className="form-grupo full">
-                    <label htmlFor="res-exame">Exame coletado *</label>
-                    <select id="res-exame" value={resExameId} onChange={e => selecionarParaResultado(e.target.value)}>
-                      <option value="">{fila.length ? 'Selecione o exame...' : 'Nenhum exame aguardando resultado'}</option>
-                      {fila.map(e => <option key={e.id} value={e.id}>{e.paciente.nome} ({formatarNascimento(e.paciente.nascimento)}): {e.nome} | {STATUS[e.status]?.nome ?? e.status}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-grupo"><label htmlFor="res-status">Classificação do resultado</label><select id="res-status" value={resStatus} onChange={e => setResStatus(e.target.value)}><option value="CONCLUIDO">Normal / Concluído</option><option value="ALTERADO_CRITICO">Alterado / Crítico</option></select></div>
-                  <div className="form-grupo full"><label htmlFor="res-valor">Resultado e laudo *</label><textarea id="res-valor" rows={4} maxLength={5000} placeholder="Valores, descrição e conclusão do exame..." value={resValor} onChange={e => setResValor(e.target.value)}></textarea></div>
-                </div>
-                <div className="mod-acoes"><button type="submit" className="btn btn-primary" disabled={salvando}><i className="las la-save" aria-hidden="true"></i> {salvando ? 'Salvando...' : 'Lançar resultado'}</button></div>
-              </form>
-            </Panel>
-
-            <Panel title="Resultados recentes" icon="las la-history">
-              {concluidos.length === 0 ? <EmptyState message="Nenhum resultado lançado." /> : concluidos.map(e => (
-                <div key={e.id} className="resultado-card">
-                  <div className="resultado-header">
-                    <strong>{e.paciente.nome}: {e.nome}</strong>
-                    <Badge tone="info">{rotuloTipo(e.tipo)}</Badge>
-                  </div>
-                  <p className="resultado-valor mod-texto-longo">{e.resultado}</p>
-                  <small className="mod-secundario">{liberacao(e)}</small>
-                  <button type="button" className="btn btn-xs btn-info" onClick={() => setModalLaudo(e)}><i className="las la-file-alt" aria-hidden="true"></i> Ver detalhes</button>
-                </div>
-              ))}
-            </Panel>
-          </>
-        )}
-      </div>
+        </>
+      )}
 
       {modalLaudo && (
-        <div className="modal-laudo" onClick={e => { if (e.target === e.currentTarget) setModalLaudo(null); }}>
-          <div className="modal-laudo-content" role="dialog" aria-modal="true" aria-labelledby="laudo-titulo">
-            <h3 id="laudo-titulo"><i className="las la-file-alt" aria-hidden="true"></i> Exame e resultado</h3>
-            <div className="exames-laudo-dados">
-              <p><strong>Paciente:</strong> {modalLaudo.paciente.nome} ({formatarNascimento(modalLaudo.paciente.nascimento)})</p>
-              <p><strong>Exame:</strong> {modalLaudo.nome}</p>
-              <p><strong>Tipo:</strong> {rotuloTipo(modalLaudo.tipo)}</p>
-              <p><strong>Status:</strong> <StatusBadge status={modalLaudo.status} /></p>
-              <p><strong>Prioridade:</strong> {modalLaudo.prioridade || 'não registrada'}</p>
-              <p><strong>Solicitante:</strong> {nomeSolicitante(modalLaudo)}</p>
-              <p><strong>Solicitado em:</strong> {new Date(modalLaudo.createdAt).toLocaleString('pt-BR')}</p>
-            </div>
-            {modalLaudo.indicacao && <div className="exames-laudo-bloco"><h4>Indicação clínica</h4><p className="mod-texto-longo">{modalLaudo.indicacao}</p></div>}
-            {modalLaudo.observacoes && <div className="exames-laudo-bloco"><h4>Observações (registro anterior)</h4><p className="mod-texto-longo">{modalLaudo.observacoes}</p></div>}
-            <div className={`exames-laudo-bloco ${modalLaudo.status === 'ALTERADO_CRITICO' ? 'exames-laudo-critico' : ''}`}>
-              <h4>Resultado</h4>
-              <p className="mod-texto-longo">{modalLaudo.resultado || 'Aguardando'}</p>
-              {(modalLaudo.status === 'CONCLUIDO' || modalLaudo.status === 'ALTERADO_CRITICO') && <small className="mod-secundario">{liberacao(modalLaudo)}</small>}
-            </div>
-            <div className="mod-acoes"><button type="button" className="btn btn-primary" onClick={() => setModalLaudo(null)}>Fechar</button></div>
+        <Modal title="Exame e resultado" icon="las la-file-alt" size="lg" onClose={() => setModalLaudo(null)}>
+          <dl className="exames-laudo-dados">
+            <dt>Paciente</dt><dd>{modalLaudo.paciente.nome} ({formatarNascimento(modalLaudo.paciente.nascimento)})</dd>
+            <dt>Exame</dt><dd>{modalLaudo.nome}</dd>
+            <dt>Tipo</dt><dd>{rotuloTipo(modalLaudo.tipo)}</dd>
+            <dt>Status</dt><dd><StatusBadge status={modalLaudo.status} /></dd>
+            <dt>Prioridade</dt><dd>{modalLaudo.prioridade || 'Não registrada'}</dd>
+            <dt>Solicitante</dt><dd>{nomeSolicitante(modalLaudo)}</dd>
+            <dt>Solicitado em</dt><dd>{new Date(modalLaudo.createdAt).toLocaleString('pt-BR')}</dd>
+          </dl>
+          {modalLaudo.indicacao && <div className="exames-laudo-bloco"><h3>Indicação clínica</h3><p className="mod-texto-longo">{modalLaudo.indicacao}</p></div>}
+          {modalLaudo.observacoes && <div className="exames-laudo-bloco"><h3>Observações (registro anterior)</h3><p className="mod-texto-longo">{modalLaudo.observacoes}</p></div>}
+          <div className={`exames-laudo-bloco${modalLaudo.status === 'ALTERADO_CRITICO' ? ' mod-aviso mod-aviso-erro' : ''}`}>
+            <h3>{modalLaudo.status === 'ALTERADO_CRITICO' ? 'Resultado crítico' : 'Resultado'}</h3>
+            <p className="mod-texto-longo">{modalLaudo.resultado || 'Aguardando'}</p>
+            {(modalLaudo.status === 'CONCLUIDO' || modalLaudo.status === 'ALTERADO_CRITICO') && <span className="mod-secundario">{liberacao(modalLaudo)}</span>}
           </div>
-        </div>
+          <div className="mod-acoes"><button type="button" className="btn btn-primary" onClick={() => setModalLaudo(null)}>Fechar</button></div>
+        </Modal>
       )}
     </div>
   );

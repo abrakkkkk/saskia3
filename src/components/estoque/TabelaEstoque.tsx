@@ -89,7 +89,7 @@ function AjusteForm({ item, onSalvo, onCancelar }: { item: ItemEstoque; onSalvo:
 
   return (
     <form onSubmit={salvar}>
-      <p className="mod-nota">Ajustar {item.nome}, lote {item.lote || 'não informado'}. Saldo atual: {item.quantidade}.</p>
+      <p className="mod-nota"><strong>Ajustar saldo de {item.nome}</strong>, lote {item.lote || 'não informado'}. Saldo atual: {item.quantidade}.</p>
       {erro && <p className="mod-aviso mod-aviso-erro" role="alert">{erro}</p>}
       <div className="mod-form-grid">
         <div className="form-group">
@@ -102,7 +102,7 @@ function AjusteForm({ item, onSalvo, onCancelar }: { item: ItemEstoque; onSalvo:
         </div>
       </div>
       <div className="mod-acoes">
-        <button type="button" className="btn btn-sm" onClick={onCancelar} disabled={salvando}>Cancelar</button>
+        <button type="button" className="btn btn-sm btn-secondary" onClick={onCancelar} disabled={salvando}>Cancelar</button>
         <button type="submit" className="btn btn-sm btn-primary" disabled={salvando}>{salvando ? 'Salvando...' : 'Registrar ajuste'}</button>
       </div>
     </form>
@@ -123,10 +123,11 @@ export default function TabelaEstoque({ itens, podeAjustar, onAjustado, vazio }:
   return (
     <div className="tabela-wrapper">
       <table className="tabela">
+        <caption className="sr-only">Itens em estoque, com lote, validade e saldo</caption>
         <thead>
           <tr>
-            <th>Item</th><th>Código</th><th>Lote</th><th>Validade</th><th>Qtd.</th><th>Mín.</th><th>Situação</th>
-            {podeAjustar && <th>Ações</th>}
+            <th scope="col">Item</th><th scope="col">Código</th><th scope="col">Lote</th><th scope="col">Validade</th><th scope="col">Qtd.</th><th scope="col">Mín.</th><th scope="col">Situação</th>
+            {podeAjustar && <th scope="col">Ações</th>}
           </tr>
         </thead>
         <tbody>
@@ -147,7 +148,7 @@ export default function TabelaEstoque({ itens, podeAjustar, onAjustado, vazio }:
                 <td><Badge tone={tom}>{texto}</Badge></td>
                 {podeAjustar && (
                   <td>
-                    <button type="button" className="btn btn-xs btn-info" onClick={() => setEmAjuste(emAjuste === item.id ? null : item.id)} aria-expanded={emAjuste === item.id}>
+                    <button type="button" className="btn btn-xs btn-secondary" onClick={() => setEmAjuste(emAjuste === item.id ? null : item.id)} aria-expanded={emAjuste === item.id} aria-label={`Ajustar saldo de ${item.nome}, lote ${item.lote || 'não informado'}`}>
                       Ajustar
                     </button>
                   </td>

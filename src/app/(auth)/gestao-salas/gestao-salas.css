@@ -1,99 +1,15 @@
-@scope (.conteudo) {
-.salas-container { max-width: 1500px; margin: 0 auto; padding: 15px; }
-.salas-loading { padding: 32px 20px; color: #e2e8f0; text-align: center; }
-.salas-container .banner-salas-acoes { display: flex; gap: 10px; flex-wrap: wrap; }
-.salas-container .salas-erro { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 0 18px; padding: 14px 16px; border: 1px solid #fecaca; border-radius: 12px; color: #991b1b; background: #fef2f2; }
-.banner-salas { background: linear-gradient(135deg, #0a1f44, #1e3a8a); border-radius: 8px; padding: 30px 40px; color: white; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
-.banner-salas h1 { font-size: 28px; margin: 0; }
-.banner-salas p { opacity: 0.9; margin: 5px 0 0 0; font-size: 14px; }
-
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
-.stat-card { background: white; border-radius: 8px; padding: 18px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border-left: 5px solid #1e3a8a; text-align: center; transition: all 0.3s; }
-.stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-.stat-card .stat-icon { font-size: 28px; margin-bottom: 6px; }
-.stat-card .stat-valor { font-size: 30px; font-weight: 800; color: #0a1f44; }
-.stat-card .stat-label { font-size: 11px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
-.stat-card.livre { border-left-color: #16a34a; }
-.stat-card.ocupado { border-left-color: #dc2626; }
-.stat-card.reservado { border-left-color: #f59e0b; }
-.stat-card.manutencao { border-left-color: #6b7280; }
-
-.tabs-salas { display: flex; gap: 6px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; flex-wrap: wrap; }
-.tab-btn { padding: 13px 26px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #cbd5e1; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
-.tab-btn:hover { color: #fff; }
-.tab-btn.ativo { color: #fff; border-bottom-color: #fff; }
-.tab-conteudo { display: none; }
-.tab-conteudo.ativo { display: block; }
-
-.mapa-salas { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
-.sala-card { background: white; border-radius: 8px; padding: 22px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 3px solid #e2e8f0; transition: all 0.3s; position: relative; }
-.sala-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
-.sala-card.livre { border-color: #22c55e; background: #f0fdf4; }
-.sala-card.ocupado { border-color: #b91c1c; background: #fef2f2; }
-.sala-card.reservado { border-color: #f59e0b; background: #fefce8; }
-.sala-card.manutencao { border-color: #6b7280; background: #f3f4f6; }
-.sala-card .sala-numero { font-size: 36px; font-weight: 800; color: #0a1f44; display: flex; justify-content: space-between; align-items: center; }
-.sala-card .sala-status { display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; }
-.sala-card.livre .sala-status { background: #dcfce7; color: #15803d; }
-.sala-card.ocupado .sala-status { background: #fef2f2; color: #b91c1c; }
-.sala-card.reservado .sala-status { background: #fefce8; color: #b45309; }
-.sala-card.manutencao .sala-status { background: #f3f4f6; color: #6b7280; }
-.sala-card .sala-info { margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; }
-.sala-card .sala-info p { margin: 6px 0; font-size: 13px; color: #64748b; display: flex; align-items: center; gap: 8px; }
-.sala-card .sala-info p i { color: #1e3a8a; width: 18px; text-align: center; }
-.sala-card .sala-acoes { display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap; }
-.sala-card .tempo-restante { font-size: 12px; color: #64748b; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
-.sala-card .tempo-restante.urgente { color: #dc2626; font-weight: 600; animation: piscarUrgente 1s infinite; }
-@keyframes piscarUrgente { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
-
-.form-panel { background: white; border-radius: 8px; padding: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); margin-bottom: 25px; }
-.form-panel h3 { color: #0a1f44; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-.form-grupo { margin-bottom: 14px; }
-.form-grupo.full { grid-column: 1 / -1; }
-.form-grupo label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-.form-grupo input, .form-grupo select, .form-grupo textarea { width: 100%; padding: 11px 14px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #334155; background: #f8fafc; transition: all 0.2s; }
-.form-grupo input:focus, .form-grupo select:focus, .form-grupo textarea:focus { border-color: #1e3a8a; outline: none; box-shadow: 0 0 0 4px rgba(30,58,138,0.06); background: white; }
-
-.btn { padding: 11px 22px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; white-space: nowrap; }
-.btn-primary { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; box-shadow: 0 4px 12px rgba(30,58,138,0.2); }
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(30,58,138,0.3); }
-.btn-success { background: #15803d; color: white; }
-.btn-warning { background: #f59e0b; color: #0f172a; }
-.btn-danger { background: #dc2626; color: white; }
-.btn-info { background: #0e7490; color: white; }
-.btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 8px; }
-.btn-xs { padding: 5px 10px; font-size: 11px; border-radius: 8px; }
-
-.tabela-salas { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
-.tabela-salas-wrapper { overflow-x: auto; max-width: 100%; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); -webkit-overflow-scrolling: touch; }
-.tabela-salas thead { background: #0f172a; }
-.tabela-salas th { padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
-.tabela-salas td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
-.tabela-salas tbody tr:hover { background: #f8fafc; }
-
-.badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; }
-.badge-livre { background: #dcfce7; color: #15803d; }
-.badge-ocupado { background: #fef2f2; color: #b91c1c; }
-.badge-reservado { background: #fefce8; color: #b45309; }
-.badge-manutencao { background: #f3f4f6; color: #6b7280; }
-
-.search-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-.search-box input, .search-box select { padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; background: white; }
-.search-box input { flex: 1; min-width: 250px; }
-
-.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; justify-content: center; align-items: center; }
-.modal-overlay.show { display: flex; }
-.modal-box { background: white; border-radius: 8px; padding: 30px; max-width: 550px; width: 90%; max-height: 85vh; overflow-y: auto; }
-.modal-box h3 { color: #0a1f44; margin-bottom: 20px; }
-
-.legenda-salas { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; padding: 15px; background: white; border-radius: 8px; }
-.legenda-item { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; }
-.legenda-cor { width: 16px; height: 16px; border-radius: 8px; }
-
-@media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } .mapa-salas { grid-template-columns: 1fr; } .tabela-salas { min-width: 720px; font-size: 11px; } .banner-salas { padding: 24px; } }
-
-@media (max-width: 480px) { .salas-container { padding: 10px; } .salas-container .banner-salas { padding: 20px 16px; } .banner-salas h1 { font-size: 22px; line-height: 1.25; } .banner-salas-acoes { width: 100%; } .banner-salas-acoes .btn { flex: 1 1 100%; } .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .stat-card { padding: 14px 10px; } .sala-card { padding: 17px; } .sala-card .sala-numero { align-items: flex-start; gap: 10px; font-size: 24px; flex-wrap: wrap; } .search-box input { min-width: 100%; } .form-panel { padding: 20px 16px; } .modal-box { padding: 20px 16px; } }
-.salas-container :where(a, button, input, select, textarea):focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; }
-@media (prefers-reduced-motion: reduce) { .salas-container *, .salas-container *::before, .salas-container *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+/* gestao-salas: mapa de salas (cartão por sala) */
+.sl-mapa { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--ui-space-4); }
+.sl-sala {
+  display: flex; flex-direction: column; min-width: 0; padding: 16px;
+  background: var(--ui-surface); color: var(--ui-text);
+  border: 1px solid var(--ui-border); border-radius: var(--ui-radius-card); box-shadow: var(--ui-shadow-card);
 }
+.sl-sala-topo { display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-3); }
+.sl-sala-topo h2 { margin: 0; font-size: var(--ui-t-section); font-weight: 600; overflow-wrap: anywhere; }
+.sl-info { list-style: none; margin: var(--ui-space-3) 0 0; padding: var(--ui-space-3) 0 0; border-top: 1px solid var(--ui-border); display: grid; gap: 6px; font-size: var(--ui-t-label); color: var(--ui-text-muted); }
+.sl-info li { display: flex; align-items: flex-start; gap: 8px; overflow-wrap: anywhere; }
+.sl-info i { flex: none; width: 18px; text-align: center; color: var(--ui-blue-700); font-size: 16px; }
+.sl-info strong { color: var(--ui-text); }
+.sl-info .sl-urgente { color: var(--ui-danger); font-weight: 600; }
+.sl-acoes { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin-top: auto; padding-top: var(--ui-space-3); }

@@ -1,17 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { 
-  Book, 
-  ChartLine, 
-  Syringe, 
-  FileText, 
-  Eye, 
-  Download,
-  Image as ImageIcon
-} from 'lucide-react';
+import { ChartLine, Syringe, FileText, Image as ImageIcon } from 'lucide-react';
 
+import { DocAtalho, DocCard, DocGrid, DocSection } from '@/components/ui/documentos';
+import { PageHeader } from '@/components/ui';
 import { urlGoogleSegura } from '../setores-ui';
 
 interface Documento {
@@ -113,94 +106,33 @@ export default function BibliotecaPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 lg:space-y-10 animate-fade-in">
-      <div className="flex items-center gap-4 bg-gradient-to-r from-blue-900 to-blue-700 p-8 rounded-3xl shadow-lg text-white">
-        <div className="bg-white/20 p-4 rounded-2xl">
-          <Book className="w-10 h-10 text-blue-50" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Biblioteca de Documentos</h1>
-          <p className="text-blue-100 mt-1 font-medium">Manuais, protocolos e referências técnicas</p>
-        </div>
-      </div>
+    <div className="conteudo">
+      <PageHeader icon="las la-book" title="Biblioteca" subtitle="Manuais, protocolos e referências técnicas" />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Link href="/curvas-crescimento" className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
-          <div className="bg-white rounded-2xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(30,58,138,0.1)] hover:-translate-y-1 flex items-center gap-6">
-            <div className="bg-blue-50 p-5 rounded-2xl group-hover:bg-blue-600 transition-colors duration-300">
-              <ChartLine className="w-10 h-10 text-blue-600 group-hover:text-white transition-colors duration-300" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-800 group-hover:text-blue-700 transition-colors">Curvas de Crescimento</h3>
-              <p className="text-slate-500 mt-1">Tabelas OMS de crescimento infantil</p>
-            </div>
-          </div>
-        </Link>
+      <DocGrid>
+        <DocAtalho href="/curvas-crescimento" icone={<ChartLine size={20} />} titulo="Curvas de crescimento" descricao="Tabelas OMS de crescimento infantil" />
+        <DocAtalho href="/vacinacao" icone={<Syringe size={20} />} titulo="Calendários de vacinação" descricao="Calendários vacinais por faixa etária" />
+      </DocGrid>
 
-        <Link href="/vacinacao" className="group block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
-          <div className="bg-white rounded-2xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(30,58,138,0.1)] hover:-translate-y-1 flex items-center gap-6">
-            <div className="bg-blue-50 p-5 rounded-2xl group-hover:bg-blue-600 transition-colors duration-300">
-              <Syringe className="w-10 h-10 text-blue-600 group-hover:text-white transition-colors duration-300" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-800 group-hover:text-blue-700 transition-colors">Calendários de Vacinação</h3>
-              <p className="text-slate-500 mt-1">Calendários vacinais por faixa etária</p>
-            </div>
-          </div>
-        </Link>
-      </div>
-
-      <div>
-        <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-slate-100">
-          <FileText className="w-6 h-6 text-blue-200" />
-          <h2 className="text-2xl font-bold text-white">Documentos Técnicos e Protocolos</h2>
-        </div>
-
-        {loading && (
-          <p className="mb-4 text-sm text-slate-500" role="status">Verificando disponibilidade do acervo online…</p>
-        )}
+      <DocSection titulo="Documentos técnicos e protocolos">
+        {loading && <p className="ui-doc-aviso" role="status">Verificando disponibilidade do acervo online…</p>}
         {!loading && driveUnavailable && (
-          <p className="mb-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900" role="status">
+          <p className="ui-doc-aviso" role="status">
             Acervo online indisponível no momento. Os documentos locais continuam disponíveis.
           </p>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <DocGrid>
           {documentos.map((doc) => (
-            <div key={doc.id} className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.04)] border border-slate-100 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 flex flex-col">
-              <div className="bg-slate-50 p-8 flex items-center justify-center border-b border-slate-100">
-                {doc.tipo === 'imagem' ? (
-                  <ImageIcon className="w-16 h-16 text-blue-300" strokeWidth={1.5} />
-                ) : (
-                  <FileText className="w-16 h-16 text-blue-300" strokeWidth={1.5} />
-                )}
-              </div>
-              <div className="p-5 flex flex-col flex-1">
-                <h4 className="font-bold text-slate-800 text-[15px] leading-tight mb-2 line-clamp-3" title={doc.titulo}>
-                  {doc.titulo}
-                </h4>
-                <div className="mt-auto pt-4 flex gap-2">
-                  <button 
-                    onClick={() => handleDriveAction(doc, 'view')}
-                    className="flex-1 flex items-center justify-center gap-2 bg-blue-50 text-blue-700 font-semibold py-2.5 rounded-xl hover:bg-blue-600 hover:text-white transition-colors text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-                    aria-label={`Ver ${doc.titulo}`}
-                  >
-                    <Eye className="w-4 h-4" />
-                    Ver
-                  </button>
-                  <button 
-                    onClick={() => handleDriveAction(doc, 'download')}
-                    className="flex-1 flex items-center justify-center gap-2 bg-slate-50 text-slate-700 font-semibold py-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition-colors text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-                    aria-label={`Baixar ${doc.titulo}`}
-                  >
-                    <Download className="w-4 h-4" />
-                    Baixar
-                  </button>
-                </div>
-              </div>
-            </div>
+            <DocCard
+              key={doc.id}
+              icone={doc.tipo === 'imagem' ? <ImageIcon size={20} /> : <FileText size={20} />}
+              titulo={doc.titulo}
+              onVer={() => handleDriveAction(doc, 'view')}
+              onBaixar={() => handleDriveAction(doc, 'download')}
+            />
           ))}
-        </div>
-      </div>
+        </DocGrid>
+      </DocSection>
     </div>
   );
 }

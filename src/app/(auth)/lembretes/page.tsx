@@ -2,15 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import styles from './lembretes.module.css';
-import { 
-  Bell, 
-  PlusCircle, 
-  Clock, 
-  Calendar as CalendarIcon, 
-  CheckCircle, 
-  BarChart, 
-  List,
+import {
+  PlusCircle,
+  CheckCircle,
   Edit,
   Trash2,
   ChevronLeft,
@@ -20,6 +14,11 @@ import {
   Activity,
   User
 } from 'lucide-react';
+import { PageHeader, StatGrid, StatCard, Panel, Badge, EmptyState, LoadingState } from '@/components/ui';
+import { Modal } from '@/components/ui/Modal';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
+import './lembretes.css';
 
 interface Lembrete {
   id: string;
@@ -62,11 +61,11 @@ function toIsoDateTime(date: string, time: string) {
 }
 
 const TIPO_INFO = {
-  consulta: { label: 'Consulta', icon: Stethoscope, color: 'text-blue-800 bg-blue-100' },
-  medicacao: { label: 'Registro antigo', icon: Pill, color: 'text-slate-600 bg-slate-100' },
-  exame: { label: 'Exame', icon: Activity, color: 'text-purple-800 bg-purple-100' },
-  cirurgia: { label: 'Cirurgia', icon: Activity, color: 'text-orange-800 bg-orange-100' },
-  pessoal: { label: 'Pessoal', icon: User, color: 'text-slate-600 bg-slate-100' }
+  consulta: { label: 'Consulta', icon: Stethoscope },
+  medicacao: { label: 'Registro antigo', icon: Pill },
+  exame: { label: 'Exame', icon: Activity },
+  cirurgia: { label: 'Cirurgia', icon: Activity },
+  pessoal: { label: 'Pessoal', icon: User }
 };
 
 export default function LembretesPage() {
@@ -162,7 +161,7 @@ export default function LembretesPage() {
 
   const salvarLembrete = async () => {
     if (!form.titulo.trim() || !form.data || !form.hora) {
-      alert("Preencha título e data!");
+      alert("Preencha título, data e horário.");
       return;
     }
     
@@ -273,266 +272,183 @@ export default function LembretesPage() {
   const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
   return (
-    <div className="lembretes-page max-w-[1500px] mx-auto p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
-      
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-            <Bell aria-hidden="true" className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-blue-900" />
-            Meus lembretes (agenda pessoal)
-          </h2>
-          <p className="text-slate-200 mt-1">Esta agenda pessoal não emite alertas nem notificações: só você a vê, ao abrir esta tela. Não use para medicação, exames ou qualquer prazo clínico.</p>
-        </div>
-        <button 
-          onClick={() => abrirModal()}
-          className="min-h-11 w-full sm:w-auto justify-center bg-blue-900 hover:bg-blue-950 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-colors shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-        >
-          <PlusCircle aria-hidden="true" className="w-5 h-5" /> Novo Lembrete
-        </button>
-      </div>
+    <div className="mod-pagina">
+      <PageHeader
+        icon="las la-bell"
+        title="Meus lembretes"
+        subtitle="Agenda pessoal, visível só para você."
+        actions={<button type="button" className="btn btn-primary" onClick={() => abrirModal()}><PlusCircle aria-hidden="true" size={18} /> Novo lembrete</button>}
+      />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Pendentes', value: stats.pendentes, icon: Clock, color: 'text-orange-700', bg: 'bg-orange-100 border-orange-500' },
-          { label: 'Para Hoje', value: stats.hoje, icon: CalendarIcon, color: 'text-blue-700', bg: 'bg-blue-100 border-blue-500' },
-          { label: 'Concluídos', value: stats.concluidos, icon: CheckCircle, color: 'text-green-700', bg: 'bg-green-100 border-green-500' },
-          { label: 'Total', value: stats.total, icon: BarChart, color: 'text-slate-600', bg: 'bg-slate-100 border-slate-500' }
-        ].map((s, i) => (
-          <div key={i} className={`min-w-0 bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 border-l-4 ${s.bg} flex items-center gap-3 sm:gap-4`}>
-            <div className={`w-12 h-12 shrink-0 rounded-full flex items-center justify-center bg-white shadow-sm ${s.color}`}>
-              <s.icon aria-hidden="true" className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-sm font-medium text-slate-500">{s.label}</div>
-              <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <p className="mod-aviso mod-aviso-atencao" role="note">Esta agenda não emite alertas nem notificações. Não use para medicação, exames ou prazos clínicos.</p>
 
-      {erroCarga && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{erroCarga}</p>}
+      <StatGrid>
+        <StatCard icon="las la-clock" value={stats.pendentes} label="Pendentes" tone="warning" />
+        <StatCard icon="las la-calendar-day" value={stats.hoje} label="Para hoje" tone="info" alerta />
+        <StatCard icon="las la-check-circle" value={stats.concluidos} label="Concluídos" tone="success" />
+        <StatCard icon="las la-list" value={stats.total} label="Total" />
+      </StatGrid>
 
-      {/* Main Content */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        
-        {/* Calendário */}
-        <div className="lg:col-span-1 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200 self-start">
-          <div className="flex items-center justify-between mb-6">
-            <button type="button" onClick={() => mudarMes(-1)} aria-label="Mês anterior" className="min-h-11 min-w-11 p-2 hover:bg-slate-100 rounded-lg text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"><ChevronLeft aria-hidden="true" className="w-5 h-5 mx-auto" /></button>
-            <h3 className="font-bold text-slate-800 text-lg">{meses[mes]} {ano}</h3>
-            <button type="button" onClick={() => mudarMes(1)} aria-label="Próximo mês" className="min-h-11 min-w-11 p-2 hover:bg-slate-100 rounded-lg text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"><ChevronRight aria-hidden="true" className="w-5 h-5 mx-auto" /></button>
+      {erroCarga && <p role="alert" className="mod-aviso mod-aviso-erro">{erroCarga}</p>}
+
+      <div className="lb-grade">
+        <Panel title="Calendário" icon="las la-calendar">
+          <div className="lb-mes">
+            <button type="button" onClick={() => mudarMes(-1)} aria-label="Mês anterior" className="btn btn-secondary btn-sm ux-icon-btn"><ChevronLeft aria-hidden="true" size={18} /></button>
+            <h3>{meses[mes]} {ano}</h3>
+            <button type="button" onClick={() => mudarMes(1)} aria-label="Próximo mês" className="btn btn-secondary btn-sm ux-icon-btn"><ChevronRight aria-hidden="true" size={18} /></button>
           </div>
-          
-          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-[10px] sm:text-xs font-bold text-slate-600" aria-hidden="true">
-            <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+
+          <div className="lb-semana" aria-hidden="true">
+            <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
           </div>
-          
-          <div className="grid grid-cols-7 gap-1 sm:gap-2">
-            {diasBrancos.map((_, i) => <div key={`b-${i}`} className="aspect-square"></div>)}
+
+          <div className="lb-dias">
+            {diasBrancos.map((_, i) => <span key={`b-${i}`}></span>)}
             {dias.map(dia => {
               const dataStr = `${ano}-${String(mes+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
               const isHoje = dataStr === hojeStr;
               const temLembrete = lembretes.some(l => l.data === dataStr && !l.concluido);
-              
+
               return (
-                <button 
+                <button
                   key={dia}
                   type="button"
                   onClick={() => selecionarData(dataStr)}
-                  aria-label={`Criar lembrete em ${formatDate(dataStr)}`}
+                  aria-label={`Criar lembrete em ${formatDate(dataStr)}${temLembrete ? ', há lembretes pendentes' : ''}`}
                   aria-current={isHoje ? 'date' : undefined}
-                  className={`
-                    aspect-square min-w-0 rounded-full flex items-center justify-center text-sm font-medium transition-colors relative focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-700
-                    ${isHoje ? 'bg-blue-900 text-white shadow-md' : 'text-slate-700 hover:bg-slate-100'}
-                  `}
+                  className={`lb-dia${isHoje ? ' hoje' : ''}`}
                 >
                   {dia}
-                  {temLembrete && (
-                    <span aria-hidden="true" className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${isHoje ? 'bg-white' : 'bg-red-500'}`}></span>
-                  )}
+                  {temLembrete && <span aria-hidden="true" className="lb-ponto"></span>}
                 </button>
               );
             })}
           </div>
-        </div>
+        </Panel>
 
-        {/* Lista */}
-        <div className={`${styles.lembretesListPanel} lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[360px] max-h-[75vh]`}>
-          <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 sm:gap-4">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <List aria-hidden="true" className="w-5 h-5 text-blue-900" /> Meus Lembretes
-            </h3>
-            <div className="flex w-full sm:w-auto flex-wrap gap-2" role="group" aria-label="Filtrar lembretes">
-              {(['todos', 'pendente', 'concluido', 'hoje'] as const).map(f => (
-                <button
-                  key={f}
-                  onClick={() => setFiltro(f)}
-                  aria-pressed={filtro === f}
-                  className={`min-h-10 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${filtro === f ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
-                >
-                  {f === 'todos' ? 'Todos' : f === 'pendente' ? 'Pendentes' : f === 'concluido' ? 'Concluídos' : 'Hoje'}
-                </button>
-              ))}
-            </div>
+        <Panel title="Lembretes" icon="las la-list">
+          <div className="ux-chips lb-filtros" role="group" aria-label="Filtrar lembretes">
+            {(['todos', 'pendente', 'concluido', 'hoje'] as const).map(f => (
+              <button key={f} type="button" className="ux-chip" onClick={() => setFiltro(f)} aria-pressed={filtro === f}>
+                {f === 'todos' ? 'Todos' : f === 'pendente' ? 'Pendentes' : f === 'concluido' ? 'Concluídos' : 'Hoje'}
+              </button>
+            ))}
           </div>
-          
-          <div className="flex-1 overflow-y-auto p-4">
-            {carregando ? (
-              <div role="status" className="flex h-full items-center justify-center text-slate-500">Carregando lembretes...</div>
-            ) : listaFiltrada.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-4">
-                <Bell aria-hidden="true" className="w-16 h-16 opacity-30" />
-                <p>Nenhum lembrete encontrado</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {listaFiltrada.map(l => {
-                  const info = TIPO_INFO[l.tipo];
-                  const Icon = info.icon;
-                  
-                  return (
-                    <div key={l.id} className={`p-4 rounded-xl border transition-all ${l.concluido ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-200 shadow-sm hover:shadow-md border-l-4 border-l-blue-900'}`}>
-                      <div className="flex flex-wrap justify-between items-start gap-4">
-                        <div className="flex-1">
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
-                            <h4 className={`min-w-0 break-words font-bold ${l.concluido ? 'line-through text-slate-600' : 'text-slate-800'}`}>{l.titulo}</h4>
-                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 ${info.color}`}>
-                              <Icon aria-hidden="true" className="w-3 h-3" /> {info.label}
-                            </span>
-                          </div>
-                          <div className="text-xs text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1">
-                            <span className="flex items-center gap-1.5"><CalendarIcon aria-hidden="true" className="w-3.5 h-3.5" /> {formatDate(l.data)} às {l.hora}</span>
-                            {l.relacionado && <span className="min-w-0 flex items-center gap-1.5 break-words"><User aria-hidden="true" className="w-3.5 h-3.5 shrink-0" /> {l.relacionado}</span>}
-                          </div>
-                          {l.descricao && <p className="text-sm text-slate-700 leading-relaxed mt-2 break-words">{l.descricao}</p>}
-                        </div>
-                        
-                        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-                          {!l.concluido && (
-                            <button type="button" onClick={() => concluirLembrete(l.id)} className="min-h-11 min-w-11 p-2 text-green-700 hover:bg-green-50 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700" title="Concluir" aria-label={`Concluir ${l.titulo}`}>
-                              <CheckCircle aria-hidden="true" className="w-5 h-5" />
-                            </button>
-                          )}
-                          <button type="button" onClick={() => abrirModal(l)} className="min-h-11 min-w-11 p-2 text-blue-700 hover:bg-blue-50 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700" title="Editar" aria-label={`Editar ${l.titulo}`}>
-                            <Edit aria-hidden="true" className="w-5 h-5" />
-                          </button>
-                          <button type="button" onClick={() => excluirLembrete(l.id)} className="min-h-11 min-w-11 p-2 text-red-700 hover:bg-red-50 rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700" title="Excluir" aria-label={`Excluir ${l.titulo}`}>
-                            <Trash2 aria-hidden="true" className="w-5 h-5" />
-                          </button>
-                        </div>
+
+          {carregando ? (
+            <LoadingState message="Carregando lembretes..." />
+          ) : listaFiltrada.length === 0 ? (
+            <EmptyState icon="las la-bell" message="Nenhum lembrete encontrado." />
+          ) : (
+            <ul className="ux-lista lb-lista">
+              {listaFiltrada.map(l => {
+                const info = TIPO_INFO[l.tipo];
+                const Icon = info.icon;
+
+                return (
+                  <li key={l.id} className={`lb-item${l.concluido ? ' feito' : ''}`}>
+                    <div className="lb-item-corpo">
+                      <div className="lb-item-topo">
+                        <h3>{l.titulo}</h3>
+                        <Badge><Icon aria-hidden="true" size={12} /> {info.label}</Badge>
                       </div>
+                      <p className="ux-secundario">
+                        {formatDate(l.data)} às {l.hora}
+                        {l.relacionado && <> · {l.relacionado}</>}
+                      </p>
+                      {l.descricao && <p className="lb-descricao">{l.descricao}</p>}
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+                    <div className="ux-acoes">
+                      {!l.concluido && (
+                        <button type="button" onClick={() => concluirLembrete(l.id)} className="btn btn-success btn-sm ux-icon-btn" title="Concluir" aria-label={`Concluir ${l.titulo}`}>
+                          <CheckCircle aria-hidden="true" size={16} />
+                        </button>
+                      )}
+                      <button type="button" onClick={() => abrirModal(l)} className="btn btn-secondary btn-sm ux-icon-btn" title="Editar" aria-label={`Editar ${l.titulo}`}>
+                        <Edit aria-hidden="true" size={16} />
+                      </button>
+                      <button type="button" onClick={() => excluirLembrete(l.id)} className="btn btn-danger btn-sm ux-icon-btn" title="Excluir" aria-label={`Excluir ${l.titulo}`}>
+                        <Trash2 aria-hidden="true" size={16} />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
       </div>
 
-      {/* Modal Lembrete */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div role="dialog" aria-modal="true" aria-labelledby="lembrete-modal-titulo" className="bg-white rounded-2xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-xl">
-            <div className="bg-blue-900 p-4 px-6 flex justify-between items-center text-white">
-              <h3 id="lembrete-modal-titulo" className="font-bold flex items-center gap-2"><Bell aria-hidden="true" className="w-5 h-5" /> {lembreteEditando ? 'Editar Lembrete' : 'Novo Lembrete'}</h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} aria-label="Fechar formulário" className="min-h-11 min-w-11 rounded-lg text-white/90 hover:bg-white/10 transition-colors text-2xl leading-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">&times;</button>
+        <Modal title={lembreteEditando ? 'Editar lembrete' : 'Novo lembrete'} icon="las la-bell" onClose={() => setIsModalOpen(false)}>
+          <div className="form-group">
+            <label htmlFor="lembrete-titulo">Título</label>
+            <input
+              id="lembrete-titulo"
+              type="text"
+              value={form.titulo}
+              onChange={e => setForm({...form, titulo: e.target.value})}
+              placeholder="Ex.: reunião da equipe"
+              maxLength={200}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="lembrete-tipo">Tipo</label>
+            <select
+              id="lembrete-tipo"
+              value={form.tipo}
+              onChange={e => setForm({...form, tipo: e.target.value as Lembrete['tipo']})}
+            >
+              <option value="consulta">Consulta</option>
+              <option value="exame">Exame</option>
+              <option value="cirurgia">Cirurgia</option>
+              <option value="pessoal">Pessoal</option>
+            </select>
+          </div>
+
+          <div className="ux-campos">
+            <div className="form-group">
+              <label htmlFor="lembrete-data">Data</label>
+              <input id="lembrete-data" type="date" value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
             </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label htmlFor="lembrete-titulo" className="block text-sm font-bold text-slate-700 mb-1">Título</label>
-                <input 
-                  id="lembrete-titulo"
-                  type="text" 
-                  value={form.titulo}
-                  onChange={e => setForm({...form, titulo: e.target.value})}
-                  className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm"
-                  placeholder="Ex: Reunião Equipe"
-                  maxLength={200}
-                  required
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="lembrete-tipo" className="block text-sm font-bold text-slate-700 mb-1">Tipo</label>
-                <select 
-                  id="lembrete-tipo"
-                  value={form.tipo}
-                  onChange={e => setForm({...form, tipo: e.target.value as Lembrete['tipo']})}
-                  className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm bg-white"
-                >
-                  <option value="consulta"> Consulta</option>
-                  
-                  <option value="exame"> Exame</option>
-                  <option value="cirurgia"> Cirurgia</option>
-                  <option value="pessoal"> Pessoal</option>
-                </select>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="lembrete-data" className="block text-sm font-bold text-slate-700 mb-1">Data</label>
-                  <input 
-                    id="lembrete-data"
-                    type="date" 
-                    value={form.data}
-                    onChange={e => setForm({...form, data: e.target.value})}
-                    className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="lembrete-hora" className="block text-sm font-bold text-slate-700 mb-1">Horário</label>
-                  <input 
-                    id="lembrete-hora"
-                    type="time" 
-                    value={form.hora}
-                    onChange={e => setForm({...form, hora: e.target.value})}
-                    className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label htmlFor="lembrete-relacionado" className="block text-sm font-bold text-slate-700 mb-1">Relacionado a (Opcional)</label>
-                <input 
-                  id="lembrete-relacionado"
-                  type="text" 
-                  value={form.relacionado}
-                  onChange={e => setForm({...form, relacionado: e.target.value})}
-                  className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm"
-                  placeholder="Ex: João da Silva (Paciente)"
-                  maxLength={200}
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="lembrete-descricao" className="block text-sm font-bold text-slate-700 mb-1">Descrição</label>
-                <textarea 
-                  id="lembrete-descricao"
-                  value={form.descricao}
-                  onChange={e => setForm({...form, descricao: e.target.value})}
-                  className="w-full min-h-11 border border-slate-300 rounded-lg p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:border-blue-700 text-sm resize-y"
-                  rows={3}
-                  maxLength={4000}
-                />
-              </div>
-            </div>
-            
-            <div className="p-4 border-t border-slate-100 bg-slate-50">
-              <button 
-                onClick={salvarLembrete}
-                className="min-h-11 w-full bg-blue-900 hover:bg-blue-950 text-white font-bold py-3 rounded-xl transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
-              >
-                Salvar Lembrete
-              </button>
+            <div className="form-group">
+              <label htmlFor="lembrete-hora">Horário</label>
+              <input id="lembrete-hora" type="time" value={form.hora} onChange={e => setForm({...form, hora: e.target.value})} />
             </div>
           </div>
-        </div>
-      )}
 
+          <div className="form-group">
+            <label htmlFor="lembrete-relacionado">Relacionado a (opcional)</label>
+            <input
+              id="lembrete-relacionado"
+              type="text"
+              value={form.relacionado}
+              onChange={e => setForm({...form, relacionado: e.target.value})}
+              placeholder="Ex.: João da Silva (paciente)"
+              maxLength={200}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="lembrete-descricao">Descrição</label>
+            <textarea
+              id="lembrete-descricao"
+              value={form.descricao}
+              onChange={e => setForm({...form, descricao: e.target.value})}
+              rows={3}
+              maxLength={4000}
+            />
+          </div>
+
+          <div className="ui-modal-foot">
+            <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>
+            <button type="button" className="btn btn-primary" onClick={salvarLembrete}>Salvar</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

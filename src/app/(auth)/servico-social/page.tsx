@@ -1,11 +1,31 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, SearchInput, StatCard, StatGrid, Tabs, type Tone } from '@/components/ui';
 import PacienteSelect from '@/components/ui/PacienteSelect';
 import { pode } from '@/lib/permissions';
+import '@/components/ui/modulo.css';
+import '../setores.css';
 import './servico-social.css';
 
 interface CasoSocial { id: string; pacienteNome?: string; situacao?: string; detalhe?: string; status?: string; createdAt: string }
+
+type Aba = 'atendimento' | 'lista' | 'encaminhamentos';
+
+const ABAS = [
+  { id: 'atendimento', label: 'Atendimento', icon: 'las la-plus-circle' },
+  { id: 'lista', label: 'Lista completa', icon: 'las la-list' },
+  { id: 'encaminhamentos', label: 'Encaminhamentos', icon: 'las la-share' },
+] as const;
+
+const DESTINOS = [
+  { nome: 'CRAS / CREAS', descricao: 'Centro de Referência de Assistência Social' },
+  { nome: 'Conselho Tutelar', descricao: 'Para casos de vulnerabilidade infantil' },
+  { nome: 'Delegacia da Mulher (DEAM)', descricao: 'Violência doméstica' },
+  { nome: 'Abrigos Institucionais', descricao: 'Pessoas em situação de rua' },
+  { nome: 'INSS', descricao: 'Auxílio doença e benefícios' },
+  { nome: 'Vara da Infância/Idoso', descricao: 'Ministério Público' },
+];
 
 function dataDoAtendimento(registro: CasoSocial): Date | null {
   const dataInformada = typeof registro.detalhe === 'string'
@@ -21,16 +41,23 @@ function dataDoAtendimento(registro: CasoSocial): Date | null {
   return Number.isNaN(criadaEm.getTime()) ? null : criadaEm;
 }
 
+function tomDoStatus(status?: string): Tone {
+  const s = (status || '').toUpperCase();
+  if (s.includes('CONCLU')) return 'success';
+  if (s.includes('AGUARDANDO') || s.includes('ACOMPANHAMENTO') || s.includes('ANDAMENTO')) return 'warning';
+  return 'info';
+}
+
 export default function ServicoSocialPage() {
   const { data: session, status: sessionStatus } = useSession();
   const podeGerir = pode(session?.user?.cargo, 'social:gerir');
-  const [tabEscolhida, setTabAtiva] = useState('atendimento');
-  const tabAtiva = !podeGerir && tabEscolhida === 'atendimento' ? 'lista' : tabEscolhida;
+  const [tabEscolhida, setTabAtiva] = useState<Aba>('atendimento');
+  const tabAtiva: Aba = !podeGerir && tabEscolhida === 'atendimento' ? 'lista' : tabEscolhida;
   const [loading, setLoading] = useState(true);
   const [erroCarga, setErroCarga] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [feedbackAtendimento, setFeedbackAtendimento] = useState({ texto: '', erro: false });
-  
+
   // Dados
   const [atendimentos, setAtendimentos] = useState<CasoSocial[]>([]);
 
@@ -105,7 +132,7 @@ export default function ServicoSocialPage() {
       });
       const resposta = await res.json().catch(() => null);
       if (!res.ok) throw new Error(resposta?.error || 'Erro ao registrar atendimento');
-      
+
       setForm(prev => ({ ...prev, relato: '', encaminhamentos: '', pacienteId: '' }));
       setFeedbackAtendimento({ texto: 'Atendimento registrado com sucesso.', erro: false });
       await carregarDados();
@@ -121,7 +148,7 @@ export default function ServicoSocialPage() {
   let listaFiltrada = atendimentos.slice();
   if (buscaLista) {
     const t = buscaLista.trim().toLocaleLowerCase('pt-BR');
-    listaFiltrada = listaFiltrada.filter(a => 
+    listaFiltrada = listaFiltrada.filter(a =>
       (a.pacienteNome || '').toLocaleLowerCase('pt-BR').includes(t) ||
       (a.situacao || '').toLocaleLowerCase('pt-BR').includes(t)
     );
@@ -135,7 +162,7 @@ export default function ServicoSocialPage() {
     const d = dataDoAtendimento(a);
     return d !== null && (d.getMonth() + 1) === mesAtual && d.getFullYear() === anoAtual;
   }).length;
-  
+
   const pendentes = atendimentos.filter(a => {
     const s = (a.status || '').toUpperCase();
     return s.includes('ACOMPANHAMENTO') || s.includes('PENDENTE') || s.includes('ANDAMENTO');
@@ -148,201 +175,149 @@ export default function ServicoSocialPage() {
     return (a.detalhe || '').toLowerCase().includes('encaminhamentos:');
   }).length;
 
-  if (loading && atendimentos.length === 0) {
-    return (
-      <div className="conteudo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '350px', gap: '16px' }}>
-        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <p role="status" style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>Carregando dados do Serviço Social...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="conteudo">
       <div className="ss-container">
-
-        {erroCarga && <div className="ss-alerta-carga" role="alert"><span>{erroCarga}</span><button type="button" onClick={() => void carregarDados()} disabled={loading}>{loading ? 'Tentando novamente…' : 'Tentar novamente'}</button></div>}
-        {feedbackAtendimento.texto && <p className={`ss-feedback ${feedbackAtendimento.erro ? 'erro' : 'sucesso'}`} role={feedbackAtendimento.erro ? 'alert' : 'status'}>{feedbackAtendimento.texto}</p>}
-
-        <div className="banner-ss">
-          <div>
-          <h1><i className="las la-hands-helping" aria-hidden="true"></i> Serviço Social</h1>
-            <p>Atendimento social, acolhimento e controle de demandas do paciente.</p>
-          </div>
-          {podeGerir && <button type="button" className="btn btn-success" onClick={() => setTabAtiva('atendimento')}>
-            <i className="las la-plus-circle" aria-hidden="true"></i> Novo Atendimento
-          </button>}
-        </div>
-
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon" aria-hidden="true"><i className="las la-users"></i></div>
-            <div className="stat-numero">{atendimentosMes}</div>
-            <div className="stat-label">Atendimentos (Mês)</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon" aria-hidden="true" style={{ color: '#f59e0b' }}><i className="las la-clock"></i></div>
-            <div className="stat-numero">{pendentes}</div>
-            <div className="stat-label">Pendentes</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon" aria-hidden="true" style={{ color: '#16a34a' }}><i className="las la-check-circle"></i></div>
-            <div className="stat-numero">{concluidos}</div>
-            <div className="stat-label">Concluídos</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon" aria-hidden="true" style={{ color: '#7c3aed' }}><i className="las la-share"></i></div>
-            <div className="stat-numero">{comEncaminhamentos}</div>
-            <div className="stat-label">Encaminhamentos</div>
-          </div>
-        </div>
-
-        <div className="tabs-ss" role="group" aria-label="Seções do Serviço Social">
-          {podeGerir && <button type="button" aria-pressed={tabAtiva === 'atendimento'} className={`tab-btn ${tabAtiva === 'atendimento' ? 'ativo' : ''}`} onClick={() => setTabAtiva('atendimento')}>
-            <i className="las la-plus-circle" aria-hidden="true"></i> Atendimento
-          </button>}
-          <button type="button" aria-pressed={tabAtiva === 'lista'} className={`tab-btn ${tabAtiva === 'lista' ? 'ativo' : ''}`} onClick={() => setTabAtiva('lista')}>
-            <i className="las la-list" aria-hidden="true"></i> Lista Completa
-          </button>
-          <button type="button" aria-pressed={tabAtiva === 'encaminhamentos'} className={`tab-btn ${tabAtiva === 'encaminhamentos' ? 'ativo' : ''}`} onClick={() => setTabAtiva('encaminhamentos')}>
-            <i className="las la-share" aria-hidden="true"></i> Encaminhamentos
-          </button>
-        </div>
-
-        {tabAtiva === 'atendimento' && podeGerir && (
-          <div className="form-panel">
-            <h3><i className="las la-hands-helping" aria-hidden="true"></i> Registrar Atendimento Social</h3>
-            <div className="form-grid">
-              <PacienteSelect required value={form.pacienteId} onChange={id => setForm(atual => ({ ...atual, pacienteId: id }))} />
-              <div className="form-grupo">
-                <label htmlFor="social-tipo">Tipo de Atendimento *</label>
-                <select id="social-tipo" required value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
-                  <option>Orientação Social</option>
-                  <option>Acolhimento</option>
-                  <option>Visita Domiciliar</option>
-                  <option>Entrevista Social</option>
-                  <option>Grupo de Apoio</option>
-                </select>
-              </div>
-              <div className="form-grupo">
-                <label htmlFor="social-demanda">Demanda Principal *</label>
-                <select id="social-demanda" required value={form.demanda} onChange={e => setForm({...form, demanda: e.target.value})}>
-                  <option>Vulnerabilidade Social</option>
-                  <option>Violência Doméstica</option>
-                  <option>Abandono Familiar</option>
-                  <option>Dependência Química</option>
-                  <option>Moradia/Habitação</option>
-                  <option>Benefícios/Previdência</option>
-                  <option>Documentação</option>
-                  <option>Óbito/Trâmites</option>
-                  <option>Alta Hospitalar Complexa</option>
-                  <option>Outra</option>
-                </select>
-              </div>
-              <div className="form-grupo">
-                <label htmlFor="social-profissional">Profissional responsável</label>
-                <input id="social-profissional" type="text" value={form.profissional} readOnly aria-readonly="true" />
-              </div>
-              <div className="form-grupo">
-                <label htmlFor="social-data">Data *</label>
-                <input id="social-data" type="date" required value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
-              </div>
-              <div className="form-grupo">
-                <label htmlFor="social-status">Status</label>
-                <select id="social-status" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
-                  <option>Em Andamento</option>
-                  <option>Aguardando Retorno</option>
-                  <option>Concluído</option>
-                </select>
-              </div>
-              <div className="form-grupo full">
-                <label htmlFor="social-relato">Relato / Evolução *</label>
-                <textarea id="social-relato" rows={3} required maxLength={4000} aria-describedby="social-relato-contagem" value={form.relato} onChange={e => setForm({...form, relato: e.target.value})} placeholder="Descreva o atendimento ou evolução do caso..."></textarea>
-                <small id="social-relato-contagem" className="ss-contagem">{form.relato.length}/4000 caracteres</small>
-              </div>
-              <div className="form-grupo full">
-                <label htmlFor="social-encaminhamentos">Encaminhamentos Realizados</label>
-                <textarea id="social-encaminhamentos" rows={2} maxLength={1000} value={form.encaminhamentos} onChange={e => setForm({...form, encaminhamentos: e.target.value})} placeholder="Ex: Encaminhado ao CRAS para benefício eventual."></textarea>
-              </div>
-            </div>
-            <button type="button" className="btn btn-success" onClick={registrarAtendimento} disabled={salvando || loading || sessionStatus !== 'authenticated'} aria-busy={salvando} style={{ width: '100%', marginTop: '15px' }}>
-              <i className="las la-save" aria-hidden="true"></i> {salvando ? 'Salvando...' : 'Salvar Atendimento'}
+        <PageHeader
+          icon="las la-hands-helping"
+          title="Serviço social"
+          subtitle="Atendimento social, acolhimento e demandas do paciente"
+          actions={podeGerir ? (
+            <button type="button" className="btn btn-success" onClick={() => setTabAtiva('atendimento')}>
+              <i className="las la-plus-circle" aria-hidden="true"></i> Novo atendimento
             </button>
-          </div>
-        )}
+          ) : undefined}
+        />
 
-        {tabAtiva === 'lista' && (
-          <div>
-            <div className="search-box">
-              <input aria-label="Buscar por paciente ou demanda" type="text" placeholder="Buscar por paciente ou demanda..." value={buscaLista} onChange={e => setBuscaLista(e.target.value)} />
-            </div>
-            <div style={{ background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
-              <table className="tabela-ss">
-                <caption className="ss-sr-only">Atendimentos de Serviço Social registrados</caption>
-                <thead>
-                  <tr><th>Data</th><th>Paciente</th><th>Demanda</th><th>Detalhe</th><th>Status</th></tr>
-                </thead>
-                <tbody>
-                  {listaFiltrada.length === 0 ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>{buscaLista.trim() ? 'Nenhum atendimento corresponde à busca.' : 'Nenhum atendimento registrado.'}</td></tr>
-                  ) : (
-                    listaFiltrada.map((a) => {
-                      let badge = "badge-info";
-                      const status = (a.status || '').toUpperCase();
-                      if (status.includes('CONCLU')) badge = "badge-success";
-                      if (status.includes('AGUARDANDO') || status.includes('ACOMPANHAMENTO') || status.includes('ANDAMENTO')) badge = "badge-warning";
-                      
-                      return (
-                        <tr key={a.id}>
-                          <td>{dataDoAtendimento(a)?.toLocaleDateString('pt-BR') || '—'}</td>
-                          <td><strong>{a.pacienteNome}</strong></td>
-                          <td>{a.situacao}</td>
-                          <td>{a.detalhe}</td>
-                          <td><span className={`badge ${badge}`}>{a.status}</span></td>
-                        </tr>
-                      )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        {loading && atendimentos.length === 0 ? <LoadingState message="Carregando dados do Serviço Social..." /> : erroCarga && atendimentos.length === 0 ? (
+          <ErrorState message={erroCarga} onRetry={() => void carregarDados()} />
+        ) : (
+          <>
+            {erroCarga && <p className="mod-aviso mod-aviso-erro" role="alert">{erroCarga}</p>}
+            {feedbackAtendimento.texto && (
+              <p className={`mod-aviso ${feedbackAtendimento.erro ? 'mod-aviso-erro' : 'mod-aviso-sucesso'}`} role={feedbackAtendimento.erro ? 'alert' : 'status'}>
+                {feedbackAtendimento.texto}
+              </p>
+            )}
 
-        {tabAtiva === 'encaminhamentos' && (
-          <div>
-            <p role="note" style={{ padding: '12px 16px', borderRadius: 8, background: '#fff7ed', color: '#9a3412', marginBottom: 16 }}>
-              O sistema não envia ofícios, notificações ou pedidos de vaga. Use os canais institucionais autorizados e registre o encaminhamento no atendimento.
-            </p>
-            <div className="encaminhamentos-grid">
-            <div className="enc-card">
-              <h4>CRAS / CREAS</h4>
-              <p>Centro de Referência de Assistência Social</p>
-            </div>
-            <div className="enc-card">
-              <h4>Conselho Tutelar</h4>
-              <p>Para casos de vulnerabilidade infantil</p>
-            </div>
-            <div className="enc-card">
-              <h4>Delegacia da Mulher (DEAM)</h4>
-              <p>Violência doméstica</p>
-            </div>
-            <div className="enc-card">
-              <h4>Abrigos Institucionais</h4>
-              <p>Pessoas em situação de rua</p>
-            </div>
-            <div className="enc-card">
-              <h4>INSS</h4>
-              <p>Auxílio doença e benefícios</p>
-            </div>
-            <div className="enc-card">
-              <h4>Vara da Infância/Idoso</h4>
-              <p>Ministério Público</p>
-            </div>
-            </div>
-          </div>
-        )}
+            <StatGrid>
+              <StatCard icon="las la-users" value={atendimentosMes} label="Atendimentos no mês" />
+              <StatCard icon="las la-clock" value={pendentes} label="Pendentes" tone="warning" alerta />
+              <StatCard icon="las la-check-circle" value={concluidos} label="Concluídos" />
+              <StatCard icon="las la-share" value={comEncaminhamentos} label="Encaminhamentos" />
+            </StatGrid>
 
+            <Tabs tabs={podeGerir ? ABAS : ABAS.filter(a => a.id !== 'atendimento')} active={tabAtiva} onChange={setTabAtiva} label="Seções do Serviço Social" />
+
+            {tabAtiva === 'atendimento' && podeGerir && (
+              <Panel title="Registrar atendimento social" icon="las la-hands-helping">
+                <div className="mod-form-grid">
+                  <PacienteSelect required value={form.pacienteId} onChange={id => setForm(atual => ({ ...atual, pacienteId: id }))} />
+                  <div className="form-group">
+                    <label htmlFor="social-tipo">Tipo de atendimento *</label>
+                    <select id="social-tipo" required value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}>
+                      <option>Orientação Social</option>
+                      <option>Acolhimento</option>
+                      <option>Visita Domiciliar</option>
+                      <option>Entrevista Social</option>
+                      <option>Grupo de Apoio</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="social-demanda">Demanda principal *</label>
+                    <select id="social-demanda" required value={form.demanda} onChange={e => setForm({...form, demanda: e.target.value})}>
+                      <option>Vulnerabilidade Social</option>
+                      <option>Violência Doméstica</option>
+                      <option>Abandono Familiar</option>
+                      <option>Dependência Química</option>
+                      <option>Moradia/Habitação</option>
+                      <option>Benefícios/Previdência</option>
+                      <option>Documentação</option>
+                      <option>Óbito/Trâmites</option>
+                      <option>Alta Hospitalar Complexa</option>
+                      <option>Outra</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="social-profissional">Profissional responsável</label>
+                    <input id="social-profissional" type="text" value={form.profissional} readOnly aria-readonly="true" />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="social-data">Data *</label>
+                    <input id="social-data" type="date" required value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="social-status">Status</label>
+                    <select id="social-status" value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
+                      <option>Em Andamento</option>
+                      <option>Aguardando Retorno</option>
+                      <option>Concluído</option>
+                    </select>
+                  </div>
+                  <div className="form-group mod-largo">
+                    <label htmlFor="social-relato">Relato e evolução *</label>
+                    <textarea id="social-relato" rows={3} required maxLength={4000} aria-describedby="social-relato-contagem" value={form.relato} onChange={e => setForm({...form, relato: e.target.value})} placeholder="Descreva o atendimento ou a evolução do caso..."></textarea>
+                    <small id="social-relato-contagem" className="sc-muted">{form.relato.length}/4000 caracteres</small>
+                  </div>
+                  <div className="form-group mod-largo">
+                    <label htmlFor="social-encaminhamentos">Encaminhamentos realizados</label>
+                    <textarea id="social-encaminhamentos" rows={2} maxLength={1000} value={form.encaminhamentos} onChange={e => setForm({...form, encaminhamentos: e.target.value})} placeholder="Ex: Encaminhado ao CRAS para benefício eventual."></textarea>
+                  </div>
+                </div>
+                <div className="mod-acoes">
+                  <button type="button" className="btn btn-success" onClick={registrarAtendimento} disabled={salvando || loading || sessionStatus !== 'authenticated'} aria-busy={salvando}>
+                    <i className="las la-save" aria-hidden="true"></i> {salvando ? 'Salvando...' : 'Salvar atendimento'}
+                  </button>
+                </div>
+              </Panel>
+            )}
+
+            {tabAtiva === 'lista' && (
+              <>
+                <SearchInput value={buscaLista} onChange={setBuscaLista} placeholder="Buscar por paciente ou demanda..." label="Buscar por paciente ou demanda" />
+                {listaFiltrada.length === 0 ? (
+                  <EmptyState icon="las la-hands-helping" message={buscaLista.trim() ? 'Nenhum atendimento corresponde à busca.' : 'Nenhum atendimento registrado.'} />
+                ) : (
+                  <div className="tabela-wrapper">
+                    <table className="tabela">
+                      <caption className="sr-only">Atendimentos de Serviço Social registrados</caption>
+                      <thead>
+                        <tr><th scope="col">Data</th><th scope="col">Paciente</th><th scope="col">Demanda</th><th scope="col">Detalhe</th><th scope="col">Status</th></tr>
+                      </thead>
+                      <tbody>
+                        {listaFiltrada.map((a) => (
+                          <tr key={a.id}>
+                            <td>{dataDoAtendimento(a)?.toLocaleDateString('pt-BR') || '—'}</td>
+                            <td><strong>{a.pacienteNome}</strong></td>
+                            <td>{a.situacao}</td>
+                            <td className="sc-historico">{a.detalhe}</td>
+                            <td><Badge tone={tomDoStatus(a.status)}>{a.status}</Badge></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+
+            {tabAtiva === 'encaminhamentos' && (
+              <>
+                <p role="note" className="mod-aviso mod-aviso-atencao">
+                  O sistema não envia ofícios, notificações ou pedidos de vaga. Use os canais institucionais autorizados e registre o encaminhamento no atendimento.
+                </p>
+                <ul className="mod-lista ss-destinos">
+                  {DESTINOS.map(d => (
+                    <li key={d.nome} className="mod-cartao">
+                      <strong>{d.nome}</strong>
+                      <span className="mod-secundario">{d.descricao}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

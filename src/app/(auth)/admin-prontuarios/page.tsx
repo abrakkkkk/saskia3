@@ -1,6 +1,10 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { PageHeader, Badge, EmptyState, LoadingState, ErrorState } from '@/components/ui';
+import { Modal } from '@/components/ui/Modal';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
 import './prontuarios.css';
 
 interface CampoProntuario {
@@ -61,18 +65,6 @@ export default function AdminProntuariosPage() {
     }
     void carregarModelos();
   }, [statusSessao, isAdmin, carregarModelos]);
-
-  useEffect(() => {
-    if (!isModalOpen) return;
-    const fecharComEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !salvando) {
-        setIsModalOpen(false);
-        setEditIndex(null);
-      }
-    };
-    window.addEventListener('keydown', fecharComEscape);
-    return () => window.removeEventListener('keydown', fecharComEscape);
-  }, [isModalOpen, salvando]);
 
   const abrirModal = (index: number | null = null) => {
     setErroFormulario('');
@@ -192,153 +184,150 @@ export default function AdminProntuariosPage() {
   };
 
   return (
-    <div className="conteudo prontuarios-page">
-      <div className="prontuarios-page-header">
-        <div>
-          <h2><i className="las la-file-alt"></i> Modelos de Prontuários</h2>
-          <p>Crie e gerencie formulários customizados para os registros clínicos da sua unidade.</p>
-        </div>
-        {isAdmin && <button className="btn btn-primary" onClick={() => abrirModal()} style={{ padding: '12px 24px' }}>
-          <i className="las la-plus"></i> Novo Modelo
-        </button>}
-      </div>
+    <div className="mod-pagina">
+      <PageHeader
+        icon="las la-file-alt"
+        title="Modelos de prontuário"
+        subtitle="Formulários dos registros clínicos da unidade."
+        actions={isAdmin ? (
+          <button type="button" className="btn btn-primary" onClick={() => abrirModal()}>
+            <i className="las la-plus" aria-hidden="true"></i> Novo modelo
+          </button>
+        ) : undefined}
+      />
 
-      {!isAdmin && <p role="alert" style={{ color: '#b91c1c', marginBottom: 16 }}>Acesso restrito a administradores do hospital.</p>}
+      {!isAdmin && statusSessao !== 'loading' && <p role="alert" className="mod-aviso mod-aviso-erro">Acesso restrito a administradores do hospital.</p>}
+      {feedback && <p className="mod-aviso mod-aviso-sucesso" role="status">{feedback}</p>}
 
-      <div className="lista-modelos">
-        {erro && <div className="prontuarios-load-error" role="alert"><span>{erro}</span><button className="btn btn-secondary" onClick={() => void carregarModelos()} disabled={carregando}>Tentar novamente</button></div>}
-        {carregando ? (
-          <p role="status" style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#64748b', padding: '40px' }}>Carregando modelos…</p>
-        ) : erro ? null : modelos.length === 0 ? (
-          <p className="prontuarios-empty">Nenhum modelo de prontuário cadastrado.</p>
-        ) : (
-          modelos.map((m, idx) => (
-            <div className="modelo-item" key={m.id}>
-              <div>
-                <div className="modelo-header">
-                  <h4><i className="las la-file-medical"></i> {m.titulo}</h4>
-                  {isAdmin && <div className="modelo-acoes">
-                    <button className="btn-editar" onClick={() => abrirModal(idx)} title="Editar Modelo" aria-label={`Editar ${m.titulo}`}><i className="las la-edit" aria-hidden="true"></i></button>
-                    <button className="btn-excluir" onClick={() => excluirModelo(idx)} title="Excluir Modelo" aria-label={`Excluir ${m.titulo}`}><i className="las la-trash" aria-hidden="true"></i></button>
-                  </div>}
-                </div>
-                <div className="modelo-descricao">
-                  {m.descricao || "Nenhuma descrição fornecida."}
-                </div>
-              </div>
-              
-              <div className="modelo-campos-preview">
-                <strong><i className="las la-list"></i> Estrutura ({m.campos?.length || 0} campos):</strong>
-                {m.campos && m.campos.length > 0 ? (
-                  <ul>
-                    {m.campos.slice(0, 4).map((c, cIdx) => (
-                      <li key={cIdx}><b>{c.nome}</b> <span style={{color: '#94a3b8', fontSize: '11px'}}>({getTipoLabel(c.tipo)})</span></li>
-                    ))}
-                    {m.campos.length > 4 && (
-                      <li style={{ listStyle: 'none', fontStyle: 'italic', color: '#94a3b8', marginTop: '5px' }}>
-                        + {m.campos.length - 4} campo(s)...
-                      </li>
+      {carregando ? (
+        <LoadingState message="Carregando modelos..." />
+      ) : erro ? (
+        <ErrorState message={erro} onRetry={() => void carregarModelos()} />
+      ) : modelos.length === 0 ? (
+        <EmptyState icon="las la-file-medical" message="Nenhum modelo de prontuário cadastrado." />
+      ) : (
+        <div className="tabela-wrapper">
+          <table className="tabela">
+            <thead>
+              <tr>
+                <th>Modelo</th>
+                <th>Campos</th>
+                {isAdmin && <th>Ações</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {modelos.map((m, idx) => (
+                <tr key={m.id}>
+                  <td className="pr-modelo">
+                    <strong>{m.titulo}</strong>
+                    <span className="ux-secundario">{m.descricao || 'Sem descrição'}</span>
+                  </td>
+                  <td className="pr-campos">
+                    {m.campos && m.campos.length > 0 ? (
+                      <>
+                        <Badge tone="info">{m.campos.length} {m.campos.length === 1 ? 'campo' : 'campos'}</Badge>
+                        <span className="ux-secundario">
+                          {m.campos.slice(0, 4).map(c => `${c.nome} (${getTipoLabel(c.tipo)})`).join(', ')}
+                          {m.campos.length > 4 ? ` e mais ${m.campos.length - 4}` : ''}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="ux-mudo">Nenhum campo</span>
                     )}
-                  </ul>
-                ) : (
-                  <span style={{ color: '#64748b' }}>Nenhum campo estruturado</span>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {feedback && <p className="prontuarios-feedback" role="status">{feedback}</p>}
+                  </td>
+                  {isAdmin && (
+                    <td>
+                      <span className="ux-acoes">
+                        <button type="button" className="btn btn-secondary btn-sm ux-icon-btn" onClick={() => abrirModal(idx)} title="Editar" aria-label={`Editar ${m.titulo}`}><i className="las la-edit" aria-hidden="true"></i></button>
+                        <button type="button" className="btn btn-danger btn-sm ux-icon-btn" onClick={() => excluirModelo(idx)} title="Excluir" aria-label={`Excluir ${m.titulo}`}><i className="las la-trash" aria-hidden="true"></i></button>
+                      </span>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {isModalOpen && (
-        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget && !salvando) fecharModal(); }}>
-          <form className="modal-content" role="dialog" aria-modal="true" aria-labelledby="modelo-modal-title" onSubmit={e => { e.preventDefault(); void salvarModelo(); }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 id="modelo-modal-title"><i className={editIndex !== null ? "las la-edit" : "las la-file-medical"} aria-hidden="true"></i> {editIndex !== null ? "Editar Modelo de Prontuário" : "Novo Modelo de Prontuário"}</h3>
-              <button type="button" aria-label="Fechar formulário de modelo" disabled={salvando} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: salvando ? 'not-allowed' : 'pointer' }} onClick={fecharModal}>&times;</button>
+        <Modal size="lg" title={editIndex !== null ? 'Editar modelo' : 'Novo modelo'} icon={editIndex !== null ? 'las la-edit' : 'las la-file-medical'} onClose={fecharModal} busy={salvando}>
+          <form onSubmit={e => { e.preventDefault(); void salvarModelo(); }}>
+            <div className="form-group">
+              <label htmlFor="modelo-titulo">Título *</label>
+              <input
+                id="modelo-titulo"
+                type="text"
+                value={formTitulo}
+                onChange={e => setFormTitulo(e.target.value)}
+                placeholder="Ex.: Anamnese pediátrica"
+                maxLength={160}
+                required
+                autoFocus
+              />
             </div>
-            
-            <div className="modal-body">
-              <div className="form-group">
-                <label htmlFor="modelo-titulo">Título do Modelo *</label>
-                <input 
-                  id="modelo-titulo"
-                  type="text" 
-                  value={formTitulo} 
-                  onChange={e => setFormTitulo(e.target.value)} 
-                  placeholder="Ex: Anamnese Pediátrica, Avaliação Cardiológica..." 
-                  maxLength={160}
-                  required
-                  autoFocus
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="modelo-descricao">Descrição e Orientação de Uso</label>
-                <textarea 
-                  id="modelo-descricao"
-                  rows={2} 
-                  value={formDescricao} 
-                  onChange={e => setFormDescricao(e.target.value)} 
-                  placeholder="Instruções breves sobre quando este modelo deve ser utilizado."
-                  maxLength={2000}
-                />
-              </div>
-
-              {erroFormulario && <p role="alert" className="prontuarios-form-error">{erroFormulario}</p>}
-
-              <div className="campos-builder">
-                <div className="campos-builder-header">
-                  <h4><i className="las la-layer-group"></i> Estrutura de Campos</h4>
-                  <button type="button" className="btn btn-primary" onClick={adicionarCampo} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '12px' }}>
-                    <i className="las la-plus"></i> Adicionar Campo
-                  </button>
-                </div>
-
-                {formCampos.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '30px', background: '#f8fafc', borderRadius: '8px', border: '2px dashed #cbd5e1', color: '#94a3b8' }}>
-                    <i className="las la-mouse-pointer" style={{ fontSize: '32px', marginBottom: '10px' }}></i>
-                    <p style={{ margin: 0 }}>Nenhum campo adicionado.<br/>Clique no botão acima para começar a construir o prontuário.</p>
-                  </div>
-                ) : (
-                  formCampos.map((campo, index) => (
-                    <div className="campo-dinamico-item" key={campo.id || index}>
-                      <div style={{ flex: '0 0 auto', color: '#94a3b8', fontWeight: 'bold' }}>{index + 1}.</div>
-                      <input 
-                        aria-label={`Nome do campo ${index + 1}`}
-                        type="text" 
-                        value={campo.nome} 
-                        onChange={e => atualizarCampo(index, 'nome', e.target.value)} 
-                        placeholder="Nome da pergunta / campo"
-                        maxLength={120}
-                        required
-                      />
-                      <select 
-                        aria-label={`Tipo do campo ${index + 1}`}
-                        value={campo.tipo} 
-                        onChange={e => atualizarCampo(index, 'tipo', e.target.value)}
-                      >
-                        <option value="texto">Texto Curto</option>
-                        <option value="numero">Número</option>
-                        <option value="data">Data</option>
-                        <option value="textarea">Texto Longo</option>
-                        <option value="select">Seleção (Dropdown)</option>
-                      </select>
-                      <button type="button" className="btn-remover-campo" onClick={() => removerCampo(index)} title="Remover Campo" aria-label={`Remover campo ${index + 1}`}>
-                        <i className="las la-trash"></i>
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
+            <div className="form-group">
+              <label htmlFor="modelo-descricao">Orientação de uso</label>
+              <textarea
+                id="modelo-descricao"
+                rows={2}
+                value={formDescricao}
+                onChange={e => setFormDescricao(e.target.value)}
+                placeholder="Quando este modelo deve ser usado"
+                maxLength={2000}
+              />
             </div>
 
-            <div className="modal-footer">
-              <button type="button" className="btn btn-danger" onClick={fecharModal} disabled={salvando}>Cancelar</button>
-              <button type="submit" className="btn btn-success" disabled={salvando}><i className="las la-save" aria-hidden="true"></i> {salvando ? 'Salvando…' : 'Salvar Modelo'}</button>
+            {erroFormulario && <p role="alert" className="mod-aviso mod-aviso-erro">{erroFormulario}</p>}
+
+            <div className="pr-builder-topo">
+              <h3>Campos</h3>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={adicionarCampo}>
+                <i className="las la-plus" aria-hidden="true"></i> Adicionar campo
+              </button>
+            </div>
+
+            {formCampos.length === 0 ? (
+              <EmptyState icon="las la-list" message="Nenhum campo. Use “Adicionar campo” para montar o modelo." />
+            ) : (
+              <ul className="ux-lista">
+                {formCampos.map((campo, index) => (
+                  <li key={campo.id || index} className="form-group pr-campo">
+                    <span className="pr-campo-num" aria-hidden="true">{index + 1}</span>
+                    <input
+                      aria-label={`Nome do campo ${index + 1}`}
+                      type="text"
+                      value={campo.nome}
+                      onChange={e => atualizarCampo(index, 'nome', e.target.value)}
+                      placeholder="Nome do campo"
+                      maxLength={120}
+                      required
+                    />
+                    <select
+                      aria-label={`Tipo do campo ${index + 1}`}
+                      value={campo.tipo}
+                      onChange={e => atualizarCampo(index, 'tipo', e.target.value)}
+                    >
+                      <option value="texto">Texto curto</option>
+                      <option value="numero">Número</option>
+                      <option value="data">Data</option>
+                      <option value="textarea">Texto longo</option>
+                      <option value="select">Seleção</option>
+                    </select>
+                    <button type="button" className="btn btn-danger btn-sm ux-icon-btn" onClick={() => removerCampo(index)} title="Remover campo" aria-label={`Remover campo ${index + 1}`}>
+                      <i className="las la-trash" aria-hidden="true"></i>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="ui-modal-foot">
+              <button type="button" className="btn btn-secondary" onClick={fecharModal} disabled={salvando}>Cancelar</button>
+              <button type="submit" className="btn btn-primary" disabled={salvando}><i className="las la-save" aria-hidden="true"></i> {salvando ? 'Salvando…' : 'Salvar'}</button>
             </div>
           </form>
-        </div>
+        </Modal>
       )}
     </div>
   );

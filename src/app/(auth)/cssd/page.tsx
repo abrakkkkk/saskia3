@@ -72,7 +72,7 @@ function IndicadoresForm({ lote, onSalvo, onErro }: { lote: Lote; onSalvo: (mens
 
   return (
     <form className="cssd-indicadores" onSubmit={salvar}>
-      <h5>Resultado do ciclo</h5>
+      <h3>Resultado do ciclo</h3>
       {campos.map(campo => (
         <div className="form-group" key={campo.id}>
           <label htmlFor={`${campo.id}-${lote.id}`}>{campo.rotulo}</label>
@@ -82,7 +82,7 @@ function IndicadoresForm({ lote, onSalvo, onErro }: { lote: Lote; onSalvo: (mens
           </select>
         </div>
       ))}
-      <button type="submit" className="btn btn-sm btn-info" disabled={salvando}>{salvando ? 'Salvando...' : 'Registrar indicadores'}</button>
+      <button type="submit" className="btn btn-sm btn-secondary" disabled={salvando}>{salvando ? 'Salvando...' : 'Registrar indicadores'}</button>
     </form>
   );
 }
@@ -219,182 +219,183 @@ export default function CSSDPage() {
   const lotesAtivos = lotes.filter(ativo);
   const contar = (status: string) => lotes.filter(l => l.status === status).length;
 
-  if (loading) return <div className="conteudo"><LoadingState message="Carregando lotes de esterilização..." /></div>;
+  const cabecalho = (
+    <PageHeader
+      icon="las la-sync"
+      title="CSSD"
+      subtitle="Central de material e esterilização: lotes, ciclos e rastreabilidade"
+      actions={!loading && podeGerir && <button type="button" className="btn btn-primary" onClick={() => setActiveTab('novo')}><i className="las la-plus-circle" aria-hidden="true"></i> Novo lote</button>}
+    />
+  );
+
+  if (loading) return <div className="conteudo mod-pagina">{cabecalho}<LoadingState message="Carregando lotes de esterilização..." /></div>;
 
   return (
-    <div className="conteudo">
-      <div className="cssd-container">
-        <PageHeader
-          icon="las la-box"
-          title="CME - Central de Material e Esterilização"
-          subtitle="Controle de ciclos de esterilização e rastreabilidade de instrumentais"
-          actions={podeGerir ? <button type="button" className="btn btn-success" onClick={() => setActiveTab('novo')}><i className="las la-plus-circle" aria-hidden="true"></i> Novo lote</button> : undefined}
-        />
+    <div className="conteudo mod-pagina">
+      {cabecalho}
 
-        {erroCarregamento && <ErrorState message={erroCarregamento} onRetry={() => void carregarDados()} />}
-        {sucesso && <p className="mod-aviso mod-aviso-sucesso" role="status">{sucesso}</p>}
-        {erroAcao && <p className="mod-aviso mod-aviso-erro" role="alert">{erroAcao}</p>}
+      {erroCarregamento && <ErrorState message={erroCarregamento} onRetry={() => void carregarDados()} />}
+      {sucesso && <p className="mod-aviso mod-aviso-sucesso" role="status">{sucesso}</p>}
+      {erroAcao && <p className="mod-aviso mod-aviso-erro" role="alert">{erroAcao}</p>}
 
-        <StatGrid>
-          <StatCard icon="las la-inbox" value={contar('Recepção')} label="Na recepção" tone="info" />
-          <StatCard icon="las la-soap" value={contar('Limpeza')} label="Em limpeza" tone="neutral" />
-          <StatCard icon="las la-box-open" value={contar('Preparo')} label="Em preparo" tone="warning" />
-          <StatCard icon="las la-fire" value={contar('Esterilização')} label="Esterilizando" tone="success" />
-        </StatGrid>
+      <StatGrid>
+        <StatCard icon="las la-inbox" value={contar('Recepção')} label="Recepção" hint="Lotes na recepção" />
+        <StatCard icon="las la-soap" value={contar('Limpeza')} label="Limpeza" hint="Lotes em limpeza" />
+        <StatCard icon="las la-box-open" value={contar('Preparo')} label="Preparo" hint="Lotes em preparo" />
+        <StatCard icon="las la-fire" value={contar('Esterilização')} label="Esterilização" hint="Lotes em esterilização" />
+      </StatGrid>
 
-        <Tabs tabs={abas} active={activeTab} onChange={setActiveTab} label="Seções da CME" />
+      <Tabs tabs={abas} active={activeTab} onChange={setActiveTab} label="Seções da CSSD" />
 
-        {activeTab === 'novo' && (
-          <Panel title="Abertura de novo lote" icon="las la-plus-circle">
-            <p className="mod-nota">O número é gerado pelo sistema ao salvar. Os indicadores são registrados depois do ciclo, na etapa de esterilização.</p>
-            <form onSubmit={criarLote}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label htmlFor="lote-setor">Setor de origem *</label>
-                  <select id="lote-setor" value={loteSetor} onChange={e => setLoteSetor(e.target.value)}>
-                    <option value="">Selecione...</option>
-                    <option>Centro Cirúrgico</option><option>UTI</option><option>Emergência</option><option>Enfermaria</option><option>Ambulatório</option>
-                  </select>
-                </div>
-                <div className="form-group"><label htmlFor="lote-data">Data *</label><input id="lote-data" type="date" value={loteData} onChange={e => setLoteData(e.target.value)} /></div>
-                <div className="form-group"><label htmlFor="lote-operador">Operador autenticado</label><input id="lote-operador" type="text" value={operadorAtual} readOnly aria-readonly="true" /></div>
-                <div className="form-group">
-                  <label htmlFor="lote-equipamento">Equipamento</label>
-                  <select id="lote-equipamento" value={loteEquipamento} onChange={e => setLoteEquipamento(e.target.value)}>
-                    <option>Autoclave 01</option><option>Autoclave 02</option><option>Autoclave 03 (Rápida)</option><option>Estufa Térmica</option><option>Lavadora Termodesinfectora</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="lote-ciclo">Ciclo</label>
-                  <select id="lote-ciclo" value={loteCiclo} onChange={e => setLoteCiclo(e.target.value)}>
-                    <option>134°C - 7 min (Padrão)</option><option>134°C - 4 min (Flash)</option><option>121°C - 15 min</option><option>Ciclo Príon</option><option>Lavagem Térmica</option>
-                  </select>
-                </div>
-                <div className="form-group"><label htmlFor="lote-obs">Observações</label><input id="lote-obs" type="text" maxLength={2000} value={loteObs} onChange={e => setLoteObs(e.target.value)} placeholder="Opcional" /></div>
+      {activeTab === 'novo' && (
+        <Panel title="Novo lote" icon="las la-plus-circle">
+          <p className="mod-nota">O número é gerado ao salvar. Os indicadores são registrados depois do ciclo, na etapa de esterilização.</p>
+          <form onSubmit={criarLote}>
+            <div className="mod-form-grid">
+              <div className="form-group">
+                <label htmlFor="lote-setor">Setor de origem *</label>
+                <select id="lote-setor" value={loteSetor} onChange={e => setLoteSetor(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  <option>Centro Cirúrgico</option><option>UTI</option><option>Emergência</option><option>Enfermaria</option><option>Ambulatório</option>
+                </select>
               </div>
-              <div className="mod-acoes"><button type="submit" className="btn btn-success" disabled={salvando}><i className="las la-save" aria-hidden="true"></i> {salvando ? 'Criando...' : 'Criar lote'}</button></div>
-            </form>
-          </Panel>
-        )}
-
-        {activeTab === 'itens' && (
-          <Panel title="Vincular instrumentais ao lote" icon="las la-tools">
-            <p className="mod-nota">Adicione as pinças, caixas e materiais que compõem o lote ativo.</p>
-            <form onSubmit={adicionarItem}>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label htmlFor="item-lote">Lote aberto *</label>
-                  <select id="item-lote" value={itemLote} onChange={e => setItemLote(e.target.value)}>
-                    <option value="">Selecione...</option>
-                    {lotesAtivos.map(l => <option key={l.id} value={l.id}>{l.numero} ({l.status})</option>)}
-                  </select>
-                </div>
-                <div className="form-group"><label htmlFor="item-nome">Material / caixa *</label><input id="item-nome" type="text" maxLength={200} value={itemNome} onChange={e => setItemNome(e.target.value)} placeholder="Ex.: Caixa de pequena cirurgia" /></div>
-                <div className="form-group">
-                  <label htmlFor="item-tipo">Tipo</label>
-                  <select id="item-tipo" value={itemTipo} onChange={e => setItemTipo(e.target.value)}>
-                    <option>Instrumental Cirúrgico</option><option>Caixa Montada</option><option>Tecido / Avental</option><option>Vidraria</option><option>Motor / Perfurador</option>
-                  </select>
-                </div>
-                <div className="form-group"><label htmlFor="item-quantidade">Quantidade</label><input id="item-quantidade" type="number" min="1" step="1" value={itemQuantidade} onChange={e => setItemQuantidade(Number(e.target.value))} /></div>
-                <div className="form-group">
-                  <label htmlFor="item-embalagem">Embalagem</label>
-                  <select id="item-embalagem" value={itemEmbalagem} onChange={e => setItemEmbalagem(e.target.value)}>
-                    <option>Grau Cirúrgico (SMS)</option><option>Contêiner Rígido</option><option>Papel Crepado</option><option>Tyvek</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="item-integridade">Integridade visual</label>
-                  <select id="item-integridade" value={itemIntegridade} onChange={e => setItemIntegridade(e.target.value)}>
-                    {INTEGRIDADES.map(opcao => <option key={opcao}>{opcao}</option>)}
-                  </select>
-                </div>
+              <div className="form-group"><label htmlFor="lote-data">Data *</label><input id="lote-data" type="date" value={loteData} onChange={e => setLoteData(e.target.value)} /></div>
+              <div className="form-group"><label htmlFor="lote-operador">Operador</label><input id="lote-operador" type="text" value={operadorAtual} readOnly aria-readonly="true" /></div>
+              <div className="form-group">
+                <label htmlFor="lote-equipamento">Equipamento</label>
+                <select id="lote-equipamento" value={loteEquipamento} onChange={e => setLoteEquipamento(e.target.value)}>
+                  <option>Autoclave 01</option><option>Autoclave 02</option><option>Autoclave 03 (Rápida)</option><option>Estufa Térmica</option><option>Lavadora Termodesinfectora</option>
+                </select>
               </div>
-              <div className="mod-acoes"><button type="submit" className="btn btn-primary" disabled={salvando}><i className="las la-plus" aria-hidden="true"></i> {salvando ? 'Adicionando...' : 'Adicionar material'}</button></div>
-            </form>
-          </Panel>
-        )}
+              <div className="form-group">
+                <label htmlFor="lote-ciclo">Ciclo</label>
+                <select id="lote-ciclo" value={loteCiclo} onChange={e => setLoteCiclo(e.target.value)}>
+                  <option>134°C - 7 min (Padrão)</option><option>134°C - 4 min (Flash)</option><option>121°C - 15 min</option><option>Ciclo Príon</option><option>Lavagem Térmica</option>
+                </select>
+              </div>
+              <div className="form-group"><label htmlFor="lote-obs">Observações</label><input id="lote-obs" type="text" maxLength={2000} value={loteObs} onChange={e => setLoteObs(e.target.value)} placeholder="Opcional" /></div>
+            </div>
+            <div className="mod-acoes"><button type="submit" className="btn btn-primary" disabled={salvando}><i className="las la-save" aria-hidden="true"></i> {salvando ? 'Criando...' : 'Criar lote'}</button></div>
+          </form>
+        </Panel>
+      )}
 
-        {activeTab === 'lotes' && (
+      {activeTab === 'itens' && (
+        <Panel title="Adicionar itens ao lote" icon="las la-tools">
+          <p className="mod-nota">Adicione as pinças, caixas e materiais que compõem o lote aberto.</p>
+          <form onSubmit={adicionarItem}>
+            <div className="mod-form-grid">
+              <div className="form-group">
+                <label htmlFor="item-lote">Lote aberto *</label>
+                <select id="item-lote" value={itemLote} onChange={e => setItemLote(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  {lotesAtivos.map(l => <option key={l.id} value={l.id}>{l.numero} ({l.status})</option>)}
+                </select>
+              </div>
+              <div className="form-group"><label htmlFor="item-nome">Material ou caixa *</label><input id="item-nome" type="text" maxLength={200} value={itemNome} onChange={e => setItemNome(e.target.value)} placeholder="Ex.: Caixa de pequena cirurgia" /></div>
+              <div className="form-group">
+                <label htmlFor="item-tipo">Tipo</label>
+                <select id="item-tipo" value={itemTipo} onChange={e => setItemTipo(e.target.value)}>
+                  <option>Instrumental Cirúrgico</option><option>Caixa Montada</option><option>Tecido / Avental</option><option>Vidraria</option><option>Motor / Perfurador</option>
+                </select>
+              </div>
+              <div className="form-group"><label htmlFor="item-quantidade">Quantidade</label><input id="item-quantidade" type="number" min="1" step="1" value={itemQuantidade} onChange={e => setItemQuantidade(Number(e.target.value))} /></div>
+              <div className="form-group">
+                <label htmlFor="item-embalagem">Embalagem</label>
+                <select id="item-embalagem" value={itemEmbalagem} onChange={e => setItemEmbalagem(e.target.value)}>
+                  <option>Grau Cirúrgico (SMS)</option><option>Contêiner Rígido</option><option>Papel Crepado</option><option>Tyvek</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="item-integridade">Integridade visual</label>
+                <select id="item-integridade" value={itemIntegridade} onChange={e => setItemIntegridade(e.target.value)}>
+                  {INTEGRIDADES.map(opcao => <option key={opcao}>{opcao}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="mod-acoes"><button type="submit" className="btn btn-primary" disabled={salvando}><i className="las la-plus" aria-hidden="true"></i> {salvando ? 'Adicionando...' : 'Adicionar material'}</button></div>
+          </form>
+        </Panel>
+      )}
+
+      {activeTab === 'lotes' && (
+        <>
           <Panel>
             <div className="mod-filtros">
-              <SearchInput value={buscarLote} onChange={setBuscarLote} placeholder="Buscar lote, setor ou operador..." />
+              <SearchInput value={buscarLote} onChange={setBuscarLote} placeholder="Buscar lote, setor ou operador" />
               <select aria-label="Filtrar lotes por status" value={filtroStatusLote} onChange={e => setFiltroStatusLote(e.target.value)}>
                 <option value="todos">Todos os status</option>
                 {FLUXO.slice(0, 4).map(status => <option key={status}>{status}</option>)}
               </select>
             </div>
+          </Panel>
 
-            {lotesVisiveis.length === 0 ? <EmptyState icon="las la-box" message="Nenhum lote ativo encontrado nos filtros selecionados." /> : (
-              <div className="lotes-grid">
-                {lotesVisiveis.map(l => {
-                  const proximo = FLUXO[FLUXO.indexOf(l.status) + 1];
-                  const emEsterilizacao = l.status === 'Esterilização';
-                  const integros = l.itens.filter(item => item.integridade !== ITEM_REJEITADO).length;
-                  const liberavel = indicadoresConformes(l) && integros > 0;
-                  return (
-                    <div className="lote-card" key={l.id}>
-                      <div className="lote-header">
-                        <h4><i className="las la-box" aria-hidden="true"></i> {l.numero}</h4>
-                        <Badge tone={tomStatus(l.status)}>{l.status}</Badge>
-                      </div>
-                      <div className="lote-body">
-                        <p><strong>Setor:</strong> {l.setor}</p>
-                        <p><strong>Operador:</strong> {l.operador}</p>
-                        <p><strong>Equipamento:</strong> {l.equipamento}</p>
-                        <p><strong>Ciclo:</strong> {l.ciclo}</p>
-                        <p><strong>Itens:</strong> {l.itens.length} ({integros} {integros === 1 ? 'íntegro' : 'íntegros'})</p>
-                      </div>
-                      {emEsterilizacao && podeGerir && <IndicadoresForm key={`${l.id}-${l.indicadorQuimico}-${l.indicadorBiologico}-${l.bowieDick}`} lote={l} onSalvo={mensagem => { limparMensagens(); setSucesso(mensagem); void carregarDados(); }} onErro={mensagem => { limparMensagens(); setErroAcao(mensagem); }} />}
-                      {emEsterilizacao && !liberavel && <p className="cssd-pendencia">Para liberar: indicadores conformes e ao menos 1 item íntegro.</p>}
-                      {podeGerir && (
-                        <div className="lote-actions">
-                          {proximo && (
-                            <button type="button" className="btn btn-primary btn-sm" disabled={emEsterilizacao && !liberavel} onClick={() => void mudarStatus(l, proximo)}>
-                              {emEsterilizacao ? 'Liberar como pronto' : `Avançar para ${proximo}`} <i className="las la-arrow-right" aria-hidden="true"></i>
-                            </button>
-                          )}
-                          <button type="button" className="btn btn-danger btn-sm" onClick={() => void rejeitarLote(l)} aria-label={`Reprovar lote ${l.numero}`} title="Reprovar lote">
-                            <i className="las la-times-circle" aria-hidden="true"></i>
+          {lotesVisiveis.length === 0 ? <EmptyState icon="las la-box" message="Nenhum lote ativo encontrado." /> : (
+            <div className="cssd-lotes">
+              {lotesVisiveis.map(l => {
+                const proximo = FLUXO[FLUXO.indexOf(l.status) + 1];
+                const emEsterilizacao = l.status === 'Esterilização';
+                const integros = l.itens.filter(item => item.integridade !== ITEM_REJEITADO).length;
+                const liberavel = indicadoresConformes(l) && integros > 0;
+                return (
+                  <Panel key={l.id} title={l.numero} icon="las la-box" actions={<Badge tone={tomStatus(l.status)}>{l.status}</Badge>}>
+                    <dl className="cssd-dados">
+                      <dt>Setor</dt><dd>{l.setor}</dd>
+                      <dt>Operador</dt><dd>{l.operador}</dd>
+                      <dt>Equipamento</dt><dd>{l.equipamento}</dd>
+                      <dt>Ciclo</dt><dd>{l.ciclo}</dd>
+                      <dt>Itens</dt><dd>{l.itens.length} ({integros} {integros === 1 ? 'íntegro' : 'íntegros'})</dd>
+                    </dl>
+                    {emEsterilizacao && podeGerir && <IndicadoresForm key={`${l.id}-${l.indicadorQuimico}-${l.indicadorBiologico}-${l.bowieDick}`} lote={l} onSalvo={mensagem => { limparMensagens(); setSucesso(mensagem); void carregarDados(); }} onErro={mensagem => { limparMensagens(); setErroAcao(mensagem); }} />}
+                    {emEsterilizacao && !liberavel && <p className="mod-aviso mod-aviso-atencao cssd-pendencia">Para liberar: indicadores conformes e ao menos 1 item íntegro.</p>}
+                    {podeGerir && (
+                      <div className="cssd-acoes">
+                        {proximo && (
+                          <button type="button" className="btn btn-primary btn-sm" disabled={emEsterilizacao && !liberavel} onClick={() => void mudarStatus(l, proximo)}>
+                            {emEsterilizacao ? 'Liberar como pronto' : `Avançar para ${proximo}`} <i className="las la-arrow-right" aria-hidden="true"></i>
                           </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Panel>
-        )}
+                        )}
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => void rejeitarLote(l)} aria-label={`Reprovar lote ${l.numero}`}>
+                          <i className="las la-times-circle" aria-hidden="true"></i> Reprovar
+                        </button>
+                      </div>
+                    )}
+                  </Panel>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
 
-        {activeTab === 'historico' && (
-          <Panel>
-            {lotes.length === 0 ? <EmptyState icon="las la-history" message="Nenhum lote registrado." /> : (
-              <div className="tabela-wrapper cssd-tabela-branca">
-                <table className="tabela-cssd">
-                  <thead><tr><th>Nº lote</th><th>Data</th><th>Setor</th><th>Operador</th><th>Equipamento</th><th>Itens</th><th>Químico</th><th>Biológico</th><th>Bowie-Dick</th><th>Status</th></tr></thead>
-                  <tbody>
-                    {lotes.map(l => (
-                      <tr key={l.id}>
-                        <td><strong>{l.numero}</strong></td>
-                        <td>{/^\d{4}-\d{2}-\d{2}$/.test(l.data) ? new Date(`${l.data}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</td>
-                        <td>{l.setor}</td>
-                        <td>{l.operador}</td>
-                        <td>{l.equipamento}</td>
-                        <td>{l.itens.length}</td>
-                        <td><Indicador valor={l.indicadorQuimico} /></td>
-                        <td><Indicador valor={l.indicadorBiologico} /></td>
-                        <td><Indicador valor={l.bowieDick} /></td>
-                        <td><Badge tone={tomStatus(l.status)}>{l.status}</Badge></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Panel>
-        )}
-      </div>
+      {activeTab === 'historico' && (
+        <Panel>
+          {lotes.length === 0 ? <EmptyState icon="las la-history" message="Nenhum lote registrado." /> : (
+            <div className="tabela-wrapper">
+              <table className="tabela">
+                <caption className="sr-only">Histórico de lotes de esterilização</caption>
+                <thead><tr><th scope="col">Lote</th><th scope="col">Data</th><th scope="col">Setor</th><th scope="col">Operador</th><th scope="col">Equipamento</th><th scope="col">Itens</th><th scope="col">Químico</th><th scope="col">Biológico</th><th scope="col">Bowie-Dick</th><th scope="col">Status</th></tr></thead>
+                <tbody>
+                  {lotes.map(l => (
+                    <tr key={l.id}>
+                      <td><strong>{l.numero}</strong></td>
+                      <td>{/^\d{4}-\d{2}-\d{2}$/.test(l.data) ? new Date(`${l.data}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</td>
+                      <td>{l.setor}</td>
+                      <td>{l.operador}</td>
+                      <td>{l.equipamento}</td>
+                      <td>{l.itens.length}</td>
+                      <td><Indicador valor={l.indicadorQuimico} /></td>
+                      <td><Indicador valor={l.indicadorBiologico} /></td>
+                      <td><Indicador valor={l.bowieDick} /></td>
+                      <td><Badge tone={tomStatus(l.status)}>{l.status}</Badge></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
+      )}
     </div>
   );
 }

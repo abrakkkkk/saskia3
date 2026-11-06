@@ -2,12 +2,10 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useSession } from 'next-auth/react';
-import { Plus, RefreshCw, ShieldAlert } from 'lucide-react';
-import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, type Tone } from '@/components/ui';
+import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, StatCard, StatGrid, type Tone } from '@/components/ui';
 import { pode } from '@/lib/permissions';
 import { enviarJson, mensagemErro, textoDoErro } from '@/lib/resposta';
 import '@/components/ui/modulo.css';
-import './banco-sangue.css';
 
 type EstoqueSangue = { id: string; tipo: string; quantidade: number; status: string };
 type Movimentacao = { id: string; acao: string; usuarioNome: string; createdAt: string; detalhes: { tipo?: string; quantidade?: number; saldo?: number; saldoAnterior?: number; motivo?: string | null } | null };
@@ -16,6 +14,8 @@ type Operacao = 'ENTRADA' | 'SAIDA' | 'CORRECAO';
 const TIPOS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const TOM_STATUS: Record<string, Tone> = { 'CRÍTICO': 'danger', ALERTA: 'warning', NORMAL: 'success' };
 const ROTULO_ACAO: Record<string, string> = { SANGUE_ENTRADA: 'Entrada', SANGUE_SAIDA: 'Saída', SANGUE_CORRECAO: 'Correção' };
+
+const rotuloStatus = (status: string) => status.charAt(0) + status.slice(1).toLocaleLowerCase('pt-BR');
 
 export default function BancoSanguePage() {
   const { data: session } = useSession();
@@ -85,63 +85,93 @@ export default function BancoSanguePage() {
     }
   };
 
+  const criticos = estoques.filter(item => item.status === 'CRÍTICO').length;
+  const emAlerta = estoques.filter(item => item.status === 'ALERTA').length;
+
   return (
-    <div className="conteudo">
-      <div className="bs-page">
-        <PageHeader icon="las la-tint" title="Banco de Sangue" subtitle="Consulta e movimentação do estoque agregado de hemocomponentes deste hospital." />
+    <div className="conteudo mod-pagina">
+      <PageHeader icon="las la-tint" title="Banco de sangue" subtitle="Estoque e movimentação de hemocomponentes" />
 
-        <Panel
-          title="Estoque registrado"
-          actions={<button className="bs-button bs-button-secondary" type="button" onClick={() => { setAtualizando(true); void carregar(); }} disabled={atualizando} aria-label="Atualizar estoque"><RefreshCw size={16} aria-hidden="true" /> {atualizando ? 'Atualizando…' : 'Atualizar'}</button>}
-        >
-          <p className="mod-nota">A base atual guarda apenas tipo sanguíneo, quantidade e faixa de estoque.</p>
-          {loading ? <LoadingState message="Carregando estoque..." /> : erroCarga ? <ErrorState message={erroCarga} onRetry={() => void carregar()} /> : estoques.length === 0 ? <EmptyState icon="las la-tint" message="Nenhum estoque cadastrado para este hospital." /> : (
-            <div className="bs-table-wrap"><table className="bs-table">
+      {!loading && !erroCarga && estoques.length > 0 && (
+        <StatGrid>
+          <StatCard icon="las la-tint" value={estoques.length} label="Tipos registrados" />
+          <StatCard icon="las la-exclamation-circle" value={emAlerta} label="Em alerta" tone="warning" alerta hint="Tipos sanguíneos com estoque na faixa de alerta" />
+          <StatCard icon="las la-exclamation-triangle" value={criticos} label="Críticos" tone="danger" alerta hint="Tipos sanguíneos com estoque crítico" />
+        </StatGrid>
+      )}
+
+      <Panel
+        title="Estoque registrado"
+        actions={<button className="btn btn-secondary btn-sm" type="button" onClick={() => { setAtualizando(true); void carregar(); }} disabled={atualizando} aria-label="Atualizar estoque"><i className={`las la-sync${atualizando ? ' la-spin' : ''}`} aria-hidden="true"></i> {atualizando ? 'Atualizando...' : 'Atualizar'}</button>}
+      >
+        <p className="mod-nota">O sistema registra só tipo sanguíneo, quantidade e faixa de estoque.</p>
+        {loading ? <LoadingState message="Carregando estoque..." /> : erroCarga ? <ErrorState message={erroCarga} onRetry={() => void carregar()} /> : estoques.length === 0 ? <EmptyState icon="las la-tint" message="Nenhum estoque cadastrado para este hospital." /> : (
+          <div className="tabela-wrapper">
+            <table className="tabela">
               <caption className="sr-only">Estoque agregado de hemocomponentes por tipo sanguíneo</caption>
-              <thead><tr>{['Tipo sanguíneo', 'Quantidade registrada', 'Situação'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
-              <tbody>{estoques.map(item => <tr key={item.id}><td>{item.tipo}</td><td>{item.quantidade}</td><td><Badge tone={TOM_STATUS[item.status] ?? 'neutral'}>{item.status}</Badge></td></tr>)}</tbody>
-            </table></div>
-          )}
-        </Panel>
-
-        {podeGerir && (
-          <Panel title="Registrar movimentação">
-            <form className="bs-form" onSubmit={registrar}>
-              <label>Operação<select value={operacao} onChange={e => setOperacao(e.target.value as Operacao)}><option value="ENTRADA">Entrada</option><option value="SAIDA">Saída</option><option value="CORRECAO">Correção de inventário</option></select></label>
-              <label>Tipo sanguíneo<select name="tipo" required><option value="">Selecione</option>{TIPOS.map(tipo => <option key={tipo}>{tipo}</option>)}</select></label>
-              <label>{operacao === 'CORRECAO' ? 'Saldo correto' : 'Quantidade'}<input name="quantidade" type="number" min={operacao === 'CORRECAO' ? 0 : 1} step="1" inputMode="numeric" required /></label>
-              <label>Motivo{operacao === 'CORRECAO' ? ' *' : ''}<input name="motivo" type="text" maxLength={500} /></label>
-              <button className="bs-button bs-button-primary" type="submit" disabled={salvando}><Plus size={16} aria-hidden="true" />{salvando ? 'Salvando…' : 'Registrar'}</button>
-            </form>
-            {erroFormulario && <p className="mod-aviso mod-aviso-erro bs-retorno" role="alert">{erroFormulario}</p>}
-            {mensagem && <p className="mod-aviso mod-aviso-sucesso bs-retorno" role="status">{mensagem}</p>}
-          </Panel>
+              <thead><tr><th scope="col">Tipo</th><th scope="col">Quantidade</th><th scope="col">Situação</th></tr></thead>
+              <tbody>{estoques.map(item => <tr key={item.id}><td><strong>{item.tipo}</strong></td><td>{item.quantidade}</td><td><Badge tone={TOM_STATUS[item.status] ?? 'neutral'}>{rotuloStatus(item.status)}</Badge></td></tr>)}</tbody>
+            </table>
+          </div>
         )}
+      </Panel>
 
-        {!loading && movimentacoes.length > 0 && (
-          <Panel title="Últimas movimentações">
-            <div className="bs-table-wrap"><table className="bs-table">
+      {podeGerir && (
+        <Panel title="Registrar movimentação">
+          {erroFormulario && <p className="mod-aviso mod-aviso-erro" role="alert">{erroFormulario}</p>}
+          {mensagem && <p className="mod-aviso mod-aviso-sucesso" role="status">{mensagem}</p>}
+          <form onSubmit={registrar}>
+            <div className="mod-form-grid">
+              <div className="form-group">
+                <label htmlFor="bs-operacao">Operação</label>
+                <select id="bs-operacao" value={operacao} onChange={e => setOperacao(e.target.value as Operacao)}><option value="ENTRADA">Entrada</option><option value="SAIDA">Saída</option><option value="CORRECAO">Correção de inventário</option></select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="bs-tipo">Tipo sanguíneo *</label>
+                <select id="bs-tipo" name="tipo" required><option value="">Selecione</option>{TIPOS.map(tipo => <option key={tipo}>{tipo}</option>)}</select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="bs-quantidade">{operacao === 'CORRECAO' ? 'Saldo correto *' : 'Quantidade *'}</label>
+                <input id="bs-quantidade" name="quantidade" type="number" min={operacao === 'CORRECAO' ? 0 : 1} step="1" inputMode="numeric" required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="bs-motivo">Motivo{operacao === 'CORRECAO' ? ' *' : ''}</label>
+                <input id="bs-motivo" name="motivo" type="text" maxLength={500} />
+              </div>
+            </div>
+            <div className="mod-acoes">
+              <button className="btn btn-primary" type="submit" disabled={salvando}><i className="las la-plus" aria-hidden="true"></i> {salvando ? 'Salvando...' : 'Registrar'}</button>
+            </div>
+          </form>
+        </Panel>
+      )}
+
+      {!loading && movimentacoes.length > 0 && (
+        <Panel title="Últimas movimentações">
+          <div className="tabela-wrapper">
+            <table className="tabela">
               <caption className="sr-only">Últimas movimentações do estoque de sangue</caption>
-              <thead><tr>{['Data', 'Operação', 'Tipo', 'Quantidade', 'Saldo', 'Autor', 'Motivo'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
+              <thead><tr><th scope="col">Data</th><th scope="col">Operação</th><th scope="col">Tipo</th><th scope="col">Quantidade</th><th scope="col">Saldo</th><th scope="col">Autor</th><th scope="col">Motivo</th></tr></thead>
               <tbody>{movimentacoes.map(mov => (
                 <tr key={mov.id}>
                   <td>{new Date(mov.createdAt).toLocaleString('pt-BR')}</td>
                   <td>{ROTULO_ACAO[mov.acao] ?? mov.acao}</td>
-                  <td>{mov.detalhes?.tipo ?? '-'}</td>
+                  <td><strong>{mov.detalhes?.tipo ?? '-'}</strong></td>
                   <td>{mov.detalhes?.quantidade ?? '-'}</td>
                   <td>{mov.detalhes?.saldo ?? '-'}</td>
                   <td>{mov.usuarioNome}</td>
                   <td>{mov.detalhes?.motivo || '-'}</td>
                 </tr>
               ))}</tbody>
-            </table></div>
-          </Panel>
-        )}
+            </table>
+          </div>
+        </Panel>
+      )}
 
-        <aside className="mod-aviso mod-aviso-atencao bs-note" role="note">
-          <ShieldAlert size={20} aria-hidden="true" /><p><strong>Fluxos transfusionais indisponíveis.</strong> Rastreabilidade por bolsa, compatibilidade clínica, prescrição e administração não são persistidas no sistema atual. Esses fluxos permanecem desativados até implementação e validação institucional.</p>
-        </aside>
-      </div>
+      <aside className="mod-aviso mod-aviso-atencao" role="note">
+        <strong>Fluxos transfusionais indisponíveis</strong>
+        Rastreabilidade por bolsa, compatibilidade clínica, prescrição e administração não são registradas no sistema atual. Esses fluxos ficam desativados até a implementação e a validação institucional.
+      </aside>
     </div>
   );
 }

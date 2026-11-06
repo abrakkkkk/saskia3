@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, SearchInput, StatCard, StatGrid, Tabs } from '@/components/ui';
+import { Modal, ModalActions } from '@/components/ui/Modal';
 import { pode } from '@/lib/permissions';
 import { proximosStatus } from '@/lib/paciente-status';
 import { formatarCPF, formatarDataHora, formatarNascimento } from '@/lib/utils';
-import { erroDaApi, EsperaBadge, ModalNovoPaciente, StatusBadge, useAgora, useCargo } from '../pacientes/componentes';
+import { erroDaApi, Espera, ModalNovoPaciente, StatusBadge, useAgora, useCargo } from '../pacientes/componentes';
 
 interface Paciente {
   id: string;
@@ -186,26 +187,26 @@ export default function RecepcaoPage() {
         title="Recepção"
         subtitle="Cadastro, encaminhamento e controle de visitantes"
         actions={<>
-          <button type="button" className="btn pac-btn-sec" onClick={() => setModalVisitante(true)}><i className="las la-walking" aria-hidden="true"></i> Registrar visitante</button>
+          <button type="button" className="btn btn-secondary" onClick={() => setModalVisitante(true)}><i className="las la-walking" aria-hidden="true"></i> Registrar visitante</button>
           {podeCadastrar && <button type="button" className="btn btn-primary" onClick={() => setModalAberto(true)}><i className="las la-user-plus" aria-hidden="true"></i> Novo paciente</button>}
         </>}
       />
 
       <StatGrid>
-        <StatCard icon="las la-clipboard-list" tone="neutral" value={contar('Recepção')} label="Na recepção" />
-        <StatCard icon="las la-hourglass-half" tone="warning" value={contar('Aguardando Triagem')} label="Aguard. triagem" />
-        <StatCard icon="las la-user-md" value={contar('Aguardando Médico')} label="Aguard. médico" />
-        <StatCard icon="las la-bed" tone="danger" value={contar('Internado') + contar('Internado - UTI')} label="Internados" />
+        <StatCard icon="las la-clipboard-list" value={contar('Recepção')} label="Na recepção" />
+        <StatCard icon="las la-hourglass-half" tone="warning" alerta value={contar('Aguardando Triagem')} label="Aguardando triagem" />
+        <StatCard icon="las la-user-md" tone="warning" alerta value={contar('Aguardando Médico')} label="Aguardando médico" />
+        <StatCard icon="las la-bed" value={contar('Internado') + contar('Internado - UTI')} label="Internados" />
         <StatCard icon="las la-walking" value={visitantesDentro.length} label="Visitantes dentro" />
-        <StatCard icon="las la-sign-out-alt" tone="success" value={sairamHoje.length} label="Saíram hoje" />
+        <StatCard icon="las la-sign-out-alt" value={sairamHoje.length} label="Saíram hoje" />
       </StatGrid>
 
       <Panel title="Buscar paciente" icon="las la-search">
         <form className="pac-filtros" onSubmit={buscarPaciente}>
-          <SearchInput value={busca} onChange={setBusca} placeholder="Digite nome ou CPF..." label="Buscar paciente por nome ou CPF" />
+          <SearchInput value={busca} onChange={setBusca} placeholder="Nome ou CPF" label="Buscar paciente por nome ou CPF" />
           <button type="submit" className="btn btn-primary" disabled={buscando}><i className="las la-search" aria-hidden="true"></i> {buscando ? 'Buscando...' : 'Buscar'}</button>
         </form>
-        {erroBusca && <p className="pac-erro" role="alert">{erroBusca}</p>}
+        {erroBusca && <p className="mod-aviso mod-aviso-erro pac-aviso" role="alert">{erroBusca}</p>}
         {resultados && (
           resultados.length === 0 ? (
             <EmptyState
@@ -215,20 +216,22 @@ export default function RecepcaoPage() {
             />
           ) : (
             <>
-              <p className="pac-sub" role="status" style={{ margin: '12px 0' }}>{resultados.length} resultado(s). Confira dois identificadores antes de encaminhar.</p>
-              {resultados.map(p => (
-                <article key={p.id} className="pac-cartao">
-                  <div className="pac-cartao-topo">
-                    <strong>{p.nome}</strong>
+              <p className="mod-nota pac-aviso" role="status">{resultados.length} resultado(s). Confira dois identificadores antes de encaminhar.</p>
+              <ul className="pac-resultados">
+                {resultados.map(p => (
+                  <li key={p.id} className="pac-resultado">
+                    <div>
+                      <strong className="pac-nome">{p.nome}</strong>
+                      <span className="pac-sub">Nascimento: {formatarNascimento(p.nascimento) || 'não informado'} | CPF: {p.cpf ? formatarCPF(p.cpf) : 'não informado'}</span>
+                    </div>
                     <StatusBadge status={p.status} />
-                  </div>
-                  <p className="pac-sub">Nascimento: {formatarNascimento(p.nascimento) || 'não informado'} | CPF: {p.cpf ? formatarCPF(p.cpf) : 'não informado'}</p>
-                  <div className="pac-acoes" style={{ marginTop: 8 }}>
-                    <Link href={`/pacientes/${p.id}`} className="btn pac-btn-sec btn-xs">Ficha</Link>
-                    {botaoTriagem(p)}
-                  </div>
-                </article>
-              ))}
+                    <div className="pac-acoes">
+                      <Link href={`/pacientes/${p.id}`} className="btn btn-secondary btn-xs" aria-label={`Abrir ficha de ${p.nome}`}>Ficha</Link>
+                      {botaoTriagem(p)}
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </>
           )
         )}
@@ -249,18 +252,20 @@ export default function RecepcaoPage() {
           {loading ? <LoadingState /> : erroPacientes ? <ErrorState message={erroPacientes} onRetry={() => void carregarPacientes()} /> : recentes.length === 0 ? <EmptyState message="Nenhum paciente cadastrado." /> : (
             <div className="tabela-wrapper">
               <table className="tabela">
-                <thead><tr><th scope="col">Paciente</th><th scope="col">Nascimento</th><th scope="col">CPF</th><th scope="col">Cadastro</th><th scope="col">Status</th><th scope="col">Ações</th></tr></thead>
+                <caption className="sr-only">Últimos cadastros de pacientes</caption>
+                <thead><tr><th scope="col">Paciente</th><th scope="col">Nascimento</th><th scope="col">CPF</th><th scope="col">Cadastro</th><th scope="col">Status</th><th scope="col">Espera</th><th scope="col">Ações</th></tr></thead>
                 <tbody>
                   {recentes.map(p => (
                     <tr key={p.id}>
-                      <td><strong>{p.nome}</strong></td>
+                      <td><strong className="pac-nome">{p.nome}</strong></td>
                       <td>{formatarNascimento(p.nascimento) || '-'}</td>
                       <td>{p.cpf ? formatarCPF(p.cpf) : '-'}</td>
                       <td>{formatarDataHora(p.createdAt)}</td>
-                      <td><StatusBadge status={p.status} /><EsperaBadge status={p.status} desde={p.esperaDesde} agora={agora} /></td>
+                      <td><StatusBadge status={p.status} /></td>
+                      <td><Espera status={p.status} desde={p.esperaDesde} classificacao={p.classificacao} agora={agora} /></td>
                       <td>
                         <div className="pac-acoes">
-                          <Link href={`/pacientes/${p.id}`} className="btn pac-btn-sec btn-xs" aria-label={`Abrir ficha de ${p.nome}`}><i className="las la-eye" aria-hidden="true"></i> Ficha</Link>
+                          <Link href={`/pacientes/${p.id}`} className="btn btn-secondary btn-xs" aria-label={`Abrir ficha de ${p.nome}`}><i className="las la-eye" aria-hidden="true"></i> Ficha</Link>
                           {botaoTriagem(p)}
                         </div>
                       </td>
@@ -278,17 +283,18 @@ export default function RecepcaoPage() {
           {erroVisitantes ? <ErrorState message={erroVisitantes} onRetry={() => void carregarVisitantes()} /> : visitantes.length === 0 ? <EmptyState icon="las la-door-open" message="Nenhum visitante registrado." /> : (
             <div className="tabela-wrapper">
               <table className="tabela">
+                <caption className="sr-only">Visitantes registrados</caption>
                 <thead><tr><th scope="col">Nome</th><th scope="col">Documento</th><th scope="col">Destino</th><th scope="col">Entrada</th><th scope="col">Saída</th><th scope="col">Status</th><th scope="col">Ação</th></tr></thead>
                 <tbody>
                   {visitantes.map(v => (
                     <tr key={v.id}>
-                      <td><strong>{v.nome}</strong></td>
+                      <td><strong className="pac-nome">{v.nome}</strong></td>
                       <td>{v.documento || '-'}</td>
                       <td>{v.destino || '-'}</td>
                       <td>{formatarDataHora(v.entrada)}</td>
                       <td>{v.saida ? formatarDataHora(v.saida) : '-'}</td>
                       <td><Badge tone={v.status === 'DENTRO' ? 'success' : 'neutral'}>{v.status === 'DENTRO' ? 'Dentro' : 'Saiu'}</Badge></td>
-                      <td>{v.status === 'DENTRO' ? <button type="button" className="btn btn-danger btn-xs" onClick={() => darSaidaVisitante(v.id)}><i className="las la-sign-out-alt" aria-hidden="true"></i> Dar saída</button> : 'Concluído'}</td>
+                      <td>{v.status === 'DENTRO' ? <button type="button" className="btn btn-secondary btn-xs" aria-label={`Dar saída a ${v.nome}`} onClick={() => darSaidaVisitante(v.id)}><i className="las la-sign-out-alt" aria-hidden="true"></i> Dar saída</button> : 'Concluído'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -301,24 +307,18 @@ export default function RecepcaoPage() {
       {modalAberto && <ModalNovoPaciente onFechar={() => setModalAberto(false)} onCriado={() => { setModalAberto(false); void carregarPacientes(); }} />}
 
       {modalVisitante && (
-        <div className="pac-modal-fundo">
-          <div className="pac-modal pac-modal-estreito" role="dialog" aria-modal="true" aria-labelledby="visitante-titulo">
-            <div className="pac-modal-topo">
-              <h2 id="visitante-titulo">Registrar visitante</h2>
-              <button type="button" className="pac-icone-btn" aria-label="Fechar cadastro de visitante" onClick={() => setModalVisitante(false)}><i className="las la-times" aria-hidden="true"></i></button>
-            </div>
-            <form onSubmit={criarVisitante}>
-              {erroFormVisitante && <p className="pac-erro" role="alert">{erroFormVisitante}</p>}
-              <div className="form-group"><label htmlFor="recepcao-visitante-nome">Nome completo *</label><input id="recepcao-visitante-nome" required maxLength={160} value={formVisitante.nome} onChange={e => setFormVisitante({ ...formVisitante, nome: e.target.value })} /></div>
-              <div className="form-group"><label htmlFor="recepcao-visitante-documento">Documento (RG/CPF)</label><input id="recepcao-visitante-documento" maxLength={40} value={formVisitante.documento} onChange={e => setFormVisitante({ ...formVisitante, documento: e.target.value })} /></div>
-              <div className="form-group"><label htmlFor="recepcao-visitante-destino">Destino</label><input id="recepcao-visitante-destino" maxLength={160} placeholder="Ex: Leito 104, UTI, Diretoria" value={formVisitante.destino} onChange={e => setFormVisitante({ ...formVisitante, destino: e.target.value })} /></div>
-              <div className="pac-rodape">
-                <button type="button" className="btn pac-btn-sec" onClick={() => setModalVisitante(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary"><i className="las la-door-open" aria-hidden="true"></i> Registrar entrada</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <Modal size="sm" title="Registrar visitante" closeLabel="Fechar cadastro de visitante" onClose={() => setModalVisitante(false)}>
+          <form onSubmit={criarVisitante}>
+            {erroFormVisitante && <p className="mod-aviso mod-aviso-erro" role="alert">{erroFormVisitante}</p>}
+            <div className="form-group"><label htmlFor="recepcao-visitante-nome">Nome completo *</label><input id="recepcao-visitante-nome" required maxLength={160} value={formVisitante.nome} onChange={e => setFormVisitante({ ...formVisitante, nome: e.target.value })} /></div>
+            <div className="form-group"><label htmlFor="recepcao-visitante-documento">Documento (RG/CPF)</label><input id="recepcao-visitante-documento" maxLength={40} value={formVisitante.documento} onChange={e => setFormVisitante({ ...formVisitante, documento: e.target.value })} /></div>
+            <div className="form-group"><label htmlFor="recepcao-visitante-destino">Destino</label><input id="recepcao-visitante-destino" maxLength={160} placeholder="Ex.: Leito 104, UTI, Diretoria" value={formVisitante.destino} onChange={e => setFormVisitante({ ...formVisitante, destino: e.target.value })} /></div>
+            <ModalActions>
+              <button type="button" className="btn btn-secondary" onClick={() => setModalVisitante(false)}>Cancelar</button>
+              <button type="submit" className="btn btn-primary"><i className="las la-door-open" aria-hidden="true"></i> Registrar entrada</button>
+            </ModalActions>
+          </form>
+        </Modal>
       )}
     </div>
   );

@@ -1,0 +1,4 @@
+/* painel-chamadas (TV): mesma família da aplicação (Inter); números tabulares para o relógio e os contadores. */
+.painel-tv { font-family: Inter, "Segoe UI", sans-serif; }
+.painel-hora { font-variant-numeric: tabular-nums; }
+.painel-data::first-letter { text-transform: uppercase; }

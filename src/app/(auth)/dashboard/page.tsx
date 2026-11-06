@@ -1,10 +1,10 @@
-﻿'use client'
+'use client'
 
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { inter } from '@/app/fonts'
-import { ErrorState, LoadingState } from '@/components/ui'
+import { ErrorState, LoadingState, StatCard, StatGrid, type Tone } from '@/components/ui'
 import { menuDoCargo } from '@/lib/navigation'
 import { CARGO_LABEL, type Cargo } from '@/lib/permissions'
 import './dashboard.css'
@@ -134,17 +134,19 @@ export default function DashboardPage() {
   const s = stats
 
   // Rótulos curtos; a definição exata de cada contagem fica no tooltip.
-  const kpis = s ? [
-    { config: 'contador_aguardando', icone: 'las la-hourglass-half', tom: 'warning', valor: valor(s.aguardando), rotulo: 'Aguardando', dica: 'Recepção, triagem e médico' },
+  // Cor só onde significa algo: `alerta` pinta o número quando há o que fazer.
+  type Kpi = { config: string; icone: string; tom: Tone; valor: string | number; rotulo: string; sub?: string; dica: string; alerta?: boolean }
+  const kpis: Kpi[] = s ? [
+    { config: 'contador_aguardando', icone: 'las la-hourglass-half', tom: 'warning', alerta: true, valor: valor(s.aguardando), rotulo: 'Aguardando', dica: 'Recepção, triagem e médico' },
     { config: 'contador_atendidos', icone: 'las la-user-md', tom: 'info', valor: valor(s.emAtendimento), rotulo: 'Em atendimento', dica: 'Triagem e consulta em curso' },
-    { config: 'contador_total', icone: 'las la-procedures', tom: 'pink', valor: valor(s.internados), rotulo: 'Internados', dica: 'Enfermaria e UTI' },
-    { config: 'contador_leitos_vermelha', icone: 'las la-exclamation-circle', tom: 'danger', valor: valor(s.riscoVermelho), rotulo: 'Risco vermelho', dica: 'Classificação de risco em curso (não é sala)' },
-    { config: 'contador_leitos_amarela', icone: 'las la-exclamation-triangle', tom: 'warning', valor: valor(s.riscoAmarelo), rotulo: 'Risco amarelo', dica: 'Classificação de risco em curso (não é sala)' },
-    { config: 'contador_salas_cc', icone: 'las la-cut', tom: 'success', valor: valor(s.cirurgiasEmAndamento), rotulo: 'Cirurgias', sub: 'em andamento', dica: 'Cirurgias em andamento agora' },
-    { config: 'contador_leitos_uti', icone: 'las la-bed', tom: 'success', valor: statsErro && !stats ? '—' : `${s.leitosUti}/${s.totalLeitosUti}`, rotulo: 'Leitos de UTI', sub: 'ocupados', dica: 'Ocupados / cadastrados' },
+    { config: 'contador_total', icone: 'las la-procedures', tom: 'violet', valor: valor(s.internados), rotulo: 'Internados', dica: 'Enfermaria e UTI' },
+    { config: 'contador_leitos_vermelha', icone: 'las la-exclamation-circle', tom: 'danger', alerta: true, valor: valor(s.riscoVermelho), rotulo: 'Risco vermelho', dica: 'Classificação de risco em curso (não é sala)' },
+    { config: 'contador_leitos_amarela', icone: 'las la-exclamation-triangle', tom: 'yellow', alerta: true, valor: valor(s.riscoAmarelo), rotulo: 'Risco amarelo', dica: 'Classificação de risco em curso (não é sala)' },
+    { config: 'contador_salas_cc', icone: 'las la-cut', tom: 'teal', valor: valor(s.cirurgiasEmAndamento), rotulo: 'Cirurgias', dica: 'Cirurgias em andamento agora' },
+    { config: 'contador_leitos_uti', icone: 'las la-bed', tom: 'cyan', valor: statsErro && !stats ? '—' : `${s.leitosUti}/${s.totalLeitosUti}`, rotulo: 'Leitos UTI', dica: 'Leitos ocupados / cadastrados' },
     { config: 'contador_altas', icone: 'las la-check-circle', tom: 'success', valor: valor(s.altas), rotulo: 'Altas', dica: 'Registros ativos, sem período' },
-    { config: 'contador_evasao', icone: 'las la-door-open', tom: 'danger', valor: valor(s.evasoes), rotulo: 'Evasões', dica: 'Registros ativos, sem período' },
-    { config: 'contador_transferencias', icone: 'las la-truck', tom: 'info', valor: valor(s.transferencias), rotulo: 'Transferências', dica: 'Registros ativos, sem período' },
+    { config: 'contador_evasao', icone: 'las la-door-open', tom: 'rose', alerta: true, valor: valor(s.evasoes), rotulo: 'Evasões', dica: 'Registros ativos, sem período' },
+    { config: 'contador_transferencias', icone: 'las la-truck', tom: 'neutral', valor: valor(s.transferencias), rotulo: 'Transferências', dica: 'Registros ativos, sem período' },
     { config: 'contador_obitos', icone: 'las la-cross', tom: 'neutral', valor: valor(s.obitos), rotulo: 'Óbitos', dica: 'Total registrado, sem período' },
   ] : []
 
@@ -156,6 +158,7 @@ export default function DashboardPage() {
 
   return (
     <div className={inter.className}>
+      <h1 className="sr-only">Painel inicial</h1>
       <div className="perfil-profissional">
         <div className="perfil-info">
           <div className="perfil-avatar" aria-hidden="true"><i className="las la-user-md"></i></div>
@@ -172,16 +175,11 @@ export default function DashboardPage() {
 
       {s && (
         <section aria-label="Indicadores do momento">
-          <div className="kpis">
+          <StatGrid>
             {kpis.filter(k => ativo(k.config)).map(k => (
-              <div key={k.config} className={`kpi kpi-${k.tom}`} title={k.dica}>
-                <i className={k.icone} aria-hidden="true"></i>
-                <div className="kpi-valor">{k.valor}</div>
-                <div className="kpi-rotulo">{k.rotulo}</div>
-                {k.sub && <div className="kpi-sub">{k.sub}</div>}
-              </div>
+              <StatCard key={k.config} icon={k.icone} tone={k.tom} alerta={k.alerta} value={k.valor} label={k.sub ? `${k.rotulo} ${k.sub}` : k.rotulo} hint={k.dica} />
             ))}
-          </div>
+          </StatGrid>
           {atualizadoEm && <p className="kpi-atualizado">Atualizado às {atualizadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>}
         </section>
       )}

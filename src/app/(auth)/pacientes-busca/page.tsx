@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Badge } from '@/components/ui';
+import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel } from '@/components/ui';
 import { STATUS_PACIENTE } from '@/lib/paciente-status';
 import { pode } from '@/lib/permissions';
 import { formatarCPF, formatarNascimento, nascimentoParaInput, STATUS_TOM } from '@/lib/utils';
 import { erroDaApi, useCargo } from '../pacientes/componentes';
-import styles from './pacientes-busca.module.css';
+import './pacientes-busca.css';
 
 interface Paciente {
   id: string;
@@ -23,26 +23,24 @@ interface Paciente {
 }
 
 function normalizarBusca(valor: string) {
-  return valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').trim();
+  return valor.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR').trim();
 }
+
+const FILTROS_VAZIOS = { nome: '', cpf: '', mae: '', nascimento: '', telefone: '', sexo: '', endereco: '', status: '' };
+
+const BUSCAS_RAPIDAS = [
+  { rotulo: 'Internados', status: 'Internado' },
+  { rotulo: 'Altas', status: 'Alta Médica' },
+  { rotulo: 'Óbitos', status: 'Óbito' },
+  { rotulo: 'Evasões', status: 'Evasão' },
+] as const;
 
 export default function BuscarPacientesPage() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erroCarga, setErroCarga] = useState('');
-  
-  // Filtros
-  const [filtros, setFiltros] = useState({
-    nome: '',
-    cpf: '',
-    mae: '',
-    nascimento: '',
-    telefone: '',
-    sexo: '',
-    endereco: '',
-    status: ''
-  });
-
+  const [tentativa, setTentativa] = useState(0);
+  const [filtros, setFiltros] = useState(FILTROS_VAZIOS);
   const [ordenacao, setOrdenacao] = useState<{ campo: keyof Paciente, direcao: 'asc'|'desc' }>({ campo: 'nome', direcao: 'asc' });
 
   const cargo = useCargo();
@@ -88,13 +86,9 @@ export default function BuscarPacientesPage() {
     };
     void carregar();
     return () => controller.abort();
-  }, [consultaServidor]);
+  }, [consultaServidor, tentativa]);
 
-  const limparFiltros = () => {
-    setFiltros({
-      nome: '', cpf: '', mae: '', nascimento: '', telefone: '', sexo: '', endereco: '', status: ''
-    });
-  };
+  const limparFiltros = () => setFiltros(FILTROS_VAZIOS);
 
   const pacientesFiltrados = pacientes.filter(p => {
     const nomeFiltro = normalizarBusca(filtros.nome);
@@ -125,6 +119,8 @@ export default function BuscarPacientesPage() {
     }));
   };
 
+  const sentido = (campo: keyof Paciente) => ordenacao.campo === campo ? (ordenacao.direcao === 'asc' ? 'ascending' : 'descending') : 'none';
+
   // Geração e auditoria no servidor. Filtros de texto vão junto para o arquivo refletir a tela.
   const exportarCSV = async () => {
     setExportando(true);
@@ -152,63 +148,51 @@ export default function BuscarPacientesPage() {
     }
   };
 
-  const statusDisponiveis = [...STATUS_PACIENTE];
-
   return (
-    <div className={styles.page}>
-      
-      {/* Banner */}
-      <div className={styles.banner}>
-        <div>
-          <h1><i className="las la-search" aria-hidden="true"></i> Busca Avançada de Pacientes</h1>
-          <p>Pesquise pacientes ativos por nome, documentos, contato e status</p>
-        </div>
-        <div className={styles.bannerActions}>
-          {podeExportar && (
-            <button type="button" onClick={exportarCSV} className={styles.exportButton} disabled={carregando || exportando || pacientesFiltrados.length === 0}>
-              <i className="las la-download" aria-hidden="true"></i> {exportando ? 'Exportando...' : `Exportar resultados (${pacientesFiltrados.length})`}
-            </button>
-          )}
-        </div>
-      </div>
+    <div className="pb-pagina">
+      <PageHeader
+        icon="las la-search"
+        title="Busca de pacientes"
+        subtitle="Nome, documentos, contato e status"
+        actions={podeExportar && (
+          <button type="button" onClick={exportarCSV} className="btn btn-secondary" disabled={carregando || exportando || pacientesFiltrados.length === 0}>
+            <i className="las la-download" aria-hidden="true"></i> {exportando ? 'Exportando...' : `Exportar (${pacientesFiltrados.length})`}
+          </button>
+        )}
+      />
 
-      {/* Painel de Filtros */}
-      <section className={styles.filterPanel} aria-labelledby="filtros-pacientes-heading">
-        <h2 className={styles.filtersTitle} id="filtros-pacientes-heading">
-          <i className="las la-filter" aria-hidden="true"></i> Filtros de Pesquisa
-        </h2>
-        
-        <div className={styles.filtersGrid}>
-          <div className={styles.field}>
-            <label htmlFor="busca-paciente-nome"><i className="las la-user" aria-hidden="true"></i> Nome</label>
-            <input id="busca-paciente-nome" type="text" className={styles.control} value={filtros.nome} onChange={e => setFiltros({...filtros, nome: e.target.value})} placeholder="Nome completo ou parte" />
+      <Panel title="Filtros" icon="las la-filter">
+        <div className="mod-form-grid">
+          <div className="form-group">
+            <label htmlFor="busca-paciente-nome">Nome</label>
+            <input id="busca-paciente-nome" type="text" value={filtros.nome} onChange={e => setFiltros({ ...filtros, nome: e.target.value })} placeholder="Nome ou parte dele" />
           </div>
           {buscaCompleta && (
-            <div className={styles.field}>
-              <label htmlFor="busca-paciente-cpf"><i className="las la-id-card" aria-hidden="true"></i> CPF</label>
-              <input id="busca-paciente-cpf" type="text" inputMode="numeric" className={styles.control} value={filtros.cpf} onChange={e => setFiltros({...filtros, cpf: e.target.value})} placeholder="000.000.000-00" />
+            <div className="form-group">
+              <label htmlFor="busca-paciente-cpf">CPF</label>
+              <input id="busca-paciente-cpf" type="text" inputMode="numeric" value={filtros.cpf} onChange={e => setFiltros({ ...filtros, cpf: e.target.value })} placeholder="000.000.000-00" />
             </div>
           )}
           {buscaCompleta && (
-            <div className={styles.field}>
-              <label htmlFor="busca-paciente-mae"><i className="las la-female" aria-hidden="true"></i> Nome da Mãe</label>
-              <input id="busca-paciente-mae" type="text" className={styles.control} value={filtros.mae} onChange={e => setFiltros({...filtros, mae: e.target.value})} placeholder="Nome da mãe" />
+            <div className="form-group">
+              <label htmlFor="busca-paciente-mae">Nome da mãe</label>
+              <input id="busca-paciente-mae" type="text" value={filtros.mae} onChange={e => setFiltros({ ...filtros, mae: e.target.value })} placeholder="Nome da mãe" />
             </div>
           )}
-          <div className={styles.field}>
-            <label htmlFor="busca-paciente-nascimento"><i className="las la-calendar" aria-hidden="true"></i> Nascimento</label>
-            <input id="busca-paciente-nascimento" type="date" className={styles.control} value={filtros.nascimento} onChange={e => setFiltros({...filtros, nascimento: e.target.value})} />
+          <div className="form-group">
+            <label htmlFor="busca-paciente-nascimento">Nascimento</label>
+            <input id="busca-paciente-nascimento" type="date" value={filtros.nascimento} onChange={e => setFiltros({ ...filtros, nascimento: e.target.value })} />
           </div>
           {buscaCompleta && (
-            <div className={styles.field}>
-              <label htmlFor="busca-paciente-telefone"><i className="las la-phone" aria-hidden="true"></i> Telefone</label>
-              <input id="busca-paciente-telefone" type="tel" inputMode="tel" className={styles.control} value={filtros.telefone} onChange={e => setFiltros({...filtros, telefone: e.target.value})} placeholder="(00) 00000-0000" />
+            <div className="form-group">
+              <label htmlFor="busca-paciente-telefone">Telefone</label>
+              <input id="busca-paciente-telefone" type="tel" inputMode="tel" value={filtros.telefone} onChange={e => setFiltros({ ...filtros, telefone: e.target.value })} placeholder="(00) 00000-0000" />
             </div>
           )}
           {buscaCompleta && (
-            <div className={styles.field}>
-              <label htmlFor="busca-paciente-sexo"><i className="las la-venus-mars" aria-hidden="true"></i> Sexo</label>
-              <select id="busca-paciente-sexo" className={styles.control} value={filtros.sexo} onChange={e => setFiltros({...filtros, sexo: e.target.value})}>
+            <div className="form-group">
+              <label htmlFor="busca-paciente-sexo">Sexo</label>
+              <select id="busca-paciente-sexo" value={filtros.sexo} onChange={e => setFiltros({ ...filtros, sexo: e.target.value })}>
                 <option value="">Todos</option>
                 <option value="Masculino">Masculino</option>
                 <option value="Feminino">Feminino</option>
@@ -217,55 +201,50 @@ export default function BuscarPacientesPage() {
             </div>
           )}
           {buscaCompleta && (
-            <div className={styles.field}>
-              <label htmlFor="busca-paciente-endereco"><i className="las la-map-marker" aria-hidden="true"></i> Cidade/Endereço</label>
-              <input id="busca-paciente-endereco" type="text" className={styles.control} value={filtros.endereco} onChange={e => setFiltros({...filtros, endereco: e.target.value})} placeholder="Cidade ou rua" />
+            <div className="form-group">
+              <label htmlFor="busca-paciente-endereco">Cidade ou endereço</label>
+              <input id="busca-paciente-endereco" type="text" value={filtros.endereco} onChange={e => setFiltros({ ...filtros, endereco: e.target.value })} placeholder="Cidade ou rua" />
             </div>
           )}
-          <div className={styles.field}>
-            <label htmlFor="busca-paciente-status"><i className="las la-flag" aria-hidden="true"></i> Status</label>
-            <select id="busca-paciente-status" className={styles.control} value={filtros.status} onChange={e => setFiltros({...filtros, status: e.target.value})}>
-              <option value="">Todos os Status</option>
-              {statusDisponiveis.map(status => <option key={status} value={status}>{status}</option>)}
+          <div className="form-group">
+            <label htmlFor="busca-paciente-status">Status</label>
+            <select id="busca-paciente-status" value={filtros.status} onChange={e => setFiltros({ ...filtros, status: e.target.value })}>
+              <option value="">Todos</option>
+              {STATUS_PACIENTE.map(status => <option key={status} value={status}>{status}</option>)}
             </select>
           </div>
         </div>
 
-        <div className={styles.quickFilters}>
-          <span>Buscas rápidas:</span>
-          <button type="button" onClick={() => setFiltros({...filtros, status: 'Internado'})}>Internados</button>
-          <button type="button" onClick={() => setFiltros({...filtros, status: 'Alta Médica'})}>Altas</button>
-          <button type="button" onClick={() => setFiltros({...filtros, status: 'Óbito'})}>Óbitos</button>
-          <button type="button" onClick={() => setFiltros({...filtros, status: 'Evasão'})}>Evasões</button>
-          <button type="button" className={styles.clearFilters} onClick={limparFiltros}>Limpar Filtros</button>
+        <div className="pb-rapidas" role="group" aria-label="Buscas rápidas">
+          {BUSCAS_RAPIDAS.map(r => (
+            <button key={r.status} type="button" className="btn btn-secondary btn-sm" aria-pressed={filtros.status === r.status} onClick={() => setFiltros({ ...filtros, status: r.status })}>{r.rotulo}</button>
+          ))}
+          <button type="button" className="btn btn-secondary btn-sm" onClick={limparFiltros}>Limpar filtros</button>
         </div>
-      </section>
+      </Panel>
 
-      {/* Resultados */}
-      <div className={styles.resultSummary} aria-live="polite">
-        <div><i className="las la-users" aria-hidden="true"></i> <strong>{pacientesFiltrados.length}</strong> paciente(s) encontrado(s)</div>
-        {total > pacientes.length && <div>Resultado parcial: {pacientes.length} de {total} analisados. Combine CPF, status, sexo ou nascimento para ampliar.</div>}
-      </div>
-
-      {erroCarga && <p className={styles.loadError} role="alert">{erroCarga}</p>}
-
-      <div className={styles.resultsCard}>
+      <Panel
+        title="Resultados"
+        icon="las la-users"
+        actions={!carregando && !erroCarga && <span className="pb-contagem" aria-live="polite"><strong>{pacientesFiltrados.length}</strong> paciente(s) encontrado(s)</span>}
+      >
+        {total > pacientes.length && (
+          <p className="mod-aviso mod-aviso-atencao" role="status">Resultado parcial: {pacientes.length} de {total} analisados. Combine CPF, status, sexo ou nascimento para ampliar.</p>
+        )}
         {carregando ? (
-          <div className={styles.loading} role="status"><i className="las la-spinner la-spin" aria-hidden="true"></i><span>Carregando pacientes...</span></div>
+          <LoadingState message="Carregando pacientes..." />
         ) : erroCarga ? (
-          <div className={styles.emptyState}><i className="las la-exclamation-circle" aria-hidden="true"></i><p>Os resultados estão indisponíveis até que os dados possam ser carregados.</p></div>
+          <ErrorState message={erroCarga} onRetry={() => { setCarregando(true); setTentativa(n => n + 1); }} />
         ) : pacientesFiltrados.length === 0 ? (
-          <div className={styles.emptyState}>
-            <i className="las la-search" aria-hidden="true"></i>
-            <p>Nenhum paciente encontrado com os filtros atuais.</p>
-          </div>
+          <EmptyState icon="las la-search" message="Nenhum paciente encontrado com os filtros atuais." />
         ) : (
-          <div className={styles.tableViewport}>
-            <table className={styles.table}>
+          <div className="tabela-wrapper">
+            <table className="tabela">
+              <caption className="sr-only">Pacientes encontrados</caption>
               <thead>
                 <tr>
-                  <th scope="col" aria-sort={ordenacao.campo === 'nome' ? ordenacao.direcao === 'asc' ? 'ascending' : 'descending' : 'none'}><button type="button" className={styles.sortButton} onClick={() => handleOrdenacao('nome')}>Paciente <i className="las la-sort" aria-hidden="true"></i></button></th>
-                  <th scope="col" aria-sort={ordenacao.campo === 'cpf' ? ordenacao.direcao === 'asc' ? 'ascending' : 'descending' : 'none'}><button type="button" className={styles.sortButton} onClick={() => handleOrdenacao('cpf')}>CPF <i className="las la-sort" aria-hidden="true"></i></button></th>
+                  <th scope="col" aria-sort={sentido('nome')}><button type="button" className="pb-ordenar" onClick={() => handleOrdenacao('nome')}>Paciente <i className="las la-sort" aria-hidden="true"></i></button></th>
+                  <th scope="col" aria-sort={sentido('cpf')}><button type="button" className="pb-ordenar" onClick={() => handleOrdenacao('cpf')}>CPF <i className="las la-sort" aria-hidden="true"></i></button></th>
                   <th scope="col">Sexo</th>
                   <th scope="col">Nascimento</th>
                   <th scope="col">Status</th>
@@ -275,18 +254,13 @@ export default function BuscarPacientesPage() {
               <tbody>
                 {pacientesFiltrados.map(p => (
                   <tr key={p.id}>
-                    <td className={styles.patientNameCell}>
-                      <div className={styles.avatar} aria-hidden="true">
-                        {p.nome.charAt(0)}
-                      </div>
-                      {p.nome}
-                    </td>
+                    <td className="pb-nome">{p.nome}</td>
                     <td>{p.cpf ? formatarCPF(p.cpf) : 'N/I'}</td>
                     <td>{p.sexo || 'N/I'}</td>
                     <td>{formatarNascimento(p.nascimento) || 'N/I'}</td>
                     <td><Badge tone={STATUS_TOM[p.status] ?? 'neutral'}>{p.status}</Badge></td>
                     <td>
-                      <Link href={`/pacientes/${p.id}`} className={styles.recordLink}>
+                      <Link href={`/pacientes/${p.id}`} className="btn btn-primary btn-xs" aria-label={`Abrir ficha de ${p.nome}`}>
                         <i className="las la-folder-open" aria-hidden="true"></i> Ficha
                       </Link>
                     </td>
@@ -296,7 +270,7 @@ export default function BuscarPacientesPage() {
             </table>
           </div>
         )}
-      </div>
+      </Panel>
     </div>
   );
 }

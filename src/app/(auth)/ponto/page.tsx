@@ -3,7 +3,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { estadoApos, minutosTrabalhados, normalizarTipo, PROXIMOS } from '@/lib/ponto';
+import { PageHeader, StatGrid, StatCard, Tabs, Panel, Badge, SearchInput, EmptyState, LoadingState, ErrorState, type Tone } from '@/components/ui';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
 import './ponto.css';
+
+const ABAS = [
+  { id: 'hoje', label: 'Hoje', icon: 'las la-calendar-day' },
+  { id: 'historico', label: 'Histórico', icon: 'las la-history' },
+  { id: 'expediente', label: 'Expediente', icon: 'las la-business-time' },
+] as const;
 
 interface RegistroPonto {
   id: string;
@@ -21,7 +30,7 @@ export default function PontoPage() {
   const [registros, setRegistros] = useState<RegistroPonto[]>([]);
   const [horaAtual, setHoraAtual] = useState('');
   const [dataAtual, setDataAtual] = useState('');
-  const [tabAtiva, setTabAtiva] = useState('hoje');
+  const [tabAtiva, setTabAtiva] = useState<(typeof ABAS)[number]['id']>('hoje');
   const [erroApi, setErroApi] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [agoraMs, setAgoraMs] = useState(0);
@@ -128,10 +137,8 @@ export default function PontoPage() {
   const btnSaidaDisabled = !permitidos.includes('SAÍDA');
   const btnInicioIntervaloDisabled = !permitidos.includes('INÍCIO INTERVALO');
   const btnFimIntervaloDisabled = !permitidos.includes('FIM INTERVALO');
-  const temEntrada = estado !== 'FORA';
   const temSaida = estado === 'FORA' && ultimoRegistro?.tipo === 'SAÍDA';
   let statusTexto = estado === 'FORA' ? (temSaida ? 'Jornada encerrada' : 'Jornada não iniciada') : estado === 'EM_INTERVALO' ? 'Em intervalo' : 'Em jornada';
-  const statusClasse = estado === 'FORA' ? 'status-ponto status-finalizado' : estado === 'EM_INTERVALO' ? 'status-ponto status-intervalo' : 'status-ponto status-trabalhando';
   if (!dadosCarregados) {
     statusTexto = carregandoRegistros ? 'Carregando status...' : 'Status indisponível';
   }
@@ -171,12 +178,18 @@ export default function PontoPage() {
   const totalMin = minutosTrabalhados([...regMes].sort((a, b) => a.timestamp - b.timestamp));
   const expHorasStr = String(Math.floor(totalMin / 60)).padStart(2,'0') + ':' + String(totalMin % 60).padStart(2,'0');
 
-  const getBadgeClass = (tipo: string) => {
-    if (tipo === 'ENTRADA') return 'badge-success';
-    if (tipo === 'SAÍDA') return 'badge-danger';
-    if (tipo.includes('INTERVALO')) return 'badge-warning';
-    return 'badge-info';
+  const getBadgeTone = (tipo: string): Tone => {
+    if (tipo === 'ENTRADA') return 'success';
+    if (tipo === 'SAÍDA') return 'danger';
+    if (tipo.includes('INTERVALO')) return 'warning';
+    return 'info';
   };
+  const rotuloTipo = (tipo: string) => {
+    const rotulos: Record<string, string> = { 'ENTRADA': 'Entrada', 'SAÍDA': 'Saída', 'INÍCIO INTERVALO': 'Início do intervalo', 'FIM INTERVALO': 'Fim do intervalo' };
+    return rotulos[tipo] ?? tipo;
+  };
+  const toneStatus: Tone = estado === 'FORA' ? 'neutral' : estado === 'EM_INTERVALO' ? 'warning' : 'success';
+  const bloqueado = salvando || carregandoRegistros || !dadosCarregados;
 
   const imprimirRelatorioPonto = () => {
     const janela = window.open('','_blank');
@@ -199,115 +212,79 @@ export default function PontoPage() {
   };
 
   return (
-    <>
-    {erroApi && <div className="ponto-erro" role="alert"><span>{erroApi}</span><button type="button" onClick={() => void fetchRegistros()} disabled={carregandoRegistros}>Tentar novamente</button></div>}
-    <div className="conteudo">
-      <div className="ponto-container">
-        <div className="banner-ponto">
-          <div>
-            <h1><i className="las la-clock"></i> Meu ponto (registro interno)</h1>
-            <p>Registro interno de entradas, intervalos e saídas. Não substitui o ponto oficial da instituição.</p>
+    <div className="mod-pagina">
+      <PageHeader icon="las la-clock" title="Meu ponto" subtitle="Registro interno de entradas, intervalos e saídas. Não substitui o ponto oficial da instituição." />
+
+      {erroApi && (
+        <div className="mod-aviso mod-aviso-erro" role="alert">
+          {erroApi}{' '}
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => void fetchRegistros()} disabled={carregandoRegistros}>Tentar novamente</button>
+        </div>
+      )}
+
+      <Panel>
+        <div className="pt-relogio">
+          <div className="pt-hora" aria-label="Hora atual">{horaAtual || '00:00:00'}</div>
+          <div className="pt-data">{dataAtual || 'Carregando...'}</div>
+          <div role="status" aria-live="polite">
+            <Badge tone={dadosCarregados ? toneStatus : 'neutral'}>{statusTexto}</Badge>
           </div>
         </div>
-
-        <div className="relogio-secao">
-          <div className="relogio-digital">{horaAtual || '00:00:00'}</div>
-          <div className="data-completa">{dataAtual || 'Carregando...'}</div>
-          
-          <div className={statusClasse} role="status" aria-live="polite">
-            <i className={`las ${temEntrada && temSaida ? 'la-check-circle' : 'la-circle'}`}></i> 
-            <span>{statusTexto}</span>
-          </div>
-          
-          <div className="ponto-botoes">
-            <button className="btn-ponto-acao btn-entrada" disabled={btnEntradaDisabled || salvando || carregandoRegistros || !dadosCarregados} onClick={() => registrar('ENTRADA')}>
-              <i className="las la-sign-in-alt"></i><span>ENTRADA</span>
-            </button>
-            <button className="btn-ponto-acao btn-inicio-intervalo" disabled={btnInicioIntervaloDisabled || salvando || carregandoRegistros || !dadosCarregados} onClick={() => registrar('INÍCIO INTERVALO')}>
-              <i className="las la-coffee"></i><span>INTERVALO</span>
-            </button>
-            <button className="btn-ponto-acao btn-fim-intervalo" disabled={btnFimIntervaloDisabled || salvando || carregandoRegistros || !dadosCarregados} onClick={() => registrar('FIM INTERVALO')}>
-              <i className="las la-undo-alt"></i><span>FIM INTERVALO</span>
-            </button>
-            <button className="btn-ponto-acao btn-saida" disabled={btnSaidaDisabled || salvando || carregandoRegistros || !dadosCarregados} onClick={() => registrar('SAÍDA')}>
-              <i className="las la-sign-out-alt"></i><span>SAÍDA</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="status-cards">
-          <div className="status-card">
-            <div className="card-icon" style={{color:'#16a34a'}}><i className="las la-sign-in-alt"></i></div>
-            <div className="card-numero">{regEntrada ? regEntrada.hora : '--:--'}</div>
-            <div className="card-label">Entrada da jornada</div>
-          </div>
-          <div className="status-card">
-            <div className="card-icon" style={{color:'#dc2626'}}><i className="las la-sign-out-alt"></i></div>
-            <div className="card-numero">{regSaida ? regSaida.hora : '--:--'}</div>
-            <div className="card-label">Saída da jornada</div>
-          </div>
-          <div className="status-card">
-            <div className="card-icon" style={{color:'#f59e0b'}}><i className="las la-hourglass-half"></i></div>
-            <div className="card-numero">{horasTrabalhadas}</div>
-            <div className="card-label">Horas na jornada</div>
-          </div>
-          <div className="status-card">
-            <div className="card-icon" style={{color:'#1e3a8a'}}><i className="las la-calendar-check"></i></div>
-            <div className="card-numero">{diasTrabalhadosMes}</div>
-            <div className="card-label">Dias no Mês</div>
-          </div>
-        </div>
-
-        <div className="tabs-ponto">
-          <button aria-pressed={tabAtiva === 'hoje'} className={`tab-btn ${tabAtiva === 'hoje' ? 'ativo' : ''}`} onClick={() => setTabAtiva('hoje')}>
-            <i className="las la-calendar-day"></i> Hoje
+        <div className="pt-acoes">
+          <button type="button" className="btn btn-success pt-acao" disabled={btnEntradaDisabled || bloqueado} onClick={() => registrar('ENTRADA')}>
+            <i className="las la-sign-in-alt" aria-hidden="true"></i> Entrada
           </button>
-          <button aria-pressed={tabAtiva === 'historico'} className={`tab-btn ${tabAtiva === 'historico' ? 'ativo' : ''}`} onClick={() => setTabAtiva('historico')}>
-            <i className="las la-history"></i> Histórico
+          <button type="button" className="btn btn-warning pt-acao" disabled={btnInicioIntervaloDisabled || bloqueado} onClick={() => registrar('INÍCIO INTERVALO')}>
+            <i className="las la-coffee" aria-hidden="true"></i> Início do intervalo
           </button>
-          <button aria-pressed={tabAtiva === 'expediente'} className={`tab-btn ${tabAtiva === 'expediente' ? 'ativo' : ''}`} onClick={() => setTabAtiva('expediente')}>
-            <i className="las la-business-time"></i> Expediente
+          <button type="button" className="btn btn-info pt-acao" disabled={btnFimIntervaloDisabled || bloqueado} onClick={() => registrar('FIM INTERVALO')}>
+            <i className="las la-undo-alt" aria-hidden="true"></i> Fim do intervalo
+          </button>
+          <button type="button" className="btn btn-danger pt-acao" disabled={btnSaidaDisabled || bloqueado} onClick={() => registrar('SAÍDA')}>
+            <i className="las la-sign-out-alt" aria-hidden="true"></i> Saída
           </button>
         </div>
+      </Panel>
 
-        {tabAtiva === 'hoje' && (
+      <StatGrid>
+        <StatCard icon="las la-sign-in-alt" value={regEntrada ? regEntrada.hora : '--:--'} label="Entrada da jornada" />
+        <StatCard icon="las la-sign-out-alt" value={regSaida ? regSaida.hora : '--:--'} label="Saída da jornada" />
+        <StatCard icon="las la-hourglass-half" value={horasTrabalhadas} label="Horas na jornada" />
+        <StatCard icon="las la-calendar-check" value={diasTrabalhadosMes} label="Dias no mês" />
+      </StatGrid>
+
+      <Tabs label="Seções do ponto" tabs={ABAS} active={tabAtiva} onChange={setTabAtiva} />
+
+      {tabAtiva === 'hoje' && (
+        !dadosCarregados ? (
+          carregandoRegistros ? <LoadingState message="Carregando registros..." /> : <ErrorState message="Registros indisponíveis. Tente novamente." onRetry={() => void fetchRegistros()} />
+        ) : registrosHoje.length === 0 ? (
+          <EmptyState icon="las la-clock" message="Nenhum registro hoje." />
+        ) : (
           <div className="tabela-wrapper">
-            <table className="tabela-ponto">
+            <table className="tabela">
               <thead>
-                <tr>
-                  <th>Hora</th>
-                  <th>Tipo</th>
-                  <th>Profissional</th>
-                </tr>
+                <tr><th>Hora</th><th>Tipo</th><th>Profissional</th></tr>
               </thead>
               <tbody>
-                  {!dadosCarregados ? (
-                    <tr><td colSpan={3} role="status" style={{textAlign:'center', padding:'30px', color:'#64748b'}}>{carregandoRegistros ? 'Carregando registros...' : 'Registros indisponíveis. Tente novamente.'}</td></tr>
-                  ) : registrosHoje.length === 0 ? (
-                  <tr><td colSpan={3} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Nenhum registro hoje</td></tr>
-                ) : (
-                    [...registrosHoje].reverse().map(r => {
-                    const icones: Record<string, string> = {
-                      'ENTRADA': '', 'SAÍDA': '', 'INÍCIO INTERVALO': '', 'FIM INTERVALO': ''
-                    };
-                    return (
-                      <tr key={r.id}>
-                        <td><strong>{r.hora}</strong></td>
-                        <td>{icones[r.tipo] || ''} {r.tipo}</td>
-                        <td>{r.profissional}</td>
-                      </tr>
-                    )
-                  })
-                )}
+                {[...registrosHoje].reverse().map(r => (
+                  <tr key={r.id}>
+                    <td><strong>{r.hora}</strong></td>
+                    <td>{rotuloTipo(r.tipo)}</td>
+                    <td>{r.profissional}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        )}
+        )
+      )}
 
-        {tabAtiva === 'historico' && (
-          <div>
-            <div className="search-box">
-              <input type="text" aria-label="Buscar no histórico por data ou tipo" placeholder="Buscar por data ou tipo..." value={busca} onChange={e => setBusca(e.target.value)} />
+      {tabAtiva === 'historico' && (
+        <div>
+          <div className="ux-barra">
+            <SearchInput value={busca} onChange={setBusca} placeholder="Buscar por data ou tipo" label="Buscar no histórico por data ou tipo" />
+            <div className="form-group">
               <select aria-label="Filtrar histórico por mês" value={mesFiltro} onChange={e => setMesFiltro(e.target.value)}>
                 <option value="todos">Todos os meses</option>
                 <option value="1">Janeiro</option><option value="2">Fevereiro</option>
@@ -318,53 +295,45 @@ export default function PontoPage() {
                 <option value="11">Novembro</option><option value="12">Dezembro</option>
               </select>
             </div>
-            
+          </div>
+
+          {historicoFiltrado.length === 0 ? (
+            <EmptyState icon="las la-history" message="Nenhum registro encontrado." />
+          ) : (
             <div className="tabela-wrapper">
-              <table className="tabela-ponto">
+              <table className="tabela">
                 <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Hora</th>
-                    <th>Tipo</th>
-                    <th>Profissional</th>
-                  </tr>
+                  <tr><th>Data</th><th>Hora</th><th>Tipo</th><th>Profissional</th></tr>
                 </thead>
                 <tbody>
-                  {historicoFiltrado.length === 0 ? (
-                    <tr><td colSpan={4} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Nenhum registro encontrado</td></tr>
-                  ) : (
-                    historicoFiltrado.slice(0, 100).map(r => (
-                      <tr key={r.id}>
-                        <td>{r.data}</td>
-                        <td><strong>{r.hora}</strong></td>
-                        <td><span className={`badge ${getBadgeClass(r.tipo)}`}>{r.tipo}</span></td>
-                        <td>{r.profissional}</td>
-                      </tr>
-                    ))
-                  )}
+                  {historicoFiltrado.slice(0, 100).map(r => (
+                    <tr key={r.id}>
+                      <td>{r.data}</td>
+                      <td><strong>{r.hora}</strong></td>
+                      <td><Badge tone={getBadgeTone(r.tipo)}>{rotuloTipo(r.tipo)}</Badge></td>
+                      <td>{r.profissional}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
-        {tabAtiva === 'expediente' && (
-          <div>
-            <div className="expediente-card">
-              <h4><i className="las la-user-clock"></i> Resumo do Mês ({new Date().toLocaleString('pt-BR', {month: 'long'})})</h4>
-              <p><strong>Dias:</strong> <span>{diasMes.length}</span></p>
-              <p><strong>Horas:</strong> <span>{expHorasStr}</span></p>
-              <p><strong>Intervalos:</strong> <span>{totalIntervalos}</span></p>
-            </div>
-            
-            <button className="btn-imprimir" onClick={imprimirRelatorioPonto}>
-              <i className="las la-print"></i> Imprimir Relatório Completo
-            </button>
-          </div>
-        )}
-
-      </div>
+      {tabAtiva === 'expediente' && (
+        <Panel
+          title={`Resumo do mês (${new Date().toLocaleString('pt-BR', {month: 'long'})})`}
+          icon="las la-user-clock"
+          actions={<button type="button" className="btn btn-secondary btn-sm" onClick={imprimirRelatorioPonto}><i className="las la-print" aria-hidden="true"></i> Imprimir relatório</button>}
+        >
+          <dl className="pt-resumo">
+            <div><dt>Dias</dt><dd>{diasMes.length}</dd></div>
+            <div><dt>Horas</dt><dd>{expHorasStr}</dd></div>
+            <div><dt>Intervalos</dt><dd>{totalIntervalos}</dd></div>
+          </dl>
+        </Panel>
+      )}
     </div>
-    </>
   );
 }

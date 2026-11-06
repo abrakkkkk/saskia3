@@ -1,12 +1,12 @@
-﻿'use client';
+'use client';
 
-import { useState, useMemo, useEffect, useRef, type ComponentType } from 'react';
+import { useState, useMemo, useEffect, useId, useRef, type ComponentType } from 'react';
+import { EmptyState, PageHeader, SearchInput, Tabs } from '@/components/ui';
+import { DocFerramenta, DocGrid } from '@/components/ui/documentos';
+import '../setores.css';
 import {
-  Wrench,
   Search,
-  ExternalLink,
   Activity,
-  List,
   FileText,
   Pill,
   Baby,
@@ -28,7 +28,7 @@ interface Ferramenta {
   categoria: string;
   descricao: string;
   link: string;
-  icone: ComponentType<{ className?: string }>;
+  icone: ComponentType<{ size?: number }>;
 }
 
 const ferramentas: Ferramenta[] = [
@@ -62,9 +62,10 @@ const ferramentas: Ferramenta[] = [
   { id: '20', nome: "SciELO", categoria: "Referências", descricao: "Biblioteca científica brasileira", link: "https://scielo.org/", icone: GraduationCap }
 ];
 
-const normalizarBusca = (valor: string) => valor.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+const normalizarBusca = (valor: string) => valor.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR');
 
 export default function UtilitariosPage() {
+  const tituloDialogoId = useId();
   const [busca, setBusca] = useState('');
   const [categoriaAtiva, setCategoriaAtiva] = useState('Todos');
 
@@ -122,144 +123,72 @@ export default function UtilitariosPage() {
   }, [modalOpen]);
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-fade-in">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-gradient-to-r from-blue-900 to-blue-700 p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-lg text-white">
-        <div className="bg-white/20 p-3 sm:p-4 rounded-2xl shrink-0" aria-hidden="true">
-          <Wrench className="w-10 h-10 text-blue-50" />
-        </div>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Utilitários Clínicos</h1>
-          <p className="text-blue-100 mt-1 font-medium">Calculadoras, diretrizes e referências úteis</p>
-        </div>
-      </div>
+    <div className="conteudo">
+      <PageHeader icon="las la-tools" title="Utilitários clínicos" subtitle="Calculadoras, diretrizes e referências úteis" />
 
-      <div className="relative">
-        <Search aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-        <input
-          aria-label="Buscar ferramentas clínicas"
-          type="text"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar ferramentas ou diretrizes..."
-          className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 shadow-sm transition-all"
-        />
-      </div>
+      <SearchInput value={busca} onChange={setBusca} placeholder="Buscar ferramentas ou diretrizes..." label="Buscar ferramentas clínicas" />
 
-      <div className="flex flex-wrap gap-2 sm:gap-3" aria-label="Filtrar por categoria">
-        {categorias.map(cat => {
-          const ativo = categoriaAtiva === cat;
-          return (
-            <button
-              key={cat}
-              onClick={() => setCategoriaAtiva(cat)}
-              aria-pressed={ativo}
-              className={`min-h-10 flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-full font-medium transition-all duration-200 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
-                ativo
-                  ? 'bg-blue-700 text-white shadow-lg shadow-blue-200'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:text-blue-600 shadow-sm'
-              }`}
-            >
-              {cat === 'Todos' ? <List className="w-4 h-4" /> : <Wrench className="w-4 h-4 opacity-70" />}
-              {cat}
-            </button>
-          )
-        })}
-      </div>
+      <Tabs tabs={categorias.map(cat => ({ id: cat, label: cat }))} active={categoriaAtiva} onChange={setCategoriaAtiva} label="Filtrar por categoria" />
 
       <p className="sr-only" role="status" aria-live="polite">
         {ferramentasFiltradas.length} {ferramentasFiltradas.length === 1 ? 'ferramenta encontrada' : 'ferramentas encontradas'}
       </p>
 
       {ferramentasFiltradas.length === 0 ? (
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-8 sm:p-16 text-center shadow-sm border border-slate-100">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-50 mb-4">
-            <Search className="w-10 h-10 text-slate-300" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-700 mb-2">Nenhuma ferramenta encontrada</h3>
-          <p className="text-slate-500">Tente outro termo de busca ou selecione outra categoria</p>
-        </div>
+        <EmptyState icon="las la-search" message="Nenhuma ferramenta encontrada. Tente outro termo ou outra categoria." />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
+        <DocGrid>
           {ferramentasFiltradas.map(ferramenta => {
             const Icon = ferramenta.icone;
             return (
-              <article key={ferramenta.id} className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-100 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 flex flex-col group relative overflow-hidden min-w-0">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-700 to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-blue-600 mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-200" aria-hidden="true">
-                  <Icon className="w-6 h-6 sm:w-7 sm:h-7" />
-                </div>
-
-                <span className="inline-block bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase mb-3 w-max max-w-full">
-                  {ferramenta.categoria}
-                </span>
-
-                <h2 className="text-base font-bold text-slate-800 leading-snug mb-2 min-h-[2.75rem]">
-                  {ferramenta.nome}
-                </h2>
-
-                <p className="text-sm text-slate-500 mb-6 flex-1 line-clamp-3">
-                  {ferramenta.descricao}
-                </p>
-
-                <button
-                  onClick={(event) => handleOpenLink(ferramenta.link, event.currentTarget)}
-                  className="w-full min-h-11 flex items-center justify-center gap-2 bg-blue-50 text-blue-700 font-bold py-3 px-3 rounded-xl hover:bg-blue-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors text-sm mt-auto"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Acessar Ferramenta
-                </button>
-              </article>
+              <DocFerramenta
+                key={ferramenta.id}
+                icone={<Icon size={20} />}
+                titulo={ferramenta.nome}
+                descricao={ferramenta.descricao}
+                categoria={ferramenta.categoria}
+                rotuloAcao="Acessar"
+                onAcao={botao => handleOpenLink(ferramenta.link, botao)}
+              />
             );
           })}
-        </div>
+        </DocGrid>
       )}
 
-      {/* Modal Confirmação de Link Externo */}
+      {/* Confirmação de link externo */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div role="dialog" aria-modal="true" aria-labelledby="utilitarios-dialog-title" onKeyDown={(event) => {
-            if (event.key !== 'Tab') return;
-            const focaveis = event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])');
-            if (!focaveis.length) return;
-            const primeiro = focaveis[0];
-            const ultimo = focaveis[focaveis.length - 1];
-            if (event.shiftKey && document.activeElement === primeiro) { event.preventDefault(); ultimo.focus(); }
-            else if (!event.shiftKey && document.activeElement === ultimo) { event.preventDefault(); primeiro.focus(); }
-          }} className="bg-white rounded-2xl sm:rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-blue-900 p-6 flex justify-between items-center">
-              <h3 id="utilitarios-dialog-title" className="text-white font-bold text-lg flex items-center gap-2">
-                <ExternalLink className="w-5 h-5" />
-                Aviso de Redirecionamento
-              </h3>
-              <button
-                ref={fecharModalRef}
-                onClick={fecharModal}
-                aria-label="Fechar aviso de redirecionamento"
-                className="w-10 h-10 rounded-lg text-white/80 hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white transition-colors"
-              >
-                &times;
+        <div className="sc-modal" onMouseDown={event => { if (event.target === event.currentTarget) fecharModal(); }}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={tituloDialogoId}
+            className="sc-modal-caixa"
+            onKeyDown={(event) => {
+              if (event.key !== 'Tab') return;
+              const focaveis = event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])');
+              if (!focaveis.length) return;
+              const primeiro = focaveis[0];
+              const ultimo = focaveis[focaveis.length - 1];
+              if (event.shiftKey && document.activeElement === primeiro) { event.preventDefault(); ultimo.focus(); }
+              else if (!event.shiftKey && document.activeElement === ultimo) { event.preventDefault(); primeiro.focus(); }
+            }}
+          >
+            <div className="sc-modal-topo">
+              <h2 id={tituloDialogoId}>Abrir site externo</h2>
+              <button ref={fecharModalRef} type="button" className="sc-modal-fechar" onClick={fecharModal} aria-label="Fechar aviso de redirecionamento">
+                <i className="las la-times" aria-hidden="true"></i>
               </button>
             </div>
-            <div className="p-6">
-              <p className="text-slate-700 mb-4 font-medium">Você será redirecionado para um site externo:</p>
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 break-all text-sm text-blue-600 font-medium mb-6">
-                {linkSelecionado}
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={fecharModal}
-                  className="flex-1 min-h-11 py-3 px-4 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmarAbrirLink}
-                  className="flex-1 min-h-11 py-3 px-4 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors flex items-center justify-center gap-2"
-                >
-                  Continuar <ExternalLink className="w-4 h-4" />
-                </button>
-              </div>
+            <div className="sc-nota">
+              Você será redirecionado para um site externo:
+              <br />
+              <strong className="sc-historico">{linkSelecionado}</strong>
+            </div>
+            <div className="sc-acoes sc-acoes-fim">
+              <button type="button" className="btn btn-secondary" onClick={fecharModal}>Cancelar</button>
+              <button type="button" className="btn btn-primary" onClick={confirmarAbrirLink}>
+                Continuar <i className="las la-external-link-alt" aria-hidden="true"></i>
+              </button>
             </div>
           </div>
         </div>

@@ -1,9 +1,12 @@
-﻿'use client'
+'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Tabs } from '@/components/ui'
+import { PageHeader, StatGrid, StatCard, Tabs, Panel, Badge, SearchInput, EmptyState, LoadingState } from '@/components/ui'
 import { useSession } from 'next-auth/react'
-import { CheckCircle2, RefreshCw, Search, ShieldAlert } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
+import '@/components/ui/modulo.css'
+import '@/components/ui/ui-extras.css'
+import '@/components/ui/modal.css';
 import './equipe-seguranca.css'
 
 type Ocorrencia = {
@@ -102,88 +105,78 @@ export default function EquipeSegurancaPage() {
   }
 
   return (
-    <div className="conteudo">
-      <div className="seg-container">
-        <header className="banner-seg">
-          <div>
-            <h1><ShieldAlert aria-hidden="true" /> Registros de segurança</h1>
-            <p>Consulte e encerre ocorrências registradas neste hospital.</p>
-          </div>
-          <button className="btn btn-info" type="button" onClick={() => void carregar()} disabled={loading || sessionStatus !== 'authenticated'}>
+    <div className="mod-pagina">
+      <PageHeader
+        icon="las la-shield-alt"
+        title="Registros de segurança"
+        subtitle="Consulte e encerre ocorrências deste hospital."
+        actions={
+          <button className="btn btn-secondary" type="button" onClick={() => void carregar()} disabled={loading || sessionStatus !== 'authenticated'}>
             <RefreshCw size={16} aria-hidden="true" /> Atualizar
           </button>
-        </header>
+        }
+      />
 
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon"><ShieldAlert aria-hidden="true" /></div>
-            <div className="stat-valor">{ativas.length}</div>
-            <div className="stat-label">Ocorrências ativas</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon"><CheckCircle2 aria-hidden="true" /></div>
-            <div className="stat-valor">{historico.length}</div>
-            <div className="stat-label">Ocorrências encerradas</div>
-          </div>
-        </div>
+      <StatGrid>
+        <StatCard icon="las la-shield-alt" value={ativas.length} label="Ocorrências ativas" tone="danger" alerta />
+        <StatCard icon="las la-check-circle" value={historico.length} label="Ocorrências encerradas" tone="success" />
+      </StatGrid>
 
-        <div className="seg-flow-status" role="status">
-          <ShieldAlert size={18} aria-hidden="true" />
-          <span>Acionamentos de emergência estão desativados até a aprovação do fluxo institucional.</span>
-        </div>
+      <p className="mod-aviso mod-aviso-atencao" role="status">Acionamentos de emergência estão desativados até a aprovação do fluxo institucional.</p>
 
-        <form className="form-panel" onSubmit={registrar} aria-label="Registrar ocorrência">
-          <h2>Registrar ocorrência</h2>
-          <div className="form-grid">
-            <div className="form-grupo">
+      <Panel title="Registrar ocorrência" icon="las la-plus-circle">
+        <form onSubmit={registrar} aria-label="Registrar ocorrência">
+          <div className="ux-campos">
+            <div className="form-group">
               <label htmlFor="seg-tipo">Tipo</label>
               <select id="seg-tipo" value={novo.tipo} onChange={e => setNovo({ ...novo, tipo: e.target.value })}>
                 <option>Ronda</option><option>Acesso indevido</option><option>Furto ou perda</option>
                 <option>Conflito</option><option>Dano ao patrimônio</option><option>Outro</option>
               </select>
             </div>
-            <div className="form-grupo">
+            <div className="form-group">
               <label htmlFor="seg-local">Local</label>
               <input id="seg-local" required maxLength={160} value={novo.local} onChange={e => setNovo({ ...novo, local: e.target.value })} />
             </div>
-            <div className="form-grupo full">
+            <div className="form-group ux-largo">
               <label htmlFor="seg-relato">Relato</label>
               <textarea id="seg-relato" required rows={3} maxLength={4000} value={novo.relato} onChange={e => setNovo({ ...novo, relato: e.target.value })} />
             </div>
           </div>
-          <button className="btn btn-primary" type="submit" disabled={registrando}>{registrando ? 'Registrando…' : 'Registrar ocorrência'}</button>
-        </form>
-
-        <Tabs label="Registros de segurança" tabs={ABAS} active={filtro} onChange={setFiltro} />
-
-        <div className="search-box">
-          <Search size={16} aria-hidden="true" />
-          <input aria-label="Buscar ocorrências" type="search" placeholder="Buscar por tipo, local ou relato" value={busca} onChange={event => setBusca(event.target.value)} />
-        </div>
-
-        {error && <p role="alert" className="seg-error">{error}</p>}
-        {loading ? <p role="status">Carregando registros…</p> : (
-          <div className="tabela-wrapper">
-            <table className="tabela-seg">
-              <thead><tr><th>Data e hora</th><th>Tipo</th><th>Local</th><th>Relato</th><th>Status</th><th>Ação</th></tr></thead>
-              <tbody>
-                {lista.length === 0 ? (
-                  <tr><td colSpan={6} className="seg-empty">Nenhuma ocorrência encontrada.</td></tr>
-                ) : lista.map(item => (
-                  <tr key={item.id}>
-                    <td>{new Date(item.dataHora).toLocaleString('pt-BR')}</td>
-                    <td>{item.tipo}</td>
-                    <td>{item.local}</td>
-                    <td>{item.relato}</td>
-                    <td>{item.resolvido ? 'Encerrada' : 'Ativa'}</td>
-                    <td>{!item.resolvido && <button className="btn btn-success btn-sm" type="button" onClick={() => void resolver(item.id)}>Encerrar</button>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="ui-modal-foot">
+            <button className="btn btn-primary" type="submit" disabled={registrando}>{registrando ? 'Registrando…' : 'Registrar ocorrência'}</button>
           </div>
-        )}
+        </form>
+      </Panel>
+
+      <Tabs label="Registros de segurança" tabs={ABAS} active={filtro} onChange={setFiltro} />
+
+      <div className="ux-barra">
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar por tipo, local ou relato" label="Buscar ocorrências" />
       </div>
+
+      {error && <p role="alert" className="mod-aviso mod-aviso-erro">{error}</p>}
+      {loading ? <LoadingState message="Carregando registros..." /> : lista.length === 0 ? (
+        <EmptyState icon="las la-shield-alt" message="Nenhuma ocorrência encontrada." />
+      ) : (
+        <div className="tabela-wrapper">
+          <table className="tabela">
+            <thead><tr><th>Data e hora</th><th>Tipo</th><th>Local</th><th>Relato</th><th>Status</th><th>Ação</th></tr></thead>
+            <tbody>
+              {lista.map(item => (
+                <tr key={item.id}>
+                  <td>{new Date(item.dataHora).toLocaleString('pt-BR')}</td>
+                  <td>{item.tipo}</td>
+                  <td>{item.local}</td>
+                  <td className="seg-relato">{item.relato}</td>
+                  <td><Badge tone={item.resolvido ? 'success' : 'danger'}>{item.resolvido ? 'Encerrada' : 'Ativa'}</Badge></td>
+                  <td>{!item.resolvido && <button className="btn btn-success btn-sm" type="button" onClick={() => void resolver(item.id)}>Encerrar</button>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

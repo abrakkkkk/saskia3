@@ -1,37 +1,4 @@
-﻿.usuarios-page { display: grid; gap: 20px; color: #172033; }
-.usuarios-primary,.usuarios-secondary,.usuarios-icon-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:40px; border-radius:8px; font:inherit; font-weight:600; cursor:pointer; }
-.usuarios-primary { padding:0 16px; color:white; border:1px solid #1d4ed8; background:#1d4ed8; }
-.usuarios-primary:hover { background:#1e40af; }
-.usuarios-primary:disabled,.usuarios-secondary:disabled,.usuarios-icon-button:disabled { opacity:.55; cursor:not-allowed; }
-.usuarios-secondary { padding:0 16px; color:#334155; border:1px solid #cbd5e1; background:white; }
-.usuarios-icon-button { width:40px; border:1px solid #dbe2ea; color:#334155; background:white; }
-.usuarios-icon-button:hover { background:#f1f5f9; }
-.usuarios-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr)); gap:14px; }
-.usuarios-card { display:flex; align-items:flex-start; gap:12px; padding:16px; border:1px solid #dbe2ea; border-radius:10px; background:var(--card,#fff); }
-.usuarios-card.is-inactive { background:#f8fafc; border-style:dashed; }
-.usuarios-avatar { display:grid; place-items:center; flex:0 0 40px; height:40px; border-radius:10px; background:#eff6ff; color:#1d4ed8; }
-.usuarios-details { display:grid; min-width:0; flex:1; gap:5px; }
-.usuarios-details strong { color:#172033; overflow-wrap:anywhere; }
-.usuarios-details > span { color:#64748b; font-size:.9rem; overflow-wrap:anywhere; }
-.usuarios-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
-.usuarios-tags span { padding:4px 8px; border-radius:999px; background:#f1f5f9; color:#475569; font-size:.75rem; }
-.usuarios-tags .status-active { background:#ecfdf5; color:#047857; }
-.usuarios-tags .status-inactive { background:#fff7ed; color:#c2410c; }
-.usuarios-actions { display:flex; gap:6px; }
-.usuarios-alert { color:#991b1b; border:1px solid #fecaca; background:#fef2f2; }
-.usuarios-notice { color:#065f46; border:1px solid #a7f3d0; background:#ecfdf5; }
-.usuarios-overlay { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:18px; background:rgb(15 23 42 / 55%); }
-.usuarios-dialog { width:min(100%,520px); max-height:min(90vh,760px); overflow:auto; border:1px solid #dbe2ea; border-radius:12px; background:#fff; box-shadow:0 24px 70px rgb(15 23 42 / 25%); }
-.usuarios-dialog > header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:20px 22px; border-bottom:1px solid #e2e8f0; }
-.usuarios-dialog h2 { margin:0; color:#172033; font-size:1.2rem; }
-.usuarios-dialog header p { margin:5px 0 0; color:#64748b; font-size:.9rem; }
-.usuarios-dialog form { display:grid; gap:15px; padding:22px; }
-.usuarios-dialog label { display:grid; gap:6px; color:#334155; font-size:.9rem; font-weight:600; }
-.usuarios-dialog input,.usuarios-dialog select { width:100%; min-height:42px; box-sizing:border-box; padding:8px 10px; border:1px solid #cbd5e1; border-radius:7px; background:#fff; color:#172033; font:inherit; }
-.usuarios-dialog input:focus,.usuarios-dialog select:focus,.usuarios-search:focus-within { outline:2px solid #93c5fd; outline-offset:1px; border-color:#3b82f6; }
-.usuarios-dialog footer { display:flex; justify-content:flex-end; gap:10px; padding-top:6px; }
-.usuarios-icon-button:focus-visible,.usuarios-primary:focus-visible,.usuarios-secondary:focus-visible { outline:3px solid #1d4ed8; outline-offset:3px; }
-.usuarios-hint { color:#64748b; font-weight:400; }
-.spin { animation:usuarios-spin 1s linear infinite; }
-@keyframes usuarios-spin { to { transform:rotate(360deg); } }
-@media(max-width:640px) { .usuarios-heading { align-items:flex-start; flex-direction:column; } .usuarios-card { flex-wrap:wrap; } .usuarios-actions { width:100%; justify-content:flex-end; } }
+﻿/* admin-usuarios: só o que a tabela e o ícone de carregamento precisam */
+.us-email { overflow-wrap: anywhere; color: var(--ui-text-muted); }
+.us-gira { animation: us-gira 1s linear infinite; }
+@keyframes us-gira { to { transform: rotate(360deg); } }

@@ -19,29 +19,49 @@ export function PageHeader({ icon, title, subtitle, actions }: {
   );
 }
 
-export type Tone = 'info' | 'success' | 'warning' | 'danger' | 'neutral';
+/** `auto` reparte as matizes por posição dentro do StatGrid; os demais têm significado fixo. */
+export type Tone = 'info' | 'success' | 'warning' | 'danger' | 'neutral' | 'violet' | 'teal' | 'cyan' | 'rose' | 'yellow' | 'auto';
 
 export function StatGrid({ children }: { children: ReactNode }) {
   return <div className="ui-stat-grid">{children}</div>;
 }
 
-export function StatCard({ icon, value, label, tone = 'info', hint }: {
+/**
+ * Indicador compacto. Cada tom tem matiz própria; com valor, o cartão ganha fundo e ladrilho
+ * sólidos, e o zero perde o peso (cartão branco, ladrilho pálido) sem virar cinza. `alerta`
+ * destaca a borda do que exige ação. A explicação longa vai em `hint`, que aparece como tooltip.
+ */
+export function StatCard({ icon, value, label, tone = 'auto', hint, alerta = false }: {
   icon?: string;
   value: ReactNode;
   label: string;
   tone?: Tone;
   hint?: string;
+  alerta?: boolean;
 }) {
+  const zero = value === 0 || value === '0';
   return (
-    <div className={`ui-stat ui-tone-${tone}`}>
+    <div className={`ui-stat ui-tone-${tone}${zero ? ' ui-stat-zero' : alerta ? ' ui-stat-alerta' : ''}`} title={hint}>
       {icon && <span className="ui-stat-icon"><i className={icon} aria-hidden="true"></i></span>}
       <div>
         <strong>{value}</strong>
         <span>{label}</span>
-        {hint && <small>{hint}</small>}
       </div>
     </div>
   );
+}
+
+export type Risco = 'vermelho' | 'laranja' | 'amarelo' | 'verde' | 'azul';
+
+const RISCO_ROTULO: Record<Risco, string> = {
+  vermelho: 'Vermelho', laranja: 'Laranja', amarelo: 'Amarelo', verde: 'Verde', azul: 'Azul',
+};
+
+/** Classificação de risco (Manchester). Aceita o texto do banco em qualquer caixa. */
+export function RiscoBadge({ classificacao }: { classificacao?: string | null }) {
+  const chave = classificacao?.trim().toLowerCase() as Risco | undefined;
+  if (!chave || !(chave in RISCO_ROTULO)) return <span className="ui-risco">Sem classificação</span>;
+  return <span className={`ui-risco ui-risco-${chave}`}>{RISCO_ROTULO[chave]}</span>;
 }
 
 export type TabItem<T extends string> = { id: T; label: string; icon?: string };

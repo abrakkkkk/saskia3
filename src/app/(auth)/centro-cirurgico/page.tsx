@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, SearchInput, StatCard, StatGrid, Tabs, type Tone } from '@/components/ui';
 import PacienteSelect from '@/components/ui/PacienteSelect';
 import { pode } from '@/lib/permissions';
+import '@/components/ui/modulo.css';
+import '../setores.css';
 import './centro-cirurgico.css';
 
 interface Paciente {
@@ -32,6 +35,17 @@ interface Cirurgia {
   createdAt: string;
 }
 
+type Aba = 'agendamento' | 'salas' | 'lista';
+
+const ABAS = [
+  { id: 'agendamento', label: 'Agendamento', icon: 'las la-calendar-plus' },
+  { id: 'salas', label: 'Salas', icon: 'las la-door-open' },
+  { id: 'lista', label: 'Cirurgias', icon: 'las la-list' },
+] as const;
+
+const STATUS_ROTULO: Record<string, string> = { AGENDADA: 'Agendada', EM_ANDAMENTO: 'Em andamento', CONCLUIDA: 'Concluída', CANCELADA: 'Cancelada' };
+const STATUS_TOM: Record<string, Tone> = { AGENDADA: 'neutral', EM_ANDAMENTO: 'info', CONCLUIDA: 'success', CANCELADA: 'neutral' };
+
 function dataLocalKey(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -41,7 +55,7 @@ function dataLocalKey(date: Date) {
 export default function CentroCirurgicoPage() {
   const { data: session, status: sessionStatus } = useSession();
   const podeGerenciar = pode(session?.user?.cargo, 'cirurgia:gerir');
-  const [activeTab, setActiveTab] = useState<'agendamento' | 'salas' | 'lista'>('agendamento');
+  const [activeTab, setActiveTab] = useState<Aba>('agendamento');
   const [cirurgias, setCirurgias] = useState<Cirurgia[]>([]);
   const [salas, setSalas] = useState<string[]>([]);
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
@@ -106,10 +120,15 @@ export default function CentroCirurgicoPage() {
     }
   }, [sessionStatus, podeGerenciar, activeTab]);
 
+  const tentarNovamente = () => {
+    setLoading(true);
+    void carregarDados();
+  };
+
   const agendarCirurgia = async () => {
     const { pacienteId, data, hora, procedimento, cirurgiao, anestesista, instrumentador, circulante, anestesia, prioridade, sala, obs } = formAgendamento;
     if (!pacienteId || !sala || !salas.includes(sala) || !data || !hora || !procedimento.trim() || !cirurgiao.trim()) {
-      alert(" Preencha todos os campos obrigatórios (*)");
+      alert('Preencha todos os campos obrigatórios (*).');
       return;
     }
 
@@ -151,14 +170,14 @@ export default function CentroCirurgicoPage() {
         const erro = await res.json().catch(() => null);
         throw new Error(typeof erro?.error === 'string' ? erro.error : 'Erro ao agendar cirurgia.');
       }
-      
+
       setFormAgendamento({
         ...formAgendamento,
         pacienteId: '', hora: '', procedimento: '', cirurgiao: '', anestesista: '',
         instrumentador: '', circulante: '', obs: ''
       });
 
-      alert(" Cirurgia agendada com sucesso!");
+      alert('Cirurgia agendada com sucesso.');
       carregarDados();
       setActiveTab('lista');
     } catch (e) {
@@ -170,7 +189,7 @@ export default function CentroCirurgicoPage() {
     if (!podeGerenciar) return;
     const cirurgia = cirurgias.find(c => c.id === id);
     if (!cirurgia) return;
-    
+
     let msg = "";
     if (novoStatus === 'EM_ANDAMENTO') msg = `Iniciar cirurgia de ${cirurgia.paciente.nome} - ${cirurgia.procedimento}?`;
     else if (novoStatus === 'CONCLUIDA') msg = `Concluir cirurgia de ${cirurgia.paciente.nome} - ${cirurgia.procedimento}?`;
@@ -187,10 +206,10 @@ export default function CentroCirurgicoPage() {
           const erro = await res.json().catch(() => null);
           throw new Error(typeof erro?.error === 'string' ? erro.error : 'Erro ao atualizar cirurgia.');
         }
-        
-        if (novoStatus === 'EM_ANDAMENTO') alert(" Cirurgia iniciada!");
-        if (novoStatus === 'CONCLUIDA') alert(" Cirurgia concluída!");
-        if (novoStatus === 'CANCELADA') alert(" Cirurgia cancelada.");
+
+        if (novoStatus === 'EM_ANDAMENTO') alert('Cirurgia iniciada.');
+        if (novoStatus === 'CONCLUIDA') alert('Cirurgia concluída.');
+        if (novoStatus === 'CANCELADA') alert('Cirurgia cancelada.');
         carregarDados();
       } catch (e) {
         alert(e instanceof Error ? e.message : 'Erro ao atualizar cirurgia.');
@@ -216,249 +235,246 @@ export default function CentroCirurgicoPage() {
   }
   if (buscaCirurgia) {
     const termo = buscaCirurgia.toLowerCase();
-    cirurgiasFiltradas = cirurgiasFiltradas.filter(c => 
-      c.paciente.nome.toLowerCase().includes(termo) || 
-      c.procedimento.toLowerCase().includes(termo) || 
+    cirurgiasFiltradas = cirurgiasFiltradas.filter(c =>
+      c.paciente.nome.toLowerCase().includes(termo) ||
+      c.procedimento.toLowerCase().includes(termo) ||
       (c.equipe && c.equipe.toLowerCase().includes(termo))
     );
   }
 
-  const getStatusBadge = (status: string) => {
-    if (status === 'AGENDADA') return 'badge-agendado';
-    if (status === 'EM_ANDAMENTO') return 'badge-andamento';
-    if (status === 'CONCLUIDA') return 'badge-concluido';
-    if (status === 'CANCELADA') return 'badge-cancelado';
-    return '';
-  };
-  const getStatusName = (status: string) => {
-    if (status === 'AGENDADA') return 'Agendada';
-    if (status === 'EM_ANDAMENTO') return 'Em Andamento';
-    if (status === 'CONCLUIDA') return 'Concluída';
-    if (status === 'CANCELADA') return 'Cancelada';
-    return status;
-  };
-
-  if (loading && cirurgias.length === 0) {
-    return (
-      <div className="conteudo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '350px', gap: '16px' }}>
-        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <p style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>Carregando dados do Centro Cirúrgico...</p>
-      </div>
-    );
-  }
+  const rotuloStatus = (status: string) => STATUS_ROTULO[status] ?? status;
+  const abas = podeGerenciar ? ABAS : ABAS.filter(a => a.id !== 'agendamento');
 
   return (
     <div className="conteudo">
       <div className="cc-container">
+        <PageHeader
+          icon="las la-hospital"
+          title="Centro cirúrgico"
+          subtitle="Agendamento de cirurgias e situação das salas"
+          actions={podeGerenciar && !loading ? (
+            <button type="button" className="btn btn-success" onClick={() => setActiveTab('agendamento')}>
+              <i className="las la-plus-circle" aria-hidden="true"></i> Agendar cirurgia
+            </button>
+          ) : undefined}
+        />
 
-        <div className="banner-cc">
-          <div>
-            <h1><i className="las la-scalpel"></i> Centro Cirúrgico</h1>
-            <p>Gestão de cirurgias e salas</p>
-          </div>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {podeGerenciar && <button className="btn btn-success" onClick={() => setActiveTab('agendamento')}>
-              <i className="las la-plus-circle"></i> Agendar Cirurgia
-            </button>}
-          </div>
-        </div>
+        {loading && cirurgias.length === 0 ? <LoadingState message="Carregando dados do centro cirúrgico..." /> : erroCarga && cirurgias.length === 0 && salas.length === 0 ? (
+          <ErrorState message={erroCarga} onRetry={tentarNovamente} />
+        ) : (
+          <>
+            {erroCarga && <p className="mod-aviso mod-aviso-erro" role="alert">{erroCarga}</p>}
 
-        {erroCarga && <div role="alert" className="alert-erro" style={{ marginBottom: 16 }}>{erroCarga}</div>}
+            <StatGrid>
+              <StatCard icon="las la-calendar-check" value={stats.agendadas} label="Cirurgias hoje" />
+              <StatCard icon="las la-clock" value={stats.andamento} label="Em andamento" tone="info" alerta />
+              <StatCard icon="las la-check-circle" value={stats.concluidas} label="Concluídas hoje" />
+              <StatCard icon="las la-door-open" value={salas.length} label="Salas" />
+              <StatCard icon="las la-ban" value={stats.canceladas} label="Canceladas" />
+            </StatGrid>
 
-        <div className="stats-grid">
-          <div className="stat-card"><div className="stat-icon blue"><i className="las la-calendar-check"></i></div><div className="stat-numero">{stats.agendadas}</div><div className="stat-label">Cirurgias Hoje</div></div>
-          <div className="stat-card"><div className="stat-icon orange"><i className="las la-clock"></i></div><div className="stat-numero">{stats.andamento}</div><div className="stat-label">Em Andamento</div></div>
-          <div className="stat-card"><div className="stat-icon green"><i className="las la-check-circle"></i></div><div className="stat-numero">{stats.concluidas}</div><div className="stat-label">Concluídas Hoje</div></div>
-          <div className="stat-card"><div className="stat-icon purple"><i className="las la-door-open"></i></div><div className="stat-numero">{salas.length}</div><div className="stat-label">Total Salas</div></div>
-          <div className="stat-card"><div className="stat-icon red"><i className="las la-exclamation-triangle"></i></div><div className="stat-numero">{stats.canceladas}</div><div className="stat-label">Canceladas</div></div>
-        </div>
+            <Tabs tabs={abas} active={activeTab} onChange={setActiveTab} label="Seções do centro cirúrgico" />
 
-        <div className="tabs-cc">
-          {podeGerenciar && <button type="button" aria-pressed={activeTab === 'agendamento'} className={`tab-btn ${activeTab === 'agendamento' ? 'ativo' : ''}`} onClick={() => setActiveTab('agendamento')}><i className="las la-calendar-plus" aria-hidden="true"></i> Agendamento</button>}
-          <button type="button" aria-pressed={activeTab === 'salas'} className={`tab-btn ${activeTab === 'salas' ? 'ativo' : ''}`} onClick={() => setActiveTab('salas')}><i className="las la-door-open" aria-hidden="true"></i> Salas Cirúrgicas</button>
-          <button type="button" aria-pressed={activeTab === 'lista'} className={`tab-btn ${activeTab === 'lista' ? 'ativo' : ''}`} onClick={() => setActiveTab('lista')}><i className="las la-list" aria-hidden="true"></i> Lista de Cirurgias</button>
-        </div>
+            {sessionStatus === 'authenticated' && !podeGerenciar && (
+              <p role="status" className="sc-nota sc-nota-superficie">Seu cargo pode consultar cirurgias, mas não agendar nem alterar status.</p>
+            )}
 
-        {sessionStatus === 'authenticated' && !podeGerenciar && <div role="status" className="cc-panel" style={{ marginBottom: 16 }}>Seu cargo pode consultar cirurgias, mas não agendar nem alterar status.</div>}
-
-        {activeTab === 'agendamento' && podeGerenciar && (
-          <div className="cc-grid">
-            <div className="cc-panel">
-              <h3><i className="las la-calendar-plus"></i> Agendar Nova Cirurgia</h3>
-              <div className="form-grid">
-                <PacienteSelect required value={formAgendamento.pacienteId} onChange={id => setFormAgendamento({ ...formAgendamento, pacienteId: id })} />
-                <div className="form-grupo">
-                  <label>Sala Cirúrgica *</label>
-                  <select value={formAgendamento.sala} onChange={e => setFormAgendamento({...formAgendamento, sala: e.target.value})}>
-                    <option value="">{salas.length ? 'Selecione uma sala' : 'Cadastre uma sala antes de agendar'}</option>
-                    {salas.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="form-grupo"><label>Data *</label><input type="date" value={formAgendamento.data} onChange={e => setFormAgendamento({...formAgendamento, data: e.target.value})} /></div>
-                <div className="form-grupo"><label>Horário *</label><input type="time" value={formAgendamento.hora} onChange={e => setFormAgendamento({...formAgendamento, hora: e.target.value})} /></div>
-                <div className="form-grupo"><label>Procedimento *</label><input type="text" placeholder="Nome do procedimento" value={formAgendamento.procedimento} onChange={e => setFormAgendamento({...formAgendamento, procedimento: e.target.value})} /></div>
-                <div className="form-grupo">
-                  <label>Prioridade</label>
-                  <select value={formAgendamento.prioridade} onChange={e => setFormAgendamento({...formAgendamento, prioridade: e.target.value})}>
-                    <option>Eletiva</option><option>Urgência</option><option>Emergência</option>
-                  </select>
-                </div>
-                <div className="form-grupo">
-                  <label>Cirurgião Responsável *</label>
-                  <input 
-                    type="text" 
-                    list="medicos-list"
-                    placeholder="Selecione ou digite o cirurgião" 
-                    value={formAgendamento.cirurgiao} 
-                    onChange={e => setFormAgendamento({...formAgendamento, cirurgiao: e.target.value})} 
-                  />
-                  <datalist id="medicos-list">
-                    {profissionais.filter(u => u.cargo?.toLowerCase().includes('medico') || u.cargo === 'ADMIN' || u.cargo === 'diretor_geral').map(u => (
-                      <option key={u.id} value={`Dr(a). ${u.nome}`} />
-                    ))}
-                  </datalist>
-                </div>
-                <div className="form-grupo">
-                  <label>Anestesista</label>
-                  <input 
-                    type="text" 
-                    list="medicos-list"
-                    placeholder="Selecione ou digite o anestesista" 
-                    value={formAgendamento.anestesista} 
-                    onChange={e => setFormAgendamento({...formAgendamento, anestesista: e.target.value})} 
-                  />
-                </div>
-                <div className="form-grupo">
-                  <label>Enfermeiro Instrumentador</label>
-                  <input 
-                    type="text" 
-                    list="enfermeiros-list"
-                    placeholder="Selecione ou digite o instrumentador" 
-                    value={formAgendamento.instrumentador} 
-                    onChange={e => setFormAgendamento({...formAgendamento, instrumentador: e.target.value})} 
-                  />
-                  <datalist id="enfermeiros-list">
-                    {profissionais.filter(u => u.cargo?.toLowerCase().includes('enferm')).map(u => (
-                      <option key={u.id} value={`Enf. ${u.nome}`} />
-                    ))}
-                  </datalist>
-                </div>
-                <div className="form-grupo">
-                  <label>Enfermeiro Circulante</label>
-                  <input 
-                    type="text" 
-                    list="enfermeiros-list"
-                    placeholder="Selecione ou digite o circulante" 
-                    value={formAgendamento.circulante} 
-                    onChange={e => setFormAgendamento({...formAgendamento, circulante: e.target.value})} 
-                  />
-                </div>
-                <div className="form-grupo">
-                  <label>Anestesia Prevista</label>
-                  <select value={formAgendamento.anestesia} onChange={e => setFormAgendamento({...formAgendamento, anestesia: e.target.value})}>
-                    <option>Geral</option><option>Regional</option><option>Local</option><option>Sedativo</option>
-                  </select>
-                </div>
-                <div className="form-grupo"><label>Duração Prevista (h)</label><input type="number" min="0.5" step="0.5" value={formAgendamento.duracao} onChange={e => setFormAgendamento({...formAgendamento, duracao: e.target.value})} /></div>
-                <div className="form-grupo full"><label>Observações</label><textarea rows={2} value={formAgendamento.obs} onChange={e => setFormAgendamento({...formAgendamento, obs: e.target.value})}></textarea></div>
-              </div>
-              <button className="btn btn-success" onClick={agendarCirurgia} disabled={!salas.length || loading} style={{ width: '100%', marginTop: '15px', justifyContent: 'center', padding: '14px' }}>
-                <i className="las la-save"></i> Agendar Cirurgia
-              </button>
-            </div>
-            <div className="cc-panel">
-              <h3><i className="las la-list-alt"></i> Cirurgias de Hoje</h3>
-              <div>
-                {cirurgiasHoje.length === 0 ? (
-                  <p style={{ color: '#94a3b8', textAlign: 'center', padding: '30px' }}>Nenhuma cirurgia agendada para hoje.</p>
-                ) : (
-                  cirurgiasHoje.map(c => (
-                    <div key={c.id} style={{ background: '#f8fafc', borderRadius: '8px', padding: '15px', marginBottom: '10px', borderTop: `3px solid ${c.status==='EM_ANDAMENTO'?'#f59e0b':c.status==='CONCLUIDA'?'#22c55e':'#1e3a8a'}` }}>
-                      <strong>{c.dataHora ? new Date(c.dataHora).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : ''}</strong> - {c.paciente.nome}<br />
-                      <small>{c.procedimento} | Sala {c.sala} | {c.equipe}</small><br />
-                      <span className={`badge ${getStatusBadge(c.status)}`}>{getStatusName(c.status)}</span>
+            {activeTab === 'agendamento' && podeGerenciar && (
+              <div className="cc-colunas">
+                <Panel title="Agendar nova cirurgia" icon="las la-calendar-plus">
+                  <div className="mod-form-grid">
+                    <PacienteSelect required value={formAgendamento.pacienteId} onChange={id => setFormAgendamento({ ...formAgendamento, pacienteId: id })} />
+                    <div className="form-group">
+                      <label htmlFor="cc-sala">Sala cirúrgica *</label>
+                      <select id="cc-sala" value={formAgendamento.sala} onChange={e => setFormAgendamento({...formAgendamento, sala: e.target.value})}>
+                        <option value="">{salas.length ? 'Selecione uma sala' : 'Cadastre uma sala antes de agendar'}</option>
+                        {salas.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+                    <div className="form-group"><label htmlFor="cc-data">Data *</label><input id="cc-data" type="date" value={formAgendamento.data} onChange={e => setFormAgendamento({...formAgendamento, data: e.target.value})} /></div>
+                    <div className="form-group"><label htmlFor="cc-hora">Horário *</label><input id="cc-hora" type="time" value={formAgendamento.hora} onChange={e => setFormAgendamento({...formAgendamento, hora: e.target.value})} /></div>
+                    <div className="form-group"><label htmlFor="cc-procedimento">Procedimento *</label><input id="cc-procedimento" type="text" placeholder="Nome do procedimento" value={formAgendamento.procedimento} onChange={e => setFormAgendamento({...formAgendamento, procedimento: e.target.value})} /></div>
+                    <div className="form-group">
+                      <label htmlFor="cc-prioridade">Prioridade</label>
+                      <select id="cc-prioridade" value={formAgendamento.prioridade} onChange={e => setFormAgendamento({...formAgendamento, prioridade: e.target.value})}>
+                        <option>Eletiva</option><option>Urgência</option><option>Emergência</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="cc-cirurgiao">Cirurgião responsável *</label>
+                      <input
+                        id="cc-cirurgiao"
+                        type="text"
+                        list="medicos-list"
+                        placeholder="Selecione ou digite o cirurgião"
+                        value={formAgendamento.cirurgiao}
+                        onChange={e => setFormAgendamento({...formAgendamento, cirurgiao: e.target.value})}
+                      />
+                      <datalist id="medicos-list">
+                        {profissionais.filter(u => u.cargo?.toLowerCase().includes('medico') || u.cargo === 'ADMIN' || u.cargo === 'diretor_geral').map(u => (
+                          <option key={u.id} value={`Dr(a). ${u.nome}`} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="cc-anestesista">Anestesista</label>
+                      <input
+                        id="cc-anestesista"
+                        type="text"
+                        list="medicos-list"
+                        placeholder="Selecione ou digite o anestesista"
+                        value={formAgendamento.anestesista}
+                        onChange={e => setFormAgendamento({...formAgendamento, anestesista: e.target.value})}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="cc-instrumentador">Enfermeiro instrumentador</label>
+                      <input
+                        id="cc-instrumentador"
+                        type="text"
+                        list="enfermeiros-list"
+                        placeholder="Selecione ou digite o instrumentador"
+                        value={formAgendamento.instrumentador}
+                        onChange={e => setFormAgendamento({...formAgendamento, instrumentador: e.target.value})}
+                      />
+                      <datalist id="enfermeiros-list">
+                        {profissionais.filter(u => u.cargo?.toLowerCase().includes('enferm')).map(u => (
+                          <option key={u.id} value={`Enf. ${u.nome}`} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="cc-circulante">Enfermeiro circulante</label>
+                      <input
+                        id="cc-circulante"
+                        type="text"
+                        list="enfermeiros-list"
+                        placeholder="Selecione ou digite o circulante"
+                        value={formAgendamento.circulante}
+                        onChange={e => setFormAgendamento({...formAgendamento, circulante: e.target.value})}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="cc-anestesia">Anestesia prevista</label>
+                      <select id="cc-anestesia" value={formAgendamento.anestesia} onChange={e => setFormAgendamento({...formAgendamento, anestesia: e.target.value})}>
+                        <option>Geral</option><option>Regional</option><option>Local</option><option>Sedativo</option>
+                      </select>
+                    </div>
+                    <div className="form-group"><label htmlFor="cc-duracao">Duração prevista (h)</label><input id="cc-duracao" type="number" min="0.5" step="0.5" value={formAgendamento.duracao} onChange={e => setFormAgendamento({...formAgendamento, duracao: e.target.value})} /></div>
+                    <div className="form-group mod-largo"><label htmlFor="cc-obs">Observações</label><textarea id="cc-obs" rows={2} value={formAgendamento.obs} onChange={e => setFormAgendamento({...formAgendamento, obs: e.target.value})}></textarea></div>
+                  </div>
+                  <div className="mod-acoes">
+                    <button type="button" className="btn btn-success" onClick={agendarCirurgia} disabled={!salas.length || loading}>
+                      <i className="las la-save" aria-hidden="true"></i> Agendar cirurgia
+                    </button>
+                  </div>
+                </Panel>
 
-        {activeTab === 'salas' && (
-          <div className="salas-grid">
-            {salas.map(sala => {
-              const ocupada = cirurgias.find(c => (c.status === "EM_ANDAMENTO" || (c.status === "AGENDADA" && c.dataHora && dataLocalKey(new Date(c.dataHora)) === hojeISO)) && c.sala === sala);
-              const isEmAndamento = ocupada && ocupada.status === 'EM_ANDAMENTO';
-              
-              let classe = "disponivel";
-              let statusText = " Disponível";
-              if (isEmAndamento) {
-                classe = "ocupada"; statusText = " Ocupada";
-              } else if (ocupada) {
-                classe = "limpeza"; statusText = " Reservada (Agendada p/ hoje)";
-              }
-
-              return (
-                <div key={sala} className={`sala-card ${classe}`}>
-                  <div className="sala-numero">{sala}</div>
-                  <div className="sala-status">{statusText}</div>
-                  <small style={{ color: '#94a3b8' }}>
-                    {ocupada ? `${ocupada.procedimento} - ${ocupada.paciente.nome}` : "Próxima: Nenhuma"}
-                  </small>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {activeTab === 'lista' && (
-          <div>
-            <div className="search-box">
-              <input type="text" aria-label="Buscar cirurgias por paciente, procedimento ou equipe" placeholder="Buscar por paciente, procedimento ou equipe..." value={buscaCirurgia} onChange={e => setBuscaCirurgia(e.target.value)} />
-              <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)} style={{ width: 'auto', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '8px' }}>
-                <option value="todos">Todos os Status</option>
-                <option value="AGENDADA">Agendada</option>
-                <option value="EM_ANDAMENTO">Em Andamento</option>
-                <option value="CONCLUIDA">Concluída</option>
-                <option value="CANCELADA">Cancelada</option>
-              </select>
-            </div>
-            <div className="tabela-cc-wrapper">
-              <table className="tabela-cc">
-                <thead>
-                  <tr><th>Data/Hora</th><th>Paciente</th><th>Procedimento</th><th>Sala</th><th>Equipe/Detalhes</th><th>Status</th><th>Ações</th></tr>
-                </thead>
-                <tbody>
-                  {cirurgiasFiltradas.length === 0 ? (
-                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Nenhuma cirurgia encontrada</td></tr>
+                <Panel title="Cirurgias de hoje" icon="las la-list-alt">
+                  {cirurgiasHoje.length === 0 ? (
+                    <EmptyState icon="las la-calendar" message="Nenhuma cirurgia agendada para hoje." />
                   ) : (
-                    cirurgiasFiltradas.slice(0, 50).map(c => (
-                      <tr key={c.id}>
-                        <td>{c.dataHora ? new Date(c.dataHora).toLocaleString('pt-BR', {dateStyle: 'short', timeStyle: 'short'}) : '-'}</td>
-                        <td><strong>{c.paciente.nome}</strong></td>
-                        <td>{c.procedimento}</td>
-                        <td>{c.sala}</td>
-                        <td style={{fontSize:'12px'}}>{c.equipe}</td>
-                        <td><span className={`badge ${getStatusBadge(c.status)}`}>{getStatusName(c.status)}</span></td>
-                        <td>
-                          {podeGerenciar && <>
-                          <button type="button" className="btn btn-sm btn-primary" aria-label={`Iniciar ${c.procedimento}`} onClick={() => alterarStatus(c.id, 'EM_ANDAMENTO')} disabled={c.status !== 'AGENDADA'}><i className="las la-play" aria-hidden="true"></i></button>
-                          <button type="button" className="btn btn-sm btn-warning" aria-label={`Concluir ${c.procedimento}`} onClick={() => alterarStatus(c.id, 'CONCLUIDA')} disabled={c.status !== 'EM_ANDAMENTO'} style={{ marginLeft: '4px' }}><i className="las la-check" aria-hidden="true"></i></button>
-                          <button type="button" className="btn btn-sm btn-danger" aria-label={`Cancelar ${c.procedimento}`} onClick={() => alterarStatus(c.id, 'CANCELADA')} disabled={c.status === 'CANCELADA' || c.status === 'CONCLUIDA'} style={{ marginLeft: '4px' }}><i className="las la-times" aria-hidden="true"></i></button>
-                          </>}
-                        </td>
-                      </tr>
-                    ))
+                    <ul className="cc-hoje">
+                      {cirurgiasHoje.map(c => (
+                        <li key={c.id}>
+                          <div className="cc-hoje-topo">
+                            <strong className="ui-num">{c.dataHora ? new Date(c.dataHora).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : ''}</strong>
+                            <Badge tone={STATUS_TOM[c.status] ?? 'neutral'}>{rotuloStatus(c.status)}</Badge>
+                          </div>
+                          <p className="cc-hoje-paciente">{c.paciente.nome}</p>
+                          <p className="mod-secundario">{c.procedimento} · Sala {c.sala}</p>
+                          {c.equipe && <p className="mod-secundario">{c.equipe}</p>}
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                </Panel>
+              </div>
+            )}
+
+            {activeTab === 'salas' && (salas.length === 0 ? (
+              <EmptyState icon="las la-door-open" message="Nenhuma sala cirúrgica cadastrada." />
+            ) : (
+              <ul className="cc-salas" aria-label="Salas cirúrgicas">
+                {salas.map(sala => {
+                  const ocupada = cirurgias.find(c => (c.status === "EM_ANDAMENTO" || (c.status === "AGENDADA" && c.dataHora && dataLocalKey(new Date(c.dataHora)) === hojeISO)) && c.sala === sala);
+                  const emAndamento = ocupada?.status === 'EM_ANDAMENTO';
+
+                  const situacao = emAndamento ? 'Ocupada' : ocupada ? 'Reservada hoje' : 'Livre';
+                  const tom: Tone = emAndamento ? 'info' : ocupada ? 'warning' : 'neutral';
+
+                  return (
+                    <li key={sala} className={`cc-sala ${emAndamento ? 'cc-sala-ocupada' : ''}`}>
+                      <div className="cc-sala-topo">
+                        <span className="cc-sala-nome">{sala}</span>
+                        <Badge tone={tom}>{situacao}</Badge>
+                      </div>
+                      <p className="cc-sala-detalhe">
+                        {ocupada ? `${ocupada.procedimento} - ${ocupada.paciente.nome}` : 'Sem cirurgia prevista'}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            ))}
+
+            {activeTab === 'lista' && (
+              <>
+                <div className="sc-filtros">
+                  <SearchInput value={buscaCirurgia} onChange={setBuscaCirurgia} placeholder="Buscar por paciente, procedimento ou equipe..." label="Buscar cirurgias por paciente, procedimento ou equipe" />
+                  <select aria-label="Filtrar cirurgias por status" value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
+                    <option value="todos">Todos os status</option>
+                    <option value="AGENDADA">Agendada</option>
+                    <option value="EM_ANDAMENTO">Em andamento</option>
+                    <option value="CONCLUIDA">Concluída</option>
+                    <option value="CANCELADA">Cancelada</option>
+                  </select>
+                </div>
+                {cirurgiasFiltradas.length === 0 ? (
+                  <EmptyState icon="las la-list" message="Nenhuma cirurgia encontrada." />
+                ) : (
+                  <div className="tabela-wrapper">
+                    <table className="tabela">
+                      <thead>
+                        <tr>
+                          <th scope="col">Data e hora</th>
+                          <th scope="col">Paciente</th>
+                          <th scope="col">Procedimento</th>
+                          <th scope="col">Sala</th>
+                          <th scope="col">Status</th>
+                          {podeGerenciar && <th scope="col">Ações</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cirurgiasFiltradas.slice(0, 50).map(c => (
+                          <tr key={c.id}>
+                            <td>{c.dataHora ? new Date(c.dataHora).toLocaleString('pt-BR', {dateStyle: 'short', timeStyle: 'short'}) : '-'}</td>
+                            <td><strong>{c.paciente.nome}</strong></td>
+                            <td>
+                              {c.procedimento}
+                              {c.equipe && <span className="mod-secundario">{c.equipe}</span>}
+                            </td>
+                            <td>{c.sala}</td>
+                            <td><Badge tone={STATUS_TOM[c.status] ?? 'neutral'}>{rotuloStatus(c.status)}</Badge></td>
+                            {podeGerenciar && (
+                              <td>
+                                <div className="mod-acoes-tabela">
+                                  <button type="button" className="btn btn-xs btn-primary" aria-label={`Iniciar ${c.procedimento} de ${c.paciente.nome}`} onClick={() => alterarStatus(c.id, 'EM_ANDAMENTO')} disabled={c.status !== 'AGENDADA'}>Iniciar</button>
+                                  <button type="button" className="btn btn-xs btn-success" aria-label={`Concluir ${c.procedimento} de ${c.paciente.nome}`} onClick={() => alterarStatus(c.id, 'CONCLUIDA')} disabled={c.status !== 'EM_ANDAMENTO'}>Concluir</button>
+                                  <button type="button" className="btn btn-xs btn-danger" aria-label={`Cancelar ${c.procedimento} de ${c.paciente.nome}`} onClick={() => alterarStatus(c.id, 'CANCELADA')} disabled={c.status === 'CANCELADA' || c.status === 'CONCLUIDA'}>Cancelar</button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
-
-
-
       </div>
     </div>
   );

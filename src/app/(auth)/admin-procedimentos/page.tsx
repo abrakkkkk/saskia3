@@ -1,6 +1,10 @@
-﻿'use client';
+'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { PageHeader, Badge, EmptyState, LoadingState, ErrorState } from '@/components/ui';
+import { Modal } from '@/components/ui/Modal';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
 import './procedimentos.css';
 
 interface Procedimento {
@@ -72,18 +76,6 @@ export default function AdminProcedimentosPage() {
     setEditIndex(null);
   };
 
-  useEffect(() => {
-    if (!isModalOpen) return;
-    const fecharComEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !salvando) {
-        setIsModalOpen(false);
-        setEditIndex(null);
-      }
-    };
-    window.addEventListener('keydown', fecharComEscape);
-    return () => window.removeEventListener('keydown', fecharComEscape);
-  }, [isModalOpen, salvando]);
-
   const salvarProcedimento = async () => {
     if (!formNome.trim()) {
       alert("Informe o nome do procedimento!");
@@ -143,111 +135,107 @@ export default function AdminProcedimentosPage() {
   };
 
   return (
-    <div className="conteudo procedimentos-page">
-      <div className="procedimentos-header">
-        <div>
-          <h2><i className="las la-syringe" aria-hidden="true"></i> Procedimentos</h2>
-          <p>Gerencie o catálogo de procedimentos, exames e serviços prestados.</p>
-        </div>
-        {isAdmin && <button className="btn btn-primary procedimentos-novo" onClick={() => abrirModal()}>
-          <i className="las la-plus" aria-hidden="true"></i> Novo Procedimento
-        </button>}
-      </div>
+    <div className="mod-pagina">
+      <PageHeader
+        icon="las la-syringe"
+        title="Procedimentos"
+        subtitle="Catálogo de procedimentos, exames e serviços."
+        actions={isAdmin ? (
+          <button type="button" className="btn btn-primary" onClick={() => abrirModal()}>
+            <i className="las la-plus" aria-hidden="true"></i> Novo procedimento
+          </button>
+        ) : undefined}
+      />
 
-      {sessionStatus === 'authenticated' && !isAdmin && <p role="alert" className="alert-erro">Acesso restrito a administradores do hospital.</p>}
-      {erro && <p role="alert" className="alert-erro">{erro}</p>}
+      {sessionStatus === 'authenticated' && !isAdmin && <p role="alert" className="mod-aviso mod-aviso-erro">Acesso restrito a administradores do hospital.</p>}
 
-      <div className="lista-procedimentos">
-        {carregando ? (
-          <p role="status" className="procedimentos-loading">Carregando procedimentos…</p>
-        ) : erro ? (
-          <div className="procedimentos-empty" role="status">
-            <p>Não foi possível exibir o catálogo.</p>
-            {isAdmin && <button type="button" className="btn btn-primary" onClick={() => void carregarProcedimentos()}>Tentar novamente</button>}
-          </div>
-        ) : procedimentos.length === 0 ? (
-          <p className="procedimentos-empty" role="status">Nenhum procedimento cadastrado.</p>
-        ) : (
-          procedimentos.map((p, idx) => (
-            <div className="procedimento-item" key={p.id}>
-              <div className="procedimento-info">
-                <h4>{p.nome}</h4>
-                <p>{p.descricao}</p>
-                <div className="procedimento-footer">
-                  <span className={`badge-area ${p.ativo ? 'area-ativo' : 'area-inativo'}`}>
-                    <i className={`las ${p.ativo ? 'la-check-circle' : 'la-ban'}`} aria-hidden="true"></i>
-                    {p.ativo ? 'Ativo' : 'Desativado'}
-                  </span>
-                  {p.valorBase !== null && (
-                    <span className="badge-valor">
-                      <i className="las la-coins"></i> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.valorBase)}
-                    </span>
+      {carregando ? (
+        <LoadingState message="Carregando procedimentos..." />
+      ) : erro ? (
+        <ErrorState message={erro} onRetry={isAdmin ? () => void carregarProcedimentos() : undefined} />
+      ) : procedimentos.length === 0 ? (
+        <EmptyState icon="las la-syringe" message="Nenhum procedimento cadastrado." />
+      ) : (
+        <div className="tabela-wrapper">
+          <table className="tabela">
+            <thead>
+              <tr>
+                <th>Procedimento</th>
+                <th>Descrição</th>
+                <th>Valor base</th>
+                <th>Status</th>
+                {isAdmin && <th>Ações</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {procedimentos.map((p, idx) => (
+                <tr key={p.id}>
+                  <td><strong>{p.nome}</strong></td>
+                  <td className="proc-descricao">{p.descricao || <span className="ux-mudo">Sem descrição</span>}</td>
+                  <td>{p.valorBase !== null ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.valorBase) : <span className="ux-mudo">Não informado</span>}</td>
+                  <td><Badge tone={p.ativo ? 'success' : 'neutral'}>{p.ativo ? 'Ativo' : 'Desativado'}</Badge></td>
+                  {isAdmin && (
+                    <td>
+                      <span className="ux-acoes">
+                        <button type="button" className="btn btn-secondary btn-sm ux-icon-btn" onClick={() => abrirModal(idx)} aria-label={`Editar ${p.nome}`} title="Editar"><i className="las la-edit" aria-hidden="true"></i></button>
+                        {p.ativo ? (
+                          <button type="button" className="btn btn-danger btn-sm ux-icon-btn" onClick={() => excluirProcedimento(idx)} aria-label={`Desativar ${p.nome}`} title="Desativar"><i className="las la-ban" aria-hidden="true"></i></button>
+                        ) : (
+                          <button type="button" className="btn btn-secondary btn-sm ux-icon-btn" onClick={() => reativarProcedimento(p)} aria-label={`Reativar ${p.nome}`} title="Reativar"><i className="las la-undo" aria-hidden="true"></i></button>
+                        )}
+                      </span>
+                    </td>
                   )}
-                </div>
-              </div>
-              <div className="procedimento-acoes">
-                {isAdmin && <button type="button" className="btn-editar" onClick={() => abrirModal(idx)} aria-label={`Editar ${p.nome}`} title="Editar"><i className="las la-edit" aria-hidden="true"></i></button>}
-                {isAdmin && p.ativo && <button type="button" className="btn-excluir" onClick={() => excluirProcedimento(idx)} aria-label={`Desativar ${p.nome}`} title="Desativar"><i className="las la-ban" aria-hidden="true"></i></button>}
-                {isAdmin && !p.ativo && <button type="button" className="btn-editar" onClick={() => reativarProcedimento(p)} aria-label={`Reativar ${p.nome}`} title="Reativar"><i className="las la-undo" aria-hidden="true"></i></button>}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {isModalOpen && (
-        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget && !salvando) fecharModal(); }}>
-          <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="procedimento-modal-title" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 id="procedimento-modal-title"><i className={editIndex !== null ? "las la-edit" : "las la-plus-circle"} aria-hidden="true"></i> {editIndex !== null ? "Editar Procedimento" : "Novo Procedimento"}</h3>
-              <button type="button" aria-label="Fechar formulário de procedimento" disabled={salvando} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }} onClick={fecharModal}>&times;</button>
-            </div>
-
-            <div className="modal-body">
-              <div className="form-group">
-                <label htmlFor="procedimento-nome">Nome do procedimento *</label>
-                <input
-                  id="procedimento-nome"
-                  type="text"
-                  value={formNome}
-                  onChange={e => setFormNome(e.target.value)}
-                  placeholder="Ex: Curativo Simples"
-                  maxLength={120}
-                  autoFocus
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="procedimento-descricao">Descrição</label>
-                <textarea
-                  id="procedimento-descricao"
-                  rows={3}
-                  value={formDescricao}
-                  onChange={e => setFormDescricao(e.target.value)}
-                  placeholder="Detalhes e observações sobre o procedimento"
-                  maxLength={2000}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="procedimento-valor">Valor base (opcional)</label>
-                <input
-                  id="procedimento-valor"
-                  type="number"
-                  min="0"
-                  max="100000000"
-                  step="0.01"
-                  value={formValor}
-                  onChange={e => setFormValor(e.target.value)}
-                  placeholder="Ex: 50,00"
-                />
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button type="button" className="btn btn-danger" onClick={fecharModal} disabled={salvando}>Cancelar</button>
-              <button type="button" className="btn btn-success" onClick={salvarProcedimento} disabled={salvando}><i className="las la-save" aria-hidden="true"></i> {salvando ? 'Salvando…' : 'Salvar'}</button>
-            </div>
+        <Modal title={editIndex !== null ? 'Editar procedimento' : 'Novo procedimento'} icon={editIndex !== null ? 'las la-edit' : 'las la-plus-circle'} onClose={fecharModal} busy={salvando}>
+          <div className="form-group">
+            <label htmlFor="procedimento-nome">Nome *</label>
+            <input
+              id="procedimento-nome"
+              type="text"
+              value={formNome}
+              onChange={e => setFormNome(e.target.value)}
+              placeholder="Ex.: Curativo simples"
+              maxLength={120}
+              autoFocus
+            />
           </div>
-        </div>
+          <div className="form-group">
+            <label htmlFor="procedimento-descricao">Descrição</label>
+            <textarea
+              id="procedimento-descricao"
+              rows={3}
+              value={formDescricao}
+              onChange={e => setFormDescricao(e.target.value)}
+              placeholder="Detalhes e observações"
+              maxLength={2000}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="procedimento-valor">Valor base (opcional)</label>
+            <input
+              id="procedimento-valor"
+              type="number"
+              min="0"
+              max="100000000"
+              step="0.01"
+              value={formValor}
+              onChange={e => setFormValor(e.target.value)}
+              placeholder="Ex.: 50,00"
+            />
+          </div>
+          <div className="ui-modal-foot">
+            <button type="button" className="btn btn-secondary" onClick={fecharModal} disabled={salvando}>Cancelar</button>
+            <button type="button" className="btn btn-primary" onClick={salvarProcedimento} disabled={salvando}><i className="las la-save" aria-hidden="true"></i> {salvando ? 'Salvando…' : 'Salvar'}</button>
+          </div>
+        </Modal>
       )}
     </div>
   );

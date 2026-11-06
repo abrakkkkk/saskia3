@@ -1,29 +1,19 @@
-.cssd-container { min-width: 0; animation: fadeIn 0.4s ease-out; }
+/* Só o que o sistema compartilhado não cobre: grade de lotes, ficha do lote e campo somente leitura. */
+.cssd-lotes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 0 var(--ui-space-4); align-items: start; }
+.cssd-lotes .ui-panel-header { align-items: flex-start; }
+.cssd-lotes .ui-panel-header h2 { overflow-wrap: anywhere; }
+.ui-panel > .mod-filtros:only-child { margin-bottom: 0; }
 
-.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 0 15px; }
+.cssd-dados { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: var(--ui-t-body); }
+.cssd-dados dt { color: var(--ui-text-muted); }
+.cssd-dados dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 
-.lotes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 15px; }
-.lote-card { background: #fff; color: var(--ui-text); border: 1px solid #dbe4ef; border-radius: 12px; padding: 20px; min-width: 0; overflow-wrap: anywhere; }
-.lote-card .lote-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-.lote-card .lote-body p { font-size: 14px; margin: 4px 0; }
-.lote-card .lote-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
-.lote-card .lote-actions .btn { white-space: normal; }
-.lote-card .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.cssd-indicadores { margin-top: var(--ui-space-4); padding-top: var(--ui-space-4); border-top: 1px solid var(--ui-border); }
+.cssd-indicadores h3 { margin: 0 0 var(--ui-space-3); font-size: var(--ui-t-body); font-weight: 600; }
+.cssd-indicadores .form-group { margin-bottom: var(--ui-space-3); }
+.cssd-pendencia { margin: var(--ui-space-4) 0 0; }
 
-.cssd-indicadores { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ui-border); }
-.cssd-indicadores h5 { margin-bottom: 8px; font-size: 14px; }
-.cssd-indicadores .form-group { margin-bottom: 10px; }
-.cssd-indicadores .form-group select { padding: 10px 12px; font-size: 14px; }
-.cssd-pendencia { margin-top: 10px; color: var(--ui-warning); font-size: 13px; }
+.cssd-acoes { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin-top: var(--ui-space-4); }
+.cssd-acoes .btn { white-space: normal; text-align: center; }
 
-.cssd-tabela-branca { background: #fff; border: 1px solid #dbe4ef; }
-.tabela-cssd { width: 100%; min-width: 900px; border-collapse: collapse; background: white; }
-.tabela-cssd thead { background: #0f172a; }
-.tabela-cssd th { padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #e2e8f0; text-transform: uppercase; letter-spacing: 1px; }
-.tabela-cssd td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
-.tabela-cssd tbody tr:hover { background: #f8fafc; }
-.tabela-cssd tbody tr:last-child td { border-bottom: none; }
-
-@media (prefers-reduced-motion: reduce) {
-  .cssd-container { animation: none; }
-}
+.mod-pagina .form-group input[readonly] { background: var(--ui-surface-muted); color: var(--ui-text-muted); }

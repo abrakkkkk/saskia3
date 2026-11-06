@@ -1,7 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Tabs } from '@/components/ui';
+import { PageHeader, StatGrid, StatCard, Tabs, Badge, SearchInput, EmptyState, LoadingState, ErrorState, Panel, type Tone } from '@/components/ui';
+import { Modal } from '@/components/ui/Modal';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
 import './gestao-salas.css';
 
 function dataLocalISO(data = new Date()) {
@@ -32,22 +35,22 @@ interface Reserva {
 }
 
 const tiposSala: Record<string, string> = {
-  consultorio: " Consultório",
-  cirurgica: " Sala Cirúrgica",
-  exame: " Sala de Exames",
-  reuniao: " Sala de Reunião",
-  triagem: " Sala de Triagem",
-  observacao: " Sala de Observação",
-  procedimento: " Sala de Procedimentos",
-  aula: " Sala de Aula",
-  outro: " Outro"
+  consultorio: "Consultório",
+  cirurgica: "Sala cirúrgica",
+  exame: "Sala de exames",
+  reuniao: "Sala de reunião",
+  triagem: "Sala de triagem",
+  observacao: "Sala de observação",
+  procedimento: "Sala de procedimentos",
+  aula: "Sala de aula",
+  outro: "Outro"
 };
 
 const statusLabel: Record<string, string> = {
-  LIVRE: " Livre",
-  OCUPADO: " Em Uso",
-  RESERVADO: " Reservada",
-  MANUTENCAO: " Manutenção"
+  LIVRE: "Livre",
+  OCUPADO: "Em uso",
+  RESERVADO: "Reservada",
+  MANUTENCAO: "Manutenção"
 };
 
 const ABAS = [
@@ -112,7 +115,7 @@ export default function GestaoSalasPage() {
   }, []);
 
   const cadastrarSala = async () => {
-    if (!formSala.nome) { alert(" Digite o nome da sala!"); return; }
+    if (!formSala.nome) { alert("Digite o nome da sala."); return; }
     setIsSaving(true);
     try {
       const res = await fetch('/api/salas', {
@@ -135,7 +138,7 @@ export default function GestaoSalasPage() {
 
       setFormSala({ nome: '', tipo: 'consultorio', setor: 'Consultórios', andar: '', capacidade: 1, equipamentos: '', obs: '' });
       setActiveTab('mapa');
-      alert(" Sala cadastrada com sucesso!");
+      alert("Sala cadastrada com sucesso.");
       carregarDados();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Erro inesperado.');
@@ -174,7 +177,7 @@ export default function GestaoSalasPage() {
 
   const confirmarReserva = async () => {
     if(!formReserva.salaId || !formReserva.data || !formReserva.horaInicio || !formReserva.horaFim){
-      alert(" Preencha todos os campos obrigatórios (*)!");
+      alert("Preencha os campos obrigatórios (*).");
       return;
     }
     setIsSaving(true);
@@ -195,7 +198,7 @@ export default function GestaoSalasPage() {
       if (!res.ok) throw new Error(resposta?.error || "Erro ao criar reserva");
 
       setIsModalOpen(false);
-      alert(" Reserva confirmada com sucesso!");
+      alert("Reserva confirmada.");
       carregarDados();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Erro inesperado.');
@@ -214,7 +217,7 @@ export default function GestaoSalasPage() {
 
       const resposta = await res.json().catch(() => null);
       if (!res.ok) throw new Error(resposta?.error || "Erro ao atualizar reserva");
-      alert(status === 'FINALIZADA' ? " Sala liberada com sucesso!" : " Reserva cancelada com sucesso!");
+      alert(status === 'FINALIZADA' ? "Sala liberada." : "Reserva cancelada.");
       carregarDados();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Erro inesperado.');
@@ -230,7 +233,7 @@ export default function GestaoSalasPage() {
       });
       const resposta = await res.json().catch(() => null);
       if (!res.ok) throw new Error(resposta?.error || "Erro ao atualizar status");
-      alert(` Status alterado para: ${statusLabel[status]}`);
+      alert(`Status alterado para: ${statusLabel[status]}.`);
       carregarDados();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Erro inesperado.');
@@ -260,174 +263,161 @@ export default function GestaoSalasPage() {
     reservasFiltradas = reservasFiltradas.filter(r => r.profissional.toLowerCase().includes(t) || (r.paciente || '').toLowerCase().includes(t));
   }
 
-  if (loading) return <div className="salas-loading" role="status" aria-live="polite">Carregando Gestão de Salas…</div>;
+  if (loading) return <div className="mod-pagina"><PageHeader icon="las la-door-open" title="Gestão de salas" /><LoadingState message="Carregando salas..." /></div>;
+
+  const reservasAbertas = reservasFiltradas.filter(r => r.status === 'ATIVA' || r.status === 'RESERVADA');
+  const toneSala: Record<string, Tone> = { LIVRE: 'success', OCUPADO: 'danger', RESERVADO: 'warning', MANUTENCAO: 'neutral' };
+  const toneReserva = (status: string): Tone => status === 'ATIVA' ? 'danger' : status === 'RESERVADA' ? 'warning' : status === 'FINALIZADA' ? 'success' : 'neutral';
+  const rotuloReserva = (status: string) => status === 'ATIVA' ? 'Em uso' : status === 'RESERVADA' ? 'Reservada' : status === 'FINALIZADA' ? 'Finalizada' : 'Cancelada';
 
   return (
-    <div className="conteudo">
-      <div className="salas-container">
-        
-        <div className="banner-salas">
-          <div>
-            <h1><i className="las la-door-open"></i> Gestão de Salas & Consultórios</h1>
-            <p>Cadastro, reserva e monitoramento em tempo real de salas e espaços</p>
-          </div>
-          <div className="banner-salas-acoes">
-            <button className="btn btn-success" onClick={() => setActiveTab('cadastro')}><i className="las la-plus-circle"></i> Nova Sala</button>
-            <button className="btn btn-primary" onClick={() => abrirReserva()} disabled={!!erroCarga} title={erroCarga ? 'Carregue os dados antes de criar uma reserva' : undefined}><i aria-hidden="true" className="las la-calendar-plus"></i> Nova Reserva</button>
-          </div>
-        </div>
+    <div className="mod-pagina">
+      <PageHeader
+        icon="las la-door-open"
+        title="Gestão de salas"
+        subtitle="Cadastro, reservas e situação das salas e consultórios."
+        actions={
+          <>
+            <button type="button" className="btn btn-secondary" onClick={() => setActiveTab('cadastro')}><i className="las la-plus-circle" aria-hidden="true"></i> Nova sala</button>
+            <button type="button" className="btn btn-primary" onClick={() => abrirReserva()} disabled={!!erroCarga} title={erroCarga ? 'Carregue os dados antes de criar uma reserva' : undefined}><i aria-hidden="true" className="las la-calendar-plus"></i> Nova reserva</button>
+          </>
+        }
+      />
 
-        <div className="stats-grid">
-          <div className="stat-card livre"><div className="stat-icon" aria-hidden="true"><i className="las la-check-circle"></i></div><div className="stat-valor">{erroCarga ? '—' : stats.livres}</div><div className="stat-label">Livres</div></div>
-          <div className="stat-card ocupado"><div className="stat-icon" aria-hidden="true"><i className="las la-door-closed"></i></div><div className="stat-valor">{erroCarga ? '—' : stats.ocupadas}</div><div className="stat-label">Em Uso</div></div>
-          <div className="stat-card reservado"><div className="stat-icon" aria-hidden="true"><i className="las la-clock"></i></div><div className="stat-valor">{erroCarga ? '—' : stats.reservadas}</div><div className="stat-label">Reservadas</div></div>
-          <div className="stat-card manutencao"><div className="stat-icon" aria-hidden="true"><i className="las la-tools"></i></div><div className="stat-valor">{erroCarga ? '—' : stats.manutencao}</div><div className="stat-label">Manutenção</div></div>
-          <div className="stat-card"><div className="stat-icon" aria-hidden="true"><i className="las la-door-open"></i></div><div className="stat-valor">{erroCarga ? '—' : stats.total}</div><div className="stat-label">Total de Salas</div></div>
-        </div>
+      <StatGrid>
+        <StatCard icon="las la-check-circle" tone="success" value={erroCarga ? '—' : stats.livres} label="Livres" />
+        <StatCard icon="las la-door-closed" tone="danger" value={erroCarga ? '—' : stats.ocupadas} label="Em uso" />
+        <StatCard icon="las la-clock" tone="warning" value={erroCarga ? '—' : stats.reservadas} label="Reservadas" />
+        <StatCard icon="las la-tools" value={erroCarga ? '—' : stats.manutencao} label="Manutenção" />
+        <StatCard icon="las la-door-open" value={erroCarga ? '—' : stats.total} label="Total de salas" />
+      </StatGrid>
 
-        {erroCarga && (
-          <div className="salas-erro" role="alert">
-            <span>{erroCarga}</span>
-            <button className="btn btn-primary btn-sm" onClick={carregarDados}>Tentar novamente</button>
-          </div>
-        )}
+      {erroCarga && <ErrorState message={erroCarga} onRetry={carregarDados} />}
 
-        <div className="legenda-salas">
-          <div className="legenda-item"><div className="legenda-cor" style={{background:'#22c55e'}}></div>  Livre - Disponível para uso</div>
-          <div className="legenda-item"><div className="legenda-cor" style={{background:'#f59e0b'}}></div>  Reservada - Agendada para horário futuro</div>
-          <div className="legenda-item"><div className="legenda-cor" style={{background:'#dc2626'}}></div>  Em Uso - Ocupada neste momento</div>
-          <div className="legenda-item"><div className="legenda-cor" style={{background:'#6b7280'}}></div>  Manutenção - Indisponível temporariamente</div>
-        </div>
+      <Tabs label="Seções de salas" tabs={ABAS} active={activeTab} onChange={setActiveTab} />
 
-        <Tabs label="Seções de salas" tabs={ABAS} active={activeTab} onChange={setActiveTab} />
-
-        {activeTab === 'mapa' && (
-          <div>
-            <div className="search-box">
-              <input aria-label="Buscar sala por nome, tipo ou setor" type="search" placeholder="Buscar sala por nome, tipo ou setor..." value={buscarSala} onChange={e => setBuscarSala(e.target.value)} />
+      {activeTab === 'mapa' && (
+        <div>
+          <div className="ux-barra">
+            <SearchInput value={buscarSala} onChange={setBuscarSala} placeholder="Buscar por nome, tipo ou setor" label="Buscar sala por nome, tipo ou setor" />
+            <div className="form-group">
               <select aria-label="Filtrar salas por status" value={filtroStatusSala} onChange={e => setFiltroStatusSala(e.target.value)}>
-                <option value="todos">Todos os Status</option>
-                <option value="LIVRE"> Livres</option>
-                <option value="RESERVADO"> Reservadas</option>
-                <option value="OCUPADO"> Em Uso</option>
-                <option value="MANUTENCAO"> Manutenção</option>
+                <option value="todos">Todos os status</option>
+                <option value="LIVRE">Livres</option>
+                <option value="RESERVADO">Reservadas</option>
+                <option value="OCUPADO">Em uso</option>
+                <option value="MANUTENCAO">Manutenção</option>
               </select>
             </div>
-            <div className="mapa-salas">
-              {erroCarga ? null : salasFiltradas.length === 0 ? (
-                <div style={{textAlign:'center', padding:'50px', color:'#94a3b8', gridColumn:'1/-1'}}><i className="las la-door-open" style={{fontSize:'64px', opacity:0.3}}></i><p>Nenhuma sala encontrada</p></div>
-              ) : (
-                salasFiltradas.map(s => {
-                  const resAtiva = reservas.find(r => r.salaId === s.id && r.status === "ATIVA");
-                  let tempoRestante = '';
-                  let classeUrgente = '';
-                  
-                  if(resAtiva && resAtiva.horaFim){
-                      const agora = new Date();
-                      const fim = new Date(resAtiva.data + 'T' + resAtiva.horaFim);
-                      const diff = Math.floor((fim.getTime() - agora.getTime()) / 60000);
-                      
-                      if(diff > 0){
-                          const horas = Math.floor(diff / 60);
-                          const mins = diff % 60;
-                          tempoRestante = horas > 0 ? `${horas}h ${mins}min restantes` : `${mins} min restantes`;
-                          if(diff <= 5) classeUrgente = 'urgente';
-                      } else if(diff === 0){
-                          tempoRestante = 'Encerrando agora...';
-                          classeUrgente = 'urgente';
-                      } else {
-                          tempoRestante = 'Prazo da reserva encerrado';
-                          classeUrgente = 'urgente';
-                      }
+          </div>
+          {erroCarga ? null : salasFiltradas.length === 0 ? (
+            <EmptyState icon="las la-door-open" message="Nenhuma sala encontrada." />
+          ) : (
+            <div className="sl-mapa">
+              {salasFiltradas.map(s => {
+                const resAtiva = reservas.find(r => r.salaId === s.id && r.status === "ATIVA");
+                let tempoRestante = '';
+                let urgente = false;
+
+                if (resAtiva && resAtiva.horaFim) {
+                  const agora = new Date();
+                  const fim = new Date(resAtiva.data + 'T' + resAtiva.horaFim);
+                  const diff = Math.floor((fim.getTime() - agora.getTime()) / 60000);
+
+                  if (diff > 0) {
+                    const horas = Math.floor(diff / 60);
+                    const mins = diff % 60;
+                    tempoRestante = horas > 0 ? `${horas}h ${mins}min restantes` : `${mins} min restantes`;
+                    if (diff <= 5) urgente = true;
+                  } else if (diff === 0) {
+                    tempoRestante = 'Encerrando agora';
+                    urgente = true;
+                  } else {
+                    tempoRestante = 'Prazo da reserva encerrado';
+                    urgente = true;
                   }
+                }
 
-                  const salaStatusCss = s.status.toLowerCase();
-
-                  return (
-                    <div key={s.id} className={`sala-card ${salaStatusCss}`}>
-                      <div className="sala-numero"><span>{s.nome}</span><span className="sala-status">{statusLabel[s.status]}</span></div>
-                      <div className="sala-info">
-                          <p><i aria-hidden="true" className="las la-tag"></i> {tiposSala[s.tipo || ''] || s.tipo || 'Tipo não informado'}</p>
-                          <p><i aria-hidden="true" className="las la-map-marker"></i> {s.setor || 'Setor não informado'}{s.andar ? ' - ' + s.andar : ''}</p>
-                          <p><i className="las la-users"></i> Capacidade: {s.capacidade} pessoa(s)</p>
-                          {s.equipamentos && <p><i className="las la-tools"></i> {s.equipamentos}</p>}
-                          {s.obs && <p><i className="las la-info-circle"></i> {s.obs}</p>}
-                          {resAtiva && (
-                            <>
-                              <p><i className="las la-user"></i> <strong>{resAtiva.profissional}</strong>{resAtiva.paciente ? ' | ' + resAtiva.paciente : ''}</p>
-                              <p className={`tempo-restante ${classeUrgente}`}><i className="las la-hourglass-half"></i> {tempoRestante}</p>
-                            </>
-                          )}
-                      </div>
-                      <div className="sala-acoes">
-                          {s.status === 'LIVRE' && (
-                            <>
-                              <button className="btn btn-primary btn-sm" onClick={() => abrirReserva(s.id)}><i className="las la-calendar-plus"></i> Reservar</button>
-                              <button className="btn btn-warning btn-sm" onClick={() => alterarStatusSala(s.id, 'MANUTENCAO')}><i className="las la-tools"></i> Manutenção</button>
-                            </>
-                          )}
-                          {s.status === 'RESERVADO' && (
-                            <>
-                              <button className="btn btn-primary btn-sm" onClick={() => abrirReserva(s.id)}><i className="las la-calendar-plus"></i> Reservar</button>
-                              <button className="btn btn-warning btn-sm" onClick={() => alterarStatusSala(s.id, 'MANUTENCAO')}><i className="las la-tools"></i> Manutenção</button>
-                            </>
-                          )}
-                          {s.status === 'OCUPADO' && resAtiva && (
-                            <button className="btn btn-success btn-sm" onClick={() => encerrarReserva(resAtiva.id, 'FINALIZADA')}><i className="las la-check-circle"></i> Liberar Agora</button>
-                          )}
-                          {s.status === 'MANUTENCAO' && (
-                            <button className="btn btn-success btn-sm" onClick={() => alterarStatusSala(s.id, 'LIVRE')}><i className="las la-check"></i> Liberar</button>
-                          )}
-                      </div>
+                return (
+                  <article key={s.id} className="sl-sala">
+                    <header className="sl-sala-topo">
+                      <h2>{s.nome}</h2>
+                      <Badge tone={toneSala[s.status] ?? 'neutral'}>{statusLabel[s.status] ?? s.status}</Badge>
+                    </header>
+                    <ul className="sl-info">
+                      <li><i aria-hidden="true" className="las la-tag"></i> {tiposSala[s.tipo || ''] || s.tipo || 'Tipo não informado'}</li>
+                      <li><i aria-hidden="true" className="las la-map-marker"></i> {s.setor || 'Setor não informado'}{s.andar ? ' - ' + s.andar : ''}</li>
+                      <li><i aria-hidden="true" className="las la-users"></i> Capacidade: {s.capacidade}</li>
+                      {s.equipamentos && <li><i aria-hidden="true" className="las la-tools"></i> {s.equipamentos}</li>}
+                      {s.obs && <li><i aria-hidden="true" className="las la-info-circle"></i> {s.obs}</li>}
+                      {resAtiva && (
+                        <>
+                          <li><i aria-hidden="true" className="las la-user"></i> <strong>{resAtiva.profissional}</strong>{resAtiva.paciente ? ' | ' + resAtiva.paciente : ''}</li>
+                          <li className={urgente ? 'sl-urgente' : undefined}><i aria-hidden="true" className="las la-hourglass-half"></i> {tempoRestante}</li>
+                        </>
+                      )}
+                    </ul>
+                    <div className="sl-acoes">
+                      {(s.status === 'LIVRE' || s.status === 'RESERVADO') && (
+                        <>
+                          <button type="button" className="btn btn-primary btn-sm" onClick={() => abrirReserva(s.id)}><i className="las la-calendar-plus" aria-hidden="true"></i> Reservar</button>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => alterarStatusSala(s.id, 'MANUTENCAO')}><i className="las la-tools" aria-hidden="true"></i> Manutenção</button>
+                        </>
+                      )}
+                      {s.status === 'OCUPADO' && resAtiva && (
+                        <button type="button" className="btn btn-success btn-sm" onClick={() => encerrarReserva(resAtiva.id, 'FINALIZADA')}><i className="las la-check-circle" aria-hidden="true"></i> Liberar agora</button>
+                      )}
+                      {s.status === 'MANUTENCAO' && (
+                        <button type="button" className="btn btn-success btn-sm" onClick={() => alterarStatusSala(s.id, 'LIVRE')}><i className="las la-check" aria-hidden="true"></i> Liberar</button>
+                      )}
                     </div>
-                  );
-                })
-              )}
+                  </article>
+                );
+              })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
-        {activeTab === 'cadastro' && (
-          <div className="form-panel">
-            <h3><i className="las la-plus-circle"></i> Cadastrar Nova Sala</h3>
-            <div className="form-grid">
-              <div className="form-grupo"><label htmlFor="sala-nome">Nome da Sala *</label><input id="sala-nome" type="text" placeholder="Ex: Consultório 3" value={formSala.nome} onChange={e => setFormSala({...formSala, nome: e.target.value})} /></div>
-              <div className="form-grupo"><label htmlFor="sala-tipo">Tipo *</label><select id="sala-tipo" value={formSala.tipo} onChange={e => setFormSala({...formSala, tipo: e.target.value})}>
-                <option value="consultorio"> Consultório</option><option value="cirurgica"> Sala Cirúrgica</option>
-                <option value="exame"> Sala de Exames</option><option value="reuniao"> Sala de Reunião</option>
-                <option value="triagem"> Sala de Triagem</option><option value="observacao"> Sala de Observação</option>
-                <option value="procedimento"> Sala de Procedimentos</option><option value="aula"> Sala de Aula</option>
-                <option value="outro"> Outro</option>
-              </select></div>
-              <div className="form-grupo"><label htmlFor="sala-setor">Setor *</label><select id="sala-setor" value={formSala.setor} onChange={e => setFormSala({...formSala, setor: e.target.value})}>
-                <option>Consultórios</option><option>Centro Cirúrgico</option><option>Emergência</option>
-                <option>UTI</option><option>Enfermaria</option><option>Ambulatório</option>
-                <option>Administração</option><option>Outro</option>
-              </select></div>
-              <div className="form-grupo"><label htmlFor="sala-andar">Andar</label><input id="sala-andar" type="text" placeholder="Térreo, 1º Andar..." value={formSala.andar} onChange={e => setFormSala({...formSala, andar: e.target.value})} /></div>
-              <div className="form-grupo"><label htmlFor="sala-capacidade">Capacidade</label><input id="sala-capacidade" type="number" min="1" value={formSala.capacidade} onChange={e => setFormSala({...formSala, capacidade: parseInt(e.target.value) || 1})} /></div>
-              <div className="form-grupo"><label htmlFor="sala-equipamentos">Equipamentos</label><input id="sala-equipamentos" type="text" placeholder="Maca, Computador, Projetor..." value={formSala.equipamentos} onChange={e => setFormSala({...formSala, equipamentos: e.target.value})} /></div>
-              <div className="form-grupo full"><label htmlFor="sala-obs">Observações</label><textarea id="sala-obs" rows={2} value={formSala.obs} onChange={e => setFormSala({...formSala, obs: e.target.value})}></textarea></div>
-            </div>
-            <button className="btn btn-success" onClick={cadastrarSala} disabled={isSaving} style={{width:'100%', marginTop:'15px', justifyContent:'center', padding:'14px'}}><i className="las la-save"></i> {isSaving ? 'Cadastrando...' : 'Cadastrar Sala'}</button>
+      {activeTab === 'cadastro' && (
+        <Panel title="Cadastrar sala" icon="las la-plus-circle">
+          <div className="ux-campos">
+            <div className="form-group"><label htmlFor="sala-nome">Nome da sala *</label><input id="sala-nome" type="text" placeholder="Ex.: Consultório 3" value={formSala.nome} onChange={e => setFormSala({...formSala, nome: e.target.value})} /></div>
+            <div className="form-group"><label htmlFor="sala-tipo">Tipo *</label><select id="sala-tipo" value={formSala.tipo} onChange={e => setFormSala({...formSala, tipo: e.target.value})}>
+              {Object.entries(tiposSala).map(([valor, rotulo]) => <option key={valor} value={valor}>{rotulo}</option>)}
+            </select></div>
+            <div className="form-group"><label htmlFor="sala-setor">Setor *</label><select id="sala-setor" value={formSala.setor} onChange={e => setFormSala({...formSala, setor: e.target.value})}>
+              <option>Consultórios</option><option>Centro Cirúrgico</option><option>Emergência</option>
+              <option>UTI</option><option>Enfermaria</option><option>Ambulatório</option>
+              <option>Administração</option><option>Outro</option>
+            </select></div>
+            <div className="form-group"><label htmlFor="sala-andar">Andar</label><input id="sala-andar" type="text" placeholder="Térreo, 1º andar..." value={formSala.andar} onChange={e => setFormSala({...formSala, andar: e.target.value})} /></div>
+            <div className="form-group"><label htmlFor="sala-capacidade">Capacidade</label><input id="sala-capacidade" type="number" min="1" value={formSala.capacidade} onChange={e => setFormSala({...formSala, capacidade: parseInt(e.target.value) || 1})} /></div>
+            <div className="form-group"><label htmlFor="sala-equipamentos">Equipamentos</label><input id="sala-equipamentos" type="text" placeholder="Maca, computador, projetor..." value={formSala.equipamentos} onChange={e => setFormSala({...formSala, equipamentos: e.target.value})} /></div>
+            <div className="form-group ux-largo"><label htmlFor="sala-obs">Observações</label><textarea id="sala-obs" rows={2} value={formSala.obs} onChange={e => setFormSala({...formSala, obs: e.target.value})}></textarea></div>
           </div>
-        )}
+          <div className="ui-modal-foot">
+            <button type="button" className="btn btn-primary" onClick={cadastrarSala} disabled={isSaving}><i className="las la-save" aria-hidden="true"></i> {isSaving ? 'Cadastrando…' : 'Cadastrar sala'}</button>
+          </div>
+        </Panel>
+      )}
 
-        {activeTab === 'reservas' && (
-          <div>
-            <div className="search-box"><input aria-label="Buscar reserva por profissional ou paciente" type="search" placeholder="Buscar por sala, profissional ou paciente..." value={buscarReserva} onChange={e => setBuscarReserva(e.target.value)} /></div>
-            <div className="tabela-salas-wrapper">
-              <table className="tabela-salas"><thead><tr><th>Sala</th><th>Profissional</th><th>Paciente/Evento</th><th>Data</th><th>Horário</th><th>Status</th><th>Ações</th></tr></thead>
-              <tbody>
-                {erroCarga ? (
-                  <tr><td colSpan={7} role="status" style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Reservas indisponíveis enquanto os dados não carregam.</td></tr>
-                ) : reservasFiltradas.filter(r => r.status === 'ATIVA' || r.status === 'RESERVADA').length === 0 ? (
-                  <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Nenhuma reserva ativa encontrada</td></tr>
-                ) : (
-                  reservasFiltradas.filter(r => r.status === 'ATIVA' || r.status === 'RESERVADA').map(r => {
+      {activeTab === 'reservas' && (
+        <div>
+          <div className="ux-barra">
+            <SearchInput value={buscarReserva} onChange={setBuscarReserva} placeholder="Buscar por profissional ou paciente" label="Buscar reserva por profissional ou paciente" />
+          </div>
+          {erroCarga ? (
+            <EmptyState icon="las la-calendar-alt" message="Reservas indisponíveis enquanto os dados não carregam." />
+          ) : reservasAbertas.length === 0 ? (
+            <EmptyState icon="las la-calendar-alt" message="Nenhuma reserva ativa encontrada." />
+          ) : (
+            <div className="tabela-wrapper">
+              <table className="tabela">
+                <thead><tr><th>Sala</th><th>Profissional</th><th>Paciente ou evento</th><th>Data</th><th>Horário</th><th>Status</th><th>Ações</th></tr></thead>
+                <tbody>
+                  {reservasAbertas.map(r => {
                     const sala = salas.find(s => s.id === r.salaId);
-                    const stB = r.status === 'ATIVA' ? 'badge-ocupado' : 'badge-reservado';
-                    const stL = r.status === 'ATIVA' ? ' Em Uso' : ' Reservada';
                     return (
                       <tr key={r.id}>
                         <td><strong>{sala ? sala.nome : '—'}</strong></td>
@@ -435,84 +425,77 @@ export default function GestaoSalasPage() {
                         <td>{r.paciente || '—'}</td>
                         <td>{new Date(r.data+'T00:00:00').toLocaleDateString('pt-BR')}</td>
                         <td>{r.horaInicio} - {r.horaFim}</td>
-                        <td><span className={`badge ${stB}`}>{stL}</span></td>
+                        <td><Badge tone={toneReserva(r.status)}>{rotuloReserva(r.status)}</Badge></td>
                         <td>
-                          {r.status === 'ATIVA' || r.status === 'RESERVADA' ? (
-                            <button className="btn btn-success btn-xs" onClick={() => encerrarReserva(r.id, r.status === 'ATIVA' ? 'FINALIZADA' : 'CANCELADA')}><i className={`las ${r.status === 'ATIVA' ? 'la-check' : 'la-times'}`}></i> {r.status === 'ATIVA' ? 'Finalizar' : 'Cancelar'}</button>
-                          ) : <span style={{color:'#94a3b8', fontSize:'11px'}}>—</span>}
+                          <button type="button" className="btn btn-secondary btn-xs" onClick={() => encerrarReserva(r.id, r.status === 'ATIVA' ? 'FINALIZADA' : 'CANCELADA')}><i className={`las ${r.status === 'ATIVA' ? 'la-check' : 'la-times'}`} aria-hidden="true"></i> {r.status === 'ATIVA' ? 'Finalizar' : 'Cancelar'}</button>
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
+                  })}
+                </tbody>
               </table>
             </div>
-          </div>
-        )}
-
-        {activeTab === 'historico' && (
-          <div className="tabela-salas-wrapper">
-            <table className="tabela-salas"><thead><tr><th>Data</th><th>Sala</th><th>Profissional</th><th>Status</th><th>Detalhes</th></tr></thead>
-            <tbody>
-              {erroCarga ? (
-                <tr><td colSpan={5} role="status" style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Histórico indisponível enquanto os dados não carregam.</td></tr>
-              ) : reservas.length === 0 ? (
-                <tr><td colSpan={5} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Nenhum histórico</td></tr>
-              ) : (
-                reservas.map(r => {
-                  const sala = salas.find(s => s.id === r.salaId);
-                  const stB = r.status === 'ATIVA' ? 'badge-ocupado' : r.status === 'RESERVADA' ? 'badge-reservado' : 'badge-livre';
-                  const stL = r.status === 'ATIVA' ? ' Em Uso' : r.status === 'RESERVADA' ? ' Reservada' : (r.status === 'FINALIZADA' ? ' Finalizada' : ' Cancelada');
-                  return (
-                    <tr key={r.id}>
-                        <td>{new Date(r.data+'T00:00:00').toLocaleDateString('pt-BR')}</td>
-                        <td>{sala ? sala.nome : '—'}</td>
-                        <td>{r.profissional}</td>
-                        <td><span className={`badge ${stB}`}>{stL}</span></td>
-                        <td>{r.horaInicio} - {r.horaFim} | {r.paciente || 'N/I'}</td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-            </table>
-          </div>
-        )}
-
-      </div>
-
-      {isModalOpen && (
-        <div className="modal-overlay show">
-          <div className="modal-box" role="dialog" aria-modal="true" aria-labelledby="reserva-sala-titulo">
-            <h3 id="reserva-sala-titulo"><i aria-hidden="true" className="las la-calendar-plus"></i> Reservar Sala</h3>
-            <div className="form-grid">
-              <div className="form-grupo">
-                <label htmlFor="reserva-sala">Sala *</label>
-                <select id="reserva-sala" value={formReserva.salaId} onChange={e => setFormReserva({...formReserva, salaId: e.target.value})}>
-                  <option value="">Selecione...</option>
-                  {salas.filter(s => s.status === 'LIVRE' || s.status === 'RESERVADO' || s.id === formReserva.salaId).map(s => <option key={s.id} value={s.id}>{s.nome} ({s.setor})</option>)}
-                </select>
-              </div>
-              <div className="form-grupo"><label htmlFor="reserva-profissional">Profissional (usuário logado)</label><input id="reserva-profissional" type="text" value={session?.user?.name || ''} readOnly /></div>
-              <div className="form-grupo"><label htmlFor="reserva-paciente">Paciente / Evento</label><input id="reserva-paciente" type="text" value={formReserva.paciente} onChange={e => setFormReserva({...formReserva, paciente: e.target.value})} /></div>
-              <div className="form-grupo"><label htmlFor="reserva-data">Data *</label><input id="reserva-data" type="date" value={formReserva.data} onChange={e => setFormReserva({...formReserva, data: e.target.value})} /></div>
-              <div className="form-grupo"><label htmlFor="reserva-inicio">Horário Início *</label><input id="reserva-inicio" type="time" value={formReserva.horaInicio} onChange={e => setFormReserva({...formReserva, horaInicio: e.target.value})} /></div>
-              <div className="form-grupo"><label htmlFor="reserva-fim">Horário Término *</label><input id="reserva-fim" type="time" value={formReserva.horaFim} onChange={e => setFormReserva({...formReserva, horaFim: e.target.value})} /></div>
-              <div className="form-grupo">
-                <label htmlFor="reserva-duracao">Duração (atalho)</label>
-                <select id="reserva-duracao" value={formReserva.duracao} onChange={e => calcularHoraFim(e.target.value, formReserva.horaInicio)}>
-                  <option value="">Personalizado</option><option value="15">15 minutos</option><option value="30">30 minutos</option>
-                  <option value="45">45 minutos</option><option value="60">1 hora</option><option value="120">2 horas</option>
-                </select>
-              </div>
-            </div>
-            <button className="btn btn-success" onClick={confirmarReserva} disabled={isSaving} style={{width:'100%', marginTop:'15px', justifyContent:'center'}}><i className="las la-save"></i> {isSaving ? 'Confirmando...' : 'Confirmar'}</button>
-            <button className="btn btn-danger" onClick={() => setIsModalOpen(false)} disabled={isSaving} style={{width:'100%', marginTop:'8px', justifyContent:'center'}}>Cancelar</button>
-          </div>
+          )}
         </div>
       )}
 
+      {activeTab === 'historico' && (
+        erroCarga ? (
+          <EmptyState icon="las la-history" message="Histórico indisponível enquanto os dados não carregam." />
+        ) : reservas.length === 0 ? (
+          <EmptyState icon="las la-history" message="Nenhum histórico." />
+        ) : (
+          <div className="tabela-wrapper">
+            <table className="tabela">
+              <thead><tr><th>Data</th><th>Sala</th><th>Profissional</th><th>Status</th><th>Detalhes</th></tr></thead>
+              <tbody>
+                {reservas.map(r => {
+                  const sala = salas.find(s => s.id === r.salaId);
+                  return (
+                    <tr key={r.id}>
+                      <td>{new Date(r.data+'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                      <td>{sala ? sala.nome : '—'}</td>
+                      <td>{r.profissional}</td>
+                      <td><Badge tone={toneReserva(r.status)}>{rotuloReserva(r.status)}</Badge></td>
+                      <td>{r.horaInicio} - {r.horaFim} | {r.paciente || 'N/I'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
+      )}
+
+      {isModalOpen && (
+        <Modal title="Reservar sala" icon="las la-calendar-plus" onClose={() => setIsModalOpen(false)} busy={isSaving}>
+          <div className="ux-campos">
+            <div className="form-group">
+              <label htmlFor="reserva-sala">Sala *</label>
+              <select id="reserva-sala" value={formReserva.salaId} onChange={e => setFormReserva({...formReserva, salaId: e.target.value})}>
+                <option value="">Selecione...</option>
+                {salas.filter(s => s.status === 'LIVRE' || s.status === 'RESERVADO' || s.id === formReserva.salaId).map(s => <option key={s.id} value={s.id}>{s.nome} ({s.setor})</option>)}
+              </select>
+            </div>
+            <div className="form-group"><label htmlFor="reserva-profissional">Profissional</label><input id="reserva-profissional" type="text" value={session?.user?.name || ''} readOnly /></div>
+            <div className="form-group"><label htmlFor="reserva-paciente">Paciente ou evento</label><input id="reserva-paciente" type="text" value={formReserva.paciente} onChange={e => setFormReserva({...formReserva, paciente: e.target.value})} /></div>
+            <div className="form-group"><label htmlFor="reserva-data">Data *</label><input id="reserva-data" type="date" value={formReserva.data} onChange={e => setFormReserva({...formReserva, data: e.target.value})} /></div>
+            <div className="form-group"><label htmlFor="reserva-inicio">Início *</label><input id="reserva-inicio" type="time" value={formReserva.horaInicio} onChange={e => setFormReserva({...formReserva, horaInicio: e.target.value})} /></div>
+            <div className="form-group"><label htmlFor="reserva-fim">Término *</label><input id="reserva-fim" type="time" value={formReserva.horaFim} onChange={e => setFormReserva({...formReserva, horaFim: e.target.value})} /></div>
+            <div className="form-group">
+              <label htmlFor="reserva-duracao">Duração</label>
+              <select id="reserva-duracao" value={formReserva.duracao} onChange={e => calcularHoraFim(e.target.value, formReserva.horaInicio)}>
+                <option value="">Personalizada</option><option value="15">15 minutos</option><option value="30">30 minutos</option>
+                <option value="45">45 minutos</option><option value="60">1 hora</option><option value="120">2 horas</option>
+              </select>
+            </div>
+          </div>
+          <div className="ui-modal-foot">
+            <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)} disabled={isSaving}>Cancelar</button>
+            <button type="button" className="btn btn-primary" onClick={confirmarReserva} disabled={isSaving}><i className="las la-save" aria-hidden="true"></i> {isSaving ? 'Confirmando…' : 'Confirmar'}</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

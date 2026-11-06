@@ -1,10 +1,12 @@
-﻿'use client';
+'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, StatGrid, StatCard, Badge, EmptyState, LoadingState, type Tone } from '@/components/ui';
+import { Modal } from '@/components/ui/Modal';
 import { pode } from '@/lib/permissions';
-import './admin.css';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
 
 interface Ticket {
   id: string;
@@ -20,15 +22,24 @@ interface Ticket {
 
 type TicketApi = { id: string; numero?: number | string; titulo: string; descricao: string; status: string; prioridade: string; createdAt: string; solicitante: string; respostas?: unknown };
 
+const ATALHOS = [
+  { href: '/admin-configuracao', icone: 'las la-building', titulo: 'Configuração', desc: 'Dados da instituição e logo' },
+  { href: '/admin-procedimentos', icone: 'las la-syringe', titulo: 'Procedimentos', desc: 'Cadastro de procedimentos' },
+  { href: '/admin-usuarios', icone: 'las la-users', titulo: 'Usuários', desc: 'Contas e cargos' },
+  { href: '/admin-prontuarios', icone: 'las la-file-alt', titulo: 'Modelos de prontuário', desc: 'Registros padronizados' },
+  { href: '/admin-config-dashboard', icone: 'las la-sliders-h', titulo: 'Dashboard', desc: 'Módulos exibidos' },
+];
+
+const TONE_STATUS: Record<string, Tone> = { 'Enviado': 'warning', 'Em Análise': 'info', 'Concluído': 'success', 'Finalizado': 'neutral' };
+const TONE_PRIORIDADE: Record<string, Tone> = { 'Baixa': 'neutral', 'Média': 'info', 'Alta': 'warning', 'Urgente': 'danger' };
+
 export default function AdminPage() {
-
-
   const { data: session, status: sessionStatus } = useSession();
   const isAdmin = pode(session?.user?.cargo, 'admin:acesso');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [erroTickets, setErroTickets] = useState('');
   const [carregandoTickets, setCarregandoTickets] = useState(true);
-  
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [ticketSelecionado, setTicketSelecionado] = useState<Ticket | null>(null);
@@ -88,7 +99,12 @@ export default function AdminPage() {
   }, [isAdmin]);
 
   if (sessionStatus === 'authenticated' && !isAdmin) {
-    return <div className="conteudo"><div role="alert" className="alert-erro">Acesso restrito a administradores do hospital.</div></div>;
+    return (
+      <div className="mod-pagina">
+        <PageHeader icon="las la-hospital" title="Painel administrativo" />
+        <div role="alert" className="mod-aviso mod-aviso-erro">Acesso restrito a administradores do hospital.</div>
+      </div>
+    );
   }
 
   const abrirModal = (ticket: Ticket) => {
@@ -112,13 +128,13 @@ export default function AdminPage() {
       return;
     }
 
-setSalvandoResposta(true);
+    setSalvandoResposta(true);
     setErroResposta('');
     try {
       const response = await fetch(`/api/tickets/${ticketSelecionado.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: mapStatusToEnum(respostaStatus),
           resposta: respostaTexto.trim()
         })
@@ -135,170 +151,136 @@ setSalvandoResposta(true);
     }
   };
 
-const getPrioridadeClasse = (p: string) => {
-    const c: Record<string, string> = { "Baixa":"prioridade-baixa", "Média":"prioridade-media", "Alta":"prioridade-alta", "Urgente":"prioridade-urgente" };
-    return c[p] || "";
-  };
-
-  const getPrioridadeIcone = (p: string) => {
-    const i: Record<string, string> = { "Baixa":"", "Média":"", "Alta":"", "Urgente":"" };
-    return i[p] || "";
-  };
-
   const enviado = tickets.filter(t => t.status === "Enviado").length;
   const analise = tickets.filter(t => t.status === "Em Análise").length;
   const concluido = tickets.filter(t => t.status === "Concluído" || t.status === "Finalizado").length;
 
   return (
-    <div className="conteudo admin-page">
-      <PageHeader icon="las la-hospital" title="Painel Administrativo" subtitle="Configuração do hospital, usuários e fila de suporte." />
+    <div className="mod-pagina">
+      <PageHeader icon="las la-hospital" title="Painel administrativo" subtitle="Configuração do hospital, usuários e fila de suporte." />
 
-      <div className="dashboard-cards">
-        <Link href="/admin-configuracao" className="card-admin">
-          <i className="las la-building"></i>
-          <h3>Configuração</h3>
-          <p>Dados da instituição, logo, endereço</p>
-        </Link>
-        <Link href="/admin-procedimentos" className="card-admin">
-          <i className="las la-syringe"></i>
-          <h3>Procedimentos</h3>
-          <p>Cadastre procedimentos médicos</p>
-        </Link>
-        <Link href="/admin-usuarios" className="card-admin">
-          <i className="las la-users"></i>
-          <h3>Usuários</h3>
-          <p>Administradores, recepção, profissionais</p>
-        </Link>
-        <Link href="/admin-prontuarios" className="card-admin">
-          <i className="las la-file-alt"></i>
-          <h3>Modelos de Prontuários</h3>
-          <p>Padronize os registros clínicos</p>
-        </Link>
-        <Link href="/admin-config-dashboard" className="card-admin">
-          <i className="las la-sliders-h"></i>
-          <h3>Configurar Dashboard</h3>
-          <p>Personalize os módulos</p>
-        </Link>
-      </div>
+      <nav className="ux-atalhos" aria-label="Áreas administrativas">
+        {ATALHOS.map(a => (
+          <Link key={a.href} href={a.href} className="ux-atalho">
+            <span className="ux-atalho-icone"><i className={a.icone} aria-hidden="true"></i></span>
+            <span>
+              <strong>{a.titulo}</strong>
+              <small>{a.desc}</small>
+            </span>
+          </Link>
+        ))}
+      </nav>
 
-      <div className="secao-tickets">
-        <h2><i className="las la-headset"></i> Tickets de Suporte</h2>
-        <p>Gerencie as solicitações de suporte dos usuários do sistema.</p>
-          {erroTickets && <div role="alert" className="alert-erro">{erroTickets}<button type="button" onClick={fetchTickets} disabled={carregandoTickets}>Tentar novamente</button></div>}
-          {mensagemResposta && <p role="status" className="admin-feedback-success">{mensagemResposta}</p>}
+      <section aria-labelledby="admin-tickets-titulo">
+        <h2 id="admin-tickets-titulo" className="ux-titulo-secao"><i className="las la-headset" aria-hidden="true"></i> Tickets de suporte</h2>
 
-        <div className="tickets-resumo">
-          <div className="card-resumo-ticket pendente">
-            <h4><i className="las la-clock"></i> Aguardando</h4>
-            <div className="numero">{enviado}</div>
+        {erroTickets && (
+          <div role="alert" className="mod-aviso mod-aviso-erro">
+            {erroTickets}{' '}
+            <button type="button" className="btn btn-secondary btn-sm" onClick={fetchTickets} disabled={carregandoTickets}>Tentar novamente</button>
           </div>
-          <div className="card-resumo-ticket analise">
-            <h4><i className="las la-search"></i> Em Análise</h4>
-            <div className="numero">{analise}</div>
-          </div>
-          <div className="card-resumo-ticket concluido">
-            <h4><i className="las la-check-circle"></i> Concluídos</h4>
-            <div className="numero">{concluido}</div>
-          </div>
-          <div className="card-resumo-ticket total">
-            <h4><i className="las la-chart-bar"></i> Total</h4>
-            <div className="numero">{tickets.length}</div>
-          </div>
-        </div>
+        )}
+        {mensagemResposta && <p role="status" className="mod-aviso mod-aviso-sucesso">{mensagemResposta}</p>}
 
-        <div className="lista-tickets-admin">
-          <table>
-            <thead>
-              <tr>
-                <th>Protocolo</th>
-                <th>Solicitante</th>
-                <th>Título</th>
-                <th>Prioridade</th>
-                <th>Status</th>
-                <th>Data</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {carregandoTickets && tickets.length === 0 ? (
-                <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>Carregando tickets…</td></tr>
-              ) : tickets.length === 0 ? (
-                <tr><td colSpan={7} style={{textAlign:'center', padding:'30px', color:'#64748b'}}>{erroTickets ? 'Não foi possível mostrar os tickets.' : 'Nenhum ticket encontrado.'}</td></tr>
-              ) : (
-                tickets.map(t => {
-                  const statusClass = t.status === "Enviado" ? "status-Enviado" :
-                                      t.status === "Em Análise" ? "status-Em-Análise" :
-                                      t.status === "Concluído" ? "status-Concluído" : "status-Finalizado";
-                  return (
-                    <tr key={t.id}>
-                      <td><strong>{t.numero}</strong></td>
-                      <td>{t.solicitante}</td>
-                      <td>{t.titulo.length > 40 ? t.titulo.substring(0, 40) + '...' : t.titulo}</td>
-                      <td className={getPrioridadeClasse(t.prioridade)}>
-                        {getPrioridadeIcone(t.prioridade)} {t.prioridade}
-                      </td>
-                      <td><span className={`status-ticket ${statusClass}`}>{t.status}</span></td>
-                      <td>{new Date(t.data).toLocaleDateString('pt-BR')}</td>
-                      <td>
-                        <button className="btn-ver-ticket" onClick={() => abrirModal(t)} title="Ver Detalhes" aria-label={`Ver detalhes do ticket ${t.numero}`}>
-                          <i className="las la-eye"></i>
+        <StatGrid>
+          <StatCard icon="las la-clock" value={enviado} label="Aguardando" tone="warning" alerta />
+          <StatCard icon="las la-search" value={analise} label="Em análise" tone="info" />
+          <StatCard icon="las la-check-circle" value={concluido} label="Concluídos" tone="success" />
+          <StatCard icon="las la-list" value={tickets.length} label="Total" />
+        </StatGrid>
+
+        {carregandoTickets && tickets.length === 0 ? (
+          <LoadingState message="Carregando tickets..." />
+        ) : tickets.length === 0 ? (
+          <EmptyState icon="las la-headset" message={erroTickets ? 'Não foi possível mostrar os tickets.' : 'Nenhum ticket encontrado.'} />
+        ) : (
+          <div className="tabela-wrapper">
+            <table className="tabela">
+              <thead>
+                <tr>
+                  <th>Protocolo</th>
+                  <th>Solicitante</th>
+                  <th>Título</th>
+                  <th>Prioridade</th>
+                  <th>Status</th>
+                  <th>Data</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tickets.map(t => (
+                  <tr key={t.id}>
+                    <td><strong>{t.numero}</strong></td>
+                    <td>{t.solicitante}</td>
+                    <td title={t.titulo}>{t.titulo.length > 40 ? t.titulo.substring(0, 40) + '…' : t.titulo}</td>
+                    <td><Badge tone={TONE_PRIORIDADE[t.prioridade] ?? 'neutral'}>{t.prioridade}</Badge></td>
+                    <td><Badge tone={TONE_STATUS[t.status] ?? 'neutral'}>{t.status}</Badge></td>
+                    <td>{new Date(t.data).toLocaleDateString('pt-BR')}</td>
+                    <td>
+                      <span className="ux-acoes">
+                        <button type="button" className="btn btn-secondary btn-sm ux-icon-btn" onClick={() => abrirModal(t)} title="Ver detalhes" aria-label={`Ver detalhes do ticket ${t.numero}`}>
+                          <i className="las la-eye" aria-hidden="true"></i>
                         </button>
-                        <button className="btn-responder" onClick={() => abrirModal(t)} title="Responder" aria-label={`Responder ao ticket ${t.numero}`}>
-                          <i className="las la-reply"></i>
+                        <button type="button" className="btn btn-primary btn-sm ux-icon-btn" onClick={() => abrirModal(t)} title="Responder" aria-label={`Responder ao ticket ${t.numero}`}>
+                          <i className="las la-reply" aria-hidden="true"></i>
                         </button>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       {isModalOpen && ticketSelecionado && (
-        <div className="modal-overlay" onClick={() => !salvandoResposta && fecharModal()}>
-          <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="admin-ticket-modal-title" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 id="admin-ticket-modal-title"><i className="las la-reply" aria-hidden="true"></i> Responder Ticket</h3>
-              <button className="modal-close" onClick={fecharModal} disabled={salvandoResposta} aria-label="Fechar janela">&times;</button>
-            </div>
-            <div className="modal-body">
-              <label>Protocolo: <span>{ticketSelecionado.numero}</span></label>
-              <div className="ticket-info-box">
-                <strong>Solicitação:</strong>
-                <p style={{marginTop:'5px', marginBottom:'10px'}}>{ticketSelecionado.titulo}</p>
-                <strong>Descrição:</strong>
-                <p style={{marginTop:'5px', fontSize:'13px', color:'#475569'}}>{ticketSelecionado.descricao}</p>
-              </div>
-              
-              {(ticketSelecionado.respostas ?? []).length > 0 && <div className="ticket-info-box"><strong>Respostas anteriores:</strong>{(ticketSelecionado.respostas ?? []).map((r, i) => <p key={i} style={{marginTop:'5px', fontSize:'13px'}}>{r.respondente}, {new Date(r.data).toLocaleString('pt-BR')}: {r.resposta}</p>)}</div>}
-              <label htmlFor="admin-ticket-reply">Resposta / Atualização</label>
-              <textarea 
-                id="admin-ticket-reply"
-                rows={4} 
-                placeholder="Digite sua resposta..." 
-                value={respostaTexto} 
-                onChange={e => setRespostaTexto(e.target.value)}
-              />
-              
-              <label htmlFor="admin-ticket-status">Atualizar Status</label>
-              <select id="admin-ticket-status" value={respostaStatus} onChange={e => setRespostaStatus(e.target.value)}>
-                <option value="Enviado">Enviado</option>
-                <option value="Em Análise">Em Análise</option>
-                <option value="Concluído">Concluído</option>
-                <option value="Finalizado">Finalizado</option>
-              </select>
-              
-              {erroResposta && <p role="alert" className="admin-feedback-error">{erroResposta}</p>}
-              <button className="btn btn-success" onClick={enviarResposta} disabled={salvandoResposta} style={{width:'100%', justifyContent:'center', marginTop:'10px'}}>
-                <i className="las la-paper-plane" aria-hidden="true"></i> {salvandoResposta ? 'Enviando…' : 'Enviar Resposta'}
-              </button>
-            </div>
+        <Modal title="Responder ticket" icon="las la-reply" onClose={fecharModal} busy={salvandoResposta}>
+          <div className="ui-modal-box">
+            <strong>{ticketSelecionado.numero}</strong>
+            <p>{ticketSelecionado.titulo}</p>
+            <p className="ux-texto-longo">{ticketSelecionado.descricao}</p>
           </div>
-        </div>
-      )}
 
+          {(ticketSelecionado.respostas ?? []).length > 0 && (
+            <div className="ui-modal-box">
+              <strong>Respostas anteriores</strong>
+              {(ticketSelecionado.respostas ?? []).map((r, i) => (
+                <p key={i}>{r.respondente}, {new Date(r.data).toLocaleString('pt-BR')}: {r.resposta}</p>
+              ))}
+            </div>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="admin-ticket-reply">Resposta</label>
+            <textarea
+              id="admin-ticket-reply"
+              rows={4}
+              placeholder="Digite sua resposta..."
+              value={respostaTexto}
+              onChange={e => setRespostaTexto(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="admin-ticket-status">Status</label>
+            <select id="admin-ticket-status" value={respostaStatus} onChange={e => setRespostaStatus(e.target.value)}>
+              <option value="Enviado">Enviado</option>
+              <option value="Em Análise">Em Análise</option>
+              <option value="Concluído">Concluído</option>
+              <option value="Finalizado">Finalizado</option>
+            </select>
+          </div>
+
+          {erroResposta && <p role="alert" className="mod-aviso mod-aviso-erro">{erroResposta}</p>}
+          <div className="ui-modal-foot">
+            <button type="button" className="btn btn-secondary" onClick={fecharModal} disabled={salvandoResposta}>Cancelar</button>
+            <button type="button" className="btn btn-success" onClick={enviarResposta} disabled={salvandoResposta}>
+              <i className="las la-paper-plane" aria-hidden="true"></i> {salvandoResposta ? 'Enviando…' : 'Enviar resposta'}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

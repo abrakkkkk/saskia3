@@ -1,32 +1,15 @@
-.exames-container { max-width: 1500px; margin: 0 auto; padding: 12px 0; min-width: 0; }
-.exames-container :where(button, input, select, textarea):focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
-
-.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 0 15px; }
-.form-grupo { margin-bottom: 14px; }
-.form-grupo.full { grid-column: 1 / -1; }
-.form-grupo label { display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-.form-grupo input, .form-grupo select, .form-grupo textarea { width: 100%; min-height: 44px; padding: 11px 14px; border: 2px solid #cbd5e1; border-radius: 9px; font-size: 14px; color: #334155; background: #f8fafc; }
-.form-grupo textarea { resize: vertical; min-height: 70px; font-family: inherit; }
-
-.tabela-exames-wrapper { max-width: 100%; overflow-x: auto; background: #fff; border: 1px solid #dbe4ef; border-radius: 12px; -webkit-overflow-scrolling: touch; }
-.tabela-exames { width: 100%; min-width: 860px; border-collapse: collapse; background: white; }
-.tabela-exames thead { background: #0f172a; }
-.tabela-exames th { padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #e2e8f0; text-transform: uppercase; letter-spacing: 1px; }
-.tabela-exames td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
-.tabela-exames tbody tr:hover { background: #eff6ff; }
-.tabela-exames tbody tr:last-child td { border-bottom: none; }
-
+/* Só o que o sistema compartilhado não cobre: link de texto no alerta, resumo do laudo e ficha do exame. */
 .exames-criticos p { margin: 4px 0; }
-.exames-link { background: none; border: none; padding: 0; min-height: 0; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; text-align: left; }
+.exames-link { background: none; border: none; padding: 0; min-height: 32px; color: inherit; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; text-align: left; }
 
-.resultado-card { display: grid; justify-items: start; gap: 6px; background: #f8fafc; color: var(--ui-text); border: 1px solid #dbe4ef; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
-.resultado-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; }
-.resultado-valor { font-size: 16px; font-weight: 600; }
+.exames-resumo { max-width: 360px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 
-.modal-laudo { display: flex; position: fixed; inset: 0; padding: 16px; background: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; }
-.modal-laudo-content { background: white; color: var(--ui-text); border: 1px solid #dbe4ef; border-radius: 14px; padding: clamp(20px, 4vw, 35px); width: min(700px, 100%); max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 64px rgba(2, 8, 23, 0.28); }
-.modal-laudo-content h3 { color: #0a1f44; margin-bottom: 20px; }
-.exames-laudo-dados { display: grid; gap: 4px; padding-bottom: 15px; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; }
-.exames-laudo-bloco { background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 15px; }
-.exames-laudo-bloco h4 { margin-bottom: 8px; }
-.exames-laudo-critico { background: #fee2e2; color: #7f1d1d; }
+.exames-laudo-dados { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0 0 var(--ui-space-4); font-size: var(--ui-t-body); }
+.exames-laudo-dados dt { color: var(--ui-text-muted); }
+.exames-laudo-dados dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.exames-laudo-bloco { padding-top: var(--ui-space-3); margin-top: var(--ui-space-3); border-top: 1px solid var(--ui-border); }
+.exames-laudo-bloco h3 { margin: 0 0 var(--ui-space-2); font-size: var(--ui-t-label); font-weight: 600; color: var(--ui-text-muted); }
+.exames-laudo-bloco.mod-aviso { padding: var(--ui-space-3) var(--ui-space-4); margin-bottom: 0; }
+.exames-laudo-bloco.mod-aviso h3 { color: inherit; }
+.exames-laudo-bloco.mod-aviso-erro { border-color: #fca5a5; }
+.exames-laudo-bloco p { margin: 0; }

@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, SearchInput, StatCard, StatGrid, type Tone } from '@/components/ui';
+import { Modal, ModalActions } from '@/components/ui/Modal';
 import PacienteSelect from '@/components/ui/PacienteSelect';
 import { pode } from '@/lib/permissions';
 import { TRANSICOES_AGENDAMENTO } from '@/app/api/agendamentos/regras';
-import '../setores.css';
+import '@/components/ui/modulo.css';
 import './agenda.css';
-
-import { inter } from '@/app/fonts'
 
 function dataLocalAtual() {
   const agora = new Date()
@@ -25,6 +25,8 @@ interface PacienteData {
   telefone: string | null;
 }
 
+type StatusAgendamento = 'AGENDADO' | 'CONFIRMADO' | 'CANCELADO' | 'EM_ATENDIMENTO' | 'CONCLUIDO' | 'EM_ESPERA' | 'FALTOU';
+
 interface Agendamento {
   id: string;
   dataHora: string;
@@ -32,10 +34,20 @@ interface Agendamento {
   especialidade: string;
   profissional: string | null;
   sala: string | null;
-  status: 'AGENDADO' | 'CONFIRMADO' | 'CANCELADO' | 'EM_ATENDIMENTO' | 'CONCLUIDO' | 'EM_ESPERA' | 'FALTOU';
+  status: StatusAgendamento;
   paciente: PacienteData;
   observacoes?: string;
 }
+
+const STATUS_ROTULO: Record<StatusAgendamento, { rotulo: string; tom: Tone }> = {
+  AGENDADO: { rotulo: 'Agendado', tom: 'info' },
+  CONFIRMADO: { rotulo: 'Confirmado', tom: 'success' },
+  EM_ESPERA: { rotulo: 'Em espera', tom: 'warning' },
+  EM_ATENDIMENTO: { rotulo: 'Em atendimento', tom: 'info' },
+  CONCLUIDO: { rotulo: 'Concluído', tom: 'neutral' },
+  CANCELADO: { rotulo: 'Cancelado', tom: 'danger' },
+  FALTOU: { rotulo: 'Faltou', tom: 'danger' },
+};
 
 export default function AgendaPage() {
   const { data: session } = useSession();
@@ -49,12 +61,12 @@ export default function AgendaPage() {
   // Erro de carga troca a tabela; erro de ação aparece em aviso próprio e a tabela permanece.
   const [erro, setErro] = useState('');
   const [erroAcao, setErroAcao] = useState('');
-  
+
   const [filtroData, setFiltroData] = useState(dataLocalAtual);
   const [filtroEspecialidade, setFiltroEspecialidade] = useState('Todas');
   const [termoBusca, setTermoBusca] = useState('');
-  
-  // Modal de Ações
+
+  // Menu de ações do agendamento
   const [agendaSelecionada, setAgendaSelecionada] = useState<Agendamento | null>(null);
 
   const carregarAgendamentos = async () => {
@@ -113,14 +125,14 @@ export default function AgendaPage() {
       const confirmacao = await confirm("Deseja realmente cancelar este agendamento?");
       if (!confirmacao) return;
     }
-    
+
     try {
       const res = await fetch(`/api/agendamentos/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: novoStatus })
       });
-      
+
       if (res.ok) {
         setErroAcao('');
         void carregarAgendamentos();
@@ -134,26 +146,13 @@ export default function AgendaPage() {
     setAgendaSelecionada(null);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'AGENDADO': return { bg: '#eff6ff', text: '#1e40af', border: '#bfdbfe' };
-      case 'CONFIRMADO': return { bg: '#f0fdf4', text: '#166534', border: '#bbf7d0' };
-      case 'CANCELADO': return { bg: '#fef2f2', text: '#b91c1c', border: '#fecaca' };
-      case 'EM_ESPERA': return { bg: '#fffbeb', text: '#92400e', border: '#fde68a' };
-      case 'FALTOU': return { bg: '#fef2f2', text: '#991b1b', border: '#fecaca' };
-      case 'EM_ATENDIMENTO': return { bg: '#fff7ed', text: '#c2410c', border: '#fed7aa' };
-      case 'CONCLUIDO': return { bg: '#f8fafc', text: '#475569', border: '#e2e8f0' };
-      default: return { bg: '#f8fafc', text: '#475569', border: '#e2e8f0' };
-    }
-  };
-
   const agendamentosFiltrados = agendamentos.filter(a => {
     const dataMatch = new Date(a.dataHora).toLocaleDateString('sv-SE') === filtroData;
     const espMatch = filtroEspecialidade === 'Todas' || a.especialidade === filtroEspecialidade;
-    const buscaMatch = termoBusca === '' || 
+    const buscaMatch = termoBusca === '' ||
       a.paciente.nome.toLowerCase().includes(termoBusca.toLowerCase()) ||
       (a.paciente.cpf && a.paciente.cpf.includes(termoBusca));
-      
+
     return dataMatch && espMatch && buscaMatch;
   }).sort((a, b) => new Date(a.dataHora).getTime() - new Date(b.dataHora).getTime());
 
@@ -166,311 +165,152 @@ export default function AgendaPage() {
   };
 
   const especialidades = ['Todas', ...Array.from(new Set(agendamentos.map(a => a.especialidade).filter(Boolean)))];
+  const transicoes = agendaSelecionada ? TRANSICOES_AGENDAMENTO[agendaSelecionada.status] : [];
 
   return (
-    <div className={`agenda-page ${inter.className}`} style={{ padding: '32px', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
-      
-      {/* HEADER */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '32px' }}>
-        <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-            <i className="las la-calendar" style={{ color: '#1d4ed8' }}></i> Agenda Central
-          </h2>
-          <p style={{ color: '#475569', fontSize: '14px', marginTop: '4px', marginBottom: 0 }}>Gerencie os atendimentos e consultas do dia</p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button 
-            style={{ backgroundColor: '#0f172a', color: 'white', padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, border: '1px solid #0f172a', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}
-            hidden={!podeGerir}
-            onClick={() => { setErroAcao(''); setCriando(true); }}
-          >
-            <i className="las la-plus-circle" style={{ fontSize: '18px', opacity: 0.9 }}></i> Novo Agendamento
+    <div className="ag-pagina">
+      <PageHeader
+        icon="las la-calendar"
+        title="Agenda"
+        subtitle="Consultas e atendimentos do dia"
+        actions={podeGerir && (
+          <button type="button" className="btn btn-primary" onClick={() => { setErroAcao(''); setCriando(true); }}>
+            <i className="las la-plus" aria-hidden="true"></i> Novo agendamento
           </button>
-        </div>
-      </div>
+        )}
+      />
 
-      {erroAcao && !criando && <p role="alert" className="sc-erro">{erroAcao}</p>}
+      {erroAcao && !criando && <p role="alert" className="mod-aviso mod-aviso-erro">{erroAcao}</p>}
 
-      {/* STATS */}
-      <div className="agenda-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-        
-        {/* Agendados */}
-        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#eff6ff', color: '#1d4ed8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
-            <i className="las la-calendar-day"></i>
-          </div>
-          <div>
-            <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{stats.agendados}</div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#475569', marginTop: '4px' }}>Agendados</div>
-          </div>
-        </div>
+      <StatGrid>
+        <StatCard icon="las la-calendar-day" value={stats.agendados} label="Agendados" />
+        <StatCard icon="las la-check-circle" value={stats.confirmados} label="Confirmados" />
+        <StatCard icon="las la-stethoscope" value={stats.atendidos} label="Atendidos" />
+        <StatCard icon="las la-times-circle" value={stats.cancelados} label="Cancelados" />
+      </StatGrid>
 
-        {/* Confirmados */}
-        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#ecfdf5', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
-            <i className="las la-check-circle"></i>
+      <Panel>
+        <div className="ag-filtros">
+          <div className="form-group">
+            <label htmlFor="agenda-data">Data</label>
+            <input id="agenda-data" type="date" value={filtroData} onChange={e => setFiltroData(e.target.value)} />
           </div>
-          <div>
-            <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{stats.confirmados}</div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#475569', marginTop: '4px' }}>Confirmados</div>
-          </div>
-        </div>
-
-        {/* Atendidos */}
-        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#f1f5f9', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
-            <i className="las la-stethoscope"></i>
-          </div>
-          <div>
-            <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{stats.atendidos}</div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#475569', marginTop: '4px' }}>Atendidos</div>
-          </div>
-        </div>
-
-        {/* Cancelados */}
-        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#fef2f2', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
-            <i className="las la-times-circle"></i>
-          </div>
-          <div>
-            <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', lineHeight: 1 }}>{stats.cancelados}</div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#475569', marginTop: '4px' }}>Cancelados</div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* COMMAND BAR / FILTROS */}
-      <div className="agenda-toolbar" style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', position: 'relative', zIndex: 10 }}>
-        
-        <div style={{ flex: '1 1 200px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', marginLeft: '4px' }}>Data da Agenda</label>
-          <input 
-            type="date" 
-            value={filtroData}
-            onChange={(e) => setFiltroData(e.target.value)}
-            style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #94a3b8', borderRadius: '8px', fontSize: '14px', padding: '10px 16px', color: '#1e293b', fontWeight: 600, outline: 'none' }}
-          />
-        </div>
-        
-        <div style={{ flex: '1 1 250px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', marginLeft: '4px' }}>Especialidade</label>
-          <div style={{ position: 'relative' }}>
-            <select 
-              value={filtroEspecialidade}
-              onChange={(e) => setFiltroEspecialidade(e.target.value)}
-              style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #94a3b8', borderRadius: '8px', fontSize: '14px', padding: '10px 40px 10px 16px', color: '#1e293b', fontWeight: 600, outline: 'none', appearance: 'none' }}
-            >
+          <div className="form-group">
+            <label htmlFor="agenda-especialidade">Especialidade</label>
+            <select id="agenda-especialidade" value={filtroEspecialidade} onChange={e => setFiltroEspecialidade(e.target.value)}>
               {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
             </select>
-            <i className="las la-angle-down" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', pointerEvents: 'none' }}></i>
+          </div>
+          <div className="form-group ag-busca">
+            <label htmlFor="agenda-busca">Paciente</label>
+            <SearchInput value={termoBusca} onChange={setTermoBusca} placeholder="Nome ou CPF" label="Buscar paciente por nome ou CPF" />
           </div>
         </div>
-        
-        <div style={{ flex: '2 1 300px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', marginLeft: '4px' }}>Buscar Paciente</label>
-          <div style={{ position: 'relative' }}>
-            <i className="las la-search" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '18px' }}></i>
-            <input 
-              type="text"
-              value={termoBusca}
-              onChange={(e) => setTermoBusca(e.target.value)}
-              placeholder="Nome ou CPF..."
-              style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #94a3b8', borderRadius: '8px', fontSize: '14px', padding: '10px 16px 10px 44px', color: '#1e293b', fontWeight: 600, outline: 'none' }}
-            />
-          </div>
-        </div>
+      </Panel>
 
-      </div>
-
-      {/* TABELA DE AGENDAMENTOS */}
-      <div className="agenda-table-card" style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', overflow: 'hidden', position: 'relative', zIndex: 0 }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #94a3b8' }}>
-                <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', width: '120px' }}>Horário</th>
-                <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Paciente</th>
-                <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Detalhes</th>
-                <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', width: '160px' }}>Status</th>
-                <th style={{ padding: '16px 24px', fontSize: '12px', fontWeight: 'bold', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center', width: '100px' }}>Ações</th>
-              </tr>
-            </thead>
-            <tbody style={{ borderTop: '1px solid #94a3b8' }}>
-              {loading ? (
+      <Panel>
+        {loading ? (
+          <LoadingState message="Carregando agendamentos..." />
+        ) : erro ? (
+          <ErrorState message={erro} onRetry={() => { setLoading(true); void carregarAgendamentos(); }} />
+        ) : agendamentosFiltrados.length === 0 ? (
+          <EmptyState icon="las la-calendar-times" message="Nenhum agendamento para a data e os filtros escolhidos." />
+        ) : (
+          <div className="tabela-wrapper ag-lista">
+            <table className="tabela ag-tabela">
+              <caption className="sr-only">Agendamentos do dia</caption>
+              <thead>
                 <tr>
-                  <td colSpan={5} style={{ padding: '64px 24px', textAlign: 'center' }}>
-                    <i className="las la-spinner la-spin" style={{ fontSize: '36px', color: '#2563eb', marginBottom: '12px' }}></i>
-                    <p style={{ color: '#475569', fontWeight: 600, fontSize: '14px', margin: 0 }}>Carregando agendamentos...</p>
-                  </td>
+                  <th scope="col">Horário</th>
+                  <th scope="col">Paciente</th>
+                  <th scope="col">Detalhes</th>
+                  <th scope="col">Status</th>
+                  {podeGerir && <th scope="col">Ações</th>}
                 </tr>
-              ) : erro ? (
-                <tr><td colSpan={5} role="alert" style={{ padding: 48, textAlign: 'center', color: '#991b1b' }}>{erro}</td></tr>
-              ) : agendamentosFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan={5} style={{ padding: '80px 24px', textAlign: 'center' }}>
-                    <div style={{ width: '80px', height: '80px', backgroundColor: '#f1f5f9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', border: '1px solid #94a3b8' }}>
-                      <i className="las la-calendar-times" style={{ fontSize: '36px', color: '#64748b' }}></i>
-                    </div>
-                    <p style={{ color: '#0f172a', fontWeight: 600, fontSize: '18px', margin: 0 }}>Nenhum agendamento</p>
-                    <p style={{ color: '#475569', marginTop: '4px', fontSize: '14px' }}>Tente mudar os filtros ou a data selecionada acima.</p>
-                  </td>
-                </tr>
-              ) : (
-                agendamentosFiltrados.map((agenda) => {
-                  const isPast = new Date(agenda.dataHora) < new Date();
-                  const cor = getStatusColor(agenda.status);
-                  const iniciais = agenda.paciente.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-                  
+              </thead>
+              <tbody>
+                {agendamentosFiltrados.map(agenda => {
+                  const atrasado = new Date(agenda.dataHora) < new Date() && agenda.status === 'AGENDADO';
+                  const situacao = STATUS_ROTULO[agenda.status] ?? { rotulo: agenda.status, tom: 'neutral' as Tone };
                   return (
-                    <tr key={agenda.id} style={{ borderBottom: '1px solid #cbd5e1', backgroundColor: 'transparent', transition: 'background-color 0.2s' }}>
-                      <td style={{ padding: '16px 24px', verticalAlign: 'middle' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '14px', color: isPast && agenda.status === 'AGENDADO' ? '#dc2626' : '#1e293b' }}>
-                          <i className="las la-clock" style={{ fontSize: '18px', opacity: 0.8 }}></i>
+                    <tr key={agenda.id}>
+                      <td className="ag-c-hora">
+                        <span className={`ag-hora${atrasado ? ' ag-hora-atrasada' : ''}`}>
                           {new Date(agenda.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </td>
-                      <td style={{ padding: '16px 24px', verticalAlign: 'middle' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#e2e8f0', color: '#1e293b', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #94a3b8', fontSize: '14px' }}>
-                            {iniciais}
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '14px' }}>{agenda.paciente.nome}</div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', marginTop: '4px', fontSize: '12px', color: '#475569', fontWeight: 500 }}>
-                              {agenda.paciente.cpf && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><i className="las la-id-card"></i> {agenda.paciente.cpf}</span>}
-                              {agenda.paciente.telefone && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><i className="las la-phone"></i> {agenda.paciente.telefone}</span>}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '16px 24px', verticalAlign: 'middle' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 500 }}>
-                          <span style={{ fontWeight: 700, color: '#1e40af', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <i className="las la-stethoscope" style={{ fontSize: '16px', opacity: 0.8 }}></i> {agenda.especialidade}
-                          </span>
-                          {agenda.profissional && <span style={{ color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="las la-user-md" style={{ fontSize: '16px', opacity: 0.8 }}></i> {agenda.profissional}</span>}
-                          {agenda.sala && <span style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}><i className="las la-door-open" style={{ fontSize: '16px', opacity: 0.8 }}></i> {agenda.sala}</span>}
-                        </div>
-                      </td>
-                      <td style={{ padding: '16px 24px', verticalAlign: 'middle' }}>
-                        <span style={{ 
-                          display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.05em', textTransform: 'uppercase', border: '1px solid',
-                          backgroundColor: cor.bg, color: cor.text, borderColor: cor.border 
-                        }}>
-                          {agenda.status}
+                          {atrasado && <span className="sr-only"> (horário já passou)</span>}
                         </span>
                       </td>
-                      <td style={{ padding: '16px 24px', verticalAlign: 'middle', textAlign: 'center' }}>
-                        {podeGerir && TRANSICOES_AGENDAMENTO[agenda.status].length > 0 && <button
-                          type="button"
-                          style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', backgroundColor: 'transparent', border: '1px solid transparent', cursor: 'pointer', margin: '0 auto', transition: 'all 0.2s' }}
-                          onClick={() => setAgendaSelecionada(agenda)}
-                          title="Opções"
-                          aria-label={`Abrir opções de atendimento para ${agenda.paciente.nome}`}
-                        >
-                          <i className="las la-ellipsis-v" style={{ fontSize: '18px' }}></i>
-                        </button>}
+                      <td className="ag-c-paciente">
+                        <strong className="ag-nome">{agenda.paciente.nome}</strong>
+                        {(agenda.paciente.cpf || agenda.paciente.telefone) && (
+                          <span className="ag-sub">{[agenda.paciente.cpf, agenda.paciente.telefone].filter(Boolean).join(' · ')}</span>
+                        )}
                       </td>
+                      <td className="ag-c-detalhes">
+                        <strong className="ag-nome">{agenda.especialidade}</strong>
+                        {(agenda.profissional || agenda.sala) && (
+                          <span className="ag-sub">{[agenda.profissional, agenda.sala].filter(Boolean).join(' · ')}</span>
+                        )}
+                      </td>
+                      <td className="ag-c-status"><Badge tone={situacao.tom}>{situacao.rotulo}</Badge></td>
+                      {podeGerir && (
+                        <td className="ag-c-acoes">
+                          {TRANSICOES_AGENDAMENTO[agenda.status].length > 0 && (
+                            <button type="button" className="btn btn-secondary btn-xs" aria-label={`Abrir ações de ${agenda.paciente.nome}`} onClick={() => setAgendaSelecionada(agenda)}>
+                              <i className="las la-ellipsis-h" aria-hidden="true"></i> Ações
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* MODAL DE AÇÕES RÁPIDAS */}
-      {agendaSelecionada && (
-        <div className="agenda-quick-overlay" role="presentation" style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)' }}>
-          <div className="agenda-quick-dialog" role="dialog" aria-modal="true" aria-labelledby="agenda-quick-title" style={{ backgroundColor: '#ffffff', borderRadius: '8px', width: '100%', maxWidth: '384px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #334155', overflow: 'hidden' }}>
-            
-            {/* Modal Header */}
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #94a3b8', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', backgroundColor: '#f8fafc' }}>
-              <div>
-                <h3 id="agenda-quick-title" style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', lineHeight: 1.25, margin: 0 }}>{agendaSelecionada.paciente.nome}</h3>
-                <p style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '4px 0 0 0' }}>Opções de Atendimento</p>
-              </div>
-              <button 
-                type="button"
-                aria-label="Fechar opções de atendimento"
-                onClick={() => setAgendaSelecionada(null)} 
-                style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', marginRight: '-8px' }}
-              >
-                <i className="las la-times" style={{ fontSize: '20px' }}></i>
-              </button>
-            </div>
-            
-            {/* Modal Body */}
-            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              
-              <button 
-                disabled={!TRANSICOES_AGENDAMENTO[agendaSelecionada.status].includes('CONFIRMADO')} onClick={() => void alterarStatus(agendaSelecionada.id, 'CONFIRMADO')}
-                style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '8px', border: '1px solid #059669', backgroundColor: '#ecfdf5', color: '#065f46', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', cursor: 'pointer' }}
-              >
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', color: '#059669' }}>
-                  <i className="las la-check" style={{ fontSize: '18px' }}></i>
-                </div>
-                Confirmar Presença
-              </button>
-              
-              <button 
-                disabled={!TRANSICOES_AGENDAMENTO[agendaSelecionada.status].includes('EM_ATENDIMENTO')} onClick={() => void alterarStatus(agendaSelecionada.id, 'EM_ATENDIMENTO')}
-                style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '8px', border: '1px solid #2563eb', backgroundColor: '#eff6ff', color: '#1e40af', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', cursor: 'pointer' }}
-              >
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', color: '#2563eb' }}>
-                  <i className="las la-stethoscope" style={{ fontSize: '18px' }}></i>
-                </div>
-                Iniciar Atendimento
-              </button>
-
-              <button 
-                disabled={!TRANSICOES_AGENDAMENTO[agendaSelecionada.status].includes('CONCLUIDO')} onClick={() => void alterarStatus(agendaSelecionada.id, 'CONCLUIDO')}
-                style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#ffffff', color: '#1e293b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', cursor: 'pointer' }}
-              >
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', color: '#334155' }}>
-                  <i className="las la-flag-checkered" style={{ fontSize: '18px' }}></i>
-                </div>
-                Finalizar Consulta
-              </button>
-
-              <div style={{ height: '1px', backgroundColor: '#94a3b8', margin: '4px 0' }}></div>
-              
-              <button 
-                disabled={!TRANSICOES_AGENDAMENTO[agendaSelecionada.status].includes('CANCELADO')} onClick={() => void alterarStatus(agendaSelecionada.id, 'CANCELADO')}
-                style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: '8px', border: '1px solid transparent', backgroundColor: 'transparent', color: '#475569', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
-              >
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <i className="las la-trash-alt" style={{ fontSize: '18px' }}></i>
-                </div>
-                Cancelar Agendamento
-              </button>
-
-            </div>
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
+      </Panel>
+
+      {agendaSelecionada && (
+        <Modal size="sm" title={agendaSelecionada.paciente.nome} closeLabel="Fechar ações" onClose={() => setAgendaSelecionada(null)}>
+          <div className="ag-opcoes">
+            <button type="button" className="btn btn-success" disabled={!transicoes.includes('CONFIRMADO')} onClick={() => void alterarStatus(agendaSelecionada.id, 'CONFIRMADO')}>
+              <i className="las la-check" aria-hidden="true"></i> Confirmar presença
+            </button>
+            <button type="button" className="btn btn-primary" disabled={!transicoes.includes('EM_ATENDIMENTO')} onClick={() => void alterarStatus(agendaSelecionada.id, 'EM_ATENDIMENTO')}>
+              <i className="las la-stethoscope" aria-hidden="true"></i> Iniciar atendimento
+            </button>
+            <button type="button" className="btn btn-secondary" disabled={!transicoes.includes('CONCLUIDO')} onClick={() => void alterarStatus(agendaSelecionada.id, 'CONCLUIDO')}>
+              <i className="las la-flag-checkered" aria-hidden="true"></i> Finalizar consulta
+            </button>
+            <button type="button" className="btn btn-secondary ag-perigo" disabled={!transicoes.includes('CANCELADO')} onClick={() => void alterarStatus(agendaSelecionada.id, 'CANCELADO')}>
+              <i className="las la-ban" aria-hidden="true"></i> Cancelar agendamento
+            </button>
+          </div>
+        </Modal>
       )}
 
       {criando && (
-        <div role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setCriando(false); }} style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(15,23,42,.55)' }}>
-          <form className="agenda-create-form" role="dialog" aria-modal="true" onSubmit={criarAgendamento} aria-labelledby="novo-agendamento-titulo" style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 560, padding: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 id="novo-agendamento-titulo" style={{ gridColumn: '1 / -1', margin: 0, color: '#0f172a' }}>Novo agendamento</h3>
-            {erroAcao && <p role="alert" style={{ gridColumn: '1 / -1', color: '#b91c1c', margin: 0 }}>{erroAcao}</p>}
-            <div style={{ gridColumn: '1 / -1' }}><PacienteSelect required value={pacienteId} onChange={id => setPacienteId(id)} /></div>
-            <label style={{ display: 'grid', gap: 6 }}>Data<input required name="data" type="date" defaultValue={filtroData} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
-            <label style={{ display: 'grid', gap: 6 }}>Horário<input required name="hora" type="time" style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
-            <label style={{ display: 'grid', gap: 6 }}>Tipo<input required name="tipo" defaultValue="Consulta" maxLength={80} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
-            <label style={{ display: 'grid', gap: 6 }}>Especialidade<input required name="especialidade" maxLength={100} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
-            <label style={{ display: 'grid', gap: 6 }}>Profissional<input name="profissional" maxLength={120} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
-            <label style={{ display: 'grid', gap: 6 }}>Sala<input name="sala" maxLength={80} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
-            <label style={{ gridColumn: '1 / -1', display: 'grid', gap: 6 }}>Observações<textarea name="observacoes" maxLength={1000} rows={3} style={{ padding: 10, border: '1px solid #94a3b8', borderRadius: 6 }} /></label>
-            <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: 10 }}><button type="button" onClick={() => setCriando(false)} style={{ padding: '10px 16px' }}>Fechar</button><button disabled={salvando || !pacienteId} type="submit" style={{ padding: '10px 16px', background: '#0f172a', color: '#fff', border: 0, borderRadius: 6 }}>{salvando ? 'Salvando…' : 'Criar agendamento'}</button></div>
+        <Modal size="lg" title="Novo agendamento" closeLabel="Fechar" onClose={() => setCriando(false)}>
+          <form onSubmit={criarAgendamento}>
+            {erroAcao && <p role="alert" className="mod-aviso mod-aviso-erro">{erroAcao}</p>}
+            <div className="mod-form-grid">
+              <div className="mod-largo"><PacienteSelect required value={pacienteId} onChange={id => setPacienteId(id)} /></div>
+              <div className="form-group"><label htmlFor="ag-data">Data *</label><input id="ag-data" required name="data" type="date" defaultValue={filtroData} /></div>
+              <div className="form-group"><label htmlFor="ag-hora">Horário *</label><input id="ag-hora" required name="hora" type="time" /></div>
+              <div className="form-group"><label htmlFor="ag-tipo">Tipo *</label><input id="ag-tipo" required name="tipo" defaultValue="Consulta" maxLength={80} /></div>
+              <div className="form-group"><label htmlFor="ag-especialidade">Especialidade *</label><input id="ag-especialidade" required name="especialidade" maxLength={100} /></div>
+              <div className="form-group"><label htmlFor="ag-profissional">Profissional</label><input id="ag-profissional" name="profissional" maxLength={120} /></div>
+              <div className="form-group"><label htmlFor="ag-sala">Sala</label><input id="ag-sala" name="sala" maxLength={80} /></div>
+              <div className="form-group mod-largo"><label htmlFor="ag-obs">Observações</label><textarea id="ag-obs" name="observacoes" maxLength={1000} rows={3} /></div>
+            </div>
+            <ModalActions>
+              <button type="button" className="btn btn-secondary" onClick={() => setCriando(false)}>Fechar</button>
+              <button type="submit" className="btn btn-primary" disabled={salvando || !pacienteId}>{salvando ? 'Salvando...' : 'Criar agendamento'}</button>
+            </ModalActions>
           </form>
-        </div>
+        </Modal>
       )}
-
     </div>
   );
 }
-

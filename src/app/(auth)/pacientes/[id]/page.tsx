@@ -3,12 +3,11 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { AlertTriangle, Pill } from 'lucide-react'
-import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, Tabs } from '@/components/ui'
+import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, RiscoBadge, Tabs } from '@/components/ui'
 import { isTerminal, proximosStatus, STATUS_DESFECHO } from '@/lib/paciente-status'
 import { pode } from '@/lib/permissions'
 import { alergiaReal, calcularIdade, calcularMews, cpfValido, formatarCPF, formatarDataHora, formatarNascimento, nascimentoParaInput } from '@/lib/utils'
-import { erroDaApi, ManchesterBadge, StatusBadge, TIPOS_SANGUINEOS, useCargo } from '../componentes'
+import { erroDaApi, StatusBadge, TIPOS_SANGUINEOS, useCargo } from '../componentes'
 
 type Registro = { id: string; createdAt: string; profissional?: string | null }
 type Triagem = Registro & { classificacao: string; pressao: string | null; temperatura: number | null; frequenciaC: number | null; frequenciaR: number | null; saturacao: number | null; glicemia: number | null; queixa: string | null; observacoes: string | null }
@@ -90,6 +89,11 @@ function escalaNumerica(valores: Record<string, string>): { vazia: boolean; comp
     numeros: Object.fromEntries(Object.entries(valores).map(([chave, valor]) => [chave, Number(valor)])),
   }
 }
+
+const TOM_MEWS = { baixo: 'success', medio: 'warning', alto: 'danger' } as const
+
+const ROTULO_GLASGOW: Record<keyof typeof GLASGOW_VAZIO, string> = { ocular: 'Abertura ocular', verbal: 'Resposta verbal', motor: 'Resposta motora' }
+const ROTULO_BRADEN: Record<keyof typeof BRADEN_VAZIO, string> = { sensorial: 'Percepção sensorial', umidade: 'Umidade', atividade: 'Atividade', mobilidade: 'Mobilidade', nutricao: 'Nutrição', friccao: 'Fricção e cisalhamento' }
 
 const somar = (valores: Record<string, number> | null | undefined) => valores ? Object.values(valores).reduce((a, b) => a + b, 0) : null
 
@@ -205,9 +209,10 @@ export default function FichaPacientePage() {
     }
   }
 
-  if (!pacienteId) return <main className="prontuario-page"><ErrorState message="Identificador de paciente inválido." /></main>
-  if (loading) return <main className="prontuario-page"><LoadingState message="Carregando prontuário..." /></main>
-  if (!paciente) return <main className="prontuario-page"><ErrorState message={erroCarga || 'Paciente não encontrado'} onRetry={recarregar} /></main>
+  const cabecalhoVazio = <PageHeader icon="las la-file-medical-alt" title="Prontuário eletrônico" actions={<Link href="/pacientes" className="btn btn-secondary"><i className="las la-arrow-left" aria-hidden="true"></i> Voltar</Link>} />
+  if (!pacienteId) return <div className="pac-pagina">{cabecalhoVazio}<Panel><ErrorState message="Identificador de paciente inválido." /></Panel></div>
+  if (loading) return <div className="pac-pagina">{cabecalhoVazio}<Panel><LoadingState message="Carregando prontuário..." /></Panel></div>
+  if (!paciente) return <div className="pac-pagina">{cabecalhoVazio}<Panel><ErrorState message={erroCarga || 'Paciente não encontrado.'} onRetry={recarregar} /></Panel></div>
 
   const clinico = paciente.acesso === 'clinico'
   const terminal = isTerminal(paciente.status)
@@ -283,17 +288,17 @@ export default function FichaPacientePage() {
   const totalBraden = escalaNumerica(braden)
 
   const campoCadastro = (campo: string, rotulo: string, extras: { tipo?: string; inteira?: boolean; obrigatorio?: boolean; somenteLeitura?: boolean } = {}) => (
-    <div className={`form-group${extras.inteira ? ' pac-inteira' : ''}`} key={campo}>
+    <div className={`form-group${extras.inteira ? ' mod-largo' : ''}`} key={campo}>
       <label htmlFor={`ficha-${campo}`}>{rotulo}{extras.obrigatorio ? ' *' : ''}</label>
       <input id={`ficha-${campo}`} type={extras.tipo ?? 'text'} required={extras.obrigatorio} disabled={extras.somenteLeitura} value={form[campo] ?? ''} onChange={e => setForm({ ...form, [campo]: e.target.value })} />
     </div>
   )
 
   return (
-    <main className="prontuario-page pac-pagina">
+    <div className="pac-pagina">
       {alergiaReal(paciente.alergias) && (
         <div className="pac-alerta-alergia" role="alert">
-          <AlertTriangle size={24} aria-hidden="true" />
+          <i className="las la-exclamation-triangle" aria-hidden="true"></i>
           <span>Paciente alérgico a: <strong>{paciente.alergias}</strong></span>
         </div>
       )}
@@ -303,8 +308,8 @@ export default function FichaPacientePage() {
         title="Prontuário eletrônico"
         subtitle={clinico ? undefined : 'Acesso apenas aos dados cadastrais'}
         actions={<div className="ui-page-actions pac-sem-impressao">
-          <button type="button" className="btn pac-btn-sec btn-sm" onClick={() => window.print()}><i className="las la-print" aria-hidden="true"></i> Imprimir</button>
-          <Link href="/pacientes" className="btn pac-btn-sec btn-sm"><i className="las la-arrow-left" aria-hidden="true"></i> Voltar</Link>
+          <button type="button" className="btn btn-secondary" onClick={() => window.print()}><i className="las la-print" aria-hidden="true"></i> Imprimir</button>
+          <Link href="/pacientes" className="btn btn-secondary"><i className="las la-arrow-left" aria-hidden="true"></i> Voltar</Link>
         </div>}
       />
 
@@ -318,12 +323,15 @@ export default function FichaPacientePage() {
             </p>
           </div>
           <div className="pac-acoes">
-            <ManchesterBadge classificacao={paciente.classificacao} />
+            <RiscoBadge classificacao={paciente.classificacao} />
             {podeMudarStatus ? (
-              <select className="pac-status" aria-label="Status do atendimento" value={paciente.status} disabled={salvando} onChange={e => void atualizar({ status: e.target.value }, 'Erro ao atualizar o status.')}>
-                <option value={paciente.status}>{paciente.status}</option>
-                {opcoesStatus.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <div className="form-group pac-status-campo">
+                <label className="sr-only" htmlFor="ficha-status">Status do atendimento</label>
+                <select id="ficha-status" value={paciente.status} disabled={salvando} onChange={e => void atualizar({ status: e.target.value }, 'Erro ao atualizar o status.')}>
+                  <option value={paciente.status}>{paciente.status}</option>
+                  {opcoesStatus.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
             ) : <StatusBadge status={paciente.status} />}
             {terminal && <Badge>Somente leitura</Badge>}
           </div>
@@ -337,8 +345,8 @@ export default function FichaPacientePage() {
         {tab === 'dados' && (!editando ? (
           <>
             {podeEditarCadastro && (
-              <div className="pac-rodape pac-margem">
-                <button type="button" className="btn pac-btn-sec btn-sm" onClick={abrirEdicao}><i className="las la-pen" aria-hidden="true"></i> Editar cadastro</button>
+              <div className="mod-acoes pac-margem">
+                <button type="button" className="btn btn-secondary" onClick={abrirEdicao}><i className="las la-pen" aria-hidden="true"></i> Editar cadastro</button>
               </div>
             )}
             <div className="pac-dados">
@@ -359,7 +367,7 @@ export default function FichaPacientePage() {
           </>
         ) : (
           <form onSubmit={salvarEdicao}>
-            <div className="pac-grade">
+            <div className="mod-form-grid">
               {campoCadastro('nome', 'Nome completo', { inteira: true, obrigatorio: true })}
               {campoCadastro('cpf', 'CPF')}
               {campoCadastro('rg', 'RG')}
@@ -389,8 +397,8 @@ export default function FichaPacientePage() {
               {campoCadastro('alergias', 'Alergias', { inteira: true, somenteLeitura: !podeVitais })}
               {clinico && campoCadastro('queixaPrincipal', 'Queixa principal', { inteira: true, somenteLeitura: !podeVitais })}
             </div>
-            <div className="pac-rodape">
-              <button type="button" className="btn pac-btn-sec" onClick={() => setEditando(false)}>Cancelar</button>
+            <div className="mod-acoes">
+              <button type="button" className="btn btn-secondary" onClick={() => setEditando(false)}>Cancelar</button>
               <button type="submit" className="btn btn-primary" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar'}</button>
             </div>
           </form>
@@ -400,7 +408,7 @@ export default function FichaPacientePage() {
           <>
             {pode_('triagem:registrar') && (
               <div className="pac-margem">
-                <div className="pac-grade">
+                <div className="mod-form-grid">
                   <div className="form-group">
                     <label htmlFor="tri-classificacao">Classificação de risco *</label>
                     <select id="tri-classificacao" value={triagem.classificacao} onChange={e => setTriagem({ ...triagem, classificacao: e.target.value })}>
@@ -443,14 +451,14 @@ export default function FichaPacientePage() {
                   </div>
                 </div>
 
-                <div className={`pac-mews${mews.completo ? ` pac-mews-${mews.faixa}` : ''}`} role="status">
+                <div className={`pac-mews${mews.completo ? ` ui-tone-${TOM_MEWS[mews.faixa]}` : ''}`} role="status">
                   <div className="pac-campo-rotulo">Escore MEWS</div>
                   {mews.completo ? (
                     <><strong>{mews.total}</strong>{mews.rotulo}</>
                   ) : (
                     <><strong>Incompleto</strong>Falta: {mews.faltando.join(', ')}</>
                   )}
-                  {!adulto && <p className="pac-aviso">MEWS é validado para adultos: {nascimento ? `paciente com ${idade} anos` : 'idade não informada'}. Interprete com cautela.</p>}
+                  {!adulto && <p className="mod-aviso mod-aviso-atencao">MEWS é validado para adultos: {nascimento ? `paciente com ${idade} anos` : 'idade não informada'}. Interprete com cautela.</p>}
                 </div>
 
                 <div className="form-group">
@@ -465,11 +473,11 @@ export default function FichaPacientePage() {
               </div>
             )}
 
-            <h3 className="pac-subtitulo">Histórico de triagens</h3>
+            <h2 className="pac-subtitulo">Histórico de triagens</h2>
             {paciente.triagens?.length ? paciente.triagens.map((t, i) => (
               <Cartao key={t.id} titulo={`Triagem #${(paciente.triagens?.length ?? 0) - i}`} autor={t.profissional} data={t.createdAt}>
                 <div className="pac-dados">
-                  <span><strong>Class.:</strong> {t.classificacao || '-'}</span><span><strong>PA:</strong> {t.pressao || '-'}</span>
+                  <span><RiscoBadge classificacao={t.classificacao} /></span><span><strong>PA:</strong> {t.pressao || '-'}</span>
                   <span><strong>Temp:</strong> {t.temperatura ?? '-'}</span><span><strong>FC:</strong> {t.frequenciaC ?? '-'}</span>
                   <span><strong>FR:</strong> {t.frequenciaR ?? '-'}</span><span><strong>SpO2:</strong> {t.saturacao ?? '-'}</span>
                   <span><strong>HGT:</strong> {t.glicemia ?? '-'}</span>
@@ -487,11 +495,11 @@ export default function FichaPacientePage() {
               <div className="pac-margem">
                 <p className="pac-margem">Cada escala é opcional e independente. Só é gravado o que for avaliado agora.</p>
                 <section className="pac-escala">
-                  <h3>Escala de Glasgow</h3>
-                  <div className="pac-grade">
+                  <h2>Escala de Glasgow</h2>
+                  <div className="mod-form-grid">
                     {(Object.keys(OPCOES_GLASGOW) as (keyof typeof GLASGOW_VAZIO)[]).map(item => (
                       <div className="form-group" key={item}>
-                        <label htmlFor={`gl-${item}`}>{item}</label>
+                        <label htmlFor={`gl-${item}`}>{ROTULO_GLASGOW[item]}</label>
                         <select id={`gl-${item}`} value={glasgow[item]} onChange={e => setGlasgow({ ...glasgow, [item]: e.target.value })}>
                           <option value="">Não avaliado</option>
                           {OPCOES_GLASGOW[item].map(([nota, texto]) => <option key={nota} value={nota}>{nota} - {texto}</option>)}
@@ -502,11 +510,11 @@ export default function FichaPacientePage() {
                   <div className="pac-total"><span>Total</span><span>{totalGlasgow.completa ? somar(totalGlasgow.numeros) : 'Não avaliado'}</span></div>
                 </section>
                 <section className="pac-escala">
-                  <h3>Escala de Braden</h3>
-                  <div className="pac-grade">
+                  <h2>Escala de Braden</h2>
+                  <div className="mod-form-grid">
                     {(Object.keys(MAXIMOS_BRADEN) as (keyof typeof BRADEN_VAZIO)[]).map(item => (
                       <div className="form-group" key={item}>
-                        <label htmlFor={`br-${item}`}>{item}</label>
+                        <label htmlFor={`br-${item}`}>{ROTULO_BRADEN[item]}</label>
                         <select id={`br-${item}`} value={braden[item]} onChange={e => setBraden({ ...braden, [item]: e.target.value })}>
                           <option value="">Não avaliado</option>
                           {Array.from({ length: MAXIMOS_BRADEN[item] }, (_, i) => MAXIMOS_BRADEN[item] - i).map(nota => <option key={nota} value={nota}>{nota}</option>)}
@@ -517,7 +525,7 @@ export default function FichaPacientePage() {
                   <div className="pac-total"><span>Total</span><span>{totalBraden.completa ? somar(totalBraden.numeros) : 'Não avaliado'}</span></div>
                 </section>
                 <section className="pac-escala">
-                  <h3>Escala de dor (0 a 10)</h3>
+                  <h2>Escala de dor (0 a 10)</h2>
                   <div className="pac-dor" role="group" aria-label="Intensidade da dor">
                     {Array.from({ length: 11 }, (_, valor) => (
                       <button key={valor} type="button" aria-pressed={dor === valor} onClick={() => setDor(dor === valor ? null : valor)}>{valor}</button>
@@ -527,7 +535,7 @@ export default function FichaPacientePage() {
                 <button type="button" className="btn btn-primary pac-largo" onClick={salvarEscores} disabled={salvando}>Salvar escores avaliados</button>
               </div>
             )}
-            <h3 className="pac-subtitulo">Histórico de escores</h3>
+            <h2 className="pac-subtitulo">Histórico de escores</h2>
             {paciente.escoresClinicos?.length ? paciente.escoresClinicos.map(e => (
               <Cartao key={e.id} autor={e.profissional} data={e.createdAt}>
                 <div className="pac-dados">
@@ -563,7 +571,7 @@ export default function FichaPacientePage() {
           <>
             {pode_('sinais:registrar') && (
               <div className="pac-margem">
-                <div className="pac-grade">
+                <div className="mod-form-grid">
                   {([['pressao', 'PA', 'text'], ['fc', 'FC', 'number'], ['fr', 'FR', 'number'], ['temp', 'Temp', 'number'], ['satO2', 'SpO2', 'number'], ['glicemia', 'Glicemia', 'number']] as const).map(([campo, rotulo, tipo]) => (
                     <div className="form-group" key={campo}>
                       <label htmlFor={`sv-${campo}`}>{rotulo}</label>
@@ -595,7 +603,7 @@ export default function FichaPacientePage() {
           <>
             {pode_('prescricao:registrar') && (
               <div className="pac-margem">
-                <div className="pac-grade">
+                <div className="mod-form-grid">
                   {([['medicamento', 'Medicamento *'], ['dose', 'Dose'], ['via', 'Via'], ['frequencia', 'Frequência']] as const).map(([campo, rotulo]) => (
                     <div className="form-group" key={campo}>
                       <label htmlFor={`med-${campo}`}>{rotulo}</label>
@@ -609,7 +617,7 @@ export default function FichaPacientePage() {
               </div>
             )}
             {paciente.prescricoes?.length ? paciente.prescricoes.map(m => (
-              <Cartao key={m.id} titulo={<><Pill size={14} aria-hidden="true" /> {m.medicamento}</>} autor={m.profissional} data={m.createdAt}>
+              <Cartao key={m.id} titulo={<><i className="las la-pills" aria-hidden="true"></i> {m.medicamento}</>} autor={m.profissional} data={m.createdAt}>
                 <p className="pac-preformatado">{[m.dose, m.via, m.frequencia].filter(Boolean).join(' - ') || 'Sem posologia informada'}</p>
               </Cartao>
             )) : <EmptyState message="Nenhum medicamento prescrito." />}
@@ -620,7 +628,7 @@ export default function FichaPacientePage() {
           <>
             {pode_('exame:solicitar') && (
               <div className="pac-margem">
-                <div className="pac-grade">
+                <div className="mod-form-grid">
                   <div className="form-group">
                     <label htmlFor="ex-nome">Nome do exame *</label>
                     <input id="ex-nome" maxLength={160} value={novoExame.nome} onChange={e => setNovoExame({ ...novoExame, nome: e.target.value })} />
@@ -657,7 +665,7 @@ export default function FichaPacientePage() {
           <>
             {pode_('nutricao:registrar') && (
               <div className="pac-margem">
-                <div className="pac-grade">
+                <div className="mod-form-grid">
                   <div className="form-group"><label htmlFor="nu-peso">Peso (kg)</label><input id="nu-peso" type="number" step="0.1" value={nutricao.peso} onChange={e => setNutricao({ ...nutricao, peso: e.target.value })} /></div>
                   <div className="form-group"><label htmlFor="nu-altura">Altura (m)</label><input id="nu-altura" type="number" step="0.01" value={nutricao.altura} onChange={e => setNutricao({ ...nutricao, altura: e.target.value })} /></div>
                 </div>
@@ -686,7 +694,7 @@ export default function FichaPacientePage() {
           <>
             {pode_('medico:registrar') && (
               <div className="pac-margem">
-                <div className="pac-grade">
+                <div className="mod-form-grid">
                   <div className="form-group"><label htmlFor="me-crm">CRM informado</label><input id="me-crm" maxLength={40} value={medico.crm} onChange={e => setMedico({ ...medico, crm: e.target.value })} /></div>
                   <div className="form-group"><label htmlFor="me-esp">Especialidade</label><input id="me-esp" maxLength={120} value={medico.especialidade} onChange={e => setMedico({ ...medico, especialidade: e.target.value })} /></div>
                 </div>
@@ -726,7 +734,7 @@ export default function FichaPacientePage() {
         )}
 
         {clinico && tab === 'documentos' && (
-          <p role="note" className="pac-aviso"><strong>Anexos desativados.</strong> O sistema ainda não tem armazenamento seguro e auditável de arquivos clínicos.</p>
+          <p role="note" className="mod-aviso mod-aviso-atencao"><strong>Anexos desativados.</strong> O sistema ainda não tem armazenamento seguro e auditável de arquivos clínicos.</p>
         )}
 
         {clinico && tab === 'timeline' && (
@@ -748,6 +756,6 @@ export default function FichaPacientePage() {
           </>
         )}
       </Panel>
-    </main>
+    </div>
   )
 }

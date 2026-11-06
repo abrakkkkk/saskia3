@@ -1,6 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { PageHeader, Panel, Badge, EmptyState, LoadingState, ErrorState, type Tone } from '@/components/ui';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
+import '@/components/ui/modal.css';
 import './chamados-ti.css';
 
 interface Ticket {
@@ -83,25 +87,8 @@ export default function ChamadosTiPage() {
     }
   };
 
-  const getPrioridadeBadge = (prio: string) => {
-    switch (prio) {
-      case 'BAIXA': return 'bg-blue-100 text-blue-800 border border-blue-200';
-      case 'MEDIA': return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
-      case 'ALTA': return 'bg-orange-100 text-orange-800 border border-orange-200';
-      case 'URGENTE': return 'bg-red-100 text-red-800 border border-red-200 font-bold';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'ENVIADO': return 'bg-red-50 text-red-800 border border-red-200';
-      case 'EM_ANALISE': return 'bg-blue-50 text-blue-800 border border-blue-200';
-      case 'RESOLVIDO': return 'bg-green-50 text-green-800 border border-green-200';
-      case 'FECHADO': return 'bg-gray-100 text-gray-700 border border-gray-200';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const tonePrioridade: Record<string, Tone> = { BAIXA: 'neutral', MEDIA: 'info', ALTA: 'warning', URGENTE: 'danger' };
+  const toneStatus: Record<string, Tone> = { ENVIADO: 'warning', EM_ANALISE: 'info', RESOLVIDO: 'success', FECHADO: 'neutral' };
 
   const statusLabel: Record<string, string> = {
     ENVIADO: 'Enviado',
@@ -110,113 +97,100 @@ export default function ChamadosTiPage() {
     FECHADO: 'Fechado',
   };
 
-  return (
-    <div className="chamados-ti-page">
-      <div className="page-header">
-        <div className="header-left">
-          <h2><i className="las la-headset"></i> HelpDesk / Chamados TI</h2>
-          <p>Suporte técnico e manutenção predial do hospital</p>
-        </div>
-        <div className="header-actions">
-          <button type="button" className="btn btn-primary" onClick={() => setShowForm(!showForm)} disabled={saving} aria-expanded={showForm}>
-            <i className="las la-plus" aria-hidden="true"></i> {showForm ? 'Fechar formulário' : 'Abrir Chamado'}
-          </button>
-        </div>
-      </div>
+  const prioridadeLabel: Record<string, string> = {
+    BAIXA: 'Baixa',
+    MEDIA: 'Média',
+    ALTA: 'Alta',
+    URGENTE: 'Crítica',
+  };
 
-      {success && <p className="ticket-feedback ticket-feedback-success" role="status">{success}</p>}
+  return (
+    <div className="mod-pagina">
+      <PageHeader
+        icon="las la-headset"
+        title="Chamados de TI"
+        subtitle="Suporte técnico e manutenção predial do hospital."
+        actions={
+          <button type="button" className="btn btn-primary" onClick={() => setShowForm(!showForm)} disabled={saving} aria-expanded={showForm}>
+            <i className="las la-plus" aria-hidden="true"></i> {showForm ? 'Fechar formulário' : 'Abrir chamado'}
+          </button>
+        }
+      />
+
+      {success && <p className="mod-aviso mod-aviso-sucesso" role="status">{success}</p>}
 
       {showForm && (
-        <form id="ticket-form" className="card ticket-form" onSubmit={(event) => { event.preventDefault(); void abrirChamado(); }}>
-          <h3 style={{ marginBottom: '15px', fontSize: '16px' }}>Novo Chamado de Suporte</h3>
-          <div className="ticket-form-grid">
-            <div className="ticket-field ticket-field-full">
-              <label htmlFor="ticket-titulo">Problema (Título resumido) *</label>
-              <input id="ticket-titulo" name="titulo" type="text" maxLength={160} required aria-required="true" className="input-field" placeholder="Ex: Impressora da Recepção não funciona" value={titulo} onChange={(e) => { setTitulo(e.target.value); setFormError(''); }} />
-            </div>
-            
-            <div className="ticket-field">
-              <label htmlFor="ticket-prioridade">Prioridade</label>
-              <select id="ticket-prioridade" name="prioridade" className="input-field" value={prioridade} onChange={(e) => setPrioridade(e.target.value)}>
-                <option value="BAIXA">Baixa - Pode esperar</option>
-                <option value="MEDIA">Média - Atrapalha a rotina</option>
-                <option value="ALTA">Alta - Urgente</option>
-                <option value="URGENTE">Crítica - Risco ao Paciente</option>
-              </select>
+        <Panel title="Novo chamado" icon="las la-plus-circle">
+          <form id="ticket-form" onSubmit={(event) => { event.preventDefault(); void abrirChamado(); }}>
+            <div className="ux-campos">
+              <div className="form-group ux-largo">
+                <label htmlFor="ticket-titulo">Problema (título resumido) *</label>
+                <input id="ticket-titulo" name="titulo" type="text" maxLength={160} required aria-required="true" placeholder="Ex.: impressora da recepção não funciona" value={titulo} onChange={(e) => { setTitulo(e.target.value); setFormError(''); }} />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="ticket-prioridade">Prioridade</label>
+                <select id="ticket-prioridade" name="prioridade" value={prioridade} onChange={(e) => setPrioridade(e.target.value)}>
+                  <option value="BAIXA">Baixa: pode esperar</option>
+                  <option value="MEDIA">Média: atrapalha a rotina</option>
+                  <option value="ALTA">Alta: urgente</option>
+                  <option value="URGENTE">Crítica: risco ao paciente</option>
+                </select>
+              </div>
+
+              <div className="form-group ux-largo">
+                <label htmlFor="ticket-descricao">Descrição *</label>
+                <textarea id="ticket-descricao" name="descricao" rows={4} maxLength={4000} required aria-required="true" placeholder="Descreva o que está acontecendo" value={descricao} onChange={(e) => { setDescricao(e.target.value); setFormError(''); }} />
+              </div>
             </div>
 
-            <div className="ticket-field ticket-field-full">
-              <label htmlFor="ticket-descricao">Descrição detalhada *</label>
-              <textarea id="ticket-descricao" name="descricao" rows={4} maxLength={4000} required aria-required="true" className="input-field" placeholder="Descreva o que está acontecendo..." value={descricao} onChange={(e) => { setDescricao(e.target.value); setFormError(''); }} />
-            </div>
-          </div>
+            {formError && <p className="mod-aviso mod-aviso-erro" role="alert">{formError}</p>}
 
-          {formError && <p className="ticket-feedback ticket-feedback-error" role="alert">{formError}</p>}
-          
-          <div className="ticket-form-actions">
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Enviando...' : 'Enviar Solicitação'}
-            </button>
-          </div>
-        </form>
+            <div className="ui-modal-foot">
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? 'Enviando…' : 'Enviar chamado'}
+              </button>
+            </div>
+          </form>
+        </Panel>
       )}
 
-      <div className="card">
-        <h3 style={{ marginBottom: '20px', fontSize: '18px', color: '#1e293b' }}>Painel de Tickets</h3>
-        
-        {loading ? (
-          <p role="status" aria-live="polite">Carregando chamados...</p>
-        ) : erro ? (
-          <div className="ticket-load-error" role="alert"><span>{erro}</span><button type="button" className="btn btn-primary" onClick={() => void carregarDados()}>Tentar novamente</button></div>
-        ) : tickets.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#475569' }}>
-            <i className="las la-smile" style={{ fontSize: '48px', marginBottom: '10px', color: '#10b981' }}></i>
-            <p>Você ainda não abriu nenhum chamado.</p>
-          </div>
-        ) : (
-          <div className="tabela-wrapper">
-            <table className="tabela" aria-label="Chamados de suporte técnico">
-              <thead>
-                <tr>
-                  <th scope="col">Ticket</th>
-                  <th scope="col">Solicitante</th>
-                  <th scope="col">Prioridade</th>
-                  <th scope="col">Status</th>
+      {loading ? (
+        <LoadingState message="Carregando chamados..." />
+      ) : erro ? (
+        <ErrorState message={erro} onRetry={() => void carregarDados()} />
+      ) : tickets.length === 0 ? (
+        <EmptyState icon="las la-headset" message="Você ainda não abriu nenhum chamado." />
+      ) : (
+        <div className="tabela-wrapper">
+          <table className="tabela" aria-label="Chamados de suporte técnico">
+            <thead>
+              <tr>
+                <th scope="col">Chamado</th>
+                <th scope="col">Solicitante</th>
+                <th scope="col">Prioridade</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tickets.map(ticket => (
+                <tr key={ticket.id}>
+                  <td className="ti-chamado">
+                    <strong>{ticket.titulo}</strong>
+                    <span className="ux-secundario">{ticket.descricao}</span>
+                  </td>
+                  <td>
+                    {ticket.solicitante}
+                    <span className="ux-secundario">{new Date(ticket.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                  </td>
+                  <td><Badge tone={tonePrioridade[ticket.prioridade] ?? 'neutral'}>{prioridadeLabel[ticket.prioridade] || ticket.prioridade}</Badge></td>
+                  <td><Badge tone={toneStatus[ticket.status] ?? 'neutral'}>{statusLabel[ticket.status] || ticket.status}</Badge></td>
                 </tr>
-              </thead>
-              <tbody>
-                {tickets.map(ticket => (
-                  <tr key={ticket.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <i className="las la-headset text-blue-500" aria-hidden="true" style={{ fontSize: '18px' }}></i>
-                        {ticket.titulo}
-                      </div>
-                      <div className="ticket-description">
-                        {ticket.descricao}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '13px', color: '#475569' }}><i className="las la-user" aria-hidden="true"></i> {ticket.solicitante}</div>
-                      <div style={{ fontSize: '11px', color: '#475569' }}>{new Date(ticket.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</div>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${getPrioridadeBadge(ticket.prioridade)}`} style={{ padding: '4px 8px', borderRadius: '8px' }}>
-                         {ticket.prioridade === 'URGENTE' ? 'CRÍTICA' : ticket.prioridade}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${getStatusBadge(ticket.status)}`} style={{ padding: '4px 8px', borderRadius: '8px' }}>
-                         {statusLabel[ticket.status] || ticket.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

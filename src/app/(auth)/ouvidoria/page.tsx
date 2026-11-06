@@ -1,8 +1,11 @@
-﻿'use client';
+'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, StatCard, StatGrid, Tabs, type Tone } from '@/components/ui';
+import { Modal } from '@/components/ui/Modal';
 import { pode } from '@/lib/permissions';
+import '@/components/ui/modulo.css';
+import '@/components/ui/ui-extras.css';
 import './ouvidoria.css';
 
 const ABAS = [
@@ -142,149 +145,137 @@ export default function OuvidoriaPage() {
     }
   };
 
-  useEffect(() => {
-    if (!detalhe) return;
-    const fechar = (evento: KeyboardEvent) => { if (evento.key === 'Escape' && !respondendo) setDetalhe(null); };
-    document.addEventListener('keydown', fechar);
-    return () => document.removeEventListener('keydown', fechar);
-  }, [detalhe, respondendo]);
-
   const pendentes = manifestacoes.filter(m => !encerrada(m.status)).length;
   const respondidas = manifestacoes.filter(m => encerrada(m.status)).length;
   const atrasadas = manifestacoes.filter(vencida).length;
 
-  if (sessionStatus === 'loading' || (loading && manifestacoes.length === 0 && !erroCarga)) return <LoadingState message="Carregando manifestações..." />;
+  if (sessionStatus === 'loading' || (loading && manifestacoes.length === 0 && !erroCarga)) return <div className="mod-pagina"><PageHeader icon="las la-headset" title="Ouvidoria" /><LoadingState message="Carregando manifestações..." /></div>;
 
   return (
-    <div className="conteudo">
-      <div className="ouv-container">
-        <PageHeader
-          icon="las la-headset"
-          title="Ouvidoria"
-          subtitle="Canal de manifestações: elogios, sugestões, reclamações e denúncias. O prazo de resposta é de 30 dias."
-          actions={<button type="button" className="btn btn-success" onClick={() => { setProtocoloCriado(null); setTabAtiva('registrar'); }}><i className="las la-plus-circle" aria-hidden="true"></i> Nova manifestação</button>}
-        />
+    <div className="mod-pagina">
+      <PageHeader
+        icon="las la-headset"
+        title="Ouvidoria"
+        subtitle="Elogios, sugestões, reclamações e denúncias. Prazo de resposta: 30 dias."
+        actions={<button type="button" className="btn btn-primary" onClick={() => { setProtocoloCriado(null); setTabAtiva('registrar'); }}><i className="las la-plus-circle" aria-hidden="true"></i> Nova manifestação</button>}
+      />
 
-        {erroCarga && <ErrorState message={erroCarga} onRetry={() => void carregarDados()} />}
+      {erroCarga && <ErrorState message={erroCarga} onRetry={() => void carregarDados()} />}
 
-        <StatGrid>
-          <StatCard icon="las la-inbox" tone="info" value={manifestacoes.length} label="Total de manifestações" />
-          <StatCard icon="las la-hourglass-half" tone="warning" value={pendentes} label="Pendentes" />
-          <StatCard icon="las la-check-circle" tone="success" value={respondidas} label="Respondidas" />
-          {isAdmin && <StatCard icon="las la-exclamation-circle" tone="danger" value={atrasadas} label="Fora do prazo" />}
-        </StatGrid>
+      <StatGrid>
+        <StatCard icon="las la-inbox" value={manifestacoes.length} label="Total" />
+        <StatCard icon="las la-hourglass-half" tone="warning" value={pendentes} label="Pendentes" />
+        <StatCard icon="las la-check-circle" tone="success" value={respondidas} label="Respondidas" />
+        {isAdmin && <StatCard icon="las la-exclamation-circle" tone="danger" alerta value={atrasadas} label="Fora do prazo" />}
+      </StatGrid>
 
-        <Tabs label="Seções da ouvidoria" tabs={ABAS} active={tabAtiva} onChange={setTabAtiva} />
+      <Tabs label="Seções da ouvidoria" tabs={ABAS} active={tabAtiva} onChange={setTabAtiva} />
 
-        {tabAtiva === 'registrar' && (
-          <Panel title="Registrar manifestação" icon="las la-headset">
-            {protocoloCriado && (
-              <p role="status" className="alert-sucesso" style={{ marginBottom: 16 }}>
-                Manifestação registrada. Protocolo: <strong>{protocoloCriado.protocolo}</strong>.
-                {protocoloCriado.anonimo ? ' Como ela é anônima, não fica ligada à sua conta: anote o protocolo, que é a única forma de acompanhá-la.' : ''}
-              </p>
-            )}
-            {erroForm && <p role="alert" className="alert-erro" style={{ marginBottom: 16 }}>{erroForm}</p>}
-            <form onSubmit={registrarManifestacao}>
-              <div className="form-grid">
-                <div className="form-grupo">
-                  <label htmlFor="ouv-tipo">Tipo *</label>
-                  <select id="ouv-tipo" value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>
-                    <option>Elogio</option><option>Sugestão</option><option>Reclamação</option><option>Denúncia</option>
-                  </select>
-                </div>
-                <div className="form-grupo">
-                  <label htmlFor="ouv-setor">Setor relacionado</label>
-                  <select id="ouv-setor" value={form.setor} onChange={e => setForm({ ...form, setor: e.target.value })}>
-                    <option>Geral</option><option>Emergência</option><option>UTI</option><option>Enfermaria</option><option>Recepção</option><option>Farmácia</option>
-                  </select>
-                </div>
-                <div className="form-grupo">
-                  <label htmlFor="ouv-nome">Seu nome {form.anonimo ? '(não será gravado)' : '*'}</label>
-                  <input id="ouv-nome" type="text" maxLength={200} value={form.anonimo ? '' : form.nome} disabled={form.anonimo} onChange={e => setForm({ ...form, nome: e.target.value })} />
-                </div>
-                <div className="form-grupo" style={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <label htmlFor="ouv-anonimo" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input id="ouv-anonimo" type="checkbox" style={{ width: 'auto', minHeight: 0 }} checked={form.anonimo} onChange={e => setForm({ ...form, anonimo: e.target.checked })} />
-                    Enviar de forma anônima
-                  </label>
-                </div>
-                <div className="form-grupo full">
-                  <label htmlFor="ouv-descricao">Descrição *</label>
-                  <textarea id="ouv-descricao" rows={4} maxLength={5000} value={form.descricao} onChange={e => setForm({ ...form, descricao: e.target.value })} placeholder="Descreva sua manifestação..."></textarea>
-                </div>
+      {tabAtiva === 'registrar' && (
+        <Panel title="Registrar manifestação" icon="las la-headset">
+          {protocoloCriado && (
+            <p role="status" className="mod-aviso mod-aviso-sucesso">
+              Manifestação registrada. Protocolo: <strong>{protocoloCriado.protocolo}</strong>.
+              {protocoloCriado.anonimo ? ' Como ela é anônima, não fica ligada à sua conta: anote o protocolo, que é a única forma de acompanhá-la.' : ''}
+            </p>
+          )}
+          {erroForm && <p role="alert" className="mod-aviso mod-aviso-erro">{erroForm}</p>}
+          <form onSubmit={registrarManifestacao}>
+            <div className="ux-campos">
+              <div className="form-group">
+                <label htmlFor="ouv-tipo">Tipo *</label>
+                <select id="ouv-tipo" value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>
+                  <option>Elogio</option><option>Sugestão</option><option>Reclamação</option><option>Denúncia</option>
+                </select>
               </div>
-              <button type="submit" className="btn btn-success btn-enviar-ouv" disabled={salvando}>
-                <i className="las la-save" aria-hidden="true"></i> {salvando ? 'Enviando...' : 'Enviar manifestação'}
+              <div className="form-group">
+                <label htmlFor="ouv-setor">Setor relacionado</label>
+                <select id="ouv-setor" value={form.setor} onChange={e => setForm({ ...form, setor: e.target.value })}>
+                  <option>Geral</option><option>Emergência</option><option>UTI</option><option>Enfermaria</option><option>Recepção</option><option>Farmácia</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="ouv-nome">Seu nome {form.anonimo ? '(não será gravado)' : '*'}</label>
+                <input id="ouv-nome" type="text" maxLength={200} value={form.anonimo ? '' : form.nome} disabled={form.anonimo} onChange={e => setForm({ ...form, nome: e.target.value })} />
+              </div>
+              <div className="ouv-anonimo">
+                <label htmlFor="ouv-anonimo" className="ouv-check">
+                  <input id="ouv-anonimo" type="checkbox" checked={form.anonimo} onChange={e => setForm({ ...form, anonimo: e.target.checked })} />
+                  Enviar de forma anônima
+                </label>
+              </div>
+              <div className="form-group ux-largo">
+                <label htmlFor="ouv-descricao">Descrição *</label>
+                <textarea id="ouv-descricao" rows={4} maxLength={5000} value={form.descricao} onChange={e => setForm({ ...form, descricao: e.target.value })} placeholder="Descreva sua manifestação"></textarea>
+              </div>
+            </div>
+            <div className="ui-modal-foot">
+              <button type="submit" className="btn btn-primary" disabled={salvando}>
+                <i className="las la-paper-plane" aria-hidden="true"></i> {salvando ? 'Enviando…' : 'Enviar manifestação'}
               </button>
-            </form>
-          </Panel>
-        )}
+            </div>
+          </form>
+        </Panel>
+      )}
 
-        {tabAtiva === 'lista' && (manifestacoes.length === 0
-          ? <EmptyState message="Nenhuma manifestação registrada." />
-          : (
-            <Panel>
-              <div className="tabela-wrapper">
-                <table className="tabela">
-                  <thead><tr><th>Protocolo</th><th>Data</th><th>Tipo</th><th>Identificação</th><th>Setor</th><th>Prazo</th><th>Status</th><th>Ações</th></tr></thead>
-                  <tbody>
-                    {manifestacoes.map(m => (
-                      <tr key={m.id}>
-                        <td><strong>{m.protocolo}</strong></td>
-                        <td>{new Date(m.createdAt).toLocaleDateString('pt-BR')}</td>
-                        <td><Badge tone={TOM_TIPO[m.tipo] ?? 'neutral'}>{m.tipo}</Badge></td>
-                        <td>{m.paciente}</td>
-                        <td>{m.setor}</td>
-                        <td>{formatarPrazo(m.prazo)}{vencida(m) && <> <Badge tone="danger">Vencido</Badge></>}</td>
-                        <td><Badge tone={encerrada(m.status) ? 'success' : 'warning'}>{STATUS_ROTULO[m.status] ?? m.status}</Badge></td>
-                        <td><button type="button" className="btn btn-primary btn-sm" onClick={() => abrirDetalhe(m)}>{isAdmin ? 'Abrir e responder' : 'Ver'}</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Panel>
-          ))}
-      </div>
+      {tabAtiva === 'lista' && (manifestacoes.length === 0
+        ? <EmptyState icon="las la-inbox" message="Nenhuma manifestação registrada." />
+        : (
+          <div className="tabela-wrapper">
+            <table className="tabela">
+              <thead><tr><th>Protocolo</th><th>Data</th><th>Tipo</th><th>Identificação</th><th>Setor</th><th>Prazo</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody>
+                {manifestacoes.map(m => (
+                  <tr key={m.id}>
+                    <td><strong>{m.protocolo}</strong></td>
+                    <td>{new Date(m.createdAt).toLocaleDateString('pt-BR')}</td>
+                    <td><Badge tone={TOM_TIPO[m.tipo] ?? 'neutral'}>{m.tipo}</Badge></td>
+                    <td>{m.paciente}</td>
+                    <td>{m.setor}</td>
+                    <td>{formatarPrazo(m.prazo)}{vencida(m) && <> <Badge tone="danger">Vencido</Badge></>}</td>
+                    <td><Badge tone={encerrada(m.status) ? 'success' : 'warning'}>{STATUS_ROTULO[m.status] ?? m.status}</Badge></td>
+                    <td><button type="button" className="btn btn-primary btn-sm" onClick={() => abrirDetalhe(m)}>{isAdmin ? 'Abrir e responder' : 'Ver'}</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
 
       {detalhe && (
-        <div className="modal-overlay show" onMouseDown={e => { if (e.target === e.currentTarget && !respondendo) setDetalhe(null); }}>
-          <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="ouv-detalhe-titulo" style={{ color: 'var(--ui-text)' }}>
-            <h2 id="ouv-detalhe-titulo" style={{ fontSize: 20, marginBottom: 12, color: 'var(--ui-text)' }}>Manifestação {detalhe.protocolo}</h2>
-            <p style={{ marginBottom: 8 }}><strong>{detalhe.tipo}</strong> · {detalhe.setor} · {detalhe.paciente}</p>
-            <p style={{ whiteSpace: 'pre-wrap', marginBottom: 16 }}>{detalhe.mensagem}</p>
-            {detalhe.respostas.map((resposta, indice) => (
-              <div key={indice} style={{ background: 'var(--ui-surface-muted)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-                <strong>Resposta da ouvidoria</strong>
-                <p style={{ whiteSpace: 'pre-wrap' }}>{resposta}</p>
-              </div>
-            ))}
-            {isAdmin && !encerrada(detalhe.status) && (
-              <>
-                <div className="form-group">
-                  <label htmlFor="ouv-resposta">Resposta</label>
-                  <textarea id="ouv-resposta" rows={4} maxLength={4000} value={textoResposta} onChange={e => setTextoResposta(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="ouv-status">Situação</label>
-                  <select id="ouv-status" value={statusNovo} onChange={e => setStatusNovo(e.target.value)}>
-                    <option value="EM_ANALISE">Em análise</option>
-                    <option value="RESPONDIDA">Respondida</option>
-                    <option value="ENCERRADA">Encerrada</option>
-                  </select>
-                </div>
-                {erroResposta && <p role="alert" className="alert-erro">{erroResposta}</p>}
-              </>
-            )}
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setDetalhe(null)} disabled={respondendo}>Fechar</button>
-              {isAdmin && !encerrada(detalhe.status) && (
-                <button type="button" className="btn btn-success" onClick={() => void salvarResposta()} disabled={respondendo}>{respondendo ? 'Salvando…' : 'Salvar'}</button>
-              )}
+        <Modal size="lg" title={`Manifestação ${detalhe.protocolo}`} icon="las la-headset" onClose={() => setDetalhe(null)} busy={respondendo}>
+          <p><strong>{detalhe.tipo}</strong> · {detalhe.setor} · {detalhe.paciente}</p>
+          <div className="ui-modal-box ux-texto-longo">{detalhe.mensagem}</div>
+          {detalhe.respostas.map((resposta, indice) => (
+            <div key={indice} className="ui-modal-box">
+              <strong>Resposta da ouvidoria</strong>
+              <p className="ux-texto-longo">{resposta}</p>
             </div>
+          ))}
+          {isAdmin && !encerrada(detalhe.status) && (
+            <>
+              <div className="form-group">
+                <label htmlFor="ouv-resposta">Resposta</label>
+                <textarea id="ouv-resposta" rows={4} maxLength={4000} value={textoResposta} onChange={e => setTextoResposta(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="ouv-status">Situação</label>
+                <select id="ouv-status" value={statusNovo} onChange={e => setStatusNovo(e.target.value)}>
+                  <option value="EM_ANALISE">Em análise</option>
+                  <option value="RESPONDIDA">Respondida</option>
+                  <option value="ENCERRADA">Encerrada</option>
+                </select>
+              </div>
+              {erroResposta && <p role="alert" className="mod-aviso mod-aviso-erro">{erroResposta}</p>}
+            </>
+          )}
+          <div className="ui-modal-foot">
+            <button type="button" className="btn btn-secondary" onClick={() => setDetalhe(null)} disabled={respondendo}>Fechar</button>
+            {isAdmin && !encerrada(detalhe.status) && (
+              <button type="button" className="btn btn-primary" onClick={() => void salvarResposta()} disabled={respondendo}>{respondendo ? 'Salvando…' : 'Salvar'}</button>
+            )}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
