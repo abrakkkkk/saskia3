@@ -39,6 +39,7 @@ export default function AdminPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [erroTickets, setErroTickets] = useState('');
   const [carregandoTickets, setCarregandoTickets] = useState(true);
+  const [operaPlataforma, setOperaPlataforma] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -88,6 +89,12 @@ export default function AdminPage() {
       setCarregandoTickets(false);
     }
   };
+
+  // O atalho "Plataforma" só aparece para quem está na lista de operadores (a API decide).
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetch('/api/plataforma/acesso', { cache: 'no-store' }).then(r => setOperaPlataforma(r.ok)).catch(() => setOperaPlataforma(false));
+  }, [isAdmin]);
 
   useEffect(() => {
     void Promise.resolve().then(() => { fetchTickets(); });
@@ -160,7 +167,7 @@ export default function AdminPage() {
       <PageHeader icon="las la-hospital" title="Painel administrativo" subtitle="Configuração do hospital, usuários e fila de suporte." />
 
       <nav className="ux-atalhos" aria-label="Áreas administrativas">
-        {ATALHOS.map(a => (
+        {(operaPlataforma ? [...ATALHOS, { href: '/plataforma', icone: 'las la-city', titulo: 'Plataforma', desc: 'Criar hospitais clientes' }] : ATALHOS).map(a => (
           <Link key={a.href} href={a.href} className="ux-atalho">
             <span className="ux-atalho-icone"><i className={a.icone} aria-hidden="true"></i></span>
             <span>
