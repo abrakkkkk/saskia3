@@ -158,6 +158,52 @@ export default function SobreNosPage() {
             </div>
           </div>
 
+          {/* NAYLA */}
+          <div className="card-pessoa analista">
+            <div className="card-header">
+              <div className="foto-pessoa">
+                <Image src="/images/equipe/nayla.webp" alt="Nayla Moraes" width={160} height={160} sizes="72px" />
+              </div>
+              <div className="pessoa-header-info">
+                <h3>Nayla Moraes</h3>
+                <span className="cargo-pessoa cargo-analista">Analista de Dados &amp; Desenvolvimento</span>
+                <div className="card-links">
+                  <a href="https://www.linkedin.com/in/nayla-moraes/" target="_blank" rel="noreferrer" className="contato-link analista-outline"><i aria-hidden="true" className="lab la-linkedin"></i> LinkedIn</a>
+                </div>
+              </div>
+            </div>
+            <p className="bio-pessoa">Estudante de Estatística na UFC e de Ciência da Computação, com atuação em análise de dados e Business Intelligence. Extrai, limpa e modela dados com Python, SQL e PostgreSQL, constrói dashboards e relatórios gerenciais em Power BI e aplica técnicas estatísticas e preditivas para apoiar decisões. No Saskia, une a análise de dados ao desenvolvimento do sistema.</p>
+            <div className="tags-formacao">
+              <span className="tag-formacao tag-analista"><i aria-hidden="true" className="las la-graduation-cap"></i> Estatística UFC</span>
+              <span className="tag-formacao tag-analista"><i aria-hidden="true" className="las la-code"></i> Python</span>
+              <span className="tag-formacao tag-analista"><i aria-hidden="true" className="las la-database"></i> SQL / PostgreSQL</span>
+              <span className="tag-formacao tag-analista"><i aria-hidden="true" className="las la-chart-pie"></i> Power BI</span>
+            </div>
+          </div>
+
+          {/* DAVID */}
+          <div className="card-pessoa analista">
+            <div className="card-header">
+              <div className="foto-pessoa">
+                <Image src="/images/equipe/david.webp" alt="David Khauan Santos Lima" width={160} height={160} sizes="72px" />
+              </div>
+              <div className="pessoa-header-info">
+                <h3>David Khauan Santos Lima</h3>
+                <span className="cargo-pessoa cargo-analista">Desenvolvedor Full Stack Web</span>
+                <div className="card-links">
+                  <a href="https://www.linkedin.com/in/davidkhauan/" target="_blank" rel="noreferrer" className="contato-link analista-outline"><i aria-hidden="true" className="lab la-linkedin"></i> LinkedIn</a>
+                </div>
+              </div>
+            </div>
+            <p className="bio-pessoa">Estudante de Análise e Desenvolvimento de Sistemas na UNIFOR, com formação em Desenvolvimento Full Stack Web pela Geração Tech. Cria interfaces e back-end com Next.js, Node.js e Prisma, e usa Docker para segurança e controle do projeto. No Saskia desde maio de 2026, como desenvolvedor voluntário.</p>
+            <div className="tags-formacao">
+              <span className="tag-formacao tag-analista"><i aria-hidden="true" className="las la-graduation-cap"></i> ADS UNIFOR</span>
+              <span className="tag-formacao tag-analista"><i aria-hidden="true" className="las la-code"></i> Next.js / React</span>
+              <span className="tag-formacao tag-analista"><i aria-hidden="true" className="las la-server"></i> Node.js</span>
+              <span className="tag-formacao tag-analista"><i aria-hidden="true" className="las la-cube"></i> Prisma / Docker</span>
+            </div>
+          </div>
+
           {/* ALEXSANDER */}
           <div className="card-pessoa designer">
             <div className="card-header">

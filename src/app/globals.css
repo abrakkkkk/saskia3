@@ -201,8 +201,8 @@ img {
 .sidebar {
   position: fixed;
   left: 0;
-  top: 76px;
-  height: calc(100vh - 76px);
+  top: var(--header-h);
+  height: calc(100vh - var(--header-h));
   background: linear-gradient(135deg, #11235a, #051024);
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.25);
   z-index: 999;
@@ -1915,6 +1915,7 @@ img {
   --ui-shadow-card: 0 1px 3px rgba(15, 35, 72, 0.08);
   --ui-shadow-raised: 0 8px 20px rgba(15, 35, 72, 0.14);
   --ui-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --header-h: 84px;
 
   /* Escala de tipo (papéis) */
   --ui-t-page: 24px;
@@ -1958,15 +1959,15 @@ body {
 }
 
 .header {
-  --header-h: 76px;
   height: var(--header-h);
   padding-inline: clamp(16px, 2.5vw, 36px);
   box-shadow: 0 4px 18px rgba(2, 8, 23, 0.22);
 }
 
 .header-logo img {
-  height: 68px;
-  margin: 4px 0;
+  height: 64px;
+  width: auto;
+  margin: 0;
 }
 
 .header-nav {
@@ -2109,7 +2110,7 @@ body {
   }
 
   .header-logo img {
-    height: 58px;
+    height: 56px;
   }
 
   .header-nav > a,
@@ -2326,8 +2327,9 @@ p, li { text-wrap: pretty; }
   .header-atalho { display: none !important; }
 }
 @media (max-width: 768px) {
+  :root { --header-h: 68px; }
   .header { padding: 0 12px; }
-  .header-logo img { height: 56px; margin: 0; }
+  .header-logo img { height: 48px; margin: 0; }
   .app-container { padding: 0; }
   .app-content { padding: 12px; }
   .ui-page-header { padding: 18px; }

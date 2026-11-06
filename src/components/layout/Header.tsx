@@ -37,7 +37,7 @@ export default function Header({ nome, email, cargo }: Props) {
   return (
     <header className="header">
       <Link href="/dashboard" className="header-logo" aria-label="Saskia Saúde, ir para o início">
-        <Image src="/images/logo.png" alt="" width={90} height={90} priority />
+        <Image src="/images/logo-header.png" alt="" width={421} height={190} sizes="190px" priority />
       </Link>
       <nav className="header-nav" aria-label="Atalhos">
         {ATALHOS.filter(a => pode(cargo, a.permissao)).map(a => (
