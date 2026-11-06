@@ -5,8 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
 import { pode, type Permissao } from '@/lib/permissions';
-import EmergencyButtons from '@/components/EmergencyButtons';
-
 type Atalho = { href: string; icon: string; label: string; permissao: Permissao };
 
 const ATALHOS: Atalho[] = [
@@ -41,7 +39,6 @@ export default function Header({ nome, email, cargo }: Props) {
         <Image src="/images/logo-header.png" alt="" width={421} height={190} sizes="190px" priority />
       </Link>
       <nav className="header-nav" aria-label="Atalhos">
-        <EmergencyButtons />
         {ATALHOS.filter(a => pode(cargo, a.permissao)).map(a => (
           <Link key={a.href} href={a.href} prefetch={false} className="header-atalho">
             <i className={a.icon} aria-hidden="true"></i> <span>{a.label}</span>

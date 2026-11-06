@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { inter } from '@/app/fonts'
+import EmergencyButtons from '@/components/EmergencyButtons'
 import { ErrorState, LoadingState, StatCard, StatGrid, type Tone } from '@/components/ui'
 import { menuDoCargo } from '@/lib/navigation'
 import { CARGO_LABEL, type Cargo } from '@/lib/permissions'
@@ -167,6 +168,7 @@ export default function DashboardPage() {
             <p><i className="las la-hospital" aria-hidden="true"></i> {usuario?.hospitalNome || '-'}</p>
           </div>
         </div>
+        <EmergencyButtons />
         <div className="perfil-badge"><i className="las la-briefcase" aria-hidden="true"></i> {cargoRotulo}</div>
       </div>
 

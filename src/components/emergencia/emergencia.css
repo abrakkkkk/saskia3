@@ -26,11 +26,13 @@
 @keyframes emergencia-pulso { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.18); } }
 @media (prefers-reduced-motion: reduce) { .emergencia-item { animation: none; } }
 
-.header-emergencia { display: flex; gap: var(--ui-space-2); margin-right: var(--ui-space-1); }
-.header-emergencia .btn-emergencia { min-height: 40px; padding: 0 12px; font-size: 12px; gap: 6px; }
-.header-emergencia .btn-emergencia svg { width: 18px; height: 18px; flex: none; }
+/* Botões no meio da faixa azul do perfil (dashboard) */
+.header-emergencia { display: flex; gap: var(--ui-space-3); flex: 0 1 auto; margin: 0 auto; }
+.header-emergencia .btn-emergencia { min-height: 48px; padding: 0 20px; font-size: 14px; gap: 8px; }
+.header-emergencia .btn-emergencia svg { width: 20px; height: 20px; flex: none; }
 .emergencia-texto { margin: 0 0 var(--ui-space-3); color: var(--ui-text-muted); font-size: var(--ui-t-body); line-height: 1.45; }
 @media (max-width: 768px) {
-  .header-emergencia .emergencia-rotulo { display: none; }
-  .header-emergencia .btn-emergencia { padding: 0 10px; min-height: 44px; }
+  /* No celular a faixa quebra em linhas e os botões ocupam a largura */
+  .header-emergencia { order: 3; flex: 1 1 100%; margin: var(--ui-space-3) 0 0; }
+  .header-emergencia .btn-emergencia { flex: 1 1 0; justify-content: center; }
 }
