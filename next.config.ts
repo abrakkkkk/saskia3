@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // A Vercel restaurava o cache do Turbopack de um deploy anterior e servia o globals.css antigo com o JS novo.
+  experimental: { turbopackFileSystemCacheForBuild: false },
   // htmlparser2 (dependência do sanitize-html) é ESM puro: externo, o require() falha no Node da Vercel.
   transpilePackages: ["sanitize-html", "htmlparser2", "domhandler", "domutils", "domelementtype", "entities"],
   async headers() {
