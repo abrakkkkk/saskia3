@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
+import { pode } from '@/lib/permissions';
 import { Volume2, VolumeX, Bell, Clock, DoorOpen, ActivitySquare, Timer } from 'lucide-react';
 import './painel-chamadas.css';
 
@@ -35,6 +36,7 @@ export default function PainelChamadasTV() {
   const [carregando, setCarregando] = useState(true);
   const [horaAtual, setHoraAtual] = useState<Date | null>(null);
   const mounted = horaAtual !== null;
+  const podeLerChamadas = pode(session?.user?.cargo, 'chamada:ler');
   
   // Áudio Controls
   const [audioPermitido, setAudioPermitido] = useState(false);
@@ -130,7 +132,7 @@ export default function PainelChamadasTV() {
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;
-    if (sessionStatus !== 'authenticated' || !session?.user) {
+    if (sessionStatus !== 'authenticated' || !session?.user || !pode(session.user.cargo, 'chamada:ler')) {
       fetchSequenceRef.current++;
       chamadasInicializadasRef.current = false;
       ultimaChamadaIdRef.current = '';
@@ -204,6 +206,9 @@ export default function PainelChamadasTV() {
   }
   if (sessionStatus !== 'authenticated' || !session?.user) {
     return <main className="min-h-screen bg-slate-900 text-slate-100 grid place-items-center p-6 sm:p-8 text-center"><p role="alert" className="max-w-xl rounded-xl border border-slate-700 bg-slate-800 px-5 py-4 leading-relaxed">Entre no sistema para visualizar o painel de chamadas.</p></main>;
+  }
+  if (!podeLerChamadas) {
+    return <main className="min-h-screen bg-slate-900 text-slate-100 grid place-items-center p-6 sm:p-8 text-center"><p role="alert" className="max-w-xl rounded-xl border border-slate-700 bg-slate-800 px-5 py-4 leading-relaxed">Seu cargo não tem acesso ao painel de chamadas.</p></main>;
   }
 
   const faixas = [

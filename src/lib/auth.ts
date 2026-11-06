@@ -90,6 +90,27 @@ const { handlers, auth: readSession, signIn, signOut } = NextAuth({
       return session
     },
   },
+  events: {
+    async signOut(message) {
+      if (!('token' in message)) return
+
+      const token = message.token
+      if (!token) return
+      const { id, hospitalId, sessionVersion } = token
+      if (typeof id !== 'string' || typeof hospitalId !== 'string' || typeof sessionVersion !== 'number') return
+
+      try {
+        // JWTs não podem ser revogados individualmente. Ao sair, invalida a versão
+        // atual para que um cookie copiado deixe de autenticar imediatamente.
+        await prisma.usuario.updateMany({
+          where: { id, hospitalId, sessionVersion },
+          data: { sessionVersion: { increment: 1 } },
+        })
+      } catch (error) {
+        console.error('Falha ao invalidar sessão no logout:', error instanceof Error ? error.name : 'erro')
+      }
+    },
+  },
   pages: {
     signIn: "/",
     error: "/",

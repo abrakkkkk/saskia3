@@ -117,7 +117,8 @@ export default function PacientesPage() {
     setExportando(true);
     try {
       const params = new URLSearchParams(consulta);
-      if (filtroStatus !== 'todos') params.set('status', filtroStatus);
+      const statusExportacao = filtroStatus !== 'todos' ? [filtroStatus] : GRUPOS[grupo].status;
+      statusExportacao?.forEach(status => params.append('status', status));
       if (filtroManchester !== 'todos') params.set('classificacao', filtroManchester);
       const res = await fetch(`/api/pacientes/exportar?${params}`);
       if (!res.ok) {
@@ -197,7 +198,7 @@ export default function PacientesPage() {
       <StatGrid>
         <StatCard icon="las la-users" value={total} label="Total" />
         <StatCard icon="las la-hourglass-half" tone="warning" alerta value={contar(STATUS_ESPERA)} label="Na fila" hint="Recepção, triagem e espera por médico" />
-        <StatCard icon="las la-exclamation-circle" tone="danger" alerta value={acimaAlvo} label="Acima do alvo" hint="Esperando além do tempo-alvo da classificação de risco (Manchester); sem classificação, 60 min" />
+        <StatCard icon="las la-exclamation-circle" tone="danger" alerta value={acimaAlvo} label="Acima do alvo" hint="Pacientes aguardando mais que o tempo-alvo: Vermelho 0, Laranja 10, Amarelo 60, Verde 120 e Azul 240 min; sem classificação de risco registrada, 60 min." />
         <StatCard icon="las la-stethoscope" value={contar(GRUPOS.atendimento.status ?? [])} label="Em atendimento" />
         <StatCard icon="las la-bed" value={contar(GRUPOS.internados.status ?? [])} label="Internados" />
       </StatGrid>
