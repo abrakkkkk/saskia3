@@ -32,14 +32,11 @@ const senha = Array.from(crypto.randomBytes(18), b => ALFABETO[b % ALFABETO.leng
     console.log(`Usuário: ${usuario.nome} (${usuario.cargo}) | hospital: ${usuario.hospital.nome} | ativo: ${usuario.ativo}`)
     if (!aplicar) { console.log('Rode com --aplicar para trocar a senha.'); return }
 
+    // O arquivo vem primeiro: se não der para gravar, aborta sem tocar no banco (senão a senha nova se perderia).
+    if (saida) fs.writeFileSync(saida, `Login: ${email}\nNova senha: ${senha}\n`, { encoding: 'utf8', mode: 0o600 })
     const hash = await bcrypt.hash(senha, 12)
     await prisma.usuario.update({ where: { id: usuario.id }, data: { senha: hash, sessionVersion: { increment: 1 } } })
-    if (saida) {
-      fs.writeFileSync(saida, `Login: ${email}\nNova senha: ${senha}\n`, { encoding: 'utf8', mode: 0o600 })
-      console.log(`Senha trocada. A nova senha foi gravada em: ${saida} (apague o arquivo depois de anotar).`)
-    } else {
-      console.log(`Senha trocada. Nova senha: ${senha}`)
-    }
+    console.log(saida ? `Senha trocada. A nova senha foi gravada em: ${saida} (apague o arquivo depois de anotar).` : `Senha trocada. Nova senha: ${senha}`)
   } finally {
     await prisma.$disconnect()
   }
