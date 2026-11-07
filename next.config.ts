@@ -24,7 +24,8 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob:",
               "font-src 'self' data:",
-              "connect-src 'self'",
+              // O envio de documentos (área Plataforma) vai direto do navegador ao Vercel Blob.
+              "connect-src 'self' https://vercel.com https://*.blob.vercel-storage.com",
               "frame-src 'self' https://drive.google.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
