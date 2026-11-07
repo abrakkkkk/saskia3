@@ -20,12 +20,15 @@ export function DocGrid({ children }: { children: ReactNode }) {
 }
 
 /** Documento com as ações Ver e Baixar. O título é h2 quando não há seção acima, h3 dentro de DocSection. */
-export function DocCard({ icone, titulo, nivel = 3, onVer, onBaixar }: {
+export function DocCard({ icone, titulo, nivel = 3, onVer, onBaixar, hrefVer, hrefBaixar }: {
   icone: ReactNode;
   titulo: string;
   nivel?: 2 | 3;
-  onVer: () => void;
-  onBaixar: () => void;
+  onVer?: () => void;
+  onBaixar?: () => void;
+  /** Endereço do arquivo: vira link de verdade (nova aba), que nenhum bloqueador de pop-up impede. */
+  hrefVer?: string;
+  hrefBaixar?: string;
 }) {
   const Titulo = nivel === 2 ? 'h2' : 'h3';
   return (
@@ -35,8 +38,16 @@ export function DocCard({ icone, titulo, nivel = 3, onVer, onBaixar }: {
         <Titulo>{titulo}</Titulo>
       </div>
       <div className="ui-doc-acoes">
-        <button type="button" className="btn btn-primary" aria-label={`Ver ${titulo}`} onClick={onVer}>Ver</button>
-        <button type="button" className="btn btn-secondary" aria-label={`Baixar ${titulo}`} onClick={onBaixar}>Baixar</button>
+        {hrefVer ? (
+          <a className="btn btn-primary" href={hrefVer} target="_blank" rel="noopener noreferrer" aria-label={`Ver ${titulo}`}>Ver</a>
+        ) : (
+          <button type="button" className="btn btn-primary" aria-label={`Ver ${titulo}`} onClick={onVer}>Ver</button>
+        )}
+        {hrefBaixar ? (
+          <a className="btn btn-secondary" href={hrefBaixar} download aria-label={`Baixar ${titulo}`}>Baixar</a>
+        ) : (
+          <button type="button" className="btn btn-secondary" aria-label={`Baixar ${titulo}`} onClick={onBaixar}>Baixar</button>
+        )}
       </div>
     </article>
   );

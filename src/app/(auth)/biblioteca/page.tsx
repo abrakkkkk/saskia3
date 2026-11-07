@@ -10,15 +10,6 @@ import { useDocumentos } from '@/lib/use-documentos';
 export default function BibliotecaPage() {
   const { documentos, carregando, erro } = useDocumentos('BIBLIOTECA');
 
-  const ver = (slug: string) => window.open(urlDocumento(slug), '_blank', 'noopener,noreferrer');
-  const baixar = (slug: string) => {
-    const a = document.createElement('a');
-    a.href = urlDocumento(slug, true);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
   return (
     <div className="conteudo">
       <PageHeader icon="las la-book" title="Biblioteca" subtitle="Manuais, protocolos e referências técnicas" />
@@ -38,8 +29,8 @@ export default function BibliotecaPage() {
               key={doc.slug}
               icone={doc.mime.startsWith('image/') ? <ImageIcon size={20} /> : <FileText size={20} />}
               titulo={doc.titulo}
-              onVer={() => ver(doc.slug)}
-              onBaixar={() => baixar(doc.slug)}
+              hrefVer={urlDocumento(doc.slug)}
+              hrefBaixar={urlDocumento(doc.slug, true)}
             />
           ))}
         </DocGrid>

@@ -40,7 +40,8 @@ const nextConfig: NextConfig = {
         source: "/api/documentos/:slug",
         headers: [
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          { key: "Content-Security-Policy", value: "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; object-src 'self'; frame-ancestors 'self'" },
+          // Só a moldura: qualquer default-src/object-src aqui impede o leitor de PDF do Chrome de abrir o arquivo.
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
         ],
       },
     ];

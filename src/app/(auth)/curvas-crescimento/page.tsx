@@ -15,16 +15,6 @@ const ABAS = [
 export default function CurvasCrescimentoPage() {
   const [abaAtiva, setAbaAtiva] = useState<'Meninas' | 'Meninos'>('Meninas');
   const { documentos, carregando, erro } = useDocumentos('CRESCIMENTO');
-
-  const ver = (slug: string) => window.open(urlDocumento(slug), '_blank', 'noopener,noreferrer');
-  const baixar = (slug: string) => {
-    const a = document.createElement('a');
-    a.href = urlDocumento(slug, true);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
   const listaAtual = documentos.filter(d => d.grupo === abaAtiva);
 
   return (
@@ -43,8 +33,8 @@ export default function CurvasCrescimentoPage() {
             icone={<FileText size={20} />}
             titulo={curva.titulo}
             nivel={2}
-            onVer={() => ver(curva.slug)}
-            onBaixar={() => baixar(curva.slug)}
+            hrefVer={urlDocumento(curva.slug)}
+            hrefBaixar={urlDocumento(curva.slug, true)}
           />
         ))}
       </DocGrid>

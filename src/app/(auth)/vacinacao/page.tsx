@@ -9,15 +9,6 @@ import { useDocumentos } from '@/lib/use-documentos';
 export default function VacinacaoPage() {
   const { documentos, carregando, erro } = useDocumentos('VACINACAO');
 
-  const ver = (slug: string) => window.open(urlDocumento(slug), '_blank', 'noopener,noreferrer');
-  const baixar = (slug: string) => {
-    const a = document.createElement('a');
-    a.href = urlDocumento(slug, true);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
   return (
     <div className="conteudo">
       <PageHeader icon="las la-syringe" title="Calendários de vacinação" subtitle="Consulta a calendários vacinais em PDF. Não registra doses aplicadas." />
@@ -32,8 +23,8 @@ export default function VacinacaoPage() {
             icone={<FileText size={20} />}
             titulo={doc.titulo}
             nivel={2}
-            onVer={() => ver(doc.slug)}
-            onBaixar={() => baixar(doc.slug)}
+            hrefVer={urlDocumento(doc.slug)}
+            hrefBaixar={urlDocumento(doc.slug, true)}
           />
         ))}
       </DocGrid>
