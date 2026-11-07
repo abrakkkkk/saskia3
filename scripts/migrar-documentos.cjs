@@ -72,7 +72,7 @@ function resolver(de) {
       const t = await req('/api/documentos/upload', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'blob.generate-client-token', payload: { pathname: i.caminho, clientPayload: null, multipart: i.buf.length > 8 * 1048576 } }) })
       const tj = await t.json()
       if (!t.ok || !tj.clientToken) { console.error('FALHA token', i.slug, tj.error || t.status); process.exit(1) }
-      await put(i.caminho, i.buf, { access: 'private', token: tj.clientToken, contentType: MIME[i.ext], multipart: i.buf.length > 8 * 1048576, allowOverwrite: true, addRandomSuffix: false })
+      await put(i.caminho, i.buf, { access: 'private', token: tj.clientToken, contentType: MIME[i.ext], multipart: i.buf.length > 8 * 1048576 })
       jaEnviados.add(i.caminho)
     }
     const r = await req('/api/documentos', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slug: i.slug, titulo: i.titulo, categoria: i.categoria, grupo: i.grupo, instituicao: i.instituicao, tags: i.tags, arquivo: i.caminho, mime: MIME[i.ext], tamanho: i.buf.length, hash: i.hash, ordem: i.ordem }) })

@@ -25,13 +25,13 @@ const biblioteca = [
   ['images/tabela_risco_cardiovascular.png', 'tabela-risco-cardiovascular', 'Tabela de Risco Cardiovascular'],
 ].map(([de, slug, titulo], i) => ({ de, slug, titulo, categoria: B, ordem: i + 1 }))
 
-// Existem em public/docs mas nao estavam listados na Biblioteca: entram desligados para revisao.
+// Existiam em public/docs mas nunca apareceram na Biblioteca; o dono mandou ligar (sao importantes).
 const naoListados = [
   ['docs/Dermatologia_Pele_Negra.pdf', 'dermatologia-pele-negra', 'Dermatologia na Pele Negra'],
   ['docs/DESENGASGO_E_RCP_ADULTOS_E_CRIANÇAS_-_ATUALIZAÇÕES.pdf', 'desengasgo-e-rcp-adultos-e-criancas', 'Desengasgo e RCP em Adultos e Crianças (atualizações)'],
   ['docs/Guia_para_melhor_cuidado_da_mulher_vítima_de_situação_de_violência.pdf', 'guia-cuidado-mulher-vitima-de-violencia', 'Guia para melhor cuidado da mulher vítima de situação de violência'],
   ['docs/Manual_de_Atenção_às_Mulheres_na_Transição_Menopausal_e_Menopausa_Versão_Preliminar.pdf', 'manual-transicao-menopausal-e-menopausa-preliminar', 'Manual de Atenção às Mulheres na Transição Menopausal e Menopausa (versão preliminar)'],
-].map(([de, slug, titulo], i) => ({ de, slug, titulo, categoria: B, ordem: 100 + i, ativo: false }))
+].map(([de, slug, titulo], i) => ({ de, slug, titulo, categoria: B, ordem: 100 + i }))
 
 const faixa = { '0-5': '0 a 5 anos', '5-10': '5 a 10 anos', '5-19': '5 a 19 anos' }
 const medida = { altura: 'Altura por Idade', imc: 'IMC por Idade', perimetro_cefalico: 'Perímetro Cefálico', peso: 'Peso por Idade' }

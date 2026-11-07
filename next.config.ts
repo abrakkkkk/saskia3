@@ -34,6 +34,15 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // Os PDFs do acervo abrem em prévia (iframe) dentro do próprio sistema; a regra acima proíbe qualquer moldura.
+        // Mais específica e depois da geral: vence nas chaves repetidas.
+        source: "/api/documentos/:slug",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; object-src 'self'; frame-ancestors 'self'" },
+        ],
+      },
     ];
   },
 };
