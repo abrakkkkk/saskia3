@@ -48,7 +48,15 @@ const modulosConfigOriginal = [
   { id: "cat_chat", nome: "Categoria - Chat Interno", desc: "Comunicação profissional", icone: "las la-comments", secao: "Categorias", categoria: "categorias" },
   { id: "cat_relatorios", nome: "Categoria - Relatórios", desc: "Indicadores gerenciais", icone: "las la-chart-bar", secao: "Categorias", categoria: "categorias" },
   { id: "grafico_status", nome: "Gráfico - Distribuição por Status", desc: "Gráfico de barras de status", icone: "las la-chart-pie", secao: "Gráficos", categoria: "graficos" },
+  { id: "grafico_resumo_mes", nome: "Gráfico - Resumo do Mês", desc: "Resumo mensal de atendimentos", icone: "las la-chart-line", secao: "Gráficos", categoria: "graficos" },
+  { id: "btn_panico", nome: "Botão - Pânico", desc: "Alerta vermelho de emergência no hospital", icone: "las la-exclamation-triangle", secao: "Gráficos", categoria: "graficos" },
+  { id: "btn_pcr", nome: "Botão - PCR", desc: "Alerta amarelo de parada cardiorrespiratória", icone: "las la-heartbeat", secao: "Gráficos", categoria: "graficos" },
 ];
+
+/** O que vai para a API: só os interruptores desta tela, sempre verdadeiro/falso. */
+function somenteModulos(estado: Record<string, boolean>) {
+  return Object.fromEntries(modulosConfigOriginal.map(m => [m.id, !!estado[m.id]]));
+}
 
 export default function AdminConfigDashboardPage() {
   const { data: session, status } = useSession();
@@ -68,15 +76,15 @@ export default function AdminConfigDashboardPage() {
         return response.json();
       })
       .then(stored => {
-        let parsed: Record<string, boolean> = {};
-        if (stored && Object.keys(stored).length > 0) {
-          parsed = stored;
-        } else {
-          // Default: everything is active unless stored explicitly
-          modulosConfigOriginal.forEach(m => { parsed[m.id] = true; });
+        // Só valores verdadeiro/falso entram. Configurações antigas (ex.: tema, widgetsAtivos) ficam de fora;
+        // se voltassem no salvar, a API as recusaria e a personalização nunca seria gravada.
+        const parsed: Record<string, boolean> = {};
+        if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
+          Object.entries(stored as Record<string, unknown>).forEach(([chave, valor]) => {
+            if (typeof valor === 'boolean') parsed[chave] = valor;
+          });
         }
-        
-        // Ensure all current modules exist in config
+        // Tudo ligado por padrão, salvo o que foi desligado explicitamente.
         modulosConfigOriginal.forEach(m => {
           if (parsed[m.id] === undefined) parsed[m.id] = true;
         });
@@ -136,12 +144,15 @@ export default function AdminConfigDashboardPage() {
       const response = await fetch('/api/config-dashboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(configState)
+        body: JSON.stringify(somenteModulos(configState))
       });
-      if (!response.ok) throw new Error('Não foi possível salvar a configuração.');
+      if (!response.ok) {
+        const corpo = await response.json().catch(() => null);
+        throw new Error(corpo?.error ?? 'Não foi possível salvar a configuração.');
+      }
       setFeedback('Configuração salva. O dashboard será atualizado na próxima carga.');
-    } catch {
-      setFeedback('Erro ao salvar configuração.');
+    } catch (error) {
+      setFeedback(`Erro ao salvar: ${error instanceof Error ? error.message : 'tente novamente.'}`);
     } finally {
       setIsSaving(false);
     }
@@ -157,7 +168,7 @@ export default function AdminConfigDashboardPage() {
         const response = await fetch('/api/config-dashboard', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newState)
+          body: JSON.stringify(somenteModulos(newState))
         });
         if (!response.ok) throw new Error('Não foi possível restaurar a configuração.');
         setConfigState(newState);

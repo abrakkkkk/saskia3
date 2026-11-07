@@ -19,7 +19,12 @@ export async function POST(request: Request) {
   const { ator, negado } = await exigir('admin:acesso')
   if (negado) return negado
 
-  const body = await lerJson(request)
+  const bruto = await lerJson(request)
+  if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto) || Object.keys(bruto).length > 100) {
+    return NextResponse.json({ error: 'Configuração inválida' }, { status: 400 })
+  }
+  // Configurações antigas (tema, widgetsAtivos...) não são interruptores: descartadas em vez de recusar tudo.
+  const body = Object.fromEntries(Object.entries(bruto).filter(([, v]) => typeof v === 'boolean'))
   if (!isBooleanRecord(body)) return NextResponse.json({ error: 'Configuração inválida' }, { status: 400 })
 
   try {
