@@ -588,6 +588,32 @@ model MensagemChat {
   @@index([canalId, dataHora])
 }
 
+/// Acervo de referência (protocolos, diretrizes, curvas, calendários vacinais, fichas). Compartilhado por todos os
+/// hospitais de propósito: é material público de consulta, sem dado de paciente, por isso não tem hospitalId.
+/// O arquivo fica num Vercel Blob privado e só sai pela rota autenticada /api/documentos/[slug].
+model Documento {
+  id          String   @id @default(uuid())
+  /// Nome padrão do arquivo, sem extensão (minúsculas, sem acento, hífens). É o que aparece na URL.
+  slug        String   @unique
+  /// Nome legível, exibido na tela.
+  titulo      String
+  categoria   String
+  grupo       String?
+  instituicao String?
+  tags        String[]
+  /// Caminho dentro do Blob (ex.: biblioteca/diretriz-hipertensao-2025.pdf).
+  arquivo     String
+  mime        String
+  tamanho     Int
+  hash        String
+  ordem       Int      @default(0)
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([categoria, ordem])
+}
+
 /// Canal por setor (UTI, Pronto-Socorro, Enfermagem, Plantão). Aberto a toda a equipe do hospital.
 model CanalChat {
   id         String         @id @default(uuid())
