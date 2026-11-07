@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel } from '@/components/ui'
 import '@/components/ui/modulo.css'
@@ -83,6 +84,14 @@ export default function PlataformaPage() {
   return (
     <div className="mod-pagina">
       <PageHeader icon="las la-city" title="Plataforma" subtitle="Criar hospitais clientes e controlar o acesso de cada um." />
+
+      {!restrito && (
+        <p>
+          <Link href="/plataforma/documentos" className="btn btn-secondary">
+            <i className="las la-folder-open" aria-hidden="true"></i> Documentos do acervo
+          </Link>
+        </p>
+      )}
 
       {carregando && !restrito && hospitais.length === 0 && <LoadingState message="Carregando hospitais..." />}
       {restrito && <EmptyState icon="las la-lock" message="Esta área é restrita à operação da plataforma." />}
