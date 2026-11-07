@@ -52,6 +52,13 @@
 .chat-form input:focus { border-color: var(--ui-blue-700); outline: none; box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.18); }
 .chat-enviar { width: var(--ui-h-control); padding: 0; flex: none; }
 
+/* não lidas, canais, aviso clínico */
+.chat-contact .chat-badge { margin-left: auto; flex: none; }
+.chat-secao { margin: 0; padding: 10px 16px 6px; font-size: var(--ui-t-meta); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ui-text-muted); background: var(--ui-surface-muted); }
+.chat-avatar-canal { --c: var(--ui-blue-700); }
+.chat-autor { margin-bottom: 2px; font-size: var(--ui-t-meta); font-weight: 700; color: var(--ui-blue-700); }
+.chat-aviso-clinico { margin: 0; padding: 8px 16px; font-size: var(--ui-t-meta); color: var(--ui-text-muted); background: var(--ui-surface); border-top: 1px solid var(--ui-border); }
+
 @media (max-width: 768px) {
   .chat-root { height: calc(100dvh - 230px); min-height: 360px; }
   .chat-sidebar { width: 100%; border-right: 0; }

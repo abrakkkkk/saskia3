@@ -116,6 +116,7 @@ model Hospital {
   configDashboard      ConfigDashboard?
   obitos               Obito[]
   mensagensChat        MensagemChat[]
+  canaisChat           CanalChat[]
   casosSociais         CasoSocial[]
   ouvidoriaTickets     OuvidoriaTicket[]
   veiculosTransporte   VeiculoTransporte[]
@@ -164,6 +165,7 @@ model Usuario {
   ticketsCriados      Ticket[]                @relation("TicketCriador")
   mensagensEnviadas    MensagemChat[]          @relation("MensagemEnviada")
   mensagensRecebidas   MensagemChat[]          @relation("MensagemRecebida")
+  leiturasCanal        LeituraCanal[]
   lembretesCriados     Lembrete[]              @relation("LembreteCriador")
   manifestacoesOuvidoria OuvidoriaTicket[]     @relation("OuvidoriaAutor")
   registrosSinalVital SinalVital[]
@@ -576,8 +578,40 @@ model MensagemChat {
   remetente   String
   texto       String
   dataHora    DateTime  @default(now())
+  /// Conversa direta: quando o destinatário leu. Em canal fica nulo (a leitura é por pessoa, em LeituraCanal).
+  lidaEm      DateTime?
+  canalId     String?
+  canal       CanalChat? @relation(fields: [canalId], references: [id])
 
   @@index([hospitalId, senderId, recipientId, dataHora])
+  @@index([recipientId, lidaEm])
+  @@index([canalId, dataHora])
+}
+
+/// Canal por setor (UTI, Pronto-Socorro, Enfermagem, Plantão). Aberto a toda a equipe do hospital.
+model CanalChat {
+  id         String         @id @default(uuid())
+  hospitalId String
+  hospital   Hospital       @relation(fields: [hospitalId], references: [id])
+  slug       String
+  nome       String
+  descricao  String?
+  createdAt  DateTime       @default(now())
+  mensagens  MensagemChat[]
+  leituras   LeituraCanal[]
+
+  @@unique([hospitalId, slug])
+}
+
+model LeituraCanal {
+  id        String    @id @default(uuid())
+  usuarioId String
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  canalId   String
+  canal     CanalChat @relation(fields: [canalId], references: [id], onDelete: Cascade)
+  lidoAte   DateTime
+
+  @@unique([usuarioId, canalId])
 }
 
 model CasoSocial {

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { menuDoCargo } from '@/lib/navigation';
+import { ChatBadge } from '@/components/chat/ChatBadge';
 
 export default function Sidebar({ cargo }: { cargo: string }) {
   const [open, setOpen] = useState(false);
@@ -51,6 +52,7 @@ export default function Sidebar({ cargo }: { cargo: string }) {
                 <Link key={item.href} href={item.href} prefetch={false} className={linkClass(item.href)} onClick={fechar}>
                   <i className={item.icon} aria-hidden="true"></i>
                   <span>{item.label}</span>
+                  {item.href === '/chat' && <ChatBadge />}
                 </Link>
               ))}
             </div>
@@ -61,6 +63,7 @@ export default function Sidebar({ cargo }: { cargo: string }) {
                 <Link key={item.href} href={item.href} prefetch={false} className={linkClass(item.href)} onClick={fechar}>
                   <i className={item.icon} aria-hidden="true"></i>
                   <span>{item.label}</span>
+                  {item.href === '/chat' && <ChatBadge />}
                 </Link>
               ))}
             </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
 import { pode, type Permissao } from '@/lib/permissions';
+import { ChatBadge } from '@/components/chat/ChatBadge';
 type Atalho = { href: string; icon: string; label: string; permissao: Permissao };
 
 const ATALHOS: Atalho[] = [
@@ -42,6 +43,7 @@ export default function Header({ nome, email, cargo }: Props) {
         {ATALHOS.filter(a => pode(cargo, a.permissao)).map(a => (
           <Link key={a.href} href={a.href} prefetch={false} className="header-atalho">
             <i className={a.icon} aria-hidden="true"></i> <span>{a.label}</span>
+            {a.href === '/chat' && <ChatBadge />}
           </Link>
         ))}
         {pode(cargo, 'chamada:ler') && (
