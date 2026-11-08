@@ -342,7 +342,7 @@ export default function ReceituarioPage() {
           <button type="button" className="btn btn-secondary" disabled={medicamentos.length === 0} onClick={() => { setEditorAtivoIndex(medicamentos.length - 1); setModalAdesivosAberto(true); }}><i className="las la-tag" aria-hidden="true"></i> Inserir adesivo</button>
           <button type="button" className="btn btn-success" onClick={() => void salvarPrescricao()} disabled={salvandoPrescricao || !!registro || (alergiasCitadas.length > 0 && !alergiaConfirmada)}><i className="las la-save" aria-hidden="true"></i> {salvandoPrescricao ? 'Salvando...' : registro ? 'Receita salva' : 'Salvar no prontuário'}</button>
           <button type="button" className="btn btn-secondary" onClick={() => receitaSalva && imprimir(receitaSalva)} disabled={!receitaSalva || !estabelecimento} title={receitaSalva ? 'Imprimir receita salva' : 'Salve a receita para liberar a impressão'}><i className="las la-print" aria-hidden="true"></i> Imprimir</button>
-          <button type="button" className="btn btn-secondary rec-perigo" onClick={() => void limparTudo()}><i className="las la-trash-alt" aria-hidden="true"></i> Limpar tudo</button>
+          <button type="button" className="btn btn-secondary rec-perigo rec-fim" onClick={() => void limparTudo()}><i className="las la-trash-alt" aria-hidden="true"></i> Limpar tudo</button>
         </div>
       )}
 

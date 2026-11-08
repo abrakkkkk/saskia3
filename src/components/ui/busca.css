@@ -12,3 +12,6 @@
 .rec-busca-marcas .rec-busca-controlado { background: #fee2e2; border-color: #b91c1c; color: #7f1d1d; font-weight: 700; }
 
 .rec-busca-marcas .rec-busca-sus { background: #dcfce7; border-color: #15803d; color: #14532d; font-weight: 600; }
+.rec-busca-med input[type="search"] { width: 100%; min-height: var(--ui-h-control); padding: 0 12px; border: 1px solid #cbd5e1; border-radius: var(--ui-radius-control); background: var(--ui-surface); color: var(--ui-text); font: inherit; font-size: var(--ui-t-body); }
+.rec-busca-med input[type="search"]:focus-visible { border-color: var(--ui-blue-700); outline: 3px solid var(--ui-blue-500); outline-offset: 2px; }
+.rec-busca-med input[type="search"]::placeholder { color: var(--ui-text-muted); }

@@ -1,7 +1,11 @@
 /* Receituário e adesivos: só o que o sistema (.btn, .form-group, Panel, Modal) não cobre. */
 .rec-pagina { min-width: 0; }
 
-.rec-barra { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin-bottom: var(--ui-space-4); }
+/* Barra de ações: cartão claro (o fundo da página é escuro) e itens alinhados pela base, todos com a altura padrão de 40 px.
+   Sem align-items, os botões esticavam até a altura do campo com rótulo e ficavam gigantes. */
+.rec-barra { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--ui-space-3); margin-bottom: var(--ui-space-4); padding: var(--ui-space-3) var(--ui-space-4); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-card); box-shadow: var(--ui-shadow-card); }
+.rec-barra .btn { white-space: nowrap; }
+.rec-barra .rec-fim { margin-left: auto; }
 .btn.rec-perigo { color: var(--ui-danger); }
 .btn.rec-icone { width: 40px; padding: 0; }
 
