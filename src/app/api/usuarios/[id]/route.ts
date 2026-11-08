@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { hashSenha, isSenhaValida, MENSAGEM_SENHA_INVALIDA } from '@/lib/password'
 import { CARGOS } from '@/lib/permissions'
 import { lerRegistro } from '@/lib/registro-profissional'
+import { lerAutorizacoes, podeReceberAutorizacao } from '@/lib/prescricao'
 
 const cargosPermitidos = new Set<string>(CARGOS)
 const CONFLITO = 'Os usuários foram alterados em paralelo. Atualize a lista e tente novamente.'
@@ -43,6 +44,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const registro = lerRegistro(body)
     if ('error' in registro) return NextResponse.json({ error: registro.error }, { status: 400 })
     Object.assign(updateData, registro.data)
+    const autorizacoes = lerAutorizacoes(body, null)
+    if ('error' in autorizacoes) return NextResponse.json({ error: autorizacoes.error }, { status: 400 })
+    if (autorizacoes.data !== undefined) updateData.prescricoesAutorizadas = { set: autorizacoes.data }
     if ('ativo' in body) {
       if (typeof body.ativo !== 'boolean') return NextResponse.json({ error: 'Status inválido' }, { status: 400 })
       updateData.ativo = body.ativo
@@ -59,6 +63,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const existente = await tx.usuario.findFirst({ where: { id, hospitalId }, select: { id: true, cargo: true, ativo: true } })
       if (!existente) return { error: 'nao_encontrado' as const }
 
+      // Autorização só faz sentido para cargo que pode prescrever; mudar para outro cargo apaga as autorizações.
+      const novoCargo = typeof updateData.cargo === 'string' ? updateData.cargo : undefined
+      if (!podeReceberAutorizacao(novoCargo ?? existente.cargo)) {
+        if (autorizacoes.data && autorizacoes.data.length > 0) return { error: 'cargo_sem_prescricao' as const }
+        if (novoCargo !== undefined) updateData.prescricoesAutorizadas = { set: [] }
+      }
+
       const perdeAdmin = existente.cargo === 'ADMIN' && existente.ativo
         && (updateData.ativo === false || (updateData.cargo !== undefined && updateData.cargo !== 'ADMIN'))
       if (perdeAdmin) {
@@ -73,13 +84,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         where: { id, hospitalId },
         select: {
           id: true, nome: true, email: true, cargo: true, ativo: true, createdAt: true,
-          conselho: true, registroNumero: true, registroUf: true, especialidade: true, rqe: true,
+          conselho: true, registroNumero: true, registroUf: true, especialidade: true, rqe: true, prescricoesAutorizadas: true,
         },
       })
       return { usuario }
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
 
     if ('error' in resultado) {
+      if (resultado.error === 'cargo_sem_prescricao') return NextResponse.json({ error: 'Este cargo não pode receber autorização para prescrever' }, { status: 400 })
       if (resultado.error === 'proprio_admin') return NextResponse.json({ error: 'Não é permitido remover seu próprio acesso de administrador' }, { status: 409 })
       if (resultado.error === 'ultimo_admin') return NextResponse.json({ error: 'O hospital precisa manter ao menos um administrador ativo' }, { status: 409 })
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })

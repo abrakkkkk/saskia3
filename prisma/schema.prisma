@@ -20,6 +20,8 @@ enum CargoUsuario {
   NUTRICIONISTA
   ASSISTENTE_SOCIAL
   OUTROS
+  FISIOTERAPEUTA
+  ODONTOLOGO
 }
 
 enum StatusAgendamento {
@@ -155,6 +157,8 @@ model Usuario {
   especialidade        String?
   /// Registro de Qualificação de Especialista (opcional).
   rqe                  String?
+  /// Tipos de prescrição que o gestor autorizou este usuário a emitir (FARMACOLOGICA, CUIDADO...). Vazio = não prescreve.
+  prescricoesAutorizadas String[]            @default([])
   avatar               String?
   ativo                Boolean               @default(true)
   sessionVersion       Int                   @default(0)
@@ -316,6 +320,8 @@ model Receita {
   hospitalId   String
   hospital     Hospital @relation(fields: [hospitalId], references: [id])
   medicamentos Json
+  /// Tipo da prescrição: FARMACOLOGICA, CUIDADO, OXIGENOTERAPIA, DIETA, FISIOTERAPIA, ODONTOLOGICA.
+  tipo         String   @default("FARMACOLOGICA")
   observacoes  String?
   profissional String?
   /// Foto do registro do prescritor no momento da receita (ex.: "CRM-CE 12345"): a reimpressão não muda se o cadastro mudar.

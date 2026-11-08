@@ -131,3 +131,5 @@
   body[data-print-mode="stickers"] .print-adesivo-item span { font-size: 8px; margin-top: 4px; line-height: 1; }
   body[data-print-mode="stickers"] #papelReceita { display: none !important; }
 }
+
+.rec-barra .rec-tipo { margin: 0; min-width: 220px; }

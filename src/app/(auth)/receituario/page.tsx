@@ -10,6 +10,7 @@ import BuscaMedicamento, { type MedicamentoCatalogo } from '@/components/receitu
 import { sanitizeRecipeHtml } from '@/lib/receita-html';
 import { termosDeAlergia } from '@/lib/alergias';
 import { pode } from '@/lib/permissions';
+import { tipoPrescricao, tiposPermitidos, TIPOS_PRESCRICAO, type TipoPrescricao } from '@/lib/prescricao';
 import { mensagemErro, textoDoErro } from '@/lib/resposta';
 import '@/components/ui/modulo.css';
 import './receituario.css';
@@ -26,8 +27,6 @@ type ReceitaSalva = ReceitaImpressao & { observacoes: string | null };
 
 type Aba = 'receituario' | 'historico' | 'adesivos';
 
-const TITULO = 'RECEITUÁRIO';
-const SUBTITULO = 'RECEITA MÉDICA';
 
 // Valor guardado = rótulo impresso ("Uso Oral"). Intravenosa/Intramuscular mantêm o nome antigo das receitas já salvas.
 const VIAS_DE_USO = [
@@ -43,8 +42,15 @@ const ABAS = [
 export default function ReceituarioPage() {
   const { data: session, status: sessionStatus } = useSession();
   const cargo = session?.user?.cargo;
-  const isMedico = pode(cargo, 'prescricao:registrar');
   const podeVerHistorico = pode(cargo, 'prescricao:ler');
+  // O gestor autoriza, por usuário, quais tipos de prescrição cada um emite (tela de Usuários).
+  const [autorizadas, setAutorizadas] = useState<string[]>([]);
+  const permitidos = tiposPermitidos(cargo, autorizadas);
+  const podePrescrever = permitidos.length > 0;
+  const [tipoEscolhido, setTipoEscolhido] = useState<TipoPrescricao>('FARMACOLOGICA');
+  const tipo: TipoPrescricao = permitidos.includes(tipoEscolhido) ? tipoEscolhido : (permitidos[0] ?? 'FARMACOLOGICA');
+  const infoTipo = tipoPrescricao(tipo);
+  const farmacologica = tipo === 'FARMACOLOGICA';
 
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [activeTab, setActiveTab] = useState<Aba>('receituario');
@@ -84,6 +90,7 @@ export default function ReceituarioPage() {
         const resposta = await fetch('/api/me');
         const dados = await resposta.json();
         if (ativo && resposta.ok && typeof dados.hospital?.nome === 'string') setHospital(dados.hospital);
+        if (ativo && resposta.ok && Array.isArray(dados.prescricoesAutorizadas)) setAutorizadas(dados.prescricoesAutorizadas);
       } catch {
         // O estabelecimento fica vazio e a impressão permanece bloqueada.
       }
@@ -135,7 +142,15 @@ export default function ReceituarioPage() {
     invalidarRegistro();
   };
 
-  const addMedicamento = () => saveDadosMemoria([...medicamentos, { id: Date.now(), viaUso: 'Oral', conteudo: '' }]);
+  // Fora da farmacológica não há "via de uso": o campo guarda só o nome do tipo (e não sai no papel).
+  const addMedicamento = () => saveDadosMemoria([...medicamentos, { id: Date.now(), viaUso: farmacologica ? 'Oral' : infoTipo.curto, conteudo: '' }]);
+
+  const trocarTipo = async (novo: TipoPrescricao) => {
+    if (novo === tipo) return;
+    if (medicamentos.length > 0 && !await confirm('Trocar o tipo de prescrição limpa os itens já digitados. Continuar?')) return;
+    saveDadosMemoria([]);
+    setTipoEscolhido(novo);
+  };
   const removerMedicamento = (idx: number) => saveDadosMemoria(medicamentos.filter((_, i) => i !== idx));
   const atualizarViaUso = (idx: number, val: string) => saveDadosMemoria(medicamentos.map((med, i) => (i === idx ? { ...med, viaUso: val } : med)));
 
@@ -188,7 +203,7 @@ export default function ReceituarioPage() {
   };
 
   const salvarPrescricao = async () => {
-    if (salvandoRef.current || !isMedico) return;
+    if (salvandoRef.current || !podePrescrever) return;
     setErroAcao('');
     setSucesso('');
     if (!pacienteId) {
@@ -206,7 +221,7 @@ export default function ReceituarioPage() {
       const res = await fetch('/api/receitas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pacienteId, medicamentos, observacoes: TITULO, alergiaConfirmada }),
+        body: JSON.stringify({ pacienteId, medicamentos, tipo, observacoes: infoTipo.titulo.toUpperCase(), alergiaConfirmada }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -265,8 +280,8 @@ export default function ReceituarioPage() {
         <PageHeader
           icon="las la-prescription-bottle-alt"
           title="Receituário"
-          subtitle={isMedico ? `Profissional da sessão: ${session?.user?.name || 'Médico'}` : 'Histórico de receitas e adesivos'}
-          actions={isMedico && (
+          subtitle={podePrescrever ? `Profissional da sessão: ${session?.user?.name || 'Profissional'}` : 'Histórico de receitas e adesivos'}
+          actions={podePrescrever && (
             <button type="button" className="btn btn-primary" onClick={() => { setActiveTab('receituario'); addMedicamento(); }}>
               <i className="las la-plus" aria-hidden="true"></i> Nova prescrição
             </button>
@@ -295,7 +310,7 @@ export default function ReceituarioPage() {
                 </p>
               )
             )}
-            <p className="mod-nota rec-limitacao">Sem catálogo de medicamentos, o sistema só compara o texto prescrito com o texto da alergia. Nome comercial e classe farmacológica não são reconhecidos: a conferência é do prescritor.</p>
+            <p className="mod-nota rec-limitacao">O sistema compara o texto prescrito (nome e substância, quando o medicamento vem da busca) com o texto da alergia. Classe farmacológica não é reconhecida: a conferência é do prescritor.</p>
           </Panel>
         )}
 
@@ -310,14 +325,20 @@ export default function ReceituarioPage() {
         )}
       </div>
 
-      {activeTab === 'receituario' && !isMedico && (
+      {activeTab === 'receituario' && !podePrescrever && (
         <Panel>
-          <EmptyState icon="las la-lock" message="A criação e a impressão de receitas são exclusivas de médicos." />
+          <EmptyState icon="las la-lock" message="Criar e imprimir prescrições é permitido só a profissionais autorizados pelo administrador da unidade. Peça a autorização em Usuários." />
         </Panel>
       )}
 
-      {activeTab === 'receituario' && isMedico && (
+      {activeTab === 'receituario' && podePrescrever && (
         <div className="rec-barra hide-on-print">
+          <div className="form-group rec-tipo">
+            <label htmlFor="rec-tipo">Tipo de prescrição</label>
+            <select id="rec-tipo" value={tipo} onChange={e => void trocarTipo(e.target.value as TipoPrescricao)} disabled={permitidos.length < 2}>
+              {TIPOS_PRESCRICAO.filter(t => permitidos.includes(t.id)).map(t => <option key={t.id} value={t.id}>{t.rotulo}</option>)}
+            </select>
+          </div>
           <button type="button" className="btn btn-secondary" disabled={medicamentos.length === 0} onClick={() => { setEditorAtivoIndex(medicamentos.length - 1); setModalAdesivosAberto(true); }}><i className="las la-tag" aria-hidden="true"></i> Inserir adesivo</button>
           <button type="button" className="btn btn-success" onClick={() => void salvarPrescricao()} disabled={salvandoPrescricao || !!registro || (alergiasCitadas.length > 0 && !alergiaConfirmada)}><i className="las la-save" aria-hidden="true"></i> {salvandoPrescricao ? 'Salvando...' : registro ? 'Receita salva' : 'Salvar no prontuário'}</button>
           <button type="button" className="btn btn-secondary" onClick={() => receitaSalva && imprimir(receitaSalva)} disabled={!receitaSalva || !estabelecimento} title={receitaSalva ? 'Imprimir receita salva' : 'Salve a receita para liberar a impressão'}><i className="las la-print" aria-hidden="true"></i> Imprimir</button>
@@ -325,10 +346,10 @@ export default function ReceituarioPage() {
         </div>
       )}
 
-      {activeTab === 'receituario' && isMedico && (
+      {activeTab === 'receituario' && podePrescrever && (
         <div className="papel-receita" id="papelReceita">
-          <p className="rec-titulo-doc" id="tituloDocumento">{TITULO}</p>
-          <div className="subtitulo" id="subtituloDocumento">{SUBTITULO}</div>
+          <p className="rec-titulo-doc" id="tituloDocumento">{infoTipo.titulo.toUpperCase()}</p>
+          <div className="subtitulo" id="subtituloDocumento">{infoTipo.rotulo}</div>
 
           <div className="form-row hide-on-print">
             <div className="form-group">
@@ -351,13 +372,13 @@ export default function ReceituarioPage() {
                 <div className="medicamento-card" key={med.id}>
                   <div className="card-header hide-on-print">
                     <span className="card-title">Prescrição {idx + 1}</span>
-                    <div className="form-group rec-via">
+                    {farmacologica && <div className="form-group rec-via">
                       <select aria-label={`Via de uso da prescrição ${idx + 1}`} value={med.viaUso} onChange={e => atualizarViaUso(idx, e.target.value)}>{(VIAS_DE_USO as readonly string[]).includes(med.viaUso) ? null : <option value={med.viaUso}>{med.viaUso}</option>}{VIAS_DE_USO.map(v => <option key={v} value={v}>{v}</option>)}</select>
-                    </div>
+                    </div>}
                     <button type="button" className="btn btn-secondary btn-sm rec-perigo" aria-label={`Remover prescrição ${idx + 1}`} onClick={() => removerMedicamento(idx)}><i className="las la-trash" aria-hidden="true"></i> Remover</button>
                   </div>
 
-                  <BuscaMedicamento rotulo={`Medicamento da prescrição ${idx + 1}`} onEscolher={m => inserirMedicamento(idx, m)} />
+                  {farmacologica && <BuscaMedicamento rotulo={`Medicamento da prescrição ${idx + 1}`} onEscolher={m => inserirMedicamento(idx, m)} />}
                   <div
                     className="editor-custom"
                     contentEditable
@@ -396,21 +417,21 @@ export default function ReceituarioPage() {
                   {historico.map(h => (
                     <li key={h.id} className="rec-historico-item">
                       <strong>{new Date(h.createdAt).toLocaleString('pt-BR')}</strong>
-                      <p className="mod-secundario">{h.observacoes} | Profissional: {h.profissional || 'não registrado'}{h.registroProfissional ? ` (${h.registroProfissional})` : ''}</p>
+                      <p className="mod-secundario">{tipoPrescricao(h.tipo).rotulo} | Profissional: {h.profissional || 'não registrado'}{h.registroProfissional ? ` (${h.registroProfissional})` : ''}</p>
                       <ul>
                         {(Array.isArray(h.medicamentos) ? h.medicamentos : []).map((m, i) => (
-                          <li key={i}><strong>Uso {m.viaUso}:</strong> <span dangerouslySetInnerHTML={{ __html: sanitizeRecipeHtml(typeof m.conteudo === 'string' ? m.conteudo : '') }} /></li>
+                          <li key={i}>{tipoPrescricao(h.tipo).id === 'FARMACOLOGICA' && <strong>Uso {m.viaUso}: </strong>}<span dangerouslySetInnerHTML={{ __html: sanitizeRecipeHtml(typeof m.conteudo === 'string' ? m.conteudo : '') }} /></li>
                         ))}
                       </ul>
                       <div className="mod-acoes">
-                        {isMedico && !h.registroProfissional ? (
+                        {podePrescrever && !h.registroProfissional ? (
                           <span className="mod-nota">Receita antiga, sem registro do prescritor: não é reimpressa.</span>
                         ) : (
                           <button type="button" className="btn btn-secondary btn-sm" disabled={!estabelecimento} onClick={() => imprimir(h)} aria-label={`Reimprimir receita de ${new Date(h.createdAt).toLocaleDateString('pt-BR')}`}>
                             <i className="las la-print" aria-hidden="true"></i> Reimprimir
                           </button>
                         )}
-                        {isMedico && (
+                        {podePrescrever && (
                           <button type="button" className="btn btn-secondary btn-sm" onClick={() => copiarParaNova(h)} aria-label={`Copiar receita de ${new Date(h.createdAt).toLocaleDateString('pt-BR')} para uma nova`}>
                             <i className="las la-copy" aria-hidden="true"></i> Copiar para nova receita
                           </button>

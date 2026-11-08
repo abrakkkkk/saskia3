@@ -7,6 +7,8 @@ import { auditar, exigir, lerJson } from '@/lib/api-guard'
 import { alergiasCitadas } from '@/lib/alergias'
 import { isTerminal } from '@/lib/paciente-status'
 import { formatarRegistro } from '@/lib/registro-profissional'
+import { ehTipoPrescricao, type TipoPrescricao } from '@/lib/prescricao'
+import { exigirPrescricao } from '@/lib/prescricao-guard'
 
 const JANELA_DUPLICIDADE_MS = 30_000
 const LIMITE_HISTORICO = 50
@@ -23,7 +25,7 @@ function sanitizeRecipeHtml(value: string) {
 }
 
 const SELECT_RECEITA = {
-  id: true, pacienteId: true, medicamentos: true, observacoes: true,
+  id: true, pacienteId: true, medicamentos: true, tipo: true, observacoes: true,
   profissional: true, registroProfissional: true, especialidadeProfissional: true, usuarioId: true, createdAt: true,
 } satisfies Prisma.ReceitaSelect
 
@@ -60,10 +62,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { ator, negado } = await exigir('prescricao:registrar')
-    if (negado) return negado
+    const base = await exigir('prescricao:registrar')
+    if (base.negado) return base.negado
 
     const body = await lerJson(request)
+    const tipo: TipoPrescricao = ehTipoPrescricao(body?.tipo) ? body.tipo : 'FARMACOLOGICA'
+    // O cargo só abre a porta; o tipo de prescrição precisa estar autorizado pelo gestor para este usuário.
+    const { ator, negado } = await exigirPrescricao(tipo)
+    if (negado) return negado
+
     if (!body || typeof body.pacienteId !== 'string' || !body.pacienteId.trim() || body.pacienteId.length > 64 || !Array.isArray(body.medicamentos) || body.medicamentos.length < 1 || body.medicamentos.length > 100) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }
@@ -102,7 +109,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cada item deve conter texto de prescrição' }, { status: 400 })
     }
 
-    const citadas = alergiasCitadas(paciente.alergias, medicamentos.map(item => item.conteudo).join(' '))
+    // A conferência de alergia vale para medicamentos; cuidados, oxigênio, dieta etc. não citam fármaco.
+    const citadas = tipo === 'FARMACOLOGICA' ? alergiasCitadas(paciente.alergias, medicamentos.map(item => item.conteudo).join(' ')) : []
     if (citadas.length > 0 && body.alergiaConfirmada !== true) {
       return NextResponse.json({
         error: `A prescrição cita alergia registrada do paciente: ${citadas.join(', ')}. Confirme para salvar.`,
@@ -114,7 +122,7 @@ export async function POST(request: NextRequest) {
     // Duplo clique ou reenvio: mesmo autor, paciente e conteúdo em poucos segundos devolve a receita já salva.
     const recentes = await prisma.receita.findMany({
       where: {
-        hospitalId: ator.hospitalId, pacienteId, usuarioId: ator.id,
+        hospitalId: ator.hospitalId, pacienteId, usuarioId: ator.id, tipo,
         createdAt: { gte: new Date(Date.now() - JANELA_DUPLICIDADE_MS) },
       },
       select: SELECT_RECEITA,
@@ -130,6 +138,7 @@ export async function POST(request: NextRequest) {
         hospitalId: ator.hospitalId,
         pacienteId,
         medicamentos: medicamentos as Prisma.InputJsonValue,
+        tipo,
         observacoes: typeof body.observacoes === 'string' ? body.observacoes : null,
         profissional: ator.nome,
         registroProfissional,
@@ -141,6 +150,7 @@ export async function POST(request: NextRequest) {
 
     await auditar(ator, 'RECEITA_CRIADA', 'Receita', receita.id, {
       pacienteId,
+      tipo,
       itens: medicamentos.length,
       ...(citadas.length > 0 ? { alergiaConfirmada: citadas } : {}),
     })

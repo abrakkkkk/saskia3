@@ -8,7 +8,7 @@ const MAX_NOME = 160
 const MAX_AVATAR_CHARS = 1_400_000
 const CAMPOS_PERFIL = {
   id: true, nome: true, email: true, cargo: true, avatar: true,
-  conselho: true, registroNumero: true, registroUf: true, especialidade: true, rqe: true,
+  conselho: true, registroNumero: true, registroUf: true, especialidade: true, rqe: true, prescricoesAutorizadas: true,
   hospital: { select: { nome: true, cnpj: true, endereco: true, telefone: true, logo: true } },
 } as const
 

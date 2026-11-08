@@ -10,6 +10,8 @@ export const CARGOS = [
   'FARMACEUTICO',
   'NUTRICIONISTA',
   'ASSISTENTE_SOCIAL',
+  'FISIOTERAPEUTA',
+  'ODONTOLOGO',
   'OUTROS',
 ] as const
 
@@ -24,11 +26,15 @@ export const CARGO_LABEL: Record<Cargo, string> = {
   FARMACEUTICO: 'Farmacêutico',
   NUTRICIONISTA: 'Nutricionista',
   ASSISTENTE_SOCIAL: 'Assistente social',
+  FISIOTERAPEUTA: 'Fisioterapeuta',
+  ODONTOLOGO: 'Odontólogo (inclui bucomaxilofacial)',
   OUTROS: 'Outros profissionais',
 }
 
 const ENFERMAGEM: Cargo[] = ['ENFERMEIRO_ASSISTENCIAL', 'TECNICO_ENFERMAGEM']
 const CLINICA: Cargo[] = ['MEDICO', ...ENFERMAGEM]
+// Profissionais de nível superior que atendem e prescrevem dentro da sua competência (fisioterapia, odontologia).
+const REABILITACAO_ODONTO: Cargo[] = ['FISIOTERAPEUTA', 'ODONTOLOGO']
 const TODOS: Cargo[] = [...CARGOS]
 
 const MATRIZ = {
@@ -36,19 +42,20 @@ const MATRIZ = {
   'paciente:cadastrar': ['ADMIN', 'MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'RECEPCIONISTA'],
   'paciente:encaminhar': ['ADMIN', 'RECEPCIONISTA', ...CLINICA],
   'paciente:arquivar': ['ADMIN'],
-  'prontuario:ler': [...CLINICA, 'FARMACEUTICO', 'NUTRICIONISTA'],
+  'prontuario:ler': [...CLINICA, ...REABILITACAO_ODONTO, 'FARMACEUTICO', 'NUTRICIONISTA'],
   'prontuario:dados-vitais': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL'],
   'prontuario:desfecho': ['MEDICO'],
   'triagem:registrar': CLINICA,
   'sinais:registrar': CLINICA,
   'escores:registrar': CLINICA,
-  'evolucao:registrar': CLINICA,
+  'evolucao:registrar': [...CLINICA, ...REABILITACAO_ODONTO],
   'enfermagem:registrar': ENFERMAGEM,
   'medico:registrar': ['MEDICO'],
   'nutricao:registrar': ['NUTRICIONISTA', 'MEDICO'],
-  'prescricao:ler': [...CLINICA, 'FARMACEUTICO'],
-  'prescricao:registrar': ['MEDICO'],
-  'exame:ler': [...CLINICA, 'FARMACEUTICO'],
+  'prescricao:ler': [...CLINICA, ...REABILITACAO_ODONTO, 'FARMACEUTICO'],
+  // Quem PODE receber autorização. O que cada um realmente emite é decisão do gestor (ver lib/prescricao).
+  'prescricao:registrar': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL', ...REABILITACAO_ODONTO],
+  'exame:ler': [...CLINICA, ...REABILITACAO_ODONTO, 'FARMACEUTICO'],
   'exame:solicitar': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL'],
   'exame:coletar': CLINICA,
   'exame:laudar': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL'],
@@ -60,10 +67,10 @@ const MATRIZ = {
   'sangue:gerir': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'ADMIN'],
   'obito:ler': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'ADMIN'],
   'obito:registrar': ['MEDICO'],
-  'agenda:ler': ['ADMIN', 'RECEPCIONISTA', ...CLINICA],
+  'agenda:ler': ['ADMIN', 'RECEPCIONISTA', ...CLINICA, ...REABILITACAO_ODONTO],
   'agenda:gerir': ['ADMIN', 'RECEPCIONISTA', 'MEDICO', 'ENFERMEIRO_ASSISTENCIAL'],
-  'chamada:emitir': ['RECEPCIONISTA', ...CLINICA],
-  'chamada:ler': ['ADMIN', 'RECEPCIONISTA', 'OUTROS', ...CLINICA],
+  'chamada:emitir': ['RECEPCIONISTA', ...CLINICA, ...REABILITACAO_ODONTO],
+  'chamada:ler': ['ADMIN', 'RECEPCIONISTA', 'OUTROS', ...CLINICA, ...REABILITACAO_ODONTO],
   'farmacia:ler': ['FARMACEUTICO', 'ADMIN', ...CLINICA],
   'farmacia:dispensar': ['FARMACEUTICO', 'ENFERMEIRO_ASSISTENCIAL'],
   'estoque:ler': ['FARMACEUTICO', 'ADMIN', 'OUTROS', ...CLINICA],

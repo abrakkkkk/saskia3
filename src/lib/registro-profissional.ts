@@ -7,7 +7,7 @@ export const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 
 /** Conselho sugerido por cargo, só para pré-preencher o formulário. */
 export const CONSELHO_DO_CARGO: Record<string, Conselho> = {
   MEDICO: 'CRM', ENFERMEIRO_ASSISTENCIAL: 'COREN', TECNICO_ENFERMAGEM: 'COREN',
-  FARMACEUTICO: 'CRF', NUTRICIONISTA: 'CRN', ASSISTENTE_SOCIAL: 'CRESS',
+  FARMACEUTICO: 'CRF', NUTRICIONISTA: 'CRN', ASSISTENTE_SOCIAL: 'CRESS', FISIOTERAPEUTA: 'CREFITO', ODONTOLOGO: 'CRO',
 }
 
 export type RegistroProfissional = {

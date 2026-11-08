@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auditar, exigir, lerJson } from '@/lib/api-guard'
+import { auditar, lerJson } from '@/lib/api-guard'
+import { exigirPrescricao } from '@/lib/prescricao-guard'
 import { prisma } from '@/lib/db'
 import { pacienteAtivo, registrarEvento, textoOpcional } from '@/lib/pacientes'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { ator, negado } = await exigir('prescricao:registrar')
+    const { ator, negado } = await exigirPrescricao('FARMACOLOGICA')
     if (negado) return negado
     const { id } = await params
     const { bloqueio } = await pacienteAtivo(id, ator.hospitalId)

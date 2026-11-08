@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { sanitizeRecipeHtml } from '@/lib/receita-html';
+import { tipoPrescricao } from '@/lib/prescricao';
 import { cpfParcial } from '@/components/ui/PacienteSelect';
 
 export type HospitalImpressao = { nome?: string | null; cnpj?: string | null; endereco?: string | null; telefone?: string | null; logo?: string | null };
@@ -12,6 +13,8 @@ export type ReceitaImpressao = {
   profissional: string | null;
   registroProfissional: string | null;
   especialidadeProfissional: string | null;
+  /** FARMACOLOGICA, CUIDADO, OXIGENOTERAPIA... Receitas antigas não têm e valem como farmacológicas. */
+  tipo?: string | null;
   medicamentos: { viaUso?: string; conteudo?: string }[];
 };
 
@@ -60,7 +63,7 @@ export default function FolhaReceita({ hospital, paciente, receita }: { hospital
         </div>
       </header>
 
-      <h1 className="rec-folha-titulo">Receituário</h1>
+      <h1 className="rec-folha-titulo">{tipoPrescricao(receita.tipo).titulo}</h1>
 
       <dl className="rec-folha-paciente">
         <div className="rec-folha-largo"><dt>Paciente</dt><dd>{paciente?.nome ?? 'Não informado'}</dd></div>
@@ -74,7 +77,7 @@ export default function FolhaReceita({ hospital, paciente, receita }: { hospital
       <ol className="rec-folha-itens">
         {receita.medicamentos.map((m, i) => (
           <li key={i} className="rec-folha-item">
-            <div className="rec-folha-via">Uso {m.viaUso}</div>
+            <div className="rec-folha-via">{tipoPrescricao(receita.tipo).id === 'FARMACOLOGICA' ? `Uso ${m.viaUso}` : ''}</div>
             <div className="rec-folha-conteudo" dangerouslySetInnerHTML={{ __html: sanitizeRecipeHtml(typeof m.conteudo === 'string' ? m.conteudo : '') }} />
           </li>
         ))}

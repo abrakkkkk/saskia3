@@ -5,10 +5,11 @@ import { prisma } from '@/lib/db'
 import { hashSenha, isSenhaValida, MENSAGEM_SENHA_INVALIDA } from '@/lib/password'
 import { CARGOS } from '@/lib/permissions'
 import { lerRegistro } from '@/lib/registro-profissional'
+import { lerAutorizacoes, SUGESTAO_POR_CARGO } from '@/lib/prescricao'
 
 const CAMPOS = {
   id: true, nome: true, email: true, cargo: true, ativo: true, createdAt: true,
-  conselho: true, registroNumero: true, registroUf: true, especialidade: true, rqe: true,
+  conselho: true, registroNumero: true, registroUf: true, especialidade: true, rqe: true, prescricoesAutorizadas: true,
 } as const
 const cargosPermitidos = new Set<string>(CARGOS)
 
@@ -45,9 +46,12 @@ export async function POST(request: Request) {
   if (typeof cargo !== 'string' || !cargosPermitidos.has(cargo)) return NextResponse.json({ error: 'Cargo inválido' }, { status: 400 })
   const registro = lerRegistro(body)
   if ('error' in registro) return NextResponse.json({ error: registro.error }, { status: 400 })
+  const autorizacoes = lerAutorizacoes(body, cargo)
+  if ('error' in autorizacoes) return NextResponse.json({ error: autorizacoes.error }, { status: 400 })
   // Quem prescreve precisa do registro no conselho: sem ele a receita impressa não tem validade.
-  if (cargo === 'MEDICO' && !registro.data.registroNumero) {
-    return NextResponse.json({ error: 'Informe o CRM do médico (número e UF)' }, { status: 400 })
+  const efetivas = autorizacoes.data ?? (cargo === 'MEDICO' ? [...SUGESTAO_POR_CARGO.MEDICO] : [])
+  if (efetivas.length > 0 && !registro.data.registroNumero) {
+    return NextResponse.json({ error: 'Quem prescreve precisa do registro no conselho (número e UF)' }, { status: 400 })
   }
 
   try {
@@ -59,6 +63,8 @@ export async function POST(request: Request) {
         cargo: cargo as CargoUsuario,
         hospitalId: ator.hospitalId,
         ...registro.data,
+        // Médico novo sem escolha explícita já nasce com a sugestão do cargo, como era antes; os demais, só se o gestor marcar.
+        prescricoesAutorizadas: efetivas,
       },
       select: CAMPOS,
     })

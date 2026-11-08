@@ -2,3 +2,7 @@
 .us-email { overflow-wrap: anywhere; color: var(--ui-text-muted); }
 .us-gira { animation: us-gira 1s linear infinite; }
 @keyframes us-gira { to { transform: rotate(360deg); } }
+
+.us-prescricao { margin: 0 0 var(--ui-space-4); padding: var(--ui-space-3) var(--ui-space-4); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-control); display: grid; gap: var(--ui-space-2); }
+.us-prescricao legend { padding: 0 6px; font-weight: 600; }
+.us-prescricao-item { display: flex; align-items: center; gap: var(--ui-space-2); min-height: 32px; }
