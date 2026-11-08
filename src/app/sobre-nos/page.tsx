@@ -195,7 +195,7 @@ export default function SobreNosPage() {
                 </div>
               </div>
             </div>
-            <p className="bio-pessoa">Estudante de Análise e Desenvolvimento de Sistemas na UNIFOR, com formação em Desenvolvimento Full Stack Web pela Geração Tech. Cria interfaces e back-end com Next.js, Node.js e Prisma, e usa Docker para segurança e controle do projeto. No Saskia desde maio de 2026, como desenvolvedor voluntário.</p>
+            <p className="bio-pessoa">Formado em Análise e Desenvolvimento de Sistemas pela UNIFOR, com formação em Desenvolvimento Full Stack Web pela Geração Tech. Cria interfaces e back-end com Next.js, Node.js e Prisma, e usa Docker para segurança e controle do projeto. No Saskia desde maio de 2026, como desenvolvedor voluntário.</p>
             <div className="tags-formacao">
               <span className="tag-formacao tag-analista"><i aria-hidden="true" className="las la-graduation-cap"></i> ADS UNIFOR</span>
               <span className="tag-formacao tag-analista"><i aria-hidden="true" className="las la-code"></i> Next.js / React</span>
