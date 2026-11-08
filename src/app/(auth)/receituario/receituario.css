@@ -87,6 +87,19 @@
   .assinatura-item { width: 100%; }
 }
 
+/* Busca no catálogo de medicamentos (acima do editor de cada prescrição) */
+.rec-busca-med { display: grid; gap: var(--ui-space-2); margin-bottom: var(--ui-space-3); }
+.rec-busca-rotulo { font-size: var(--ui-t-label); font-weight: 600; }
+.rec-busca-lista { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow-y: auto; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-control); background: var(--ui-surface); }
+.rec-busca-lista li + li { border-top: 1px solid var(--ui-border); }
+.rec-busca-lista button { display: grid; gap: 2px; width: 100%; min-height: 44px; padding: 8px 12px; border: 0; background: transparent; color: var(--ui-text); font: inherit; text-align: left; cursor: pointer; }
+.rec-busca-lista button:hover, .rec-busca-lista button:focus-visible { background: var(--ui-surface-muted); }
+.rec-busca-subst { color: var(--ui-text-muted); font-weight: 400; }
+.rec-busca-apres { font-size: var(--ui-t-meta); color: var(--ui-text-muted); }
+.rec-busca-marcas { display: flex; flex-wrap: wrap; gap: 6px; }
+.rec-busca-marcas em { font-style: normal; font-size: var(--ui-t-meta); padding: 1px 8px; border-radius: 999px; background: var(--ui-surface-muted); border: 1px solid var(--ui-border); }
+.rec-busca-marcas .rec-busca-controlado { background: #fee2e2; border-color: #b91c1c; color: #7f1d1d; font-weight: 700; }
+
 /* Folha de impressão: oculta na tela, única coisa que sai no papel (A4, fluxo normal, várias páginas). */
 .rec-folha { display: none; }
 

@@ -624,6 +624,34 @@ model Documento {
   @@index([categoria, ordem])
 }
 
+/// Catálogo de medicamentos registrados (lista CMED/ANVISA), uma linha por apresentação. Compartilhado por todos os
+/// hospitais, sem dado de paciente. Alimenta a busca do receituário e a conferência de alergia por substância.
+model Medicamento {
+  id                  String   @id @default(uuid())
+  /// Código GGREM da CMED: identifica a apresentação.
+  codigoGgrem         String   @unique
+  /// Substância(s) ativa(s); associações vêm separadas por " + ".
+  substancia          String
+  produto             String
+  apresentacao        String
+  laboratorio         String
+  registro            String?
+  classe              String?
+  /// Novo, Genérico, Similar, Biológico, Específico, Fitoterápico...
+  tipo                String?
+  tarja               String?
+  restricaoHospitalar Boolean  @default(false)
+  /// Consta na Relação Nacional de Medicamentos Essenciais (preenchido pela importação da RENAME).
+  rename              Boolean  @default(false)
+  /// Texto minúsculo e sem acento para a busca.
+  busca               String
+  ativo               Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([busca])
+}
+
 /// Canal por setor (UTI, Pronto-Socorro, Enfermagem, Plantão). Aberto a toda a equipe do hospital.
 model CanalChat {
   id         String         @id @default(uuid())

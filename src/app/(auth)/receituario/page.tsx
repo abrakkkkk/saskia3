@@ -6,6 +6,7 @@ import PacienteSelect, { type PacienteOpcao } from '@/components/ui/PacienteSele
 import AdesivosManager from '@/components/receituario/adesivos/AdesivosManager';
 import { type Adesivo } from '@/components/receituario/adesivos/catalog';
 import FolhaReceita, { type HospitalImpressao, type PacienteImpressao, type ReceitaImpressao } from '@/components/receituario/FolhaReceita';
+import BuscaMedicamento, { type MedicamentoCatalogo } from '@/components/receituario/BuscaMedicamento';
 import { sanitizeRecipeHtml } from '@/lib/receita-html';
 import { termosDeAlergia } from '@/lib/alergias';
 import { pode } from '@/lib/permissions';
@@ -150,6 +151,23 @@ export default function ReceituarioPage() {
     if (ref) {
       ref.insertAdjacentText('beforeend', texto);
       handleEditorInput(idx, ref.innerHTML);
+    }
+  };
+
+  // Insere "PRODUTO (substância)" em negrito e a apresentação, sem apagar o que já foi digitado.
+  // A substância no texto é o que faz a conferência de alergia reconhecer nome comercial e genérico.
+  const inserirMedicamento = (idx: number, m: MedicamentoCatalogo) => {
+    const ref = editorRefs.current[idx];
+    if (!ref) return;
+    if (ref.textContent?.trim()) ref.appendChild(document.createElement('br'));
+    const nome = document.createElement('b');
+    nome.textContent = `${m.produto} (${m.substancia})`;
+    ref.appendChild(nome);
+    ref.appendChild(document.createElement('br'));
+    ref.appendChild(document.createTextNode(m.apresentacao));
+    handleEditorInput(idx, ref.innerHTML);
+    if (m.tarja && /preta/i.test(m.tarja)) {
+      setErroAcao('Medicamento de tarja preta (controlado): este sistema ainda não emite a receita de controle especial. Use o talão oficial para este item.');
     }
   };
 
@@ -339,6 +357,7 @@ export default function ReceituarioPage() {
                     <button type="button" className="btn btn-secondary btn-sm rec-perigo" aria-label={`Remover prescrição ${idx + 1}`} onClick={() => removerMedicamento(idx)}><i className="las la-trash" aria-hidden="true"></i> Remover</button>
                   </div>
 
+                  <BuscaMedicamento rotulo={`Medicamento da prescrição ${idx + 1}`} onEscolher={m => inserirMedicamento(idx, m)} />
                   <div
                     className="editor-custom"
                     contentEditable
