@@ -84,7 +84,7 @@ export default function AdminConfiguracaoPage() {
       const response = await fetch(`/api/hospitais/${encodeURIComponent(hospitalId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, cnpj, endereco, telefone, logoUrl })
+        body: JSON.stringify({ nome, cnpj, endereco, telefone })
       });
       const result: unknown = await response.json().catch(() => null);
       if (!response.ok) {
@@ -114,6 +114,48 @@ export default function AdminConfiguracaoPage() {
     }
   };
 
+  const [enviandoLogo, setEnviandoLogo] = useState(false);
+
+  const enviarLogo = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = event.target.files?.[0];
+    event.target.value = '';
+    if (!arquivo) return;
+    setEnviandoLogo(true);
+    setFeedback('');
+    try {
+      const form = new FormData();
+      form.append('arquivo', arquivo);
+      const response = await fetch('/api/hospital/logo', { method: 'POST', body: form });
+      const dados = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(dados?.error || 'Não foi possível enviar o logotipo.');
+      setLogoUrl(dados.logo);
+      setLogoPreviewErro(false);
+      setFeedbackErro(false);
+      setFeedback('Logotipo atualizado. Ele já sai nas receitas.');
+    } catch (error) {
+      setFeedbackErro(true);
+      setFeedback(error instanceof Error ? error.message : 'Erro ao enviar o logotipo.');
+    } finally {
+      setEnviandoLogo(false);
+    }
+  };
+
+  const removerLogo = async () => {
+    if (!await confirm('Remover o logotipo do hospital?')) return;
+    setEnviandoLogo(true);
+    try {
+      const response = await fetch('/api/hospital/logo', { method: 'DELETE' });
+      if (!response.ok) throw new Error('Não foi possível remover o logotipo.');
+      setLogoUrl('');
+      setFeedbackErro(false);
+      setFeedback('Logotipo removido.');
+    } catch (error) {
+      setFeedbackErro(true);
+      setFeedback(error instanceof Error ? error.message : 'Erro ao remover o logotipo.');
+    } finally {
+      setEnviandoLogo(false);
+    }
+  };
   return (
     <div className="mod-pagina">
       <PageHeader
@@ -190,28 +232,24 @@ export default function AdminConfiguracaoPage() {
                 </div>
 
                 <div className="form-group ux-largo">
-                  <label htmlFor="instituicao-logo">Logotipo (URL da imagem)</label>
-                  <input
-                    id="instituicao-logo"
-                    name="logoUrl"
-                    type="text"
-                    value={logoUrl}
-                    onChange={(e) => { setLogoUrl(e.target.value); setLogoPreviewErro(false); }}
-                    placeholder="https://exemplo.com/logo.png"
-                    maxLength={2048}
-                  />
+                  <label htmlFor="instituicao-logo">Logotipo (PNG, JPG ou WEBP, até 1 MB)</label>
                   <div className="cfg-logo-previa">
-                    {logoUrl && !logoPreviewErro ? (
-                      <>{/* eslint-disable-next-line @next/next/no-img-element -- URL externa informada pelo admin, sem domínio conhecido */}
-<img src={logoUrl} alt="Prévia do logotipo" referrerPolicy="no-referrer" onError={() => setLogoPreviewErro(true)} /></>
-                    ) : logoUrl && logoPreviewErro ? (
-                      <p role="status" className="cfg-logo-erro">Não foi possível carregar a prévia desta imagem. Confira a URL.</p>
+                    {logoUrl.startsWith('/api/hospital/logo') && !logoPreviewErro ? (
+                      <>{/* eslint-disable-next-line @next/next/no-img-element -- arquivo do próprio hospital, entregue pela rota autenticada */}
+<img src={logoUrl} alt="Prévia do logotipo" onError={() => setLogoPreviewErro(true)} /></>
                     ) : (
                       <>
                         <ImagePlus aria-hidden="true" />
-                        <p>Nenhum logotipo configurado</p>
+                        <p>{logoUrl && !logoUrl.startsWith('/api/hospital/logo') ? 'O logotipo atual é um link externo e não aparece na receita. Envie o arquivo.' : 'Nenhum logotipo configurado'}</p>
                       </>
                     )}
+                  </div>
+                  <div className="ux-acoes">
+                    <label htmlFor="instituicao-logo" className="btn btn-secondary btn-sm">
+                      <ImagePlus aria-hidden="true" size={16} /> {enviandoLogo ? 'Enviando…' : logoUrl ? 'Trocar logotipo' : 'Enviar logotipo'}
+                    </label>
+                    <input id="instituicao-logo" className="conta-file-input" type="file" accept="image/png,image/jpeg,image/webp" disabled={enviandoLogo} onChange={event => void enviarLogo(event)} />
+                    {logoUrl && <button type="button" className="btn btn-secondary btn-sm" disabled={enviandoLogo} onClick={() => void removerLogo()}>Remover</button>}
                   </div>
                 </div>
               </div>

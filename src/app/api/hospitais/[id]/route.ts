@@ -43,14 +43,14 @@ export async function PUT(request: NextRequest, { params }: Contexto) {
     }
     const endereco = opcional(body.endereco, 300)
     const telefone = opcional(body.telefone, 40)
-    const logo = opcional(body.logoUrl, 2048)
-    if (endereco === undefined || telefone === undefined || logo === undefined) {
+    // O logotipo muda só por /api/hospital/logo (envio de arquivo); aqui não se aceita mais URL externa.
+    if (endereco === undefined || telefone === undefined) {
       return NextResponse.json({ error: 'Dados da instituição excedem os limites permitidos' }, { status: 400 })
     }
 
     const hospital = await prisma.hospital.update({
       where: { id: ator.hospitalId },
-      data: { nome, cnpj, endereco, telefone, logo },
+      data: { nome, cnpj, endereco, telefone },
     })
     await auditar(ator, 'ATUALIZAR', 'Hospital', hospital.id)
     return NextResponse.json(hospital)
