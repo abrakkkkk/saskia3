@@ -2,35 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { pode } from '@/lib/permissions';
+import { tocarSirene } from '@/lib/sirene';
 import './emergencia.css';
 
 type Alerta = { id: string; tipo: string; local: string | null; profissional: string; createdAt: string };
 
 const TITULO: Record<string, string> = { PANICO: 'Botão do pânico', PCR: 'Alerta de PCR' };
 const ICONE: Record<string, string> = { PANICO: 'las la-exclamation-triangle', PCR: 'las la-heartbeat' };
-
-function sirene() {
-  try {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    const tom = (freq: number, inicio: number) => {
-      const osc = ctx.createOscillator();
-      const ganho = ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.value = freq;
-      ganho.gain.setValueAtTime(0.18, ctx.currentTime + inicio);
-      ganho.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + 0.35);
-      osc.connect(ganho);
-      ganho.connect(ctx.destination);
-      osc.start(ctx.currentTime + inicio);
-      osc.stop(ctx.currentTime + inicio + 0.35);
-    };
-    [0, 0.45, 0.9, 1.35, 1.8, 2.25].forEach((t, i) => tom(i % 2 ? 1000 : 700, t));
-  } catch {
-    // O som é reforço: o alerta já está visível e gravado.
-  }
-}
 
 /** Faixa de alerta no topo de todas as telas logadas. Aparece para qualquer cargo, inclusive Administrador. */
 export default function EmergenciaAlertas({ cargo }: { cargo: string }) {
@@ -50,7 +28,7 @@ export default function EmergenciaAlertas({ cargo }: { cargo: string }) {
       const conhecidos = vistos.current;
       const novos = lista.filter(a => !conhecidos.has(a.id));
       novos.forEach(a => conhecidos.add(a.id));
-      if (novos.length > 0) sirene();
+      if (novos.length > 0) tocarSirene();
     } catch {
       // Sem rede neste ciclo: tenta de novo no próximo.
     }

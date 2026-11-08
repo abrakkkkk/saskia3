@@ -6,6 +6,7 @@ import { pode } from '@/lib/permissions';
 import { STATUS_ESPERA } from '@/lib/utils';
 import { Volume2, VolumeX, Bell, Clock, DoorOpen, ActivitySquare, Timer } from 'lucide-react';
 import './painel-chamadas.css';
+import { tocarSirene } from '@/lib/sirene';
 
 interface Paciente {
   id: string;
@@ -48,7 +49,6 @@ export default function PainelChamadasTV() {
   const mounted = horaAtual !== null;
   const podeLerChamadas = pode(session?.user?.cargo, 'chamada:ler');
   const [emergencias, setEmergencias] = useState<{ id: string; tipo: string; local: string | null }[]>([]);
-  const emergenciasVistasRef = useRef<Set<string> | null>(null);
   
   // Áudio Controls
   const [audioPermitido, setAudioPermitido] = useState(false);
@@ -152,20 +152,6 @@ export default function PainelChamadasTV() {
         if (!r.ok || !ativo) return;
         const lista: { id: string; tipo: string; local: string | null }[] = await r.json();
         setEmergencias(lista);
-        if (emergenciasVistasRef.current === null) { emergenciasVistasRef.current = new Set(lista.map(a => a.id)); return; }
-        const conhecidos = emergenciasVistasRef.current;
-        const novos = lista.filter(a => !conhecidos.has(a.id));
-        novos.forEach(a => conhecidos.add(a.id));
-        if (novos.length > 0 && audioPermitido && vozAtivada) {
-          const a = novos[0];
-          const texto = a.tipo === 'PCR'
-            ? `Atenção. Parada cardiorrespiratória. ${a.local ?? ''}`
-            : `Atenção. Emergência. Botão do pânico acionado. ${a.local ?? ''}`;
-          const fala = new SpeechSynthesisUtterance(texto);
-          fala.lang = 'pt-BR';
-          fala.rate = 0.9;
-          window.speechSynthesis.speak(fala);
-        }
       } catch {
         // Sem rede neste ciclo: tenta de novo no próximo.
       }
@@ -173,7 +159,31 @@ export default function PainelChamadasTV() {
     void buscar();
     const t = setInterval(() => void buscar(), 3000);
     return () => { ativo = false; clearInterval(t); };
-  }, [sessionStatus, audioPermitido, vozAtivada]);
+  }, [sessionStatus]);
+
+  // Enquanto houver alerta ativo: sirene + voz ao surgir (inclusive se a TV abriu com o alerta já ativo)
+  // e a voz repete a cada 20 s até alguém encerrar. Só depois do toque que libera o áudio.
+  const chaveEmergencias = emergencias.map(a => a.id).join(',');
+  useEffect(() => {
+    if (emergencias.length === 0 || !audioPermitido) return;
+    const falar = () => {
+      if (!vozAtivada) return;
+      const texto = emergencias.map(a => a.tipo === 'PCR'
+        ? `Parada cardiorrespiratória. ${a.local ?? ''}`
+        : `Emergência. Botão do pânico acionado. ${a.local ?? ''}`).join('. ');
+      window.speechSynthesis.cancel();
+      const fala = new SpeechSynthesisUtterance(`Atenção. ${texto}`);
+      fala.lang = 'pt-BR';
+      fala.rate = 0.9;
+      window.speechSynthesis.speak(fala);
+    };
+    tocarSirene(audioCtxRef.current);
+    const primeira = window.setTimeout(falar, 3000);
+    const repetir = window.setInterval(falar, 20000);
+    return () => { window.clearTimeout(primeira); window.clearInterval(repetir); };
+    // emergencias só muda junto com chaveEmergencias.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveEmergencias, audioPermitido, vozAtivada]);
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;
