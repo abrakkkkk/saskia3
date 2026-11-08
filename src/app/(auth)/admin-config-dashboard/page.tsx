@@ -182,7 +182,8 @@ export default function AdminConfigDashboardPage() {
     }
   };
 
-  const totalAtivos = Object.values(configState).filter(Boolean).length;
+  // Só conta o que existe na tela: o estado pode guardar chaves antigas que não são módulos.
+  const totalAtivos = modulosConfigOriginal.filter(m => configState[m.id]).length;
   if (status === 'loading') return <div className="mod-pagina"><PageHeader icon="las la-sliders-h" title="Dashboard" /><LoadingState message="Carregando permissões..." /></div>;
   if (!session?.user) return <div className="mod-pagina"><PageHeader icon="las la-sliders-h" title="Dashboard" /><div role="alert" className="mod-aviso mod-aviso-atencao">Entre no sistema para continuar.</div></div>;
   if (session.user.cargo !== 'ADMIN') return <div className="mod-pagina"><PageHeader icon="las la-sliders-h" title="Dashboard" /><div role="alert" className="mod-aviso mod-aviso-erro">Acesso restrito ao administrador do hospital.</div></div>;
