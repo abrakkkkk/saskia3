@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auditar, exigir, lerJson } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
 import { pacienteAtivo, registrarEvento, textoOpcional } from '@/lib/pacientes'
+import { formatarRegistro } from '@/lib/registro-profissional'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -22,10 +23,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     if (!diagnostico && !conduta) return NextResponse.json({ error: 'Preencha o diagnóstico ou a conduta' }, { status: 400 })
 
-    // Responsável e autor vêm da sessão. O CRM fica registrado como informado, sem valor de identificação.
+    // Responsável e autor vêm da sessão. Se o médico tem registro no cadastro profissional, é ele que vale (o digitado
+    // só é usado por quem ainda não cadastrou o seu); nada do que vem do navegador substitui o cadastro.
+    const cadastro = await prisma.usuario.findFirst({
+      where: { id: ator.id, hospitalId: ator.hospitalId },
+      select: { conselho: true, registroNumero: true, registroUf: true, especialidade: true },
+    })
+    const crmFinal = formatarRegistro(cadastro) ?? crm
+    const especialidadeFinal = cadastro?.especialidade ?? especialidade
     const item = await prisma.$transaction(async tx => {
       const criado = await tx.avaliacaoMedica.create({
-        data: { pacienteId: id, responsavel: ator.nome, crm, especialidade, diagnostico, conduta, profissional: ator.nome, usuarioId: ator.id },
+        data: { pacienteId: id, responsavel: ator.nome, crm: crmFinal, especialidade: especialidadeFinal, diagnostico, conduta, profissional: ator.nome, usuarioId: ator.id },
       })
       await registrarEvento(tx, ator, id, 'Avaliação Médica', 'Avaliação médica registrada')
       return criado

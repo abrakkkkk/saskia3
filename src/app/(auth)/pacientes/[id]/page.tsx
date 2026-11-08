@@ -7,6 +7,7 @@ import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, RiscoBa
 import { isTerminal, proximosStatus, STATUS_DESFECHO } from '@/lib/paciente-status'
 import { pode } from '@/lib/permissions'
 import BuscaCid from '@/components/ui/BuscaCid'
+import { formatarRegistro } from '@/lib/registro-profissional'
 import { alergiaReal, calcularIdade, calcularMews, cpfValido, formatarCPF, formatarDataHora, formatarNascimento, nascimentoParaInput } from '@/lib/utils'
 import { erroDaApi, StatusBadge, TIPOS_SANGUINEOS, useCargo } from '../componentes'
 
@@ -136,6 +137,15 @@ export default function FichaPacientePage() {
   const [novoSinal, setNovoSinal] = useState(SINAL_VAZIO)
   const [nutricao, setNutricao] = useState(NUTRI_VAZIA)
   const [medico, setMedico] = useState(MEDICO_VAZIO)
+  // Registro e especialidade do cadastro do profissional logado: preenchem a avaliação médica sozinhos.
+  const [cadastroProf, setCadastroProf] = useState<{ crm: string | null; especialidade: string | null }>({ crm: null, especialidade: null })
+  useEffect(() => {
+    let ativo = true
+    fetch('/api/me').then(r => (r.ok ? r.json() : null)).then(u => {
+      if (ativo && u) setCadastroProf({ crm: formatarRegistro(u), especialidade: u.especialidade ?? null })
+    }).catch(() => undefined)
+    return () => { ativo = false }
+  }, [])
   const [enfermagem, setEnfermagem] = useState(ENF_VAZIA)
   const [anotacao, setAnotacao] = useState('')
 
@@ -696,8 +706,16 @@ export default function FichaPacientePage() {
             {pode_('medico:registrar') && (
               <div className="pac-margem">
                 <div className="mod-form-grid">
-                  <div className="form-group"><label htmlFor="me-crm">CRM informado</label><input id="me-crm" maxLength={40} value={medico.crm} onChange={e => setMedico({ ...medico, crm: e.target.value })} /></div>
-                  <div className="form-group"><label htmlFor="me-esp">Especialidade</label><input id="me-esp" maxLength={120} value={medico.especialidade} onChange={e => setMedico({ ...medico, especialidade: e.target.value })} /></div>
+                  {cadastroProf.crm ? (
+                    <div className="form-group"><label htmlFor="me-crm">Registro (do seu cadastro)</label><input id="me-crm" readOnly value={cadastroProf.crm} /></div>
+                  ) : (
+                    <div className="form-group"><label htmlFor="me-crm">CRM informado</label><input id="me-crm" maxLength={40} value={medico.crm} onChange={e => setMedico({ ...medico, crm: e.target.value })} aria-describedby="me-crm-dica" /><span id="me-crm-dica" className="ux-secundario">Cadastre seu registro em Minha conta para preencher sozinho.</span></div>
+                  )}
+                  {cadastroProf.especialidade ? (
+                    <div className="form-group"><label htmlFor="me-esp">Especialidade (do seu cadastro)</label><input id="me-esp" readOnly value={cadastroProf.especialidade} /></div>
+                  ) : (
+                    <div className="form-group"><label htmlFor="me-esp">Especialidade</label><input id="me-esp" maxLength={120} value={medico.especialidade} onChange={e => setMedico({ ...medico, especialidade: e.target.value })} /></div>
+                  )}
                 </div>
                 <BuscaCid onEscolher={cid => setMedico(m => ({ ...m, diagnostico: `${m.diagnostico.trim() ? `${m.diagnostico.trim()}\n` : ''}${cid.codigo} - ${cid.descricao}` }))} />
                 <div className="form-group"><label htmlFor="me-diag">Hipótese diagnóstica / CID-10</label><textarea id="me-diag" rows={3} value={medico.diagnostico} onChange={e => setMedico({ ...medico, diagnostico: e.target.value })} /></div>
