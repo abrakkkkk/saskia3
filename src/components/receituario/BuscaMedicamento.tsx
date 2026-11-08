@@ -62,8 +62,9 @@ export default function BuscaMedicamento({ rotulo, onEscolher }: { rotulo: strin
               <button type="button" onClick={() => { onEscolher(m); setTermo(''); setLista([]); }}>
                 <strong>{m.produto}</strong> <span className="rec-busca-subst">({m.substancia})</span>
                 <span className="rec-busca-apres">{m.apresentacao} · {m.laboratorio}</span>
-                {(m.tipo || m.tarja) && (
+                {(m.tipo || m.tarja || m.rename) && (
                   <span className="rec-busca-marcas">
+                    {m.rename && <em className="rec-busca-sus" title="A substância consta na Relação Nacional de Medicamentos Essenciais (RENAME 2024)">RENAME (SUS)</em>}
                     {m.tipo && <em>{m.tipo}</em>}
                     {m.tarja && <em className={controlado(m.tarja) ? 'rec-busca-controlado' : ''}>{m.tarja}</em>}
                   </span>

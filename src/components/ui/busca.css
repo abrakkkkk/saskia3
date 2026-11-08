@@ -11,3 +11,4 @@
 .rec-busca-marcas em { font-style: normal; font-size: var(--ui-t-meta); padding: 1px 8px; border-radius: 999px; background: var(--ui-surface-muted); border: 1px solid var(--ui-border); }
 .rec-busca-marcas .rec-busca-controlado { background: #fee2e2; border-color: #b91c1c; color: #7f1d1d; font-weight: 700; }
 
+.rec-busca-marcas .rec-busca-sus { background: #dcfce7; border-color: #15803d; color: #14532d; font-weight: 600; }
