@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useState } from 'react';
+import '@/components/ui/busca.css';
 
 export type MedicamentoCatalogo = {
   id: string; produto: string; substancia: string; apresentacao: string; laboratorio: string;

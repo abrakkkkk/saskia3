@@ -652,6 +652,22 @@ model Medicamento {
   @@index([busca])
 }
 
+/// CID-10 oficial (DATASUS). Uma linha por categoria (3 caracteres) e por subcategoria (4 caracteres).
+/// `folha` = pode ser escolhido como diagnóstico (categorias que se desdobram em subcategorias não podem).
+/// Compartilhado por todos os hospitais; não tem dado de paciente.
+model Cid10 {
+  id        String  @id @default(uuid())
+  /// Com ponto, como se escreve no prontuário: A00.0 (subcategoria) ou A00 (categoria).
+  codigo    String  @unique
+  descricao String
+  tipo      String
+  folha     Boolean
+  /// Código sem ponto e descrição sem acento, minúsculos, para a busca.
+  busca     String
+
+  @@index([busca])
+}
+
 /// Canal por setor (UTI, Pronto-Socorro, Enfermagem, Plantão). Aberto a toda a equipe do hospital.
 model CanalChat {
   id         String         @id @default(uuid())

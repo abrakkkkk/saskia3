@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, RiscoBadge, Tabs } from '@/components/ui'
 import { isTerminal, proximosStatus, STATUS_DESFECHO } from '@/lib/paciente-status'
 import { pode } from '@/lib/permissions'
+import BuscaCid from '@/components/ui/BuscaCid'
 import { alergiaReal, calcularIdade, calcularMews, cpfValido, formatarCPF, formatarDataHora, formatarNascimento, nascimentoParaInput } from '@/lib/utils'
 import { erroDaApi, StatusBadge, TIPOS_SANGUINEOS, useCargo } from '../componentes'
 
@@ -698,6 +699,7 @@ export default function FichaPacientePage() {
                   <div className="form-group"><label htmlFor="me-crm">CRM informado</label><input id="me-crm" maxLength={40} value={medico.crm} onChange={e => setMedico({ ...medico, crm: e.target.value })} /></div>
                   <div className="form-group"><label htmlFor="me-esp">Especialidade</label><input id="me-esp" maxLength={120} value={medico.especialidade} onChange={e => setMedico({ ...medico, especialidade: e.target.value })} /></div>
                 </div>
+                <BuscaCid onEscolher={cid => setMedico(m => ({ ...m, diagnostico: `${m.diagnostico.trim() ? `${m.diagnostico.trim()}\n` : ''}${cid.codigo} - ${cid.descricao}` }))} />
                 <div className="form-group"><label htmlFor="me-diag">Hipótese diagnóstica / CID-10</label><textarea id="me-diag" rows={3} value={medico.diagnostico} onChange={e => setMedico({ ...medico, diagnostico: e.target.value })} /></div>
                 <div className="form-group"><label htmlFor="me-cond">Conduta médica</label><textarea id="me-cond" rows={4} value={medico.conduta} onChange={e => setMedico({ ...medico, conduta: e.target.value })} /></div>
                 <button type="button" className="btn btn-primary pac-largo" disabled={salvando} onClick={async () => {
