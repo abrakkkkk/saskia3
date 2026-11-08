@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server'
 import { auditar, exigir, lerJson } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
 import { compararSenha, hashSenha, isSenhaValida, MENSAGEM_SENHA_INVALIDA } from '@/lib/password'
+import { lerRegistro, type RegistroProfissional } from '@/lib/registro-profissional'
 
 const MAX_NOME = 160
 const MAX_AVATAR_CHARS = 1_400_000
 const CAMPOS_PERFIL = {
   id: true, nome: true, email: true, cargo: true, avatar: true,
-  hospital: { select: { nome: true } },
+  conselho: true, registroNumero: true, registroUf: true, especialidade: true, rqe: true,
+  hospital: { select: { nome: true, cnpj: true, endereco: true, telefone: true, logo: true } },
 } as const
 
 function isValidAvatar(value: unknown): value is string | null {
@@ -47,6 +49,9 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: 'A imagem de perfil é inválida ou excede o limite permitido' }, { status: 400 })
   }
 
+  const registro = lerRegistro(body)
+  if ('error' in registro) return NextResponse.json({ error: registro.error }, { status: 400 })
+
   const { senhaAtual, novaSenha } = body
   if (novaSenha !== undefined && novaSenha !== '') {
     if (typeof senhaAtual !== 'string' || !senhaAtual) {
@@ -62,7 +67,7 @@ export async function PUT(request: Request) {
     const usuario = await prisma.usuario.findFirst({ where, select: { senha: true } })
     if (!usuario) return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
 
-    const data: { nome: string; avatar?: string | null; senha?: string; sessionVersion?: { increment: number } } = { nome }
+    const data: { nome: string; avatar?: string | null; senha?: string; sessionVersion?: { increment: number } } & Partial<RegistroProfissional> = { nome, ...registro.data }
     if (body.avatar !== undefined) data.avatar = body.avatar as string | null
     const trocouSenha = typeof novaSenha === 'string' && novaSenha !== ''
     if (trocouSenha) {

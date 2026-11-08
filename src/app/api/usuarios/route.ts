@@ -4,8 +4,12 @@ import { auditar, exigir, lerJson, LIMITE_LISTA } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
 import { hashSenha, isSenhaValida, MENSAGEM_SENHA_INVALIDA } from '@/lib/password'
 import { CARGOS } from '@/lib/permissions'
+import { lerRegistro } from '@/lib/registro-profissional'
 
-const CAMPOS = { id: true, nome: true, email: true, cargo: true, ativo: true, createdAt: true } as const
+const CAMPOS = {
+  id: true, nome: true, email: true, cargo: true, ativo: true, createdAt: true,
+  conselho: true, registroNumero: true, registroUf: true, especialidade: true, rqe: true,
+} as const
 const cargosPermitidos = new Set<string>(CARGOS)
 
 export async function GET() {
@@ -39,6 +43,12 @@ export async function POST(request: Request) {
   }
   if (!isSenhaValida(senha)) return NextResponse.json({ error: MENSAGEM_SENHA_INVALIDA }, { status: 400 })
   if (typeof cargo !== 'string' || !cargosPermitidos.has(cargo)) return NextResponse.json({ error: 'Cargo inválido' }, { status: 400 })
+  const registro = lerRegistro(body)
+  if ('error' in registro) return NextResponse.json({ error: registro.error }, { status: 400 })
+  // Quem prescreve precisa do registro no conselho: sem ele a receita impressa não tem validade.
+  if (cargo === 'MEDICO' && !registro.data.registroNumero) {
+    return NextResponse.json({ error: 'Informe o CRM do médico (número e UF)' }, { status: 400 })
+  }
 
   try {
     const usuario = await prisma.usuario.create({
@@ -48,6 +58,7 @@ export async function POST(request: Request) {
         senha: await hashSenha(senha),
         cargo: cargo as CargoUsuario,
         hospitalId: ator.hospitalId,
+        ...registro.data,
       },
       select: CAMPOS,
     })

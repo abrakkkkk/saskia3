@@ -4,6 +4,7 @@ import { auditar, exigir, lerJson } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
 import { hashSenha, isSenhaValida, MENSAGEM_SENHA_INVALIDA } from '@/lib/password'
 import { CARGOS } from '@/lib/permissions'
+import { lerRegistro } from '@/lib/registro-profissional'
 
 const cargosPermitidos = new Set<string>(CARGOS)
 const CONFLITO = 'Os usuários foram alterados em paralelo. Atualize a lista e tente novamente.'
@@ -39,6 +40,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
       updateData.cargo = body.cargo as CargoUsuario
     }
+    const registro = lerRegistro(body)
+    if ('error' in registro) return NextResponse.json({ error: registro.error }, { status: 400 })
+    Object.assign(updateData, registro.data)
     if ('ativo' in body) {
       if (typeof body.ativo !== 'boolean') return NextResponse.json({ error: 'Status inválido' }, { status: 400 })
       updateData.ativo = body.ativo
@@ -67,7 +71,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (atualizado.count === 0) return { error: 'nao_encontrado' as const }
       const usuario = await tx.usuario.findFirst({
         where: { id, hospitalId },
-        select: { id: true, nome: true, email: true, cargo: true, ativo: true, createdAt: true },
+        select: {
+          id: true, nome: true, email: true, cargo: true, ativo: true, createdAt: true,
+          conselho: true, registroNumero: true, registroUf: true, especialidade: true, rqe: true,
+        },
       })
       return { usuario }
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })

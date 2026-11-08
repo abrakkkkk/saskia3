@@ -6,6 +6,7 @@ import { isRecord } from '@/lib/request-validation'
 import { auditar, exigir, lerJson } from '@/lib/api-guard'
 import { alergiasCitadas } from '@/lib/alergias'
 import { isTerminal } from '@/lib/paciente-status'
+import { formatarRegistro } from '@/lib/registro-profissional'
 
 const JANELA_DUPLICIDADE_MS = 30_000
 const LIMITE_HISTORICO = 50
@@ -23,7 +24,7 @@ function sanitizeRecipeHtml(value: string) {
 
 const SELECT_RECEITA = {
   id: true, pacienteId: true, medicamentos: true, observacoes: true,
-  profissional: true, usuarioId: true, createdAt: true,
+  profissional: true, registroProfissional: true, especialidadeProfissional: true, usuarioId: true, createdAt: true,
 } satisfies Prisma.ReceitaSelect
 
 /** Histórico sempre por paciente, junto das alergias que a tela precisa destacar. */
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     const paciente = await prisma.paciente.findFirst({
       where: { id: pacienteId, hospitalId: ator.hospitalId },
-      select: { id: true, nome: true, alergias: true },
+      select: { id: true, nome: true, alergias: true, nascimento: true, cpf: true, sexo: true, endereco: true },
     })
     if (!paciente) return NextResponse.json({ error: 'Paciente não encontrado' }, { status: 404 })
 
@@ -72,6 +73,20 @@ export async function POST(request: NextRequest) {
     if (body.observacoes !== undefined && body.observacoes !== null && (typeof body.observacoes !== 'string' || body.observacoes.length > 1000)) {
       return NextResponse.json({ error: 'Observações inválidas' }, { status: 400 })
     }
+
+    // Receita sem registro no conselho não vale na farmácia: o prescritor precisa ter o dele cadastrado.
+    const prescritor = await prisma.usuario.findFirst({
+      where: { id: ator.id, hospitalId: ator.hospitalId },
+      select: { conselho: true, registroNumero: true, registroUf: true, especialidade: true, rqe: true },
+    })
+    const registroProfissional = formatarRegistro(prescritor)
+    if (!registroProfissional) {
+      return NextResponse.json({
+        error: 'Cadastre seu registro profissional (CRM, número e UF) em Minha conta antes de salvar receitas.',
+        codigo: 'REGISTRO_PROFISSIONAL_AUSENTE',
+      }, { status: 409 })
+    }
+    const especialidadeProfissional = [prescritor?.especialidade, prescritor?.rqe ? `RQE ${prescritor.rqe}` : null].filter(Boolean).join(' · ') || null
 
     const pacienteId = body.pacienteId.trim()
     const paciente = await prisma.paciente.findFirst({
@@ -117,6 +132,8 @@ export async function POST(request: NextRequest) {
         medicamentos: medicamentos as Prisma.InputJsonValue,
         observacoes: typeof body.observacoes === 'string' ? body.observacoes : null,
         profissional: ator.nome,
+        registroProfissional,
+        especialidadeProfissional,
         usuarioId: ator.id,
       },
       select: SELECT_RECEITA,

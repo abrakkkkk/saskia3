@@ -87,16 +87,42 @@
   .assinatura-item { width: 100%; }
 }
 
+/* Folha de impressão: oculta na tela, única coisa que sai no papel (A4, fluxo normal, várias páginas). */
+.rec-folha { display: none; }
+
+@page { size: A4; margin: 14mm 16mm; }
+
 @media print {
-  body * { visibility: hidden; }
-  body:not([data-print-mode="stickers"]) #papelReceita,
-  body:not([data-print-mode="stickers"]) #papelReceita * { visibility: visible; }
-  body:not([data-print-mode="stickers"]) #papelReceita { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border: none; }
-  body:not([data-print-mode="stickers"]) .hide-on-print { display: none !important; }
-  body:not([data-print-mode="stickers"]) .print-header { display: block !important; }
-  body:not([data-print-mode="stickers"]) .print-via-uso { display: block !important; }
-  body:not([data-print-mode="stickers"]) .editor-custom { border: none !important; padding: 0 !important; min-height: 0; }
-  body:not([data-print-mode="stickers"]) .medicamento-card { border: none !important; background: transparent !important; margin-bottom: 20px !important; padding: 0 !important; }
+  body:not([data-print-mode="stickers"]) { background: #fff !important; padding: 0 !important; }
+  body:not([data-print-mode="stickers"]) .emergencia-faixa,
+  body:not([data-print-mode="stickers"]) .rec-pagina > :not(.rec-folha) { display: none !important; }
+  body:not([data-print-mode="stickers"]) .app-layout,
+  body:not([data-print-mode="stickers"]) .app-container,
+  body:not([data-print-mode="stickers"]) .app-content,
+  body:not([data-print-mode="stickers"]) .rec-pagina { display: block !important; margin: 0 !important; padding: 0 !important; width: auto !important; min-height: 0 !important; overflow: visible !important; position: static !important; background: #fff !important; }
+  body:not([data-print-mode="stickers"]) .rec-folha { display: block; color: #000; font: 12pt/1.45 "Inter", Arial, sans-serif; }
+  body:not([data-print-mode="stickers"]) .rec-folha-cabecalho { display: flex; align-items: center; gap: 12pt; padding-bottom: 8pt; border-bottom: 1.5pt solid #000; }
+  body:not([data-print-mode="stickers"]) .rec-folha-logo { max-height: 22mm; max-width: 40mm; object-fit: contain; }
+  body:not([data-print-mode="stickers"]) .rec-folha-hospital { display: grid; gap: 1pt; font-size: 10pt; }
+  body:not([data-print-mode="stickers"]) .rec-folha-hospital strong { font-size: 14pt; }
+  body:not([data-print-mode="stickers"]) .rec-folha-titulo { margin: 12pt 0 8pt; text-align: center; font-size: 15pt; letter-spacing: 0.12em; text-transform: uppercase; }
+  body:not([data-print-mode="stickers"]) .rec-folha-paciente { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4pt 12pt; margin: 0 0 12pt; padding: 8pt; border: 0.75pt solid #000; font-size: 10.5pt; break-inside: avoid; }
+  body:not([data-print-mode="stickers"]) .rec-folha-paciente div { margin: 0; }
+  body:not([data-print-mode="stickers"]) .rec-folha-paciente .rec-folha-largo { grid-column: 1 / -1; }
+  body:not([data-print-mode="stickers"]) .rec-folha-paciente dt { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.04em; }
+  body:not([data-print-mode="stickers"]) .rec-folha-paciente dd { margin: 0; font-weight: 600; }
+  body:not([data-print-mode="stickers"]) .rec-folha-itens { margin: 0; padding: 0; list-style: none; counter-reset: item; }
+  body:not([data-print-mode="stickers"]) .rec-folha-item { counter-increment: item; margin: 0 0 12pt; break-inside: avoid; }
+  body:not([data-print-mode="stickers"]) .rec-folha-via { font-weight: 700; font-size: 10.5pt; }
+  body:not([data-print-mode="stickers"]) .rec-folha-via::before { content: counter(item) ". "; }
+  body:not([data-print-mode="stickers"]) .rec-folha-conteudo { margin-top: 2pt; padding-left: 12pt; overflow-wrap: anywhere; }
+  body:not([data-print-mode="stickers"]) .rec-folha-conteudo img { max-height: 16mm; }
+  body:not([data-print-mode="stickers"]) .rec-folha-rodape { margin-top: 24pt; break-inside: avoid; }
+  body:not([data-print-mode="stickers"]) .rec-folha-data { margin: 0 0 28pt; text-align: right; font-size: 10.5pt; }
+  body:not([data-print-mode="stickers"]) .rec-folha-assinatura { display: grid; gap: 1pt; width: 85mm; margin-left: auto; margin-right: auto; text-align: center; font-size: 10.5pt; }
+  body:not([data-print-mode="stickers"]) .rec-folha-linha { border-top: 0.75pt solid #000; margin-bottom: 3pt; }
+  body:not([data-print-mode="stickers"]) .rec-folha-codigo { margin: 18pt 0 0; text-align: center; font-size: 8pt; color: #333; }
+  body[data-print-mode="stickers"] * { visibility: hidden; }
   body[data-print-mode="stickers"] .print-adesivos-container,
   body[data-print-mode="stickers"] .print-adesivos-container * { visibility: visible; }
   body[data-print-mode="stickers"] .print-adesivos-container { position: absolute; left: 0; top: 0; width: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(3cm, 1fr)); gap: 10px; align-content: start; }

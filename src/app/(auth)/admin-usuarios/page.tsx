@@ -6,11 +6,16 @@ import { Check, LoaderCircle, Pencil, Plus, UserRoundX } from 'lucide-react'
 import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, SearchInput } from '@/components/ui'
 import { Modal } from '@/components/ui/Modal';
 import { CARGO_LABEL, CARGOS, pode, type Cargo } from '@/lib/permissions'
+import { formatarRegistro } from '@/lib/registro-profissional'
+import CamposRegistro, { REGISTRO_VAZIO, registroDoUsuario, type RegistroForm } from '@/components/ui/CamposRegistro'
 import '@/components/ui/modulo.css'
 import '@/components/ui/ui-extras.css'
 import './usuarios.css'
 
-type Usuario = { id: string; nome: string; email: string; cargo: Cargo; ativo: boolean; createdAt: string }
+type Usuario = {
+  id: string; nome: string; email: string; cargo: Cargo; ativo: boolean; createdAt: string
+  conselho?: string | null; registroNumero?: string | null; registroUf?: string | null; especialidade?: string | null; rqe?: string | null
+}
 
 const rotuloCargo = (cargo: string) => CARGO_LABEL[cargo as Cargo] ?? cargo
 
@@ -31,6 +36,7 @@ export default function AdminUsuariosPage() {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [cargo, setCargo] = useState<Cargo>('OUTROS')
+  const [registro, setRegistro] = useState<RegistroForm>(REGISTRO_VAZIO)
 
   const loadUsers = useCallback(async () => {
     try {
@@ -52,17 +58,17 @@ export default function AdminUsuariosPage() {
   }, [loadUsers, permitido, status])
 
   const openCreate = () => {
-    setEditing(null); setNome(''); setEmail(''); setSenha(''); setCargo('OUTROS'); setError(''); setNotice(''); setModal(true)
+    setEditing(null); setNome(''); setEmail(''); setSenha(''); setCargo('OUTROS'); setRegistro(REGISTRO_VAZIO); setError(''); setNotice(''); setModal(true)
   }
   const openEdit = (user: Usuario) => {
-    setEditing(user); setNome(user.nome); setEmail(user.email); setSenha(''); setCargo(user.cargo); setError(''); setNotice(''); setModal(true)
+    setEditing(user); setNome(user.nome); setEmail(user.email); setSenha(''); setCargo(user.cargo); setRegistro(registroDoUsuario(user)); setError(''); setNotice(''); setModal(true)
   }
   const saveUser = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (saving) return
     setSaving(true); setError(''); setNotice('')
     try {
-      const payload: Record<string, string> = { nome: nome.trim(), email: email.trim(), cargo }
+      const payload: Record<string, string> = { nome: nome.trim(), email: email.trim(), cargo, ...registro }
       if (senha) payload.senha = senha
       const response = await fetch(editing ? `/api/usuarios/${editing.id}` : '/api/usuarios', {
         method: editing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
@@ -113,13 +119,14 @@ export default function AdminUsuariosPage() {
       : <div className="tabela-wrapper">
         <table className="tabela">
           <thead>
-            <tr><th>Nome</th><th>E-mail</th><th>Cargo</th><th>Status</th><th>Ações</th></tr>
+            <tr><th>Nome</th><th>E-mail</th><th>Cargo</th><th>Registro</th><th>Status</th><th>Ações</th></tr>
           </thead>
           <tbody>
             {filtered.map(user => <tr key={user.id}>
               <td><strong>{user.nome}</strong></td>
               <td className="us-email">{user.email}</td>
               <td>{rotuloCargo(user.cargo)}</td>
+              <td>{formatarRegistro(user) ?? (user.cargo === 'MEDICO' ? <Badge tone="warning">CRM pendente</Badge> : '-')}</td>
               <td><Badge tone={user.ativo ? 'success' : 'neutral'}>{user.ativo ? 'Ativo' : 'Inativo'}</Badge></td>
               <td>
                 <span className="ux-acoes">
@@ -147,6 +154,7 @@ export default function AdminUsuariosPage() {
           <label htmlFor="us-cargo">Cargo</label>
           <select id="us-cargo" value={cargo} onChange={event => setCargo(event.target.value as Cargo)}>{CARGOS.map(item => <option key={item} value={item}>{CARGO_LABEL[item]}</option>)}</select>
         </div>
+        <CamposRegistro valor={registro} onChange={setRegistro} cargo={cargo} prefixo="us" obrigatorio={cargo === 'MEDICO'} />
         <div className="form-group">
           <label htmlFor="us-senha">Senha{editing && ' (deixe em branco para manter a atual)'}</label>
           <input id="us-senha" required={!editing} minLength={12} maxLength={72} type="password" autoComplete="new-password" aria-describedby="us-senha-dica" value={senha} onChange={event => setSenha(event.target.value)} />

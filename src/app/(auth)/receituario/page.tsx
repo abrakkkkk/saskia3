@@ -2,9 +2,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { EmptyState, ErrorState, LoadingState, PageHeader, Panel, Tabs } from '@/components/ui';
-import PacienteSelect, { cpfParcial, formatarNascimento, type PacienteOpcao } from '@/components/ui/PacienteSelect';
+import PacienteSelect, { type PacienteOpcao } from '@/components/ui/PacienteSelect';
 import AdesivosManager from '@/components/receituario/adesivos/AdesivosManager';
 import { type Adesivo } from '@/components/receituario/adesivos/catalog';
+import FolhaReceita, { type HospitalImpressao, type PacienteImpressao, type ReceitaImpressao } from '@/components/receituario/FolhaReceita';
+import { sanitizeRecipeHtml } from '@/lib/receita-html';
 import { termosDeAlergia } from '@/lib/alergias';
 import { pode } from '@/lib/permissions';
 import { mensagemErro, textoDoErro } from '@/lib/resposta';
@@ -19,56 +21,23 @@ interface Medicamento {
   conteudo: string;
 }
 
-type ReceitaSalva = {
-  id: string;
-  createdAt: string;
-  observacoes: string | null;
-  profissional: string | null;
-  medicamentos: { viaUso?: string; conteudo?: string }[];
-};
+type ReceitaSalva = ReceitaImpressao & { observacoes: string | null };
 
 type Aba = 'receituario' | 'historico' | 'adesivos';
 
 const TITULO = 'RECEITUÁRIO';
-const SUBTITULO = 'RECEITA MÉDICA - VIA DO PACIENTE';
+const SUBTITULO = 'RECEITA MÉDICA';
+
+// Valor guardado = rótulo impresso ("Uso Oral"). Intravenosa/Intramuscular mantêm o nome antigo das receitas já salvas.
+const VIAS_DE_USO = [
+  'Oral', 'Sublingual', 'Intravenosa', 'Intramuscular', 'Subcutânea', 'Tópica', 'Inalatória',
+  'Oftálmica', 'Otológica', 'Nasal', 'Retal', 'Vaginal', 'Transdérmica',
+] as const;
 const ABAS = [
   { id: 'receituario', label: 'Editor de receita', icon: 'las la-prescription-bottle' },
   { id: 'historico', label: 'Histórico do paciente', icon: 'las la-history' },
   { id: 'adesivos', label: 'Adesivos', icon: 'las la-tag' },
 ] as const;
-
-const ALLOWED_RECIPE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR', 'P', 'DIV', 'UL', 'OL', 'LI', 'IMG']);
-const DROP_CONTENT_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH', 'TEMPLATE']);
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] || character);
-}
-
-function sanitizeRecipeHtml(value: string) {
-  if (typeof window === 'undefined') return escapeHtml(value);
-  const document = new DOMParser().parseFromString(value, 'text/html');
-  for (const element of Array.from(document.body.querySelectorAll('*'))) {
-    if (!ALLOWED_RECIPE_TAGS.has(element.tagName)) {
-      if (DROP_CONTENT_TAGS.has(element.tagName)) element.remove();
-      else element.replaceWith(...Array.from(element.childNodes));
-      continue;
-    }
-    if (element.tagName === 'IMG') {
-      const src = element.getAttribute('src') || '';
-      const alt = element.getAttribute('alt') || '';
-      if (!src.startsWith('/adesivos/') || src.includes('..') || src.includes('\\')) {
-        element.remove();
-        continue;
-      }
-      for (const attribute of Array.from(element.attributes)) element.removeAttribute(attribute.name);
-      element.setAttribute('src', src);
-      element.setAttribute('alt', alt.slice(0, 120));
-    } else {
-      for (const attribute of Array.from(element.attributes)) element.removeAttribute(attribute.name);
-    }
-  }
-  return document.body.innerHTML;
-}
 
 export default function ReceituarioPage() {
   const { data: session, status: sessionStatus } = useSession();
@@ -78,7 +47,12 @@ export default function ReceituarioPage() {
 
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [activeTab, setActiveTab] = useState<Aba>('receituario');
-  const [estabelecimento, setEstabelecimento] = useState('');
+  const [hospital, setHospital] = useState<HospitalImpressao | null>(null);
+  const estabelecimento = hospital?.nome ?? '';
+  const [pacienteCompleto, setPacienteCompleto] = useState<PacienteImpressao | null>(null);
+  const [receitaSalva, setReceitaSalva] = useState<ReceitaSalva | null>(null);
+  // Receita (salva) que está na folha de impressão neste momento.
+  const [paraImprimir, setParaImprimir] = useState<{ receita: ReceitaImpressao; paciente: PacienteImpressao | null } | null>(null);
 
   const [pacienteId, setPacienteId] = useState('');
   const [paciente, setPaciente] = useState<PacienteOpcao | null>(null);
@@ -88,7 +62,6 @@ export default function ReceituarioPage() {
   const [erroPaciente, setErroPaciente] = useState('');
 
   const [registro, setRegistro] = useState('');
-  const [autorRegistro, setAutorRegistro] = useState('');
   const [salvandoPrescricao, setSalvandoPrescricao] = useState(false);
   const [erroAcao, setErroAcao] = useState('');
   const [sucesso, setSucesso] = useState('');
@@ -109,7 +82,7 @@ export default function ReceituarioPage() {
       try {
         const resposta = await fetch('/api/me');
         const dados = await resposta.json();
-        if (ativo && resposta.ok && typeof dados.hospital?.nome === 'string') setEstabelecimento(dados.hospital.nome);
+        if (ativo && resposta.ok && typeof dados.hospital?.nome === 'string') setHospital(dados.hospital);
       } catch {
         // O estabelecimento fica vazio e a impressão permanece bloqueada.
       }
@@ -125,6 +98,7 @@ export default function ReceituarioPage() {
       if (!resposta.ok) throw new Error(await mensagemErro(resposta, 'Não foi possível carregar os dados do paciente.'));
       const dados = await resposta.json();
       setAlergias(typeof dados.paciente?.alergias === 'string' ? dados.paciente.alergias : '');
+      setPacienteCompleto(dados.paciente ?? null);
       setHistorico(Array.isArray(dados.receitas) ? dados.receitas : []);
     } catch (erro) {
       setAlergias(null);
@@ -136,8 +110,8 @@ export default function ReceituarioPage() {
   }, []);
 
   const invalidarRegistro = () => {
+    setReceitaSalva(null);
     setRegistro('');
-    setAutorRegistro('');
     setSucesso('');
   };
 
@@ -145,6 +119,7 @@ export default function ReceituarioPage() {
     setPacienteId(id);
     setPaciente(selecionado);
     setAlergias(null);
+    setPacienteCompleto(null);
     setHistorico([]);
     setAlergiasCitadas([]);
     setAlergiaConfirmada(false);
@@ -224,8 +199,8 @@ export default function ReceituarioPage() {
         }
         throw new Error(typeof data?.error === 'string' ? data.error : 'Não foi possível salvar a receita.');
       }
+      setReceitaSalva(data);
       setRegistro(data.id);
-      setAutorRegistro(typeof data.profissional === 'string' ? data.profissional : '');
       setAlergiasCitadas([]);
       setSucesso('Receita salva. A impressão está liberada.');
       await carregarPaciente(pacienteId);
@@ -245,7 +220,24 @@ export default function ReceituarioPage() {
     }
   };
 
-  const temAlergiaRegistrada = termosDeAlergia(alergias).length > 0;
+  // A impressão sai sempre da receita salva: monta a folha e abre o diálogo de impressão no quadro seguinte.
+  const imprimir = (receita: ReceitaImpressao) => {
+    setParaImprimir({ receita, paciente: pacienteCompleto ?? (paciente ? { nome: paciente.nome, nascimento: paciente.nascimento, cpf: paciente.cpf } : null) });
+    window.setTimeout(() => window.print(), 150);
+  };
+
+  const copiarParaNova = (h: ReceitaSalva) => {
+    const itens = (Array.isArray(h.medicamentos) ? h.medicamentos : []).map((m, i) => ({
+      id: Date.now() + i,
+      viaUso: typeof m.viaUso === 'string' && m.viaUso ? m.viaUso : 'Oral',
+      conteudo: typeof m.conteudo === 'string' ? sanitizeRecipeHtml(m.conteudo) : '',
+    }));
+    saveDadosMemoria(itens);
+    setActiveTab('receituario');
+    setSucesso('Itens copiados para uma nova receita. Revise antes de salvar.');
+  };
+
+  const temAlergiaRegistrada =termosDeAlergia(alergias).length > 0;
 
   if (sessionStatus === 'loading') return <LoadingState message="Carregando receituário..." />;
 
@@ -310,7 +302,7 @@ export default function ReceituarioPage() {
         <div className="rec-barra hide-on-print">
           <button type="button" className="btn btn-secondary" disabled={medicamentos.length === 0} onClick={() => { setEditorAtivoIndex(medicamentos.length - 1); setModalAdesivosAberto(true); }}><i className="las la-tag" aria-hidden="true"></i> Inserir adesivo</button>
           <button type="button" className="btn btn-success" onClick={() => void salvarPrescricao()} disabled={salvandoPrescricao || !!registro || (alergiasCitadas.length > 0 && !alergiaConfirmada)}><i className="las la-save" aria-hidden="true"></i> {salvandoPrescricao ? 'Salvando...' : registro ? 'Receita salva' : 'Salvar no prontuário'}</button>
-          <button type="button" className="btn btn-secondary" onClick={() => window.print()} disabled={!registro || !estabelecimento} title={registro ? 'Imprimir receita salva' : 'Salve a receita para liberar a impressão'}><i className="las la-print" aria-hidden="true"></i> Imprimir</button>
+          <button type="button" className="btn btn-secondary" onClick={() => receitaSalva && imprimir(receitaSalva)} disabled={!receitaSalva || !estabelecimento} title={receitaSalva ? 'Imprimir receita salva' : 'Salve a receita para liberar a impressão'}><i className="las la-print" aria-hidden="true"></i> Imprimir</button>
           <button type="button" className="btn btn-secondary rec-perigo" onClick={() => void limparTudo()}><i className="las la-trash-alt" aria-hidden="true"></i> Limpar tudo</button>
         </div>
       )}
@@ -331,14 +323,6 @@ export default function ReceituarioPage() {
             </div>
           </div>
 
-          <div className="print-header">
-            <p><strong>Estabelecimento:</strong> {estabelecimento}</p>
-            <p><strong>Registro:</strong> {registro}</p>
-            {paciente && <p className="print-paciente"><strong>Paciente:</strong> {paciente.nome}</p>}
-            {paciente && <p>{formatarNascimento(paciente.nascimento)} | {cpfParcial(paciente.cpf)}</p>}
-            <hr />
-          </div>
-
           <div className="medicamentos-list">
             {medicamentos.length === 0 ? (
               <div className="hide-on-print">
@@ -350,16 +334,10 @@ export default function ReceituarioPage() {
                   <div className="card-header hide-on-print">
                     <span className="card-title">Prescrição {idx + 1}</span>
                     <div className="form-group rec-via">
-                      <select aria-label={`Via de uso da prescrição ${idx + 1}`} value={med.viaUso} onChange={e => atualizarViaUso(idx, e.target.value)}>
-                        <option value="Oral">Oral</option>
-                        <option value="Intravenosa">IV</option>
-                        <option value="Intramuscular">IM</option>
-                        <option value="Tópica">Tópica</option>
-                      </select>
+                      <select aria-label={`Via de uso da prescrição ${idx + 1}`} value={med.viaUso} onChange={e => atualizarViaUso(idx, e.target.value)}>{(VIAS_DE_USO as readonly string[]).includes(med.viaUso) ? null : <option value={med.viaUso}>{med.viaUso}</option>}{VIAS_DE_USO.map(v => <option key={v} value={v}>{v}</option>)}</select>
                     </div>
                     <button type="button" className="btn btn-secondary btn-sm rec-perigo" aria-label={`Remover prescrição ${idx + 1}`} onClick={() => removerMedicamento(idx)}><i className="las la-trash" aria-hidden="true"></i> Remover</button>
                   </div>
-                  <div className="print-via-uso">Uso: {med.viaUso}</div>
 
                   <div
                     className="editor-custom"
@@ -384,20 +362,6 @@ export default function ReceituarioPage() {
             )}
           </div>
 
-          <div className="data-receita">
-            Data: {new Date().toLocaleDateString('pt-BR')}
-          </div>
-
-          <div className="assinatura-area">
-            <div className="assinatura-item">
-              <div className="linha"></div>
-              <p>{autorRegistro || session?.user?.name || 'Assinatura do profissional'}</p>
-            </div>
-            <div className="assinatura-item">
-              <div className="linha"></div>
-              <p>Carimbo / Registro</p>
-            </div>
-          </div>
         </div>
       )}
 
@@ -413,12 +377,26 @@ export default function ReceituarioPage() {
                   {historico.map(h => (
                     <li key={h.id} className="rec-historico-item">
                       <strong>{new Date(h.createdAt).toLocaleString('pt-BR')}</strong>
-                      <p className="mod-secundario">{h.observacoes} | Profissional: {h.profissional || 'não registrado'}</p>
+                      <p className="mod-secundario">{h.observacoes} | Profissional: {h.profissional || 'não registrado'}{h.registroProfissional ? ` (${h.registroProfissional})` : ''}</p>
                       <ul>
                         {(Array.isArray(h.medicamentos) ? h.medicamentos : []).map((m, i) => (
                           <li key={i}><strong>Uso {m.viaUso}:</strong> <span dangerouslySetInnerHTML={{ __html: sanitizeRecipeHtml(typeof m.conteudo === 'string' ? m.conteudo : '') }} /></li>
                         ))}
                       </ul>
+                      <div className="mod-acoes">
+                        {isMedico && !h.registroProfissional ? (
+                          <span className="mod-nota">Receita antiga, sem registro do prescritor: não é reimpressa.</span>
+                        ) : (
+                          <button type="button" className="btn btn-secondary btn-sm" disabled={!estabelecimento} onClick={() => imprimir(h)} aria-label={`Reimprimir receita de ${new Date(h.createdAt).toLocaleDateString('pt-BR')}`}>
+                            <i className="las la-print" aria-hidden="true"></i> Reimprimir
+                          </button>
+                        )}
+                        {isMedico && (
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => copiarParaNova(h)} aria-label={`Copiar receita de ${new Date(h.createdAt).toLocaleDateString('pt-BR')} para uma nova`}>
+                            <i className="las la-copy" aria-hidden="true"></i> Copiar para nova receita
+                          </button>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -434,6 +412,8 @@ export default function ReceituarioPage() {
         onInsertText={inserirCaractere}
         onInsertSticker={inserirAdesivo}
       />
+
+      {paraImprimir && <FolhaReceita hospital={hospital} paciente={paraImprimir.paciente} receita={paraImprimir.receita} />}
     </div>
   );
 }

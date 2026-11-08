@@ -148,6 +148,13 @@ model Usuario {
   email                String                @unique
   senha                String
   cargo                CargoUsuario          @default(ENFERMEIRO_ASSISTENCIAL)
+  /// Registro no conselho profissional (CRM, COREN...). Sai impresso na receita e é exigido para prescrever.
+  conselho             String?
+  registroNumero       String?
+  registroUf           String?
+  especialidade        String?
+  /// Registro de Qualificação de Especialista (opcional).
+  rqe                  String?
   avatar               String?
   ativo                Boolean               @default(true)
   sessionVersion       Int                   @default(0)
@@ -311,6 +318,9 @@ model Receita {
   medicamentos Json
   observacoes  String?
   profissional String?
+  /// Foto do registro do prescritor no momento da receita (ex.: "CRM-CE 12345"): a reimpressão não muda se o cadastro mudar.
+  registroProfissional      String?
+  especialidadeProfissional String?
   usuarioId    String?
   usuario      Usuario? @relation(fields: [usuarioId], references: [id])
   createdAt    DateTime @default(now())

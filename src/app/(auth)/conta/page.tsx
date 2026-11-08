@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { PageHeader, Panel, LoadingState } from '@/components/ui';
 import { CARGO_LABEL, type Cargo } from '@/lib/permissions';
+import CamposRegistro, { REGISTRO_VAZIO, registroDoUsuario, type RegistroForm } from '@/components/ui/CamposRegistro';
 import '@/components/ui/modulo.css';
 import '@/components/ui/ui-extras.css';
 import '@/components/ui/modal.css';
@@ -12,7 +13,10 @@ import './conta.css';
 
 
 
-type Perfil = { nome?: string; email?: string; cargo?: string; avatar?: string | null; hospital?: { nome?: string } };
+type Perfil = {
+  nome?: string; email?: string; cargo?: string; avatar?: string | null; hospital?: { nome?: string };
+  conselho?: string | null; registroNumero?: string | null; registroUf?: string | null; especialidade?: string | null; rqe?: string | null;
+};
 
 export default function ContaPage() {
   const { data: session, status } = useSession();
@@ -21,6 +25,7 @@ export default function ContaPage() {
   const [dadosBanco, setDadosBanco] = useState<Perfil | null>(null);
   const [fotoSrc, setFotoSrc] = useState<string | null>(null);
   const [nome, setNome] = useState('');
+  const [registro, setRegistro] = useState<RegistroForm>(REGISTRO_VAZIO);
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -43,6 +48,7 @@ export default function ContaPage() {
         .then(data => {
           setDadosBanco(data);
           setNome(data.nome || '');
+          setRegistro(registroDoUsuario(data));
           setFotoSrc(data.avatar || null);
           setErro('');
         })
@@ -91,7 +97,7 @@ export default function ContaPage() {
 
     setIsSaving(true);
     try {
-      const body: Record<string, unknown> = { nome, avatar: fotoSrc };
+      const body: Record<string, unknown> = { nome, avatar: fotoSrc, ...registro };
       if (novaSenha) { body.senhaAtual = senhaAtual; body.novaSenha = novaSenha; }
 
       const res = await fetch('/api/me', {
@@ -104,6 +110,7 @@ export default function ContaPage() {
         const data = await res.json();
         setDadosBanco(data);
         setNome(data.nome);
+        setRegistro(registroDoUsuario(data));
         if (data.avatar) setFotoSrc(data.avatar);
         setSenhaAtual(''); setNovaSenha(''); setConfirmarSenha('');
         setSucesso('Dados atualizados.');
@@ -186,6 +193,12 @@ export default function ContaPage() {
                 disabled
               />
             </div>
+          </div>
+
+          <h3 className="conta-subtitulo"><i className="las la-id-card" aria-hidden="true"></i> Registro profissional</h3>
+          <p className="mod-nota">Aparece na receita impressa. Médicos precisam do CRM (número e UF) para salvar receitas.</p>
+          <div className="ux-campos">
+            <CamposRegistro valor={registro} onChange={setRegistro} cargo={cargo} prefixo="conta" />
           </div>
 
           <h3 className="conta-subtitulo"><i className="las la-lock" aria-hidden="true"></i> Alterar senha</h3>
