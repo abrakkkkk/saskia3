@@ -21,11 +21,19 @@ export async function GET(request: NextRequest) {
       : { folha: true, AND: q.split(' ').slice(0, 5).map(t => ({ busca: { contains: t } })) }
     const achados = await prisma.cid10.findMany({
       where,
-      select: { codigo: true, descricao: true },
+      select: { codigo: true, descricao: true, busca: true },
       orderBy: { codigo: 'asc' },
-      take: 25,
+      take: 150,
     })
-    return NextResponse.json(achados, { headers: { 'Cache-Control': 'private, max-age=300' } })
+    // Por nome: descrição que COMEÇA com a palavra vem primeiro, depois palavra inteira em qualquer ponto, por fim o resto
+    // (evita "asma" trazer "Mycoplasma" antes de "Asma").
+    const primeiro = q.split(' ')[0]
+    const pontos = (busca: string) => {
+      const texto = busca.slice(busca.indexOf(' ') + 1)
+      return texto.startsWith(primeiro) ? 0 : texto.includes(` ${primeiro}`) ? 1 : 2
+    }
+    if (!porCodigo) achados.sort((a, b) => pontos(a.busca) - pontos(b.busca))
+    return NextResponse.json(achados.slice(0, 25).map(({ codigo, descricao }) => ({ codigo, descricao })), { headers: { 'Cache-Control': 'private, max-age=300' } })
   } catch {
     return NextResponse.json({ error: 'Erro ao buscar no CID-10' }, { status: 500 })
   }
