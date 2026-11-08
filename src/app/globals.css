@@ -2267,7 +2267,7 @@ button,
 /* Exige ação: borda na matiz cheia */
 .ui-stat-alerta { border-color: var(--tone); }
 
-.ui-tabs { display: flex; gap: var(--ui-space-1); overflow-x: auto; border-bottom: 1px solid rgba(255, 255, 255, 0.2); margin-bottom: var(--ui-space-4); }
+.ui-tabs { display: flex; gap: var(--ui-space-1); overflow-x: auto; overflow-y: hidden; border-bottom: 1px solid rgba(255, 255, 255, 0.2); margin-bottom: var(--ui-space-4); }
 .ui-tabs button { flex: none; background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; color: var(--ui-on-dark-muted); padding: 0 var(--ui-space-4); min-height: 44px; font-size: var(--ui-t-body); font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: color 0.15s ease, border-color 0.15s ease; }
 .ui-tabs button:hover { color: var(--ui-on-dark); }
 .ui-tabs button.ativa { color: var(--ui-on-dark); border-bottom-color: var(--ui-blue-500); font-weight: 600; }
