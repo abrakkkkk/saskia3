@@ -6,7 +6,7 @@ import { EmptyState, ErrorState, LoadingState, PageHeader, Panel, RiscoBadge, Se
 import { isTerminal, STATUS_PACIENTE } from '@/lib/paciente-status';
 import { pode } from '@/lib/permissions';
 import { calcularIdade, compararFilaClinica, formatarCPF, MANCHESTER_CORES, ORDEM_MANCHESTER, STATUS_ESPERA, STATUS_SAIDA } from '@/lib/utils';
-import { acimaDoAlvo, erroDaApi, Espera, ModalChamada, ModalNovoPaciente, StatusBadge, useAgora, useCargo } from './componentes';
+import { acimaDoAlvo, erroDaApi, Espera, ModalChamada, StatusBadge, useAgora, useCargo } from './componentes';
 
 interface Paciente {
   id: string;
@@ -50,7 +50,6 @@ export default function PacientesPage() {
   const [erroCarga, setErroCarga] = useState('');
   const [mostrarArquivados, setMostrarArquivados] = useState(false);
   const [recarga, setRecarga] = useState(0);
-  const [modalNovo, setModalNovo] = useState(false);
   const [chamando, setChamando] = useState<Paciente | null>(null);
   const [exportando, setExportando] = useState(false);
 
@@ -187,11 +186,6 @@ export default function PacientesPage() {
             </button>
           )}
           <Link href="/gestao-salas" className="btn btn-secondary"><i className="las la-door-open" aria-hidden="true"></i> Salas</Link>
-          {podeCadastrar && !mostrarArquivados && (
-            <button type="button" className="btn btn-primary" onClick={() => setModalNovo(true)}>
-              <i className="las la-plus" aria-hidden="true"></i> Novo paciente
-            </button>
-          )}
         </>}
       />
 
@@ -241,7 +235,7 @@ export default function PacientesPage() {
         ) : erroCarga ? (
           <ErrorState message={erroCarga} onRetry={recarregar} />
         ) : paginados.length === 0 ? (
-          <EmptyState icon="las la-user-slash" message="Nenhum paciente encontrado." />
+          <EmptyState icon="las la-user-slash" message="Nenhum paciente encontrado. Pacientes entram pela Recepção." />
         ) : (
           <>
             <div className="tabela-wrapper pac-fila-wrapper">
@@ -305,7 +299,6 @@ export default function PacientesPage() {
         )}
       </Panel>
 
-      {modalNovo && <ModalNovoPaciente permitirInternacao onFechar={() => setModalNovo(false)} onCriado={() => { setModalNovo(false); recarregar(); }} />}
       {chamando && <ModalChamada paciente={chamando} onFechar={() => setChamando(null)} />}
     </div>
   );

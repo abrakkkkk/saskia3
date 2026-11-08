@@ -39,7 +39,7 @@ const TODOS: Cargo[] = [...CARGOS]
 
 const MATRIZ = {
   'paciente:listar': TODOS,
-  'paciente:cadastrar': ['ADMIN', 'MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'RECEPCIONISTA'],
+  'paciente:cadastrar': ['ADMIN', 'ENFERMEIRO_ASSISTENCIAL', 'RECEPCIONISTA'],
   'paciente:encaminhar': ['ADMIN', 'RECEPCIONISTA', ...CLINICA],
   'paciente:arquivar': ['ADMIN'],
   'prontuario:ler': [...CLINICA, ...REABILITACAO_ODONTO, 'FARMACEUTICO', 'NUTRICIONISTA'],
