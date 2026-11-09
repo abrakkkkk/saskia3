@@ -227,7 +227,7 @@ export default function FichaPacientePage() {
 
   const clinico = paciente.acesso === 'clinico'
   const terminal = isTerminal(paciente.status)
-  const podeEditarCadastro = pode(cargo, 'paciente:cadastrar') && !terminal
+  const podeEditarCadastro = pode(cargo, 'paciente:editar') && !terminal
   const podeVitais = pode(cargo, 'prontuario:dados-vitais')
   const pode_ = (permissao: Parameters<typeof pode>[1]) => pode(cargo, permissao) && !terminal
   const nascimento = paciente.nascimento

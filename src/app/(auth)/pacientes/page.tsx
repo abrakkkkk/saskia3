@@ -54,7 +54,8 @@ export default function PacientesPage() {
   const [exportando, setExportando] = useState(false);
 
   const podeArquivar = pode(cargo, 'paciente:arquivar');
-  const podeCadastrar = pode(cargo, 'paciente:cadastrar');
+  const podeCadastrar = pode(cargo, 'paciente:editar');
+  const podeRecepcao = pode(cargo, 'recepcao:operar');
   const podeChamar = pode(cargo, 'chamada:emitir');
 
   useEffect(() => {
@@ -235,7 +236,8 @@ export default function PacientesPage() {
         ) : erroCarga ? (
           <ErrorState message={erroCarga} onRetry={recarregar} />
         ) : paginados.length === 0 ? (
-          <EmptyState icon="las la-user-slash" message="Nenhum paciente encontrado. Pacientes entram pela Recepção." />
+          <EmptyState icon="las la-user-slash" message="Nenhum paciente encontrado. Pacientes entram pela Recepção."
+            action={podeRecepcao && !mostrarArquivados ? <Link href="/recepcao" className="btn btn-secondary"><i className="las la-concierge-bell" aria-hidden="true"></i> Ir para a Recepção</Link> : undefined} />
         ) : (
           <>
             <div className="tabela-wrapper pac-fila-wrapper">

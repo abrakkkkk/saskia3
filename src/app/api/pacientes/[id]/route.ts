@@ -111,7 +111,7 @@ export async function PUT(request: NextRequest, { params }: Contexto) {
 
     const campos = Object.keys(dados) as (keyof typeof dados)[]
     for (const campo of campos) {
-      if (!pode(ator.cargo, PERMISSAO_DO_CAMPO[campo] ?? 'paciente:cadastrar')) {
+      if (!pode(ator.cargo, PERMISSAO_DO_CAMPO[campo] ?? 'paciente:editar')) {
         return NextResponse.json({ error: `Sem permissão para alterar ${campo}` }, { status: 403 })
       }
     }

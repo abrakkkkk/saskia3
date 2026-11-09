@@ -8,7 +8,7 @@ import { calcularIdade, csvCell, formatarCPF, formatarNascimento } from '@/lib/u
 // Exportação gerada no servidor: é o único jeito de garantir permissão e trilha de auditoria.
 export async function GET(request: NextRequest) {
   try {
-    const { ator, negado } = await exigir('paciente:cadastrar')
+    const { ator, negado } = await exigir('paciente:editar')
     if (negado) return negado
 
     const params = request.nextUrl.searchParams

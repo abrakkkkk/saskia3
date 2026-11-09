@@ -40,6 +40,8 @@ const TODOS: Cargo[] = [...CARGOS]
 const MATRIZ = {
   'paciente:listar': TODOS,
   'paciente:cadastrar': ['ADMIN', 'ENFERMEIRO_ASSISTENCIAL', 'RECEPCIONISTA'],
+  // Editar cadastro existente e exportar a lista: inclui o médico (criar só pela Recepção).
+  'paciente:editar': ['ADMIN', 'MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'RECEPCIONISTA'],
   'paciente:encaminhar': ['ADMIN', 'RECEPCIONISTA', ...CLINICA],
   'paciente:arquivar': ['ADMIN'],
   'prontuario:ler': [...CLINICA, ...REABILITACAO_ODONTO, 'FARMACEUTICO', 'NUTRICIONISTA'],

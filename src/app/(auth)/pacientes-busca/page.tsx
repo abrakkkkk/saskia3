@@ -45,7 +45,7 @@ export default function BuscarPacientesPage() {
 
   const cargo = useCargo();
   const buscaCompleta = pode(cargo, 'paciente:cadastrar') || pode(cargo, 'prontuario:ler');
-  const podeExportar = pode(cargo, 'paciente:cadastrar');
+  const podeExportar = pode(cargo, 'paciente:editar');
   const [total, setTotal] = useState(0);
   const [exportando, setExportando] = useState(false);
 
