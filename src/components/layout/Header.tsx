@@ -2,6 +2,7 @@
 
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
 import { pode, type Permissao } from '@/lib/permissions';
@@ -22,6 +23,7 @@ type Props = { nome: string; email: string; cargo: string };
 
 export default function Header({ nome, email, cargo }: Props) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function Header({ nome, email, cargo }: Props) {
       </Link>
       <nav className="header-nav" aria-label="Atalhos">
         {ATALHOS.filter(a => pode(cargo, a.permissao)).map(a => (
-          <Link key={a.href} href={a.href} prefetch={false} className="header-atalho">
+          <Link key={a.href} href={a.href} prefetch={false} className="header-atalho" aria-current={pathname === a.href || pathname.startsWith(`${a.href}/`) ? 'page' : undefined}>
             <i className={a.icon} aria-hidden="true"></i> <span>{a.label}</span>
             {a.href === '/chat' && <ChatBadge />}
           </Link>

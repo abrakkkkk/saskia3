@@ -5,10 +5,12 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { inter } from '@/app/fonts'
 import EmergencyButtons from '@/components/EmergencyButtons'
-import { ErrorState, LoadingState, StatCard, StatGrid, type Tone } from '@/components/ui'
+import { ErrorState, LoadingState, type Tone } from '@/components/ui'
 import { menuDoCargo } from '@/lib/navigation'
-import { CARGO_LABEL, type Cargo } from '@/lib/permissions'
 import './dashboard.css'
+
+// Contadores que pedem ação agora ganham cartão; o resto vai numa linha compacta.
+const PRIORITARIOS = ['contador_aguardando', 'contador_leitos_vermelha', 'contador_leitos_amarela', 'contador_leitos_uti']
 
 interface DashboardStats {
   aguardando: number
@@ -52,15 +54,6 @@ const TEMAS: Record<string, string> = {
   '/obitos': 'gray', '/manutencao': 'gray', '/utilitarios': 'gray', '/chamados-ti': 'gray', '/equipe-seguranca': 'gray',
 }
 
-const DESCRICOES: Record<string, string> = {
-  '/pacientes': 'Cadastros', '/pacientes-busca': 'Pesquisa avançada', '/agenda': 'Consultas e horários', '/receituario': 'Prescrições',
-  '/exames': 'Laboratório e imagem', '/fichas-auxiliares': 'Formulários', '/uti': 'Leitos', '/centro-cirurgico': 'Salas e agenda',
-  '/banco-sangue': 'Hemoterapia', '/recepcao': 'Atendimento inicial', '/painel-chamadas': 'Painel de TV', '/farmacia': 'Medicamentos',
-  '/almoxarifado': 'Estoque', '/cssd': 'Esterilização', '/ccih': 'Controle de infecção', '/servico-social': 'Atendimento social',
-  '/obitos': 'Registro', '/manutencao': 'Predial e equipamentos', '/transporte': 'Remoção', '/gestao-salas': 'Reservas',
-  '/chat': 'Mensagens', '/ponto': 'Entrada e saída', '/ouvidoria': 'Manifestações', '/relatorios': 'Indicadores', '/biblioteca': 'Materiais',
-  '/utilitarios': 'Ferramentas', '/admin-usuarios': 'Colaboradores',
-}
 
 const STATUS_CORES: Record<string, string> = {
   'Aguardando': '#b45309', 'Em atendimento': '#1d4ed8', 'Internados': '#be185d',
@@ -116,7 +109,12 @@ export default function DashboardPage() {
 
   const ativo = (id: string) => dashboardConfig[id] !== false
   const usuario = session?.user
-  const cargoRotulo = usuario?.cargo ? CARGO_LABEL[usuario.cargo as Cargo] ?? 'Profissional' : 'Profissional'
+  // Saudação e data só no navegador (hora local do plantão, sem divergir do servidor).
+  const [agora, setAgora] = useState<Date | null>(null)
+  useEffect(() => { const t = setTimeout(() => setAgora(new Date()), 0); return () => clearTimeout(t) }, [])
+  const hora = agora?.getHours() ?? 12
+  const saudacao = !agora ? 'Olá' : hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'
+  const hoje = agora ? agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''
 
   const grupos = useMemo(() => menuDoCargo(usuario?.cargo)
     .filter(grupo => grupo.titulo !== 'Início')
@@ -160,16 +158,12 @@ export default function DashboardPage() {
   return (
     <div className={inter.className}>
       <h1 className="sr-only">Painel inicial</h1>
-      <div className="perfil-profissional">
-        <div className="perfil-info">
-          <div className="perfil-avatar" aria-hidden="true"><i className="las la-user-md"></i></div>
-          <div className="perfil-dados">
-            <h3>{usuario?.name || 'Carregando...'}</h3>
-            <p><i className="las la-hospital" aria-hidden="true"></i> {usuario?.hospitalNome || '-'}</p>
-          </div>
+      <div className="painel-topo">
+        <div>
+          <h2>{saudacao}{usuario?.name ? `, ${usuario.name.split(' ')[0]}` : ''}</h2>
+          <p>{usuario?.hospitalNome || 'Carregando...'} · {hoje}</p>
         </div>
         <EmergencyButtons />
-        <div className="perfil-badge"><i className="las la-briefcase" aria-hidden="true"></i> {cargoRotulo}</div>
       </div>
 
       {carregando && !s && <LoadingState message="Carregando indicadores..." />}
@@ -177,11 +171,23 @@ export default function DashboardPage() {
 
       {s && (
         <section aria-label="Indicadores do momento">
-          <StatGrid>
-            {kpis.filter(k => ativo(k.config)).map(k => (
-              <StatCard key={k.config} icon={k.icone} tone={k.tom} alerta={k.alerta} value={k.valor} label={k.sub ? `${k.rotulo} ${k.sub}` : k.rotulo} hint={k.dica} />
-            ))}
-          </StatGrid>
+          <div className="painel-agora">
+            <dl className="agora-principais">
+              {kpis.filter(k => PRIORITARIOS.includes(k.config) && ativo(k.config)).map(k => {
+                return (
+                  <div key={k.config} title={k.dica} className={`agora-${k.tom}`}>
+                    <dt><i className={k.icone} aria-hidden="true"></i> {k.rotulo}</dt>
+                    <dd>{k.valor}</dd>
+                  </div>
+                )
+              })}
+            </dl>
+            <dl className="agora-secundarios">
+              {kpis.filter(k => !PRIORITARIOS.includes(k.config) && ativo(k.config)).map(k => (
+                <div key={k.config} title={k.dica} className={`agora-${k.tom}`}><dt>{k.rotulo}</dt><dd>{k.valor}</dd></div>
+              ))}
+            </dl>
+          </div>
           {atualizadoEm && <p className="kpi-atualizado">Atualizado às {atualizadoEm.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>}
         </section>
       )}
@@ -194,10 +200,7 @@ export default function DashboardPage() {
               <Link key={item.href} href={item.href}>
                 <div className={`card-categoria theme-${TEMAS[item.href] ?? 'blue'}`}>
                   <div className="icon-wrapper" aria-hidden="true"><i className={item.icon}></i></div>
-                  <div>
-                    <h4>{item.label}</h4>
-                    {DESCRICOES[item.href] && <p>{DESCRICOES[item.href]}</p>}
-                  </div>
+                  <h4>{item.label}</h4>
                 </div>
               </Link>
             ))}
@@ -218,24 +221,24 @@ export default function DashboardPage() {
                   <div className="barra"><div className="barra-preenchida" style={{ width: `${pct}%`, background: STATUS_CORES[nome] }} /></div>
                 </div>
               )
-            }) : <p style={{ textAlign: 'center', color: 'var(--ui-text-muted)', padding: 20 }}>Nenhum paciente nos status exibidos.</p>}
+            }) : <p className="grafico-vazio">Nenhum paciente em atendimento agora.</p>}
           </div>}
 
           {ativo('grafico_resumo_mes') && (
             <div className="card-grafico">
               <h3><i className="las la-chart-line" aria-hidden="true"></i> Resumo assistencial</h3>
-              <div className="resumo-metricas">
-                <div className="metrica-box">
-                  <div className="metrica-badge"><i className="las la-users" aria-hidden="true"></i> Em fluxo</div>
-                  <div className="valor">{valor(s.aguardando + s.emAtendimento)}</div>
-                  <div className="label">Aguardando e em atendimento</div>
+              <dl className="resumo-lista">
+                <div>
+                  <dt>Em fluxo</dt>
+                  <dd>{valor(s.aguardando + s.emAtendimento)}</dd>
+                  <p>Aguardando e em atendimento</p>
                 </div>
-                <div className="metrica-box">
-                  <div className="metrica-badge" style={{ background: '#eff6ff', color: '#1e40af' }}><i className="las la-check-double" aria-hidden="true"></i> Desfechos</div>
-                  <div className="valor">{valor(s.altas + s.transferencias)}</div>
-                  <div className="label">Altas e transferências</div>
+                <div>
+                  <dt>Desfechos</dt>
+                  <dd>{valor(s.altas + s.transferencias)}</dd>
+                  <p>Altas e transferências</p>
                 </div>
-              </div>
+              </dl>
             </div>
           )}
         </div>
