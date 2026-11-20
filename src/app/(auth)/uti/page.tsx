@@ -46,6 +46,10 @@ export default function UtiPage() {
   const [leitosUTI, setLeitosUTI] = useState<UtiLeito[]>([]);
   const [liberando, setLiberando] = useState<{ id: string; nome: string | null } | null>(null);
   const [destino, setDestino] = useState('Internado');
+  // Complemento da liberação: leito na enfermaria ou destino da transferência (item 9).
+  const [complemento, setComplemento] = useState({ leito: '', destinoTransferencia: '' });
+  const podeDesfecho = pode(session?.user?.cargo, 'prontuario:desfecho');
+  const destinos = DESTINOS.filter(d => podeDesfecho || (d.valor !== 'Alta Médica' && d.valor !== 'Transferido'));
   const [loading, setLoading] = useState(true);
   const [erroCarga, setErroCarga] = useState('');
 
@@ -114,6 +118,10 @@ export default function UtiPage() {
 
   const confirmarLiberacao = async () => {
     if (!liberando) return;
+    if (destino === 'Transferido' && !complemento.destinoTransferencia.trim()) {
+      alert('Informe o destino da transferência.');
+      return;
+    }
     const { id, nome } = liberando;
     const rotulo = DESTINOS.find(d => d.valor === destino)?.rotulo ?? destino;
     if (!await confirm(`Liberar o leito UTI de ${nome || 'este paciente'}? Destino: ${rotulo}.`)) return;
@@ -121,7 +129,11 @@ export default function UtiPage() {
       const res = await fetch(`/api/uti/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'LIVRE', destino }),
+        body: JSON.stringify({
+          status: 'LIVRE', destino,
+          ...(destino === 'Internado' && complemento.leito.trim() ? { leito: complemento.leito.trim() } : {}),
+          ...(destino === 'Transferido' ? { destinoTransferencia: complemento.destinoTransferencia.trim() } : {}),
+        }),
       });
       const resposta = await res.json().catch(() => null);
       if (!res.ok) throw new Error(resposta?.error || 'Erro ao liberar o leito');
@@ -136,6 +148,7 @@ export default function UtiPage() {
 
   const liberarLeito = (leitoId: string, nome: string | null) => {
     setDestino('Internado');
+    setComplemento({ leito: '', destinoTransferencia: '' });
     setLiberando({ id: leitoId, nome });
   };
 
@@ -184,11 +197,23 @@ export default function UtiPage() {
                   <div className="form-group">
                     <label htmlFor="uti-destino">Destino do paciente *</label>
                     <select id="uti-destino" value={destino} onChange={e => setDestino(e.target.value)}>
-                      {DESTINOS.map(d => <option key={d.valor} value={d.valor}>{d.rotulo}</option>)}
+                      {destinos.map(d => <option key={d.valor} value={d.valor}>{d.rotulo}</option>)}
                     </select>
                   </div>
+                  {destino === 'Internado' && (
+                    <div className="form-group">
+                      <label htmlFor="uti-leito-enf">Leito na enfermaria</label>
+                      <input id="uti-leito-enf" maxLength={40} placeholder="Ex.: 204-B" value={complemento.leito} onChange={e => setComplemento({ ...complemento, leito: e.target.value })} />
+                    </div>
+                  )}
+                  {destino === 'Transferido' && (
+                    <div className="form-group">
+                      <label htmlFor="uti-destino-transf">Destino da transferência *</label>
+                      <input id="uti-destino-transf" required maxLength={200} placeholder="Hospital ou serviço de destino" value={complemento.destinoTransferencia} onChange={e => setComplemento({ ...complemento, destinoTransferencia: e.target.value })} />
+                    </div>
+                  )}
                 </div>
-                <p className="mod-nota">Óbito é registrado na tela de Óbitos, que também libera o leito.</p>
+                <p className="mod-nota">Óbito é registrado na tela de Óbitos, que também encerra a internação e libera o leito.</p>
                 <div className="mod-acoes">
                   <button type="button" className="btn btn-secondary" onClick={() => setLiberando(null)}>Cancelar</button>
                   <button type="button" className="btn btn-warning" onClick={() => void confirmarLiberacao()}>Liberar leito</button>

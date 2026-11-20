@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
+import type { TipoSaidaInternacao } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { auditar, exigir, lerJson } from '@/lib/api-guard';
 import { pode } from '@/lib/permissions';
-import { isTerminal, STATUS_DESFECHO, transicaoValida, type StatusPaciente } from '@/lib/paciente-status';
+import { STATUS_DESFECHO, type StatusPaciente } from '@/lib/paciente-status';
+import { buscarAberta, ehFalha, encerrar, falha, internar, SETOR_UTI, trocarLeito } from '@/lib/internacao';
+import { respostaErro, SERIALIZAVEL } from '@/lib/internacao-api';
 
-// Óbito não entra aqui de propósito: é registrado em /api/obitos, que também libera o leito.
+// Óbito não entra aqui de propósito: é registrado em /api/obitos, que também encerra a internação e libera o leito.
 const DESTINOS: readonly StatusPaciente[] = ['Internado', 'Alta Médica', 'Transferido', 'Evasão'];
+const SAIDA_DO_DESTINO: Partial<Record<StatusPaciente, TipoSaidaInternacao>> = {
+  'Alta Médica': 'ALTA_MEDICA',
+  'Transferido': 'TRANSFERENCIA',
+  'Evasão': 'EVASAO',
+};
 
+const texto = (valor: unknown, limite: number) => (typeof valor === 'string' ? valor.trim().slice(0, limite) || null : null);
+
+// Admissão (OCUPADO) e liberação (LIVRE) de leito de UTI. Ambas passam pela internação (item 9):
+// admitir interna o paciente ou troca o leito de quem já está internado; liberar troca para a enfermaria ou encerra.
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { ator, negado } = await exigir('uti:gerir');
@@ -18,7 +29,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (!input) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
 
     const status = input.status;
-    const permitidos = status === 'OCUPADO' ? ['status', 'pacienteId'] : ['status', 'destino'];
+    const permitidos = status === 'OCUPADO'
+      ? ['status', 'pacienteId', 'motivo', 'cid', 'medicoResponsavelId']
+      : ['status', 'destino', 'destinoTransferencia', 'motivo', 'setor', 'leito'];
     if (Object.keys(input).some(chave => !permitidos.includes(chave))) {
       return NextResponse.json({ error: 'Campo não permitido' }, { status: 400 });
     }
@@ -36,69 +49,49 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (destino && STATUS_DESFECHO.includes(destino) && !pode(ator.cargo, 'prontuario:desfecho')) {
       return NextResponse.json({ error: 'Somente o médico registra alta ou transferência' }, { status: 403 });
     }
+    const destinoTransferencia = texto(input.destinoTransferencia, 200);
+    if (destino === 'Transferido' && !destinoTransferencia) {
+      return NextResponse.json({ error: 'Informe o destino da transferência' }, { status: 400 });
+    }
+    const motivo = texto(input.motivo, 2000);
 
     const { hospitalId } = ator;
     const resultado = await prisma.$transaction(async (tx) => {
       const leito = await tx.utiLeito.findFirst({ where: { id, hospitalId }, select: { id: true, pacienteId: true, status: true } });
-      if (!leito) return { erro: 'Leito não encontrado', codigo: 404 } as const;
+      if (!leito) return falha('Leito não encontrado', 404);
 
       if (status === 'LIVRE') {
-        if (leito.status !== 'OCUPADO' || !leito.pacienteId) return { erro: 'Este leito não está ocupado', codigo: 409 } as const;
-
-        const alterado = await tx.utiLeito.updateMany({
-          where: { id, hospitalId, status: 'OCUPADO', pacienteId: leito.pacienteId },
-          data: { status: 'LIVRE', pacienteId: null, pacienteNome: null, pacienteCpf: null },
-        });
-        if (alterado.count === 0) return { erro: 'O leito foi alterado por outra pessoa. Atualize a tela.', codigo: 409 } as const;
-
-        // Só move quem ainda consta na UTI; não reabre desfecho já registrado em outra tela.
-        await tx.paciente.updateMany({
-          where: { id: leito.pacienteId, hospitalId, status: 'Internado - UTI' },
-          data: { status: destino as StatusPaciente },
-        });
-        return { leito: await tx.utiLeito.findFirst({ where: { id, hospitalId } }), pacienteId: leito.pacienteId };
+        if (leito.status !== 'OCUPADO' || !leito.pacienteId) return falha('Este leito não está ocupado');
+        const internacao = await tx.internacao.findFirst({ where: { hospitalId, utiLeitoId: id, saidaEm: null }, select: { id: true } });
+        if (!internacao) return falha('Este leito não tem internação aberta. Atualize a tela.');
+        const r = destino === 'Internado'
+          ? await trocarLeito(tx, ator, internacao.id, { setor: texto(input.setor, 80) ?? 'Enfermaria', leito: texto(input.leito, 40), utiLeitoId: null }, motivo ?? 'Alta da UTI')
+          : await encerrar(tx, ator, internacao.id, { tipoSaida: SAIDA_DO_DESTINO[destino!]!, destinoTransferencia: destino === 'Transferido' ? destinoTransferencia : null, motivoSaida: motivo });
+        if (ehFalha(r)) return r;
+        return { pacienteId: r.pacienteId, internacaoId: internacao.id };
       }
 
-      if (leito.status !== 'LIVRE' || leito.pacienteId) return { erro: 'O leito precisa estar livre para a admissão', codigo: 409 } as const;
+      if (leito.status !== 'LIVRE' || leito.pacienteId) return falha('O leito precisa estar livre para a admissão');
+      const aberta = await buscarAberta(tx, hospitalId, pacienteId);
+      const r = aberta
+        ? await trocarLeito(tx, ator, aberta.id, { setor: SETOR_UTI, leito: null, utiLeitoId: id }, motivo ?? 'Admissão na UTI')
+        : await internar(tx, ator, pacienteId, {
+          setor: SETOR_UTI, leito: null, utiLeitoId: id, motivo: motivo ?? 'Admissão na UTI',
+          cid: texto(input.cid, 12), medicoResponsavelId: texto(input.medicoResponsavelId, 64),
+        });
+      if (ehFalha(r)) return r;
+      return { pacienteId: r.pacienteId, internacaoId: r.internacaoId };
+    }, SERIALIZAVEL);
 
-      const paciente = await tx.paciente.findFirst({
-        where: { id: pacienteId, hospitalId, arquivadoEm: null },
-        select: { id: true, nome: true, cpf: true, status: true },
-      });
-      if (!paciente) return { erro: 'Paciente não encontrado neste hospital', codigo: 404 } as const;
-      if (isTerminal(paciente.status)) return { erro: 'Paciente com óbito registrado não pode ser admitido', codigo: 409 } as const;
-      if (!transicaoValida(paciente.status, 'Internado - UTI')) {
-        return { erro: `Paciente em "${paciente.status}" não pode ser admitido direto na UTI. Atualize a etapa do atendimento antes.`, codigo: 409 } as const;
-      }
-
-      const jaInternado = await tx.utiLeito.findFirst({
-        where: { hospitalId, pacienteId: paciente.id, status: 'OCUPADO', id: { not: id } },
-        select: { id: true },
-      });
-      if (jaInternado) return { erro: 'Paciente já está vinculado a outro leito ocupado', codigo: 409 } as const;
-
-      const alterado = await tx.utiLeito.updateMany({
-        where: { id, hospitalId, status: 'LIVRE', pacienteId: null },
-        data: { status: 'OCUPADO', pacienteId: paciente.id, pacienteNome: paciente.nome, pacienteCpf: paciente.cpf },
-      });
-      if (alterado.count === 0) return { erro: 'O leito foi alterado por outra pessoa. Atualize a tela.', codigo: 409 } as const;
-
-      await tx.paciente.updateMany({ where: { id: paciente.id, hospitalId }, data: { status: 'Internado - UTI' } });
-      return { leito: await tx.utiLeito.findFirst({ where: { id, hospitalId } }), pacienteId: paciente.id };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-
-    if ('erro' in resultado) return NextResponse.json({ error: resultado.erro }, { status: resultado.codigo });
+    if (ehFalha(resultado)) return NextResponse.json({ error: resultado.erro }, { status: resultado.codigo });
 
     await auditar(ator, status === 'OCUPADO' ? 'uti.admitir' : 'uti.liberar', 'UtiLeito', id, {
       pacienteId: resultado.pacienteId,
+      internacaoId: resultado.internacaoId,
       ...(destino ? { destino } : {}),
     });
-    return NextResponse.json(resultado.leito);
+    return NextResponse.json(await prisma.utiLeito.findFirst({ where: { id, hospitalId } }));
   } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2034') {
-      return NextResponse.json({ error: 'O leito ou paciente foi atualizado em paralelo. Atualize a tela e tente novamente.' }, { status: 409 });
-    }
-    console.error('Erro ao atualizar leito de UTI');
-    return NextResponse.json({ error: 'Erro ao atualizar leito de UTI' }, { status: 500 });
+    return respostaErro(error, 'atualizar leito de UTI');
   }
 }

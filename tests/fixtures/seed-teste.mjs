@@ -51,6 +51,13 @@ export async function semearBancoDeTeste(url) {
         { id: 'e2e-uti-b1', hospitalId: HOSPITAL_B.id, numero: 91, tipo: 'ADULTO', status: 'LIVRE' },
       ],
     });
+    // Internação aberta do Hospital B (item 9): o Hospital A não pode ler, trocar leito nem dar alta.
+    await prisma.internacao.create({
+      data: {
+        id: 'e2e-intern-b', hospitalId: HOSPITAL_B.id, pacienteId: 'e2e-patient-b2', setor: 'Enfermaria', leito: '7', motivo: 'Internação sigilosa Beta',
+        movimentacoes: { create: { id: 'e2e-mov-b', hospitalId: HOSPITAL_B.id, setor: 'Enfermaria', leito: '7', motivo: 'Entrada' } },
+      },
+    });
     await prisma.receita.create({
       data: { id: 'e2e-receita-b', pacienteId: 'audit-patient-b', hospitalId: HOSPITAL_B.id, medicamentos: [{ conteudo: 'Receita sigilosa Beta' }], profissional: 'Dr. Médico Beta' },
     });

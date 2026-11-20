@@ -15,21 +15,25 @@ export async function GET() {
 
   try {
     const pacientes = { hospitalId: ator.hospitalId, arquivadoEm: null }
+    // Internação (item 9): internados e leitos de UTI pela internação aberta; altas e transferências
+    // pelas saídas de internação nas últimas 24 horas.
+    const abertas = { hospitalId: ator.hospitalId, saidaEm: null, paciente: { arquivadoEm: null } }
+    const ultimas24h = { hospitalId: ator.hospitalId, saidaEm: { gte: new Date(Date.now() - 86_400_000) } }
     const [
       aguardando, emAtendimento, internados, riscoVermelho, riscoAmarelo,
       cirurgiasEmAndamento, leitosUti, totalLeitosUti, altas, evasoes, transferencias, obitos,
     ] = await Promise.all([
       prisma.paciente.count({ where: { ...pacientes, status: { in: AGUARDANDO } } }),
       prisma.paciente.count({ where: { ...pacientes, status: { in: EM_ATENDIMENTO } } }),
-      prisma.paciente.count({ where: { ...pacientes, status: { in: INTERNADOS } } }),
+      prisma.internacao.count({ where: abertas }),
       prisma.paciente.count({ where: { ...pacientes, classificacao: 'Vermelho', status: { in: EM_CURSO } } }),
       prisma.paciente.count({ where: { ...pacientes, classificacao: 'Amarelo', status: { in: EM_CURSO } } }),
       prisma.cirurgia.count({ where: { hospitalId: ator.hospitalId, status: 'EM_ANDAMENTO' } }),
-      prisma.utiLeito.count({ where: { hospitalId: ator.hospitalId, status: 'OCUPADO' } }),
+      prisma.internacao.count({ where: { ...abertas, utiLeitoId: { not: null } } }),
       prisma.utiLeito.count({ where: { hospitalId: ator.hospitalId } }),
-      prisma.paciente.count({ where: { ...pacientes, status: 'Alta Médica' } }),
+      prisma.internacao.count({ where: { ...ultimas24h, tipoSaida: 'ALTA_MEDICA' } }),
       prisma.paciente.count({ where: { ...pacientes, status: 'Evasão' } }),
-      prisma.paciente.count({ where: { ...pacientes, status: 'Transferido' } }),
+      prisma.internacao.count({ where: { ...ultimas24h, tipoSaida: 'TRANSFERENCIA' } }),
       prisma.obito.count({ where: { hospitalId: ator.hospitalId } }),
     ])
 

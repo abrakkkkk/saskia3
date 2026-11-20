@@ -46,6 +46,7 @@ before(async () => {
   await prisma.avaliacaoMedica.deleteMany({ where: { pacienteId: 'audit-patient-b' } });
   await prisma.escoreClinico.deleteMany({ where: { pacienteId: 'audit-patient-b' } });
   await prisma.exame.deleteMany({ where: { pacienteId: 'audit-patient-b' } });
+  await prisma.internacao.deleteMany({ where: { pacienteId: 'audit-patient-b' } });
 
   const csrfResponse = await request('/api/auth/csrf');
   assert.equal(csrfResponse.status, 200, 'Auth.js deve fornecer o CSRF para o login sintético');
@@ -119,4 +120,41 @@ test('hospital A cannot mutate hospital B resources or create clinical records f
   assert.equal(await prisma.avaliacaoMedica.count({ where: { pacienteId: 'audit-patient-b' } }), 0);
   assert.equal(await prisma.escoreClinico.count({ where: { pacienteId: 'audit-patient-b' } }), 0);
   assert.equal(await prisma.exame.count({ where: { pacienteId: 'audit-patient-b' } }), 0);
+});
+
+test('internação: hospital A não lê, cria, troca leito nem encerra internação do hospital B', {
+  skip: !baseUrl || !databaseUrl,
+}, async () => {
+  await prisma.usuario.update({ where: { email: 'audit.admin@example.test' }, data: { cargo: 'MEDICO' } });
+  const json = (metodo, path, body) => request(path, {
+    method: metodo,
+    headers: body ? { 'content-type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  assert.equal((await json('GET', '/api/internacoes?pacienteId=e2e-patient-b2')).status, 404, 'histórico do paciente do B deve dar 404');
+  assert.equal((await json('GET', '/api/internacoes/e2e-intern-b')).status, 404, 'internação do B deve dar 404');
+  const abertas = await (await json('GET', '/api/internacoes')).json();
+  assert.ok(Array.isArray(abertas) && !abertas.some(i => i.id === 'e2e-intern-b'), 'lista de internações abertas não pode trazer o B');
+
+  assert.equal((await json('POST', '/api/internacoes', { pacienteId: 'audit-patient-b', setor: 'Enfermaria', motivo: 'Tentativa sintética' })).status, 404,
+    'internar paciente do B deve dar 404');
+  assert.equal((await json('POST', '/api/internacoes', { pacienteId: 'e2e-patient-a1', utiLeitoId: 'e2e-uti-b1', motivo: 'Tentativa sintética' })).status, 404,
+    'internar no leito de UTI do B deve dar 404');
+  assert.equal((await json('PATCH', '/api/internacoes/e2e-intern-b', { acao: 'trocar-leito', setor: 'Enfermaria', leito: '99' })).status, 404,
+    'trocar leito da internação do B deve dar 404');
+  assert.equal((await json('PATCH', '/api/internacoes/e2e-intern-b', { acao: 'encerrar', tipoSaida: 'ALTA_MEDICA' })).status, 404,
+    'dar alta na internação do B deve dar 404');
+
+  const internacaoB = await prisma.internacao.findUnique({ where: { id: 'e2e-intern-b' } });
+  assert.equal(internacaoB.saidaEm, null);
+  assert.equal(internacaoB.leito, '7');
+  assert.equal(await prisma.movimentacaoLeito.count({ where: { internacaoId: 'e2e-intern-b' } }), 1);
+  assert.equal(await prisma.internacao.count({ where: { pacienteId: 'audit-patient-b' } }), 0);
+  assert.equal(await prisma.internacao.count({ where: { pacienteId: 'e2e-patient-a1' } }), 0, 'leito de UTI do B não pode abrir internação no A');
+  assert.equal((await prisma.utiLeito.findUnique({ where: { id: 'e2e-uti-b1' } })).status, 'LIVRE');
+  assert.equal((await prisma.paciente.findUnique({ where: { id: 'e2e-patient-b2' } })).status, 'Internado');
+  // A internação aberta do B não entra nos contadores do A.
+  const stats = await (await json('GET', '/api/dashboard/stats')).json();
+  assert.equal(stats.internados, 0, 'painel do A não pode contar internação do B');
 });

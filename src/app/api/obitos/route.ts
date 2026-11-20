@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { auditar, exigir, lerJson, LIMITE_LISTA } from '@/lib/api-guard';
 import { isTerminal } from '@/lib/paciente-status';
+import { buscarAberta, ehFalha, encerrar } from '@/lib/internacao';
 
 const ACAO_FICHA = 'obito.ficha_emitida';
 
@@ -139,6 +140,11 @@ export async function POST(request: NextRequest) {
       if (!paciente) return { obito, efeitos: null };
 
       const onde = { hospitalId: ator.hospitalId, pacienteId: paciente.id };
+      const internacao = await buscarAberta(tx, ator.hospitalId, paciente.id);
+      if (internacao) {
+        const encerrada = await encerrar(tx, ator, internacao.id, { tipoSaida: 'OBITO', destinoTransferencia: null, motivoSaida: causa.trim().slice(0, 2000) });
+        if (ehFalha(encerrada)) return { erro: encerrada.erro, status: encerrada.codigo } as const;
+      }
       await tx.paciente.updateMany({ where: { id: paciente.id, hospitalId: ator.hospitalId }, data: { status: 'Óbito' } });
       const leitos = await tx.utiLeito.updateMany({
         where: { ...onde, status: 'OCUPADO' },

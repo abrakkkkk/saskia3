@@ -47,6 +47,15 @@
   .tabela.pac-fila .pac-c-leito { grid-area: leito; justify-self: end; color: var(--ui-text-muted); font-size: var(--ui-t-label); }
   .tabela.pac-fila .pac-c-leito::before { content: attr(data-rotulo) ": "; }
   .tabela.pac-fila .pac-c-acoes { grid-area: acoes; padding-top: var(--ui-space-2); border-top: 1px solid var(--ui-border); }
+
+  /* Histórico de internações: cada internação vira um bloco com rótulo por campo */
+  .pac-historico-wrapper { overflow: visible; background: transparent; border: 0; }
+  .tabela.pac-historico { display: block; min-width: 0; }
+  .tabela.pac-historico thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .tabela.pac-historico tbody { display: grid; gap: var(--ui-space-2); }
+  .tabela.pac-historico tr { display: grid; gap: var(--ui-space-2); padding: var(--ui-space-3); background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-card); }
+  .tabela.pac-historico td { display: block; width: auto; padding: 0; border: 0; }
+  .tabela.pac-historico td::before { content: attr(data-rotulo); display: block; margin-bottom: 2px; font-size: var(--ui-t-meta); font-weight: 600; color: var(--ui-text-muted); }
 }
 
 /* Diálogos e formulários */

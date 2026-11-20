@@ -34,6 +34,9 @@ const TRANSICOES: Record<StatusPaciente, readonly StatusPaciente[]> = {
   'Óbito': [],
 }
 
+// Status mantidos pela internação aberta (item 9): só as rotas de internação os gravam.
+export const STATUS_INTERNADO: readonly string[] = ['Internado', 'Internado - UTI']
+
 // Só médico encerra um atendimento com desfecho.
 export const STATUS_DESFECHO: readonly StatusPaciente[] = ['Alta Médica', 'Transferido']
 

@@ -7,6 +7,8 @@ import {
   comEspera, cpfEmUso, filtroPacientes, isUniqueConstraintError, SELECT_REFERENCIA_ESPERA, validarDadosPaciente,
 } from '@/lib/pacientes'
 import { STATUS_SAIDA } from '@/lib/utils'
+import { ehFalha, internar } from '@/lib/internacao'
+import { SERIALIZAVEL } from '@/lib/internacao-api'
 
 const STATUS_ENTRADA = new Set(['Recepção', 'Internado'])
 
@@ -106,21 +108,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Já existe paciente com este CPF neste hospital' }, { status: 409 })
     }
 
+    // Internação direta: o cadastro nasce na Recepção e a internação (item 9) muda o status na mesma transação.
+    const internacaoDireta = body.status === 'Internado'
     const paciente = await prisma.$transaction(async tx => {
       const criado = await tx.paciente.create({
         data: {
           ...dados,
           nome,
           hospitalId: ator.hospitalId,
-          ...(typeof body.status === 'string' ? { status: body.status } : {}),
         } as Prisma.PacienteUncheckedCreateInput,
         select: { id: true, nome: true, status: true },
       })
       await tx.timelineEvent.create({
         data: { pacienteId: criado.id, tipo: 'Cadastro', descricao: `Paciente cadastrado com status ${criado.status}`, user: ator.nome, usuarioId: ator.id },
       })
-      return criado
-    })
+      if (!internacaoDireta) return criado
+      const internado = await internar(tx, ator, criado.id, {
+        setor: 'Enfermaria', leito: null, utiLeitoId: null, cid: null, medicoResponsavelId: null,
+        motivo: dados.queixaPrincipal || 'Internação direta pelo cadastro',
+      }, { origem: 'CADASTRO', ignorarJornada: true })
+      if (ehFalha(internado)) throw new Error(internado.erro)
+      return { ...criado, status: internado.status }
+    }, SERIALIZAVEL)
 
     await auditar(ator, 'CADASTRAR_PACIENTE', 'Paciente', paciente.id)
     return NextResponse.json(paciente, { status: 201 })

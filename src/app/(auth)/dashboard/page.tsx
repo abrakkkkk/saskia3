@@ -138,14 +138,14 @@ export default function DashboardPage() {
   const kpis: Kpi[] = s ? [
     { config: 'contador_aguardando', icone: 'las la-hourglass-half', tom: 'warning', alerta: true, valor: valor(s.aguardando), rotulo: 'Aguardando', dica: 'Recepção, triagem e médico' },
     { config: 'contador_atendidos', icone: 'las la-user-md', tom: 'info', valor: valor(s.emAtendimento), rotulo: 'Em atendimento', dica: 'Triagem e consulta em curso' },
-    { config: 'contador_total', icone: 'las la-procedures', tom: 'violet', valor: valor(s.internados), rotulo: 'Internados', dica: 'Enfermaria e UTI' },
+    { config: 'contador_total', icone: 'las la-procedures', tom: 'violet', valor: valor(s.internados), rotulo: 'Internados', dica: 'Internações abertas (enfermaria e UTI)' },
     { config: 'contador_leitos_vermelha', icone: 'las la-exclamation-circle', tom: 'danger', alerta: true, valor: valor(s.riscoVermelho), rotulo: 'Risco vermelho', dica: 'Classificação de risco em curso (não é sala)' },
     { config: 'contador_leitos_amarela', icone: 'las la-exclamation-triangle', tom: 'yellow', alerta: true, valor: valor(s.riscoAmarelo), rotulo: 'Risco amarelo', dica: 'Classificação de risco em curso (não é sala)' },
     { config: 'contador_salas_cc', icone: 'las la-cut', tom: 'teal', valor: valor(s.cirurgiasEmAndamento), rotulo: 'Cirurgias', dica: 'Cirurgias em andamento agora' },
-    { config: 'contador_leitos_uti', icone: 'las la-bed', tom: 'cyan', valor: statsErro && !stats ? '—' : `${s.leitosUti}/${s.totalLeitosUti}`, rotulo: 'Leitos UTI', dica: 'Leitos ocupados / cadastrados' },
-    { config: 'contador_altas', icone: 'las la-check-circle', tom: 'success', valor: valor(s.altas), rotulo: 'Altas', dica: 'Registros ativos, sem período' },
+    { config: 'contador_leitos_uti', icone: 'las la-bed', tom: 'cyan', valor: statsErro && !stats ? '—' : `${s.leitosUti}/${s.totalLeitosUti}`, rotulo: 'Leitos UTI', dica: 'Ocupados por internação / cadastrados' },
+    { config: 'contador_altas', icone: 'las la-check-circle', tom: 'success', valor: valor(s.altas), rotulo: 'Altas', dica: 'Altas de internação nas últimas 24 h' },
     { config: 'contador_evasao', icone: 'las la-door-open', tom: 'rose', alerta: true, valor: valor(s.evasoes), rotulo: 'Evasões', dica: 'Registros ativos, sem período' },
-    { config: 'contador_transferencias', icone: 'las la-truck', tom: 'neutral', valor: valor(s.transferencias), rotulo: 'Transferências', dica: 'Registros ativos, sem período' },
+    { config: 'contador_transferencias', icone: 'las la-truck', tom: 'neutral', valor: valor(s.transferencias), rotulo: 'Transferências', dica: 'Transferências de internação nas últimas 24 h' },
     { config: 'contador_obitos', icone: 'las la-cross', tom: 'neutral', valor: valor(s.obitos), rotulo: 'Óbitos', dica: 'Total registrado, sem período' },
   ] : []
 
@@ -236,7 +236,7 @@ export default function DashboardPage() {
                 <div>
                   <dt>Desfechos</dt>
                   <dd>{valor(s.altas + s.transferencias)}</dd>
-                  <p>Altas e transferências</p>
+                  <p>Altas e transferências em 24 h</p>
                 </div>
               </dl>
             </div>

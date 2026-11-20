@@ -147,10 +147,63 @@ await cenario('UTI (admitir paciente)', 'medico.alfa@example.test', async page =
   conferir(!leitosVistos.includes('e2e-uti-b1'), 'GET /api/uti mostrou leito do B');
   conferir(await api(page, 'PUT', '/api/uti/e2e-uti-b1', { status: 'OCUPADO', pacienteId: 'e2e-patient-a1' }) === 404, 'PUT no leito do B não devolveu 404');
   conferir((await prisma.utiLeito.findUnique({ where: { id: 'e2e-uti-b1' } })).status === 'LIVRE', 'leito do B foi alterado');
+  const internacaoUti = await prisma.internacao.findFirst({ where: { pacienteId: 'e2e-patient-a2', saidaEm: null } });
+  conferir(internacaoUti?.setor === 'UTI' && internacaoUti.utiLeitoId === 'e2e-uti-a1', 'admissão na UTI não abriu internação');
+  conferir((await prisma.paciente.findUnique({ where: { id: 'e2e-patient-a2' } })).status === 'Internado - UTI', 'status do paciente não acompanhou a UTI');
+});
+
+await cenario('Internação (internar, trocar leito, transferir)', 'medico.alfa@example.test', async page => {
+  const internacao = () => prisma.internacao.findFirst({ where: { pacienteId: 'e2e-patient-a1' }, orderBy: { entradaEm: 'desc' }, include: { movimentacoes: true } });
+  await page.goto(`${BASE}/pacientes/e2e-patient-a1`);
+  await page.getByRole('button', { name: 'Internar' }).click();
+  await page.locator('#int-setor').selectOption('Enfermaria');
+  await page.locator('#int-leito').fill('101');
+  await page.locator('#int-medico option', { hasText: 'Dr. Médico Alfa' }).waitFor({ state: 'attached' });
+  await page.locator('#int-medico').selectOption({ label: 'Dr. Médico Alfa (Clínica Médica)' });
+  await page.locator('#int-motivo').fill('Pneumonia comunitária, observação clínica');
+  await semDadosDoB(page, 'Ficha: internar');
+  await page.getByRole('button', { name: 'Confirmar internação' }).click();
+  await page.getByText('Enfermaria, leito 101').first().waitFor();
+  let i = await internacao();
+  conferir(i && !i.saidaEm && i.leito === '101' && i.hospitalId === HOSPITAL_A.id && i.medicoResponsavelId === 'e2e-med-a', 'internação não gravada');
+  conferir((await prisma.paciente.findUnique({ where: { id: 'e2e-patient-a1' } })).status === 'Internado', 'status não virou Internado');
+
+  await page.getByRole('button', { name: 'Trocar leito' }).click();
+  await page.locator('#troca-leito').fill('102');
+  await page.locator('#troca-motivo').fill('Isolamento de contato');
+  await page.getByRole('button', { name: 'Confirmar troca' }).click();
+  await page.getByText('Enfermaria, leito 102').first().waitFor();
+  i = await internacao();
+  conferir(i.leito === '102' && i.movimentacoes.length === 2 && i.movimentacoes.filter(m => !m.fimEm).length === 1, 'troca de leito não registrou o histórico');
+
+  await page.getByRole('button', { name: 'Registrar saída' }).click();
+  await page.locator('#saida-tipo').selectOption('TRANSFERENCIA');
+  await page.locator('#saida-destino').fill('Hospital Municipal de Teste');
+  await page.locator('#saida-motivo').fill('Necessidade de hemodinâmica');
+  await page.getByRole('button', { name: 'Confirmar saída' }).click();
+  await page.getByText('Paciente sem internação aberta.').waitFor();
+  i = await internacao();
+  conferir(i.saidaEm && i.tipoSaida === 'TRANSFERENCIA' && i.destinoTransferencia === 'Hospital Municipal de Teste', 'saída não gravada');
+  conferir(i.movimentacoes.every(m => m.fimEm), 'leito ficou aberto após a saída');
+  conferir((await prisma.paciente.findUnique({ where: { id: 'e2e-patient-a1' } })).status === 'Transferido', 'status não virou Transferido');
+
+  // Painel conta pela entidade: a2 segue na UTI; a1 foi transferido; a internação do B não entra.
+  const stats = await page.evaluate(async () => (await fetch('/api/dashboard/stats')).json());
+  conferir(stats.internados === 1 && stats.leitosUti === 1 && stats.transferencias === 1 && stats.altas === 0,
+    `painel fora do esperado: ${JSON.stringify({ i: stats.internados, uti: stats.leitosUti, t: stats.transferencias, a: stats.altas })}`);
+  await page.screenshot({ path: process.env.E2E_CAPTURA_DESKTOP ?? 'test-results/internacao-desktop.png', fullPage: true }).catch(() => {});
+  // Celular: a ficha com a seção Internação não pode estourar a largura.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE}/pacientes/e2e-patient-a1`);
+  await page.getByText('Histórico').first().waitFor();
+  const estouro = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  conferir(estouro <= 1, `ficha estoura ${estouro}px no celular`);
+  await page.screenshot({ path: process.env.E2E_CAPTURA_CELULAR ?? 'test-results/internacao-celular.png', fullPage: true }).catch(() => {});
+  conferir(await api(page, 'PATCH', '/api/internacoes/e2e-intern-b', { acao: 'encerrar', tipoSaida: 'ALTA_MEDICA' }) === 404, 'alta na internação do B não devolveu 404');
 });
 
 await prisma.$disconnect();
 await pool.end().catch(() => {});
 
 for (const r of resultados) console.log(r.ok ? `PASSOU  ${r.tela} (${(r.ms / 1000).toFixed(1)} s)` : `FALHOU  ${r.tela}: ${r.erro}`);
-process.exitCode = resultados.every(r => r.ok) && resultados.length === 4 ? 0 : 1;
+process.exitCode = resultados.every(r => r.ok) && resultados.length === 5 ? 0 : 1;

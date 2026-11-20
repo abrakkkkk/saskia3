@@ -66,6 +66,13 @@ enum StatusOcupacao {
   LIMPEZA
 }
 
+enum TipoSaidaInternacao {
+  ALTA_MEDICA
+  TRANSFERENCIA
+  EVASAO
+  OBITO
+}
+
 enum PrioridadeTicket {
   BAIXA
   MEDIA
@@ -142,6 +149,8 @@ model Hospital {
   procedimentos        Procedimento[]
   modelosProntuarios   ModeloProntuario[]
   visitantes           Visitante[]
+  internacoes          Internacao[]
+  movimentacoesLeito   MovimentacaoLeito[]
 }
 
 model Usuario {
@@ -269,6 +278,7 @@ model Paciente {
   utiLeitos            UtiLeito[]
   salas                Sala[]
   obitos               Obito[]
+  internacoes          Internacao[]
 
   @@unique([cpf, hospitalId]) // Proteção contra CPFs duplicados no mesmo hospital
   @@index([hospitalId, arquivadoEm, createdAt])
@@ -446,8 +456,71 @@ model UtiLeito {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
+  internacoes        Internacao[]
+  movimentacoesLeito MovimentacaoLeito[]
+
   @@index([hospitalId])
   @@index([pacienteId])
+}
+
+// Internação do paciente (item 9). Paciente.status acompanha a internação ativa:
+// "Internado - UTI" quando o setor é UTI, "Internado" nos demais; a saída grava o status de desfecho.
+// Índice único parcial na migração: no máximo uma internação aberta (saidaEm nulo) por paciente.
+model Internacao {
+  id                    String               @id @default(uuid())
+  hospitalId            String
+  hospital              Hospital             @relation(fields: [hospitalId], references: [id])
+  pacienteId            String
+  paciente              Paciente             @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  entradaEm             DateTime             @default(now())
+  setor                 String
+  leito                 String?
+  utiLeitoId            String?
+  utiLeito              UtiLeito?            @relation(fields: [utiLeitoId], references: [id], onDelete: SetNull)
+  motivo                String?
+  cid                   String?
+  medicoResponsavelId   String?
+  medicoResponsavelNome String?
+  registradoPorId       String?
+  registradoPorNome     String?
+  saidaEm               DateTime?
+  tipoSaida             TipoSaidaInternacao?
+  destinoTransferencia  String?
+  motivoSaida           String?
+  encerradoPorId        String?
+  encerradoPorNome      String?
+  origem                String               @default("SISTEMA")
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  movimentacoes MovimentacaoLeito[]
+
+  @@index([hospitalId, saidaEm])
+  @@index([hospitalId, tipoSaida, saidaEm])
+  @@index([pacienteId, entradaEm])
+  @@index([utiLeitoId])
+}
+
+// Histórico de leitos de uma internação: a linha aberta (fimEm nulo) é o leito atual.
+model MovimentacaoLeito {
+  id           String     @id @default(uuid())
+  hospitalId   String
+  hospital     Hospital   @relation(fields: [hospitalId], references: [id])
+  internacaoId String
+  internacao   Internacao @relation(fields: [internacaoId], references: [id], onDelete: Cascade)
+  setor        String
+  leito        String?
+  utiLeitoId   String?
+  utiLeito     UtiLeito?  @relation(fields: [utiLeitoId], references: [id], onDelete: SetNull)
+  inicioEm     DateTime   @default(now())
+  fimEm        DateTime?
+  motivo       String?
+  usuarioId    String?
+  usuarioNome  String?
+  createdAt    DateTime   @default(now())
+
+  @@index([internacaoId, inicioEm])
+  @@index([hospitalId])
 }
 
 model Sala {

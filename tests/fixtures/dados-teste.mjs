@@ -30,7 +30,7 @@ export const PACIENTES = [
   { id: 'e2e-patient-a1', hospitalId: HOSPITAL_A.id, nome: 'Paciente Alfa Triagem', status: 'Recepção', alergias: 'Nega alergias' },
   { id: 'e2e-patient-a2', hospitalId: HOSPITAL_A.id, nome: 'Paciente Alfa UTI', status: 'Aguardando Médico', alergias: 'Nega alergias' },
   { id: 'audit-patient-b', hospitalId: HOSPITAL_B.id, nome: 'Paciente Beta Sigiloso', status: 'Aguardando Médico', alergias: 'Dipirona' },
-  { id: 'e2e-patient-b2', hospitalId: HOSPITAL_B.id, nome: 'Paciente Beta Reservado', status: 'Recepção' },
+  { id: 'e2e-patient-b2', hospitalId: HOSPITAL_B.id, nome: 'Paciente Beta Reservado', status: 'Internado', leitoTipo: 'Enfermaria', leitoNumero: 7 },
 ];
 
 export const NOMES_B = PACIENTES.filter(p => p.hospitalId === HOSPITAL_B.id).map(p => p.nome);

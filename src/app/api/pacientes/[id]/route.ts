@@ -4,6 +4,7 @@ import { auditar, exigir, lerJson, LIMITE_LISTA } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
 import { pode, type Permissao } from '@/lib/permissions'
 import { isStatusPaciente, isTerminal, STATUS_DESFECHO, transicaoValida } from '@/lib/paciente-status'
+import { buscarAberta, STATUS_INTERNADO } from '@/lib/internacao'
 import { cpfEmUso, isUniqueConstraintError, registrarEvento, SELECT_CADASTRO, validarDadosPaciente } from '@/lib/pacientes'
 
 type Contexto = { params: Promise<{ id: string }> }
@@ -103,6 +104,12 @@ export async function PUT(request: NextRequest, { params }: Contexto) {
       if (STATUS_DESFECHO.includes(input.status) && !pode(ator.cargo, 'prontuario:desfecho')) {
         return NextResponse.json({ error: 'Somente médico registra alta ou transferência' }, { status: 403 })
       }
+      if (STATUS_INTERNADO.includes(input.status)) {
+        return NextResponse.json({ error: 'Para internar, use "Internar" na ficha do paciente (setor, leito e motivo).' }, { status: 409 })
+      }
+      if (await buscarAberta(prisma, hospitalId, id)) {
+        return NextResponse.json({ error: 'Paciente internado: troque o leito ou registre a saída na seção Internação.' }, { status: 409 })
+      }
       if (!transicaoValida(atual.status, input.status)) {
         return NextResponse.json({ error: `Transição inválida: ${atual.status} para ${input.status}` }, { status: 409 })
       }
@@ -114,6 +121,10 @@ export async function PUT(request: NextRequest, { params }: Contexto) {
       if (!pode(ator.cargo, PERMISSAO_DO_CAMPO[campo] ?? 'paciente:editar')) {
         return NextResponse.json({ error: `Sem permissão para alterar ${campo}` }, { status: 403 })
       }
+    }
+
+    if ((dados.leitoTipo !== undefined || dados.leitoNumero !== undefined) && await buscarAberta(prisma, hospitalId, id)) {
+      return NextResponse.json({ error: 'O leito de paciente internado muda pela troca de leito da internação.' }, { status: 409 })
     }
 
     if (campos.length === 0 && !novoStatus) {

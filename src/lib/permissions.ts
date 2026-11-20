@@ -65,6 +65,10 @@ const MATRIZ = {
   'cirurgia:gerir': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL'],
   'uti:ler': [...CLINICA, 'ADMIN'],
   'uti:gerir': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL'],
+  // Internação (item 9): ler o histórico e internar/trocar leito/registrar evasão.
+  // Alta e transferência continuam exigindo 'prontuario:desfecho'; leito de UTI também exige 'uti:gerir'.
+  'internacao:ler': ['ADMIN', 'RECEPCIONISTA', ...CLINICA, ...REABILITACAO_ODONTO, 'FARMACEUTICO', 'NUTRICIONISTA', 'ASSISTENTE_SOCIAL'],
+  'internacao:gerir': ['RECEPCIONISTA', 'MEDICO', 'ENFERMEIRO_ASSISTENCIAL'],
   'sangue:ler': [...CLINICA, 'ADMIN'],
   'sangue:gerir': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'ADMIN'],
   'obito:ler': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'ADMIN'],

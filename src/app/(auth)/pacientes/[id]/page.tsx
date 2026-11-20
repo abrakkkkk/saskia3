@@ -4,12 +4,13 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNo
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, RiscoBadge, Tabs } from '@/components/ui'
-import { isTerminal, proximosStatus, STATUS_DESFECHO } from '@/lib/paciente-status'
+import { isTerminal, proximosStatus, STATUS_DESFECHO, STATUS_INTERNADO } from '@/lib/paciente-status'
 import { pode } from '@/lib/permissions'
 import BuscaCid from '@/components/ui/BuscaCid'
 import { formatarRegistro } from '@/lib/registro-profissional'
 import { alergiaReal, calcularIdade, calcularMews, cpfValido, formatarCPF, formatarDataHora, formatarNascimento, nascimentoParaInput } from '@/lib/utils'
 import { erroDaApi, StatusBadge, TIPOS_SANGUINEOS, useCargo } from '../componentes'
+import SecaoInternacao from './internacao'
 
 type Registro = { id: string; createdAt: string; profissional?: string | null }
 type Triagem = Registro & { classificacao: string; pressao: string | null; temperatura: number | null; frequenciaC: number | null; frequenciaR: number | null; saturacao: number | null; glicemia: number | null; queixa: string | null; observacoes: string | null }
@@ -234,8 +235,10 @@ export default function FichaPacientePage() {
   const idade = calcularIdade(nascimento)
   const adulto = typeof idade === 'number' && idade >= 18
 
-  const opcoesStatus = proximosStatus(paciente.status).filter(s => s !== 'Óbito' && (!STATUS_DESFECHO.includes(s) || pode(cargo, 'prontuario:desfecho')))
-  const podeMudarStatus = pode_('paciente:encaminhar') && opcoesStatus.length > 0
+  // Internar, trocar leito e saída da internação ficam na seção Internação (item 9), não no seletor de status.
+  const internado = STATUS_INTERNADO.includes(paciente.status)
+  const opcoesStatus = proximosStatus(paciente.status).filter(s => s !== 'Óbito' && !STATUS_INTERNADO.includes(s) && (!STATUS_DESFECHO.includes(s) || pode(cargo, 'prontuario:desfecho')))
+  const podeMudarStatus = pode_('paciente:encaminhar') && !internado && opcoesStatus.length > 0
 
   const abrirEdicao = () => {
     const inicial: Record<string, string> = {}
@@ -348,6 +351,8 @@ export default function FichaPacientePage() {
           </div>
         </div>
       </Panel>
+
+      {pode(cargo, 'internacao:ler') && <SecaoInternacao pacienteId={paciente.id} cargo={cargo} terminal={terminal} onAlterado={recarregar} />}
 
       {clinico && <Tabs label="Seções do prontuário" tabs={ABAS} active={tab} onChange={setTab} />}
       {clinico && tab === 'pep' && <Tabs label="Seções do PEP" tabs={SUB_ABAS} active={pepSubTab} onChange={setPepSubTab} />}
