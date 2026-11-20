@@ -15,6 +15,11 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
     redirect('/');
   }
 
+  // Cargo que exige verificação em duas etapas: só entra depois de configurá-la.
+  if (session.user.mfaPendente) {
+    redirect('/verificacao-duas-etapas');
+  }
+
   const { cargo, name, email } = session.user;
 
   return (

@@ -8,6 +8,8 @@ declare module 'next-auth' {
       hospitalId: string
       hospitalNome: string
       sessionVersion: number
+      /** Cargo exige verificação em duas etapas e ela ainda não foi ativada. */
+      mfaPendente?: boolean
     } & DefaultSession['user']
   }
 

@@ -3,6 +3,7 @@ import { auditar, lerJson } from '@/lib/api-guard'
 import { prisma } from '@/lib/db'
 import { hashSenha } from '@/lib/password'
 import { exigirPlataforma, gerarSenhaInicial, normalizarCnpj } from '@/lib/plataforma'
+import { gerarCodigoUnidade } from '@/lib/codigo-unidade'
 
 const SEM_CACHE = { 'Cache-Control': 'no-store' }
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -11,7 +12,7 @@ export async function GET() {
   const { negado } = await exigirPlataforma()
   if (negado) return negado
   const hospitais = await prisma.hospital.findMany({
-    select: { id: true, nome: true, cnpj: true, ativo: true, createdAt: true, _count: { select: { usuarios: true } } },
+    select: { id: true, nome: true, cnpj: true, codigo: true, ativo: true, createdAt: true, _count: { select: { usuarios: true } } },
     orderBy: { createdAt: 'desc' },
     take: 200,
   })
@@ -47,7 +48,9 @@ export async function POST(request: NextRequest) {
     const senhaInicial = gerarSenhaInicial()
     const senha = await hashSenha(senhaInicial)
     const hospital = await prisma.$transaction(async tx => {
-      const novo = await tx.hospital.create({ data: { nome, cnpj, ativo: true }, select: { id: true, nome: true, cnpj: true } })
+      let codigo = gerarCodigoUnidade()
+      while (await tx.hospital.findUnique({ where: { codigo }, select: { id: true } })) codigo = gerarCodigoUnidade()
+      const novo = await tx.hospital.create({ data: { nome, cnpj, codigo, ativo: true }, select: { id: true, nome: true, cnpj: true, codigo: true } })
       await tx.usuario.create({ data: { hospitalId: novo.id, nome: adminNome, email: adminEmail, senha, cargo: 'ADMIN' } })
       return novo
     })

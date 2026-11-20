@@ -14,11 +14,15 @@ type Resultado = { ator: Ator; negado?: never } | { ator?: never; negado: NextRe
  *   const { ator, negado } = await exigir('obito:registrar')
  *   if (negado) return negado
  */
-export async function exigir(permissao: Permissao = 'autenticado'): Promise<Resultado> {
+export async function exigir(permissao: Permissao = 'autenticado', opcoes: { semMfa?: boolean } = {}): Promise<Resultado> {
   const session = await auth()
   const usuario = session?.user
   if (!usuario?.id || !usuario.hospitalId) {
     return { negado: NextResponse.json({ error: 'Não autorizado' }, { status: 401 }) }
+  }
+  // Cargos que exigem verificação em duas etapas só usam a API depois de ativá-la.
+  if (usuario.mfaPendente && !opcoes.semMfa) {
+    return { negado: NextResponse.json({ error: 'Ative a verificação em duas etapas para continuar.', codigo: 'MFA_PENDENTE' }, { status: 403 }) }
   }
   if (!pode(usuario.cargo, permissao)) {
     return { negado: NextResponse.json({ error: 'Você não tem permissão para esta ação' }, { status: 403 }) }

@@ -1,11 +1,17 @@
-import NextAuth from "next-auth"
+import NextAuth, { CredentialsSignin } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "./db"
 import { compararSenha } from "./password"
+import { normalizarCodigoUnidade } from "./codigo-unidade"
+import { conferirSegundoFator, exigeMfa } from "./mfa"
 import { limparFalhas, registrarFalha, tentativasExcedidas } from "./rate-limit"
 
 const LIMITE_POR_CONTA = 8
 const LIMITE_POR_IP = 40
+
+// Só depois da senha correta: avisa a tela que falta o código do app autenticador.
+class MfaNecessario extends CredentialsSignin { code = "mfa" }
+class MfaInvalido extends CredentialsSignin { code = "mfa_invalido" }
 
 const { handlers, auth: readSession, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -15,14 +21,19 @@ const { handlers, auth: readSession, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         senha: { label: "Senha", type: "password" },
+        codigo: { label: "Código da unidade", type: "text" },
+        // Mantido por compatibilidade com scripts de teste; a tela de login usa só o código.
         hospitalId: { label: "Hospital", type: "text" },
+        otp: { label: "Código de verificação", type: "text" },
       },
       async authorize(credentials, request) {
-        const { email, senha, hospitalId } = credentials ?? {}
+        const { email, senha, hospitalId, codigo, otp } = credentials ?? {}
+        const codigoUnidade = normalizarCodigoUnidade(codigo)
+        const idHospital = typeof hospitalId === "string" && hospitalId.length <= 64 ? hospitalId : ""
         if (
           typeof email !== "string" || !email || email.length > 254 ||
           typeof senha !== "string" || !senha || senha.length > 256 ||
-          typeof hospitalId !== "string" || !hospitalId
+          (!codigoUnidade && !idHospital)
         ) {
           return null
         }
@@ -39,7 +50,13 @@ const { handlers, auth: readSession, signIn, signOut } = NextAuth({
         }
 
         const usuario = await prisma.usuario.findFirst({
-          where: { email: emailNormalizado, hospitalId, ativo: true, hospital: { ativo: true } },
+          where: {
+            email: emailNormalizado,
+            ativo: true,
+            ...(codigoUnidade
+              ? { hospital: { codigo: codigoUnidade, ativo: true } }
+              : { hospitalId: idHospital, hospital: { ativo: true } }),
+          },
           include: { hospital: { select: { nome: true } } },
         })
 
@@ -49,6 +66,24 @@ const { handlers, auth: readSession, signIn, signOut } = NextAuth({
           await registrarFalha(chaveConta)
           await registrarFalha(chaveIp)
           return null
+        }
+
+        if (usuario.mfaAtivo) {
+          const informado = typeof otp === "string" ? otp.trim().slice(0, 32) : ""
+          if (!informado) throw new MfaNecessario()
+          const aceito = conferirSegundoFator(usuario, informado)
+          // Grava condicionado ao estado lido: duas tentativas simultâneas não gastam o mesmo código.
+          const gravado = aceito && await prisma.usuario.updateMany({
+            where: "mfaUltimoPasso" in aceito
+              ? { id: usuario.id, mfaUltimoPasso: usuario.mfaUltimoPasso }
+              : { id: usuario.id, mfaCodigosBackup: { equals: usuario.mfaCodigosBackup } },
+            data: aceito,
+          })
+          if (!gravado || gravado.count !== 1) {
+            await registrarFalha(chaveConta)
+            await registrarFalha(chaveIp)
+            throw new MfaInvalido()
+          }
         }
 
         await limparFalhas(chaveConta)
@@ -138,6 +173,7 @@ export async function auth() {
       email: true,
       cargo: true,
       sessionVersion: true,
+      mfaAtivo: true,
       hospital: { select: { nome: true } },
     },
   })
@@ -153,6 +189,8 @@ export async function auth() {
       email: activeUser.email,
       cargo: activeUser.cargo,
       hospitalNome: activeUser.hospital.nome,
+      // ADMIN sem verificação em duas etapas só acessa a tela de configurá-la.
+      mfaPendente: exigeMfa(activeUser.cargo) && !activeUser.mfaAtivo,
     },
   }
 }

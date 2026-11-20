@@ -22,6 +22,7 @@ export default function AdminConfiguracaoPage() {
   // Form states
   const [nome, setNome] = useState('');
   const [cnpj, setCnpj] = useState('');
+  const [codigoUnidade, setCodigoUnidade] = useState('');
   const [endereco, setEndereco] = useState('');
   const [telefone, setTelefone] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -41,6 +42,7 @@ export default function AdminConfiguracaoPage() {
         if (!current || typeof current !== 'object') throw new Error('A resposta do hospital é inválida.');
         setNome(current.nome || '');
         setCnpj(current.cnpj || '');
+        setCodigoUnidade(typeof current.codigo === 'string' ? current.codigo : '');
         setEndereco(current.endereco || '');
         setTelefone(current.telefone || '');
         setLogoUrl(current.logo || '');
@@ -202,6 +204,19 @@ export default function AdminConfiguracaoPage() {
                     maxLength={20}
                     required
                   />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="instituicao-codigo">Código da unidade (login)</label>
+                  <input
+                    id="instituicao-codigo"
+                    type="text"
+                    value={codigoUnidade || 'Ainda não definido'}
+                    readOnly
+                    aria-describedby="instituicao-codigo-dica"
+                    style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '0.08em' }}
+                  />
+                  <small id="instituicao-codigo-dica" style={{ display: 'block', marginTop: 6, color: 'var(--ui-text-muted)', fontSize: 'var(--ui-t-meta)' }}>A equipe digita este código para entrar. Para trocá-lo, fale com o suporte da plataforma.</small>
                 </div>
 
                 <div className="form-group">

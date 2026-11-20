@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { PageHeader, Panel, LoadingState } from '@/components/ui';
 import { CARGO_LABEL, type Cargo } from '@/lib/permissions';
 import CamposRegistro, { REGISTRO_VAZIO, registroDoUsuario, type RegistroForm } from '@/components/ui/CamposRegistro';
@@ -246,6 +247,13 @@ export default function ContaPage() {
             </button>
           </div>
         </form>
+      </Panel>
+
+      <Panel title="Verificação em duas etapas" icon="las la-shield-alt">
+        <p className="conta-mfa-texto">Além da senha, o login pede um código do app autenticador do celular.{session?.user?.cargo === 'ADMIN' ? ' Obrigatória para administradores.' : ''}</p>
+        <Link href="/verificacao-duas-etapas" className="btn btn-secondary">
+          <i className="las la-mobile-alt" aria-hidden="true"></i> Configurar ou gerenciar
+        </Link>
       </Panel>
     </div>
   );

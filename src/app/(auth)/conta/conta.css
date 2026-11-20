@@ -14,3 +14,5 @@
 .conta-info i { color: var(--ui-blue-700); margin-right: 6px; }
 .conta-subtitulo { display: flex; align-items: center; gap: 8px; margin: var(--ui-space-5) 0 var(--ui-space-3); padding-top: var(--ui-space-4); border-top: 1px solid var(--ui-border); font-size: var(--ui-t-section); font-weight: 600; }
 .conta-subtitulo i { color: var(--ui-blue-700); font-size: 20px; }
+
+.conta-mfa-texto { margin: 0 0 var(--ui-space-3); color: var(--ui-text-muted); font-size: var(--ui-t-body); max-width: 64ch; }

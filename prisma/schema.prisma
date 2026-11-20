@@ -95,6 +95,8 @@ model Hospital {
   id        String   @id @default(uuid())
   nome      String
   cnpj      String   @unique
+  /// Código curto da unidade digitado no login (substitui a lista pública de hospitais).
+  codigo    String?  @unique
   endereco  String?
   telefone  String?
   email     String?
@@ -162,6 +164,13 @@ model Usuario {
   avatar               String?
   ativo                Boolean               @default(true)
   sessionVersion       Int                   @default(0)
+  /// Verificação em duas etapas (TOTP). Segredo cifrado com AES-256-GCM (chave derivada de AUTH_SECRET).
+  mfaSegredo           String?
+  mfaAtivo             Boolean               @default(false)
+  /// Último passo de 30 s aceito: impede reutilizar o mesmo código.
+  mfaUltimoPasso       Int?
+  /// Hashes SHA-256 dos códigos de recuperação ainda não usados.
+  mfaCodigosBackup     String[]              @default([])
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   pontoRegistros       PontoRegistro[]
@@ -188,8 +197,22 @@ model Usuario {
   examesSolicitados Exame[] @relation("ExameSolicitante")
   examesLiberados Exame[] @relation("ExameLiberador")
   obitosRegistrados Obito[]
+  tokensRedefinicaoSenha TokenRedefinicaoSenha[]
 
   @@index([hospitalId])
+}
+
+/// "Esqueci minha senha": token de uso único, guardado só como hash SHA-256.
+model TokenRedefinicaoSenha {
+  id         String    @id @default(uuid())
+  usuarioId  String
+  usuario    Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  expiraEm   DateTime
+  usadoEm    DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([usuarioId])
 }
 
 model Paciente {

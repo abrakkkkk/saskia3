@@ -6,8 +6,8 @@ import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel } from '
 import '@/components/ui/modulo.css'
 import '@/components/ui/ui-extras.css'
 
-type Hospital = { id: string; nome: string; cnpj: string; ativo: boolean; createdAt: string; _count: { usuarios: number } }
-type Credenciais = { hospital: string; login: string; senha: string }
+type Hospital = { id: string; nome: string; cnpj: string; codigo: string | null; ativo: boolean; createdAt: string; _count: { usuarios: number } }
+type Credenciais = { hospital: string; codigo: string; login: string; senha: string }
 
 const FORM_VAZIO = { nome: '', cnpj: '', adminNome: '', adminEmail: '' }
 
@@ -53,7 +53,7 @@ export default function PlataformaPage() {
       const r = await fetch('/api/plataforma/hospitais', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       const dados = await r.json().catch(() => null)
       if (!r.ok) { setMensagem(dados?.error ?? 'Não foi possível criar o hospital.'); return }
-      setCredenciais({ hospital: dados.hospital.nome, login: dados.adminEmail, senha: dados.senhaInicial })
+      setCredenciais({ hospital: dados.hospital.nome, codigo: dados.hospital.codigo, login: dados.adminEmail, senha: dados.senhaInicial })
       setForm(FORM_VAZIO)
       setCopiado(false)
       void carregar()
@@ -64,9 +64,17 @@ export default function PlataformaPage() {
 
   async function alternar(h: Hospital) {
     const acao = h.ativo ? 'Desativar' : 'Ativar'
-    if (!await confirm(`${acao} o hospital "${h.nome}"? ${h.ativo ? 'Os usuários dele deixam de conseguir entrar.' : 'Ele volta a aparecer no login.'}`)) return
+    if (!await confirm(`${acao} o hospital "${h.nome}"? ${h.ativo ? 'Os usuários dele deixam de conseguir entrar.' : 'A equipe volta a conseguir entrar.'}`)) return
     const r = await fetch(`/api/plataforma/hospitais/${h.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ativo: !h.ativo }) })
     if (!r.ok) { const d = await r.json().catch(() => null); setMensagem(d?.error ?? 'Não foi possível atualizar o hospital.'); return }
+    setMensagem('')
+    void carregar()
+  }
+
+  async function trocarCodigo(h: Hospital) {
+    if (!await confirm(`Gerar um novo código de unidade para "${h.nome}"? O código atual (${h.codigo ?? 'nenhum'}) deixa de funcionar no login e a equipe precisa receber o novo.`)) return
+    const r = await fetch(`/api/plataforma/hospitais/${h.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ novoCodigo: true }) })
+    if (!r.ok) { const d = await r.json().catch(() => null); setMensagem(d?.error ?? 'Não foi possível trocar o código.'); return }
     setMensagem('')
     void carregar()
   }
@@ -74,7 +82,7 @@ export default function PlataformaPage() {
   async function copiar() {
     if (!credenciais) return
     try {
-      await navigator.clipboard.writeText(`Login: ${credenciais.login}\nSenha: ${credenciais.senha}`)
+      await navigator.clipboard.writeText(`Código da unidade: ${credenciais.codigo}\nLogin: ${credenciais.login}\nSenha: ${credenciais.senha}`)
       setCopiado(true)
     } catch {
       setCopiado(false)
@@ -133,11 +141,12 @@ export default function PlataformaPage() {
               <p className="mod-aviso mod-aviso-atencao" role="status">
                 A senha aparece só agora. Copie e entregue ao administrador de {credenciais.hospital}; ele deve trocá-la no primeiro acesso (Minha Conta).
               </p>
+              <p><strong>Código da unidade:</strong> <code className="ui-num">{credenciais.codigo}</code></p>
               <p><strong>Login:</strong> {credenciais.login}</p>
               <p><strong>Senha:</strong> <code className="ui-num">{credenciais.senha}</code></p>
               <div className="mod-acoes">
                 <button type="button" className="btn btn-secondary" onClick={() => void copiar()}>
-                  <i className="las la-copy" aria-hidden="true"></i> {copiado ? 'Copiado' : 'Copiar login e senha'}
+                  <i className="las la-copy" aria-hidden="true"></i> {copiado ? 'Copiado' : 'Copiar código, login e senha'}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={() => setCredenciais(null)}>Já anotei, ocultar</button>
               </div>
@@ -151,19 +160,25 @@ export default function PlataformaPage() {
               <div className="tabela-wrapper">
                 <table className="tabela">
                   <thead>
-                    <tr><th scope="col">Hospital</th><th scope="col">CNPJ</th><th scope="col">Usuários</th><th scope="col">Situação</th><th scope="col">Ação</th></tr>
+                    <tr><th scope="col">Hospital</th><th scope="col">Código</th><th scope="col">CNPJ</th><th scope="col">Usuários</th><th scope="col">Situação</th><th scope="col">Ação</th></tr>
                   </thead>
                   <tbody>
                     {hospitais.map(h => (
                       <tr key={h.id}>
                         <td><strong>{h.nome}</strong></td>
+                        <td><code className="ui-num">{h.codigo ?? '—'}</code></td>
                         <td>{h.cnpj}</td>
                         <td>{h._count.usuarios}</td>
                         <td><Badge tone={h.ativo ? 'success' : 'neutral'}>{h.ativo ? 'Ativo' : 'Desativado'}</Badge></td>
                         <td>
-                          <button type="button" className="btn btn-sm btn-secondary" onClick={() => void alternar(h)}>
-                            {h.ativo ? 'Desativar' : 'Ativar'}
-                          </button>
+                          <div className="mod-acoes">
+                            <button type="button" className="btn btn-sm btn-secondary" onClick={() => void trocarCodigo(h)}>
+                              Trocar código
+                            </button>
+                            <button type="button" className="btn btn-sm btn-secondary" onClick={() => void alternar(h)}>
+                              {h.ativo ? 'Desativar' : 'Ativar'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

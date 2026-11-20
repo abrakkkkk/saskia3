@@ -1,246 +1,182 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
-import Link from 'next/link'
-import { Hospital, Mail, Lock, LogIn, AlertTriangle } from 'lucide-react'
-import { inter } from '@/app/fonts'
+import { Hospital, KeyRound, Lock, LogIn, Mail, ShieldCheck } from 'lucide-react'
+import { AuthShell, AvisoAcesso, BotaoAcesso, CampoAcesso, LinkAcesso } from '@/components/auth/AuthShell'
 
-interface HospitalData {
-  id: string;
-  nome: string;
-}
+// Conveniência do aparelho: o código da unidade não é segredo, só evita redigitar a cada plantão.
+const CHAVE_CODIGO = 'saskia:codigo-unidade'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [hospitais, setHospitais] = useState<HospitalData[]>([])
-  const [carregandoHospitais, setCarregandoHospitais] = useState(true)
-  const [erroHospitais, setErroHospitais] = useState('')
-  const [hospitalId, setHospitalId] = useState('')
+  const [codigo, setCodigo] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
+  const [otp, setOtp] = useState('')
+  const [pedeOtp, setPedeOtp] = useState(false)
   const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
+  const otpRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const controller = new AbortController()
-    fetch('/api/hospitais', { signal: controller.signal })
-      .then(async response => {
-        if (!response.ok) throw new Error('Não foi possível carregar as unidades hospitalares.')
-        const data: unknown = await response.json()
-        if (!Array.isArray(data) || data.some(item => !item || typeof item.id !== 'string' || typeof item.nome !== 'string')) {
-          throw new Error('A lista de unidades recebida é inválida.')
-        }
-        return data as HospitalData[]
-      })
-      .then(data => {
-        setHospitais(data)
-        setErroHospitais(data.length ? '' : 'Nenhuma unidade hospitalar está disponível para acesso.')
-      })
-      .catch(error => {
-        if (error instanceof Error && error.name === 'AbortError') return
-        setErroHospitais(error instanceof Error ? error.message : 'Não foi possível carregar as unidades hospitalares.')
-        setHospitais([])
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setCarregandoHospitais(false)
-      })
-    return () => controller.abort()
+    try {
+      const salvo = localStorage.getItem(CHAVE_CODIGO)
+      if (salvo) void Promise.resolve().then(() => setCodigo(salvo))
+    } catch { /* armazenamento indisponível: segue sem lembrar */ }
   }, [])
+
+  useEffect(() => {
+    if (pedeOtp) otpRef.current?.focus()
+  }, [pedeOtp])
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault()
     setErro('')
 
-    if (!hospitalId || !email || !senha) {
-      setErro('Preencha todos os campos para continuar.')
+    const codigoLimpo = codigo.replace(/[\s-]/g, '').toUpperCase()
+    if (!codigoLimpo || !email || !senha) {
+      setErro('Preencha o código da unidade, o e-mail e a senha.')
       return
     }
-
-    if (!hospitais.some(hospital => hospital.id === hospitalId)) {
-      setErro('Selecione o hospital.')
+    if (pedeOtp && !otp.trim()) {
+      setErro('Digite o código do app autenticador.')
       return
     }
 
     setLoading(true)
     try {
       const resultado = await signIn('credentials', {
+        codigo: codigoLimpo,
         email,
         senha,
-        hospitalId,
-        redirect: false
+        otp: pedeOtp ? otp.trim() : '',
+        redirect: false,
       })
 
-      if (resultado?.error || !resultado?.ok) {
-        // Mensagem única: não revela se a conta existe, está inativa ou bloqueada por excesso de tentativas.
-        setErro('Não foi possível entrar. Confira os dados ou tente de novo em alguns minutos.')
+      if (resultado?.code === 'mfa') {
+        setPedeOtp(true)
         setLoading(false)
-      } else {
-        router.push('/dashboard')
+        return
       }
+      if (resultado?.code === 'mfa_invalido') {
+        setOtp('')
+        setErro('Código de verificação incorreto ou já usado. Digite o código atual do app.')
+        setLoading(false)
+        otpRef.current?.focus()
+        return
+      }
+      if (resultado?.error || !resultado?.ok) {
+        // Mensagem única: não revela se a unidade ou a conta existem, estão inativas ou bloqueadas.
+        setErro('Não foi possível entrar. Confira o código da unidade, o e-mail e a senha, ou tente de novo em alguns minutos.')
+        setLoading(false)
+        return
+      }
+      try { localStorage.setItem(CHAVE_CODIGO, codigoLimpo) } catch { /* sem armazenamento */ }
+      router.push('/dashboard')
     } catch {
       setErro('Não foi possível conectar ao serviço de autenticação. Tente novamente.')
       setLoading(false)
     }
   }
 
+  function voltar() {
+    setPedeOtp(false)
+    setOtp('')
+    setErro('')
+  }
+
   return (
-    <div className={`min-h-screen w-full flex flex-col lg:flex-row-reverse selection:bg-blue-500/30 ${inter.className}`}>
-
-      {/* Lado Direito (Agora) - Formulário de Login */}
-      <div className="min-h-screen w-full lg:w-[45%] bg-[#0a1f44] flex flex-col items-center justify-center p-5 sm:p-6 lg:p-12 relative z-10 shadow-[-20px_0_50px_rgba(0,0,0,0.5)]">
-
-        {/* Container / Delimitador Visual (Mantido o mesmo design) */}
-        <div
-          className="w-full max-w-sm relative z-10"
-          style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.04)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            padding: 'clamp(24px, 5vw, 36px) clamp(20px, 4vw, 32px)',
-            borderRadius: '12px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(12px)',
-          }}
-        >
-
-          <div className="flex flex-col items-center text-center" style={{ marginBottom: '28px' }}>
-            <Image
-              src="/images/logo.png"
-              alt="Saskia Saúde"
-              width={180}
-              height={72}
-              className="h-14 w-auto object-contain brightness-0 invert"
-              style={{ marginBottom: '20px' }}
-              priority
+    <AuthShell
+      titulo={pedeOtp ? 'Verificação em duas etapas' : 'Acessar o sistema'}
+      descricao={pedeOtp ? 'Abra o app autenticador no celular e digite o código de 6 dígitos. Sem o celular, use um código de recuperação.' : undefined}
+      rodape={pedeOtp ? undefined : (
+        <>
+          <LinkAcesso href="/esqueci-senha">Esqueci minha senha</LinkAcesso>
+          <span aria-hidden="true" style={{ margin: '0 10px' }}>·</span>
+          <LinkAcesso href="/politicas-privacidade">Política de Privacidade</LinkAcesso>
+        </>
+      )}
+    >
+      <form onSubmit={handleLogin} aria-busy={loading} noValidate>
+        {!pedeOtp ? (
+          <>
+            <CampoAcesso
+              id="login-codigo"
+              rotulo="Código da unidade"
+              icone={Hospital}
+              value={codigo}
+              onChange={e => setCodigo(e.target.value.toUpperCase())}
+              placeholder="Ex.: K7M3QX"
+              required
+              maxLength={14}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              autoComplete="organization"
+              dica="Peça ao administrador do seu hospital."
+              style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '8px', fontSize: '16px', color: '#0f172a', letterSpacing: '0.08em', fontVariantNumeric: 'tabular-nums' }}
             />
-            <h1 className="text-xl font-semibold tracking-tight text-white" style={{ margin: 0 }}>Acessar o sistema</h1>
-          </div>
-
-          {/* Form Area */}
-          <form onSubmit={handleLogin} aria-busy={loading || carregandoHospitais}>
-
-            <div className="flex flex-col" style={{ marginBottom: '20px' }}>
-              <label htmlFor="hospitalId" className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
-                <Hospital aria-hidden="true" className="w-3.5 h-3.5 text-blue-400" /> Hospital
-              </label>
-              <div className="relative">
-                <select
-                  id="hospitalId"
-                  value={hospitalId}
-                  onChange={(e) => setHospitalId(e.target.value)}
-                  required
-                  disabled={carregandoHospitais || hospitais.length === 0}
-                  className="w-full bg-white border-2 border-transparent focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-lg appearance-none"
-                  style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', color: '#0f172a' }}
-                >
-                  <option value="" style={{ color: '#64748b' }}>{carregandoHospitais ? 'Carregando...' : 'Selecione o hospital'}</option>
-                  {hospitais.map((hospital) => (
-                    <option key={hospital.id} value={hospital.id}>{hospital.nome}</option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
-                  <div className="w-2.5 h-2.5 border-b-2 border-r-2 transform rotate-45 translate-y-[-2px]" style={{ borderColor: '#94a3b8' }}></div>
-                </div>
-              </div>
-            </div>
-
-            {erroHospitais && <p role="alert" className="text-sm text-red-200" style={{ marginBottom: '20px' }}>{erroHospitais}</p>}
-
-            <div className="flex flex-col" style={{ marginBottom: '20px' }}>
-              <label htmlFor="login-email" className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
-                <Mail aria-hidden="true" className="w-3.5 h-3.5 text-blue-400" /> E-mail
-              </label>
-              <input
-                id="login-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="usuario@hospital.com"
-                required
-                autoComplete="username"
-                className="w-full bg-white border-2 border-transparent focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-lg placeholder:text-slate-400"
-                style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', color: '#0f172a' }}
-              />
-            </div>
-
-            <div className="flex flex-col" style={{ marginBottom: '24px' }}>
-              <label htmlFor="login-senha" className="flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-white ml-1" style={{ marginBottom: '10px' }}>
-                <Lock aria-hidden="true" className="w-3.5 h-3.5 text-blue-400" /> Senha
-              </label>
-              <input
-                id="login-senha"
-                type="password"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                placeholder="••••••••"
-                required
-                autoComplete="current-password"
-                className="w-full bg-white border-2 border-transparent focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-lg placeholder:text-slate-400 tracking-widest"
-                style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '8px', fontSize: '14px', color: '#0f172a' }}
-              />
-            </div>
-
-            {erro && (
-              <div role="alert" className="flex items-center gap-3 text-red-200 bg-red-500/20 border border-red-500/50 p-3.5 rounded-md text-sm font-medium" style={{ marginBottom: '20px' }}>
-                <AlertTriangle aria-hidden="true" className="w-4 h-4 shrink-0" />
-                <p>{erro}</p>
-              </div>
-            )}
-
-            <div>
-              <button
-                type="submit"
-                disabled={loading || carregandoHospitais || hospitais.length === 0}
-                className="w-full bg-[#1e3a8a] hover:bg-[#2563eb] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300 text-white font-bold transition-colors flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ minHeight: '50px', padding: '12px 16px', borderRadius: '8px', fontSize: '16px', border: '1px solid rgba(255, 255, 255, 0.15)' }}
-              >
-                {loading ? (
-                  <><div aria-hidden="true" className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Entrando...</>
-                ) : (
-                  <><LogIn aria-hidden="true" className="w-5 h-5" /> Entrar</>
-                )}
-              </button>
-            </div>
-          </form>
-
-          <p className="text-center text-sm text-slate-300" style={{ margin: '24px 0 0' }}>
-            <Link href="/politicas-privacidade" className="underline hover:text-white">Política de Privacidade</Link>
-          </p>
-
-        </div>
-
-      </div>
-
-      {/* Lado Direito - Painel Decorativo (Abstract Branding) */}
-      <div className="hidden lg:flex lg:w-[55%] relative bg-[#020817] overflow-hidden items-center justify-center">
-
-        {/* Grade de fundo (Grid) */}
-        <div aria-hidden="true"
-          className="absolute inset-0 z-0 opacity-[0.03]"
-          style={{ backgroundImage: 'linear-gradient(#ffffff 1px, transparent 1px), linear-gradient(90deg, #ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}
-        ></div>
-
-        {/* Brilhos (Gradients) decorativos */}
-        <div aria-hidden="true" className="absolute top-1/4 left-1/4 w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] bg-blue-600 rounded-full mix-blend-screen filter blur-[150px] opacity-10"></div>
-        <div aria-hidden="true" className="absolute bottom-1/4 right-1/4 w-[50vw] h-[50vw] max-w-[500px] max-h-[500px] bg-blue-400 rounded-full mix-blend-screen filter blur-[120px] opacity-10"></div>
-
-        {/* Logo d'água no centro */}
-        <div className="relative z-10 flex flex-col items-center opacity-60 select-none pointer-events-none">
-          <Image
-            src="/images/logo.png"
-            alt=""
-            aria-hidden="true"
-            width={500}
-            height={200}
-            className="brightness-0 invert object-contain"
-            priority
+            <CampoAcesso
+              id="login-email"
+              rotulo="E-mail"
+              icone={Mail}
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="usuario@hospital.com"
+              required
+              autoComplete="username"
+              inputMode="email"
+            />
+            <CampoAcesso
+              id="login-senha"
+              rotulo="Senha"
+              icone={Lock}
+              type="password"
+              value={senha}
+              onChange={e => setSenha(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+          </>
+        ) : (
+          <CampoAcesso
+            ref={otpRef}
+            id="login-otp"
+            rotulo="Código de verificação"
+            icone={KeyRound}
+            value={otp}
+            onChange={e => setOtp(e.target.value)}
+            placeholder="000000"
+            required
+            maxLength={16}
+            autoComplete="one-time-code"
+            autoCorrect="off"
+            spellCheck={false}
+            dica="Código de recuperação: formato abcde-12345, vale uma vez só."
+            style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '8px', fontSize: '20px', color: '#0f172a', letterSpacing: '0.2em', fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}
           />
-        </div>
+        )}
 
-      </div>
+        {erro && <AvisoAcesso>{erro}</AvisoAcesso>}
 
-    </div>
+        <BotaoAcesso carregando={loading} textoCarregando="Entrando..." icone={pedeOtp ? ShieldCheck : LogIn}>
+          {pedeOtp ? 'Verificar e entrar' : 'Entrar'}
+        </BotaoAcesso>
+
+        {pedeOtp && (
+          <button
+            type="button"
+            onClick={voltar}
+            className="w-full text-sm text-slate-300 underline underline-offset-2 hover:text-white"
+            style={{ marginTop: '16px', minHeight: '44px' }}
+          >
+            Voltar e usar outra conta
+          </button>
+        )}
+      </form>
+    </AuthShell>
   )
 }

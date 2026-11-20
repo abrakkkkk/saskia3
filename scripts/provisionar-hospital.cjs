@@ -45,7 +45,10 @@ const senha = senhaInformada || gerarSenha()
 
     const hash = await bcrypt.hash(senha, 12)
     await prisma.$transaction(async tx => {
-      const hospital = await tx.hospital.create({ data: { nome, cnpj, ativo: true } })
+      const alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+      const codigo = Array.from(require('node:crypto').randomBytes(6), b => alfabeto[b % alfabeto.length]).join('')
+      const hospital = await tx.hospital.create({ data: { nome, cnpj, codigo, ativo: true } })
+      console.log(`  Código da unidade (login): ${codigo}`)
       await tx.usuario.create({ data: { hospitalId: hospital.id, nome: adminNome, email, senha: hash, cargo: 'ADMIN' } })
     })
     console.log('\nCriado com sucesso.')
