@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal'
 import { CATEGORIAS_DOCUMENTO, paraSlug, urlDocumento, type CategoriaDocumento } from '@/lib/documentos'
 import '@/components/ui/modulo.css'
 import '@/components/ui/ui-extras.css'
+import './documentos.css'
 
 type Doc = {
   slug: string; titulo: string; categoria: CategoriaDocumento; grupo: string | null; instituicao: string | null
@@ -129,8 +130,8 @@ export default function DocumentosPlataformaPage() {
 
   return (
     <div className="mod-pagina">
-      <PageHeader icon="las la-folder-open" title="Documentos do acervo" subtitle="Enviar, renomear, ligar e desligar o que aparece na Biblioteca, Curvas, Vacinação e Fichas." />
-      <p><Link href="/plataforma" className="btn btn-secondary btn-sm"><i className="las la-arrow-left" aria-hidden="true"></i> Voltar para Plataforma</Link></p>
+      <PageHeader icon="las la-folder-open" title="Documentos do acervo" subtitle="Enviar, renomear, ligar e desligar o que aparece na Biblioteca, Curvas, Vacinação e Fichas."
+        actions={<Link href="/plataforma" className="btn btn-secondary"><i className="las la-arrow-left" aria-hidden="true"></i> Plataforma</Link>} />
 
       {carregando && !restrito && docs.length === 0 && <LoadingState message="Carregando documentos..." />}
       {restrito && <EmptyState icon="las la-lock" message="Esta área é restrita à operação da plataforma." />}
@@ -140,10 +141,15 @@ export default function DocumentosPlataformaPage() {
         <>
           <Panel title="Enviar documento" icon="las la-cloud-upload-alt">
             <form onSubmit={enviar}>
-              <div className="mod-form-grid">
-                <div className="form-group">
-                  <label htmlFor="dc-arquivo">Arquivo (PDF ou imagem, até 150 MB)</label>
-                  <input id="dc-arquivo" type="file" required accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => escolherArquivo(e.target.files?.[0] ?? null)} />
+              <div className="doc-form">
+                <div className="form-group doc-arquivo">
+                  <label htmlFor="dc-arquivo">Arquivo</label>
+                  <label htmlFor="dc-arquivo" className="doc-escolher">
+                    <i className="las la-file-upload" aria-hidden="true"></i>
+                    <span className="doc-escolher-texto">{arquivo ? arquivo.name : 'Escolher PDF ou imagem'}</span>
+                    <span className="doc-escolher-dica">{arquivo ? tamanho(arquivo.size) : 'até 150 MB'}</span>
+                  </label>
+                  <input id="dc-arquivo" className="doc-input-oculto" type="file" required accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => escolherArquivo(e.target.files?.[0] ?? null)} />
                 </div>
                 <div className="form-group">
                   <label htmlFor="dc-cat">Categoria</label>
@@ -152,25 +158,27 @@ export default function DocumentosPlataformaPage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label htmlFor="dc-titulo">Título (como aparece na tela)</label>
-                  <input id="dc-titulo" required maxLength={200} value={novo.titulo} onChange={e => setNovo(n => ({ ...n, titulo: e.target.value, slug: paraSlug(e.target.value) }))} />
+                  <label htmlFor="dc-titulo">Título</label>
+                  <input id="dc-titulo" required maxLength={200} placeholder="Como aparece na tela" value={novo.titulo} onChange={e => setNovo(n => ({ ...n, titulo: e.target.value, slug: paraSlug(e.target.value) }))} />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="dc-slug">Nome do arquivo (padrão)</label>
+                  <label htmlFor="dc-slug">Nome do arquivo</label>
                   <input id="dc-slug" required maxLength={100} value={novo.slug} onChange={e => setNovo(n => ({ ...n, slug: paraSlug(e.target.value) }))} aria-describedby="dc-slug-ajuda" />
-                  <small id="dc-slug-ajuda">Minúsculas, sem acento, com hífens. Gerado a partir do título.</small>
+                  <small id="dc-slug-ajuda">Gerado do título: minúsculas, sem acento, com hífens.</small>
                 </div>
                 <div className="form-group">
-                  <label htmlFor="dc-grupo">Grupo (Meninas/Meninos nas curvas; MS, UFRGS... nas fichas)</label>
-                  <input id="dc-grupo" maxLength={80} value={novo.grupo} onChange={e => setNovo(n => ({ ...n, grupo: e.target.value }))} />
+                  <label htmlFor="dc-grupo">Grupo</label>
+                  <input id="dc-grupo" maxLength={80} value={novo.grupo} onChange={e => setNovo(n => ({ ...n, grupo: e.target.value }))} aria-describedby="dc-grupo-ajuda" />
+                  <small id="dc-grupo-ajuda">Meninas ou Meninos nas curvas; MS, UFRGS… nas fichas.</small>
                 </div>
                 <div className="form-group">
                   <label htmlFor="dc-inst">Instituição de origem</label>
                   <input id="dc-inst" maxLength={120} value={novo.instituicao} onChange={e => setNovo(n => ({ ...n, instituicao: e.target.value }))} />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="dc-tags">Palavras-chave (separadas por vírgula)</label>
-                  <input id="dc-tags" value={novo.tags} onChange={e => setNovo(n => ({ ...n, tags: e.target.value }))} />
+                  <label htmlFor="dc-tags">Palavras-chave</label>
+                  <input id="dc-tags" value={novo.tags} onChange={e => setNovo(n => ({ ...n, tags: e.target.value }))} aria-describedby="dc-tags-ajuda" />
+                  <small id="dc-tags-ajuda">Separadas por vírgula.</small>
                 </div>
               </div>
               {aviso && <p role="status" className="mod-aviso mod-aviso-atencao">{aviso}</p>}
@@ -182,36 +190,36 @@ export default function DocumentosPlataformaPage() {
             </form>
           </Panel>
 
-          <Panel title={`Acervo (${lista.length})`} icon="las la-book-medical">
-            <div className="form-group">
-              <label htmlFor="dc-filtro">Mostrar</label>
-              <select id="dc-filtro" value={filtro} onChange={e => setFiltro(e.target.value as 'TODAS' | CategoriaDocumento)}>
-                <option value="TODAS">Todas as categorias</option>
-                {CATEGORIAS.map(([id, c]) => <option key={id} value={id}>{c.rotulo}</option>)}
-              </select>
-            </div>
+          <Panel title={`Acervo (${lista.length})`} icon="las la-book-medical" actions={
+            <select id="dc-filtro" className="doc-filtro" aria-label="Mostrar categoria" value={filtro} onChange={e => setFiltro(e.target.value as 'TODAS' | CategoriaDocumento)}>
+              <option value="TODAS">Todas as categorias</option>
+              {CATEGORIAS.map(([id, c]) => <option key={id} value={id}>{c.rotulo}</option>)}
+            </select>
+          }>
             {lista.length === 0 ? (
               <EmptyState icon="las la-folder-open" message="Nenhum documento nesta categoria." />
             ) : (
               <div className="tabela-wrapper">
-                <table className="tabela">
+                <table className="tabela doc-tabela">
                   <thead>
-                    <tr><th scope="col">Título</th><th scope="col">Nome do arquivo</th><th scope="col">Categoria</th><th scope="col">Tamanho</th><th scope="col">Situação</th><th scope="col">Ações</th></tr>
+                    <tr><th scope="col">Documento</th><th scope="col">Categoria</th><th scope="col" className="doc-num">Tamanho</th><th scope="col">Situação</th><th scope="col"><span className="sr-only">Ações</span></th></tr>
                   </thead>
                   <tbody>
                     {lista.map(d => (
                       <tr key={d.slug}>
-                        <td><strong>{d.titulo}</strong>{d.grupo && <><br /><small>{d.grupo}</small></>}</td>
-                        <td><code>{d.slug}{extensao(d.arquivo)}</code></td>
-                        <td>{CATEGORIAS_DOCUMENTO[d.categoria]?.rotulo ?? d.categoria}</td>
-                        <td>{tamanho(d.tamanho)}</td>
+                        <td>
+                          <strong className="doc-titulo">{d.titulo}</strong>
+                          <span className="doc-meta"><code>{d.slug}{extensao(d.arquivo)}</code>{d.grupo && <> · {d.grupo}</>}</span>
+                        </td>
+                        <td className="doc-cat">{CATEGORIAS_DOCUMENTO[d.categoria]?.rotulo ?? d.categoria}</td>
+                        <td className="doc-num">{tamanho(d.tamanho)}</td>
                         <td><Badge tone={d.ativo ? 'success' : 'neutral'}>{d.ativo ? 'Visível' : 'Desligado'}</Badge></td>
                         <td>
-                          <div className="mod-acoes">
+                          <div className="doc-acoes">
                             <a className="btn btn-sm btn-secondary" href={urlDocumento(d.slug)} target="_blank" rel="noopener noreferrer" aria-label={`Abrir ${d.titulo}`}>Abrir</a>
                             <button type="button" className="btn btn-sm btn-secondary" onClick={() => abrirEdicao(d)} aria-label={`Editar ${d.titulo}`}>Editar</button>
                             <button type="button" className="btn btn-sm btn-secondary" onClick={() => void alternar(d)} aria-label={`${d.ativo ? 'Desligar' : 'Ligar'} ${d.titulo}`}>{d.ativo ? 'Desligar' : 'Ligar'}</button>
-                            <button type="button" className="btn btn-sm btn-secondary" onClick={() => void excluir(d)} aria-label={`Excluir ${d.titulo}`}>Excluir</button>
+                            <button type="button" className="btn btn-sm btn-secondary doc-excluir" onClick={() => void excluir(d)} aria-label={`Excluir ${d.titulo}`}>Excluir</button>
                           </div>
                         </td>
                       </tr>

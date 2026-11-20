@@ -1,0 +1,33 @@
+/* Plataforma > Documentos do acervo: formulário em duas linhas e tabela compacta */
+.doc-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 16px; align-items: start; }
+.doc-form .form-group { margin: 0; }
+.doc-form small { display: block; margin-top: 4px; font-size: 12px; line-height: 1.4; color: #475569; }
+
+.doc-arquivo { position: relative; }
+.doc-input-oculto { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.form-group label.doc-escolher { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; margin: 0; border: 1px dashed #bfdbfe; border-radius: 8px; background: #f8fafc; color: #1e3a8a; cursor: pointer; font-weight: 600; font-size: 14px; }
+.form-group label.doc-escolher:hover { border-color: #1e3a8a; background: #f1f5f9; }
+.doc-arquivo:focus-within .doc-escolher { outline: 2px solid #3b82f6; outline-offset: 2px; }
+.doc-escolher i { font-size: 20px; flex: none; }
+.doc-escolher-texto { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-escolher-dica { flex: none; font-size: 12px; font-weight: 500; color: #475569; }
+
+.doc-filtro { min-height: 36px; padding: 0 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; font-size: 14px; color: #0f172a; }
+
+.doc-tabela td { vertical-align: middle; }
+.doc-titulo { display: block; color: #0f172a; line-height: 1.35; }
+.doc-meta { display: block; margin-top: 3px; font-size: 12px; color: #475569; }
+.doc-meta code { font-size: 12px; color: #475569; background: none; padding: 0; }
+.doc-cat { color: #475569; font-size: 14px; }
+.doc-num { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+.doc-acoes { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: nowrap; }
+.doc-excluir { color: #b91c1c; }
+.doc-excluir:hover:not(:disabled) { border-color: #b91c1c; background: #f1f5f9; }
+
+@media (max-width: 1100px) { .doc-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .doc-form { grid-template-columns: 1fr; }
+  .doc-acoes { flex-wrap: wrap; justify-content: flex-start; }
+  .doc-cat { display: none; }
+  .doc-tabela th:nth-child(2) { display: none; }
+}
