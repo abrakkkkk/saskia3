@@ -4,8 +4,12 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
+import { exigirBancoDeTeste } from './fixtures/seed-teste.mjs';
+import { SENHA_AUDIT } from './fixtures/dados-teste.mjs';
+
+// Rodar com `npm run test:validacao` (sobe o servidor e popula o banco de TESTE). Nunca contra a produção.
 const baseUrl = process.env.AUDIT_BASE_URL;
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL_TESTE ? exigirBancoDeTeste(process.env.DATABASE_URL_TESTE) : undefined;
 const cookieJar = new Map();
 let prisma;
 
@@ -35,7 +39,7 @@ function request(path, options = {}) {
 before(async () => {
   if (!baseUrl || !databaseUrl) return;
   prisma = new PrismaClient({ adapter: new PrismaPg(new Pool({ connectionString: databaseUrl })) });
-  await prisma.usuario.update({ where: { email: 'audit.admin@example.test' }, data: { cargo: 'MEDICO' } });
+  await prisma.usuario.update({ where: { email: 'audit.admin@example.test' }, data: { cargo: 'ENFERMEIRO_ASSISTENCIAL' } });
   await prisma.sala.update({ where: { id: 'audit-room-b' }, data: { status: 'RESERVADO' } });
   await prisma.reservaSala.update({ where: { id: 'audit-reservation-b' }, data: { status: 'ATIVA' } });
   await prisma.transportePaciente.update({ where: { id: 'audit-transport-b' }, data: { status: 'Pendente' } });
@@ -52,7 +56,7 @@ before(async () => {
     body: new URLSearchParams({
       csrfToken,
       email: 'audit.admin@example.test',
-      senha: 'audit-only-synthetic-pass-2026!',
+      senha: SENHA_AUDIT,
       hospitalId: 'audit-hospital-a',
       callbackUrl: baseUrl,
       json: 'true',
@@ -71,16 +75,20 @@ after(async () => {
 test('hospital A cannot mutate hospital B resources or create clinical records for its patient', {
   skip: !baseUrl || !databaseUrl,
 }, async () => {
+  // Cada rota é chamada com um cargo que TEM a permissão (sem MFA obrigatório), para que um 403 não
+  // mascare o teste: o único motivo aceitável de recusa é o filtro por hospital (404).
   const requests = [
-    ['/api/salas/audit-room-b', { status: 'LIVRE' }],
-    ['/api/salas/reservas/audit-reservation-b', { status: 'CANCELADA' }],
-    ['/api/transporte/audit-transport-b', { status: 'Concluído' }],
-    ['/api/pacientes/audit-patient-b/medico', { diagnostico: 'Registro sintético' }],
-    ['/api/pacientes/audit-patient-b/escores', { dor: 4 }],
-    ['/api/pacientes/audit-patient-b/exames', { nome: 'Exame sintético' }],
+    ['/api/salas/audit-room-b', { status: 'LIVRE' }, 'ENFERMEIRO_ASSISTENCIAL'],
+    ['/api/salas/reservas/audit-reservation-b', { status: 'CANCELADA' }, 'ENFERMEIRO_ASSISTENCIAL'],
+    ['/api/transporte/audit-transport-b', { status: 'Concluído' }, 'ENFERMEIRO_ASSISTENCIAL'],
+    ['/api/pacientes/audit-patient-b/medico', { diagnostico: 'Registro sintético' }, 'MEDICO'],
+    ['/api/pacientes/audit-patient-b/escores', { dor: 4 }, 'ENFERMEIRO_ASSISTENCIAL'],
+    ['/api/pacientes/audit-patient-b/exames', { nome: 'Exame sintético' }, 'MEDICO'],
   ];
 
-  for (const [path, body] of requests) {
+  for (const [path, body, cargo] of requests) {
+    // A sessão relê o cargo do banco a cada requisição.
+    await prisma.usuario.update({ where: { email: 'audit.admin@example.test' }, data: { cargo } });
     const response = await request(path, {
       method: path.includes('/pacientes/') ? 'POST' : 'PUT',
       headers: { 'content-type': 'application/json' },
@@ -89,6 +97,7 @@ test('hospital A cannot mutate hospital B resources or create clinical records f
     assert.equal(response.status, 404, `${path} deve ocultar o registro de outro hospital`);
   }
 
+  await prisma.usuario.update({ where: { email: 'audit.admin@example.test' }, data: { cargo: 'ENFERMEIRO_ASSISTENCIAL' } });
   const reservaCount = await prisma.reservaSala.count({ where: { hospitalId: 'audit-hospital-b' } });
   const salaCrossTenant = await request('/api/salas/reservas', {
     method: 'POST',

@@ -9,7 +9,10 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",
-    "db:migrate": "prisma migrate deploy"
+    "db:migrate": "prisma migrate deploy",
+    "test:db:subir": "node tests/banco-teste.mjs subir",
+    "test:db:descer": "node tests/banco-teste.mjs descer",
+    "test:validacao": "node tests/validacao-execucao.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",

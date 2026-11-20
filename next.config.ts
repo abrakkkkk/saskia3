@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Só o roteiro de testes (tests/validacao-execucao.mjs) define isto, para rodar ao lado de outro `next dev`.
+  ...(process.env.SASKIA_TESTE_DIST_DIR ? { distDir: process.env.SASKIA_TESTE_DIST_DIR } : {}),
   // A Vercel restaurava o cache do Turbopack de um deploy anterior e servia o globals.css antigo com o JS novo.
   experimental: { turbopackFileSystemCacheForBuild: false },
   // htmlparser2 (dependência do sanitize-html) é ESM puro: externo, o require() falha no Node da Vercel.
