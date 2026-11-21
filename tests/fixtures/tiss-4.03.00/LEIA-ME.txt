@@ -1,0 +1,3 @@
+Esquemas oficiais do Padrão TISS 4.03.00 (componente de comunicação), sem alteração.
+Fonte: https://www.gov.br/ans/pt-br/assuntos/prestadores/padrao-para-troca-de-informacao-de-saude-suplementar-2013-tiss/PadroTISSComunicao_202511.zip (baixado em 20/11/2026).
+Usados por tests/faturamento-arquivos.test.mjs para validar o XML gerado por src/lib/faturamento/tiss.ts.

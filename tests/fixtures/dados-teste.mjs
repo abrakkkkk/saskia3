@@ -19,6 +19,8 @@ export const USUARIOS = [
     id: 'e2e-med-a', email: 'medico.alfa@example.test', nome: 'Dr. Médico Alfa', cargo: 'MEDICO', hospitalId: HOSPITAL_A.id, senha: SENHA_E2E,
     conselho: 'CRM', registroNumero: '000001', registroUf: 'SP', especialidade: 'Clínica Médica', prescricoesAutorizadas: ['FARMACOLOGICA'],
   },
+  // Item 7: faturista do Hospital A (tests/faturamento.integration.test.mjs).
+  { id: 'e2e-fat-a', email: 'faturamento.alfa@example.test', nome: 'Faturista Alfa', cargo: 'FATURISTA', hospitalId: HOSPITAL_A.id, senha: SENHA_E2E },
   { id: 'e2e-recep-b', email: 'recepcao.beta@example.test', nome: 'Recepção Beta', cargo: 'RECEPCIONISTA', hospitalId: HOSPITAL_B.id, senha: SENHA_E2E },
   {
     id: 'e2e-med-b', email: 'medico.beta@example.test', nome: 'Dr. Médico Beta', cargo: 'MEDICO', hospitalId: HOSPITAL_B.id, senha: SENHA_E2E,

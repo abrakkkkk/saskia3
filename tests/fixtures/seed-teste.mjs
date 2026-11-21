@@ -61,6 +61,32 @@ export async function semearBancoDeTeste(url) {
     await prisma.receita.create({
       data: { id: 'e2e-receita-b', pacienteId: 'audit-patient-b', hospitalId: HOSPITAL_B.id, medicamentos: [{ conteudo: 'Receita sigilosa Beta' }], profissional: 'Dr. Médico Beta' },
     });
+
+    // Faturamento (item 7): catálogo global mínimo, dados SUS/convênio do A e uma conta sigilosa do B.
+    await prisma.procedimentoTabela.createMany({
+      data: [
+        { tabela: '22', codigo: '10101012', descricao: 'Consulta em consultório (no horário normal ou preestabelecido)', versao: '202609', busca: '10101012 consulta em consultorio' },
+        { tabela: '18', codigo: '60000589', descricao: 'Taxa de sala de observação', versao: '202609', busca: '60000589 taxa de sala de observacao' },
+        { tabela: '38', codigo: '1801', descricao: 'Procedimento inválido', versao: '202609', busca: '1801 procedimento invalido' },
+        { tabela: 'SIGTAP', codigo: '0301010072', descricao: 'CONSULTA MEDICA EM ATENÇÃO ESPECIALIZADA', versao: '202611', valorSa: '10.00', valorSh: '0.00', valorSp: '0.00', instrumentos: ['01', '02'], busca: '0301010072 consulta medica em atencao especializada' },
+      ],
+    });
+    await prisma.configFaturamento.create({
+      data: { hospitalId: HOSPITAL_A.id, cnes: '1234567', municipioIbge: '355030', uf: 'SP', orgaoDestinoNome: 'Secretaria Municipal de Saúde', orgaoEmissorAih: 'M355030001' },
+    });
+    await prisma.operadoraPlano.createMany({
+      data: [
+        { id: 'e2e-conv-a', hospitalId: HOSPITAL_A.id, nome: 'Convênio Teste Alfa', codigoAns: '123456', vigencia: '', teto: '', status: 'ATIVO' },
+        { id: 'e2e-conv-b', hospitalId: HOSPITAL_B.id, nome: 'Convênio Sigiloso Beta', codigoAns: '654321', vigencia: '', teto: '', status: 'ATIVO' },
+      ],
+    });
+    await prisma.contaFaturamento.create({
+      data: {
+        id: 'e2e-conta-b', hospitalId: HOSPITAL_B.id, numero: 1, pacienteId: 'audit-patient-b', fonte: 'CONVENIO', tipoGuia: 'CONSULTA', competencia: '202611',
+        dataAtendimento: new Date('2026-11-10T12:00:00Z'), operadoraId: 'e2e-conv-b', numeroCarteira: 'BETA-SIGILO',
+        itens: { create: { id: 'e2e-item-b', hospitalId: HOSPITAL_B.id, tabela: '22', codigo: '10101012', descricao: 'Consulta sigilosa Beta', quantidade: '1', valorUnitario: '100.00', valorTotal: '100.00', dataExecucao: new Date('2026-11-10T12:00:00Z') } },
+      },
+    });
   } finally {
     await prisma.$disconnect();
     await pool.end().catch(() => {});

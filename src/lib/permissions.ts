@@ -12,6 +12,7 @@ export const CARGOS = [
   'ASSISTENTE_SOCIAL',
   'FISIOTERAPEUTA',
   'ODONTOLOGO',
+  'FATURISTA',
   'OUTROS',
 ] as const
 
@@ -28,6 +29,7 @@ export const CARGO_LABEL: Record<Cargo, string> = {
   ASSISTENTE_SOCIAL: 'Assistente social',
   FISIOTERAPEUTA: 'Fisioterapeuta',
   ODONTOLOGO: 'Odontólogo (inclui bucomaxilofacial)',
+  FATURISTA: 'Faturista',
   OUTROS: 'Outros profissionais',
 }
 
@@ -67,7 +69,7 @@ const MATRIZ = {
   'uti:gerir': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL'],
   // Internação (item 9): ler o histórico e internar/trocar leito/registrar evasão.
   // Alta e transferência continuam exigindo 'prontuario:desfecho'; leito de UTI também exige 'uti:gerir'.
-  'internacao:ler': ['ADMIN', 'RECEPCIONISTA', ...CLINICA, ...REABILITACAO_ODONTO, 'FARMACEUTICO', 'NUTRICIONISTA', 'ASSISTENTE_SOCIAL'],
+  'internacao:ler': ['ADMIN', 'RECEPCIONISTA', ...CLINICA, ...REABILITACAO_ODONTO, 'FARMACEUTICO', 'NUTRICIONISTA', 'ASSISTENTE_SOCIAL', 'FATURISTA'],
   'internacao:gerir': ['RECEPCIONISTA', 'MEDICO', 'ENFERMEIRO_ASSISTENCIAL'],
   'sangue:ler': [...CLINICA, 'ADMIN'],
   'sangue:gerir': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL', 'ADMIN'],
@@ -93,6 +95,11 @@ const MATRIZ = {
   'operacao:gerir': ['ADMIN', 'ENFERMEIRO_ASSISTENCIAL', 'OUTROS'],
   'seguranca:gerir': ['ADMIN', 'OUTROS'],
   'relatorio:ler': ['ADMIN'],
+  // Faturamento hospitalar (item 7): TISS para convênios, BPA/AIH para o SUS.
+  // Ler e lançar contas, gerar lotes e arquivos: faturista (ADMIN sempre). Convênios, preços e dados SUS da unidade: só gestor.
+  'faturamento:ler': ['FATURISTA'],
+  'faturamento:gerir': ['FATURISTA'],
+  'faturamento:configurar': ['ADMIN'],
   'emergencia:acionar': TODOS,
   'emergencia:ler': TODOS,
   'emergencia:encerrar': ['MEDICO', ...ENFERMAGEM],

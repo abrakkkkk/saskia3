@@ -68,10 +68,13 @@ for (const rota of ['/', '/recepcao', '/receituario', '/uti', '/pacientes/x']) a
 console.log('> Teste de isolamento entre hospitais');
 const isolamento = await rodar('node', ['--test', 'tests/tenant-isolation.integration.test.mjs'], { AUDIT_BASE_URL: BASE });
 
+console.log('> Faturamento (TISS e SUS): isolamento e fluxo completo');
+const faturamento = await rodar('node', ['--test', 'tests/faturamento.integration.test.mjs'], { AUDIT_BASE_URL: BASE });
+
 console.log('> Roteiro Playwright das telas críticas');
 await semearBancoDeTeste(url);
 const e2e = await rodar('node', ['tests/e2e/telas-criticas.mjs'], { E2E_BASE_URL: BASE });
 
 parar();
-console.log(`\nResultado: isolamento ${isolamento === 0 ? 'PASSOU' : 'FALHOU'}; telas críticas ${e2e === 0 ? 'PASSOU' : 'FALHOU'}`);
-process.exit(isolamento === 0 && e2e === 0 ? 0 : 1);
+console.log(`\nResultado: isolamento ${isolamento === 0 ? 'PASSOU' : 'FALHOU'}; faturamento ${faturamento === 0 ? 'PASSOU' : 'FALHOU'}; telas críticas ${e2e === 0 ? 'PASSOU' : 'FALHOU'}`);
+process.exit(isolamento === 0 && faturamento === 0 && e2e === 0 ? 0 : 1);

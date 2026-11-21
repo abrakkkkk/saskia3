@@ -22,6 +22,7 @@ enum CargoUsuario {
   OUTROS
   FISIOTERAPEUTA
   ODONTOLOGO
+  FATURISTA
 }
 
 enum StatusAgendamento {
@@ -151,75 +152,80 @@ model Hospital {
   visitantes           Visitante[]
   internacoes          Internacao[]
   movimentacoesLeito   MovimentacaoLeito[]
+  configFaturamento    ConfigFaturamento?
+  precosConvenio       PrecoConvenio[]
+  contasFaturamento    ContaFaturamento[]
+  itensConta           ItemConta[]
+  lotesFaturamento     LoteFaturamento[]
 }
 
 model Usuario {
-  id                   String                @id @default(uuid())
-  hospitalId           String
-  hospital             Hospital              @relation(fields: [hospitalId], references: [id])
-  nome                 String
-  email                String                @unique
-  senha                String
-  cargo                CargoUsuario          @default(ENFERMEIRO_ASSISTENCIAL)
+  id                            String                  @id @default(uuid())
+  hospitalId                    String
+  hospital                      Hospital                @relation(fields: [hospitalId], references: [id])
+  nome                          String
+  email                         String                  @unique
+  senha                         String
+  cargo                         CargoUsuario            @default(ENFERMEIRO_ASSISTENCIAL)
   /// Registro no conselho profissional (CRM, COREN...). Sai impresso na receita e é exigido para prescrever.
-  conselho             String?
-  registroNumero       String?
-  registroUf           String?
-  especialidade        String?
+  conselho                      String?
+  registroNumero                String?
+  registroUf                    String?
+  especialidade                 String?
   /// Registro de Qualificação de Especialista (opcional).
-  rqe                  String?
+  rqe                           String?
   /// Tipos de prescrição que o gestor autorizou este usuário a emitir (FARMACOLOGICA, CUIDADO...). Vazio = não prescreve.
-  prescricoesAutorizadas String[]            @default([])
-  avatar               String?
-  ativo                Boolean               @default(true)
-  sessionVersion       Int                   @default(0)
+  prescricoesAutorizadas        String[]                @default([])
+  avatar                        String?
+  ativo                         Boolean                 @default(true)
+  sessionVersion                Int                     @default(0)
   /// Verificação em duas etapas (TOTP). Segredo cifrado com AES-256-GCM (chave derivada de AUTH_SECRET).
-  mfaSegredo           String?
-  mfaAtivo             Boolean               @default(false)
+  mfaSegredo                    String?
+  mfaAtivo                      Boolean                 @default(false)
   /// Último passo de 30 s aceito: impede reutilizar o mesmo código.
-  mfaUltimoPasso       Int?
+  mfaUltimoPasso                Int?
   /// Hashes SHA-256 dos códigos de recuperação ainda não usados.
-  mfaCodigosBackup     String[]              @default([])
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  pontoRegistros       PontoRegistro[]
-  feedbacks            Feedback[]
-  triagens             Triagem[]
-  evolucoes            Evolucao[]
-  prescricaos          Prescricao[]
-  receitas             Receita[]
-  agendamentos         Agendamento[]
-  cirurgias            Cirurgia[]
-  movimentacaoEstoques MovimentacaoEstoque[]
-  ticketsCriados      Ticket[]                @relation("TicketCriador")
-  mensagensEnviadas    MensagemChat[]          @relation("MensagemEnviada")
-  mensagensRecebidas   MensagemChat[]          @relation("MensagemRecebida")
-  leiturasCanal        LeituraCanal[]
-  lembretesCriados     Lembrete[]              @relation("LembreteCriador")
-  manifestacoesOuvidoria OuvidoriaTicket[]     @relation("OuvidoriaAutor")
-  registrosSinalVital SinalVital[]
-  registrosEscoreClinico EscoreClinico[]
+  mfaCodigosBackup              String[]                @default([])
+  createdAt                     DateTime                @default(now())
+  updatedAt                     DateTime                @updatedAt
+  pontoRegistros                PontoRegistro[]
+  feedbacks                     Feedback[]
+  triagens                      Triagem[]
+  evolucoes                     Evolucao[]
+  prescricaos                   Prescricao[]
+  receitas                      Receita[]
+  agendamentos                  Agendamento[]
+  cirurgias                     Cirurgia[]
+  movimentacaoEstoques          MovimentacaoEstoque[]
+  ticketsCriados                Ticket[]                @relation("TicketCriador")
+  mensagensEnviadas             MensagemChat[]          @relation("MensagemEnviada")
+  mensagensRecebidas            MensagemChat[]          @relation("MensagemRecebida")
+  leiturasCanal                 LeituraCanal[]
+  lembretesCriados              Lembrete[]              @relation("LembreteCriador")
+  manifestacoesOuvidoria        OuvidoriaTicket[]       @relation("OuvidoriaAutor")
+  registrosSinalVital           SinalVital[]
+  registrosEscoreClinico        EscoreClinico[]
   registrosAvaliacaoNutricional AvaliacaoNutricional[]
-  registrosAvaliacaoMedica AvaliacaoMedica[]
-  registrosAnotacaoEnfermagem AnotacaoEnfermagem[]
-  registrosTimelineEvent TimelineEvent[]
-  examesSolicitados Exame[] @relation("ExameSolicitante")
-  examesLiberados Exame[] @relation("ExameLiberador")
-  obitosRegistrados Obito[]
-  tokensRedefinicaoSenha TokenRedefinicaoSenha[]
+  registrosAvaliacaoMedica      AvaliacaoMedica[]
+  registrosAnotacaoEnfermagem   AnotacaoEnfermagem[]
+  registrosTimelineEvent        TimelineEvent[]
+  examesSolicitados             Exame[]                 @relation("ExameSolicitante")
+  examesLiberados               Exame[]                 @relation("ExameLiberador")
+  obitosRegistrados             Obito[]
+  tokensRedefinicaoSenha        TokenRedefinicaoSenha[]
 
   @@index([hospitalId])
 }
 
 /// "Esqueci minha senha": token de uso único, guardado só como hash SHA-256.
 model TokenRedefinicaoSenha {
-  id         String    @id @default(uuid())
-  usuarioId  String
-  usuario    Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  tokenHash  String    @unique
-  expiraEm   DateTime
-  usadoEm    DateTime?
-  createdAt  DateTime  @default(now())
+  id        String    @id @default(uuid())
+  usuarioId String
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiraEm  DateTime
+  usadoEm   DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([usuarioId])
 }
@@ -279,6 +285,7 @@ model Paciente {
   salas                Sala[]
   obitos               Obito[]
   internacoes          Internacao[]
+  contasFaturamento    ContaFaturamento[]
 
   @@unique([cpf, hospitalId]) // Proteção contra CPFs duplicados no mesmo hospital
   @@index([hospitalId, arquivadoEm, createdAt])
@@ -347,22 +354,22 @@ model Prescricao {
 }
 
 model Receita {
-  id           String   @id @default(uuid())
-  pacienteId   String
-  paciente     Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
-  hospitalId   String
-  hospital     Hospital @relation(fields: [hospitalId], references: [id])
-  medicamentos Json
+  id                        String   @id @default(uuid())
+  pacienteId                String
+  paciente                  Paciente @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  hospitalId                String
+  hospital                  Hospital @relation(fields: [hospitalId], references: [id])
+  medicamentos              Json
   /// Tipo da prescrição: FARMACOLOGICA, CUIDADO, OXIGENOTERAPIA, DIETA, FISIOTERAPIA, ODONTOLOGICA.
-  tipo         String   @default("FARMACOLOGICA")
-  observacoes  String?
-  profissional String?
+  tipo                      String   @default("FARMACOLOGICA")
+  observacoes               String?
+  profissional              String?
   /// Foto do registro do prescritor no momento da receita (ex.: "CRM-CE 12345"): a reimpressão não muda se o cadastro mudar.
   registroProfissional      String?
   especialidadeProfissional String?
-  usuarioId    String?
-  usuario      Usuario? @relation(fields: [usuarioId], references: [id])
-  createdAt    DateTime @default(now())
+  usuarioId                 String?
+  usuario                   Usuario? @relation(fields: [usuarioId], references: [id])
+  createdAt                 DateTime @default(now())
 
   @@index([pacienteId])
   @@index([hospitalId])
@@ -394,26 +401,26 @@ model Agendamento {
 }
 
 model Exame {
-  usuarioId    String?
-  solicitante  Usuario?    @relation("ExameSolicitante", fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuarioId     String?
+  solicitante   Usuario?    @relation("ExameSolicitante", fields: [usuarioId], references: [id], onDelete: SetNull)
   liberadoPorId String?
-  liberadoPor  Usuario?    @relation("ExameLiberador", fields: [liberadoPorId], references: [id], onDelete: SetNull)
-  liberadoEm   DateTime?
-  prioridade   String?
-  indicacao    String?
-  id           String      @id @default(uuid())
-  pacienteId   String
-  paciente     Paciente    @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
-  hospitalId   String
-  hospital     Hospital    @relation(fields: [hospitalId], references: [id])
-  tipo         String
-  nome         String
-  resultado    String?
-  status       StatusExame @default(SOLICITADO)
-  profissional String?
-  observacoes  String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  liberadoPor   Usuario?    @relation("ExameLiberador", fields: [liberadoPorId], references: [id], onDelete: SetNull)
+  liberadoEm    DateTime?
+  prioridade    String?
+  indicacao     String?
+  id            String      @id @default(uuid())
+  pacienteId    String
+  paciente      Paciente    @relation(fields: [pacienteId], references: [id], onDelete: Cascade)
+  hospitalId    String
+  hospital      Hospital    @relation(fields: [hospitalId], references: [id])
+  tipo          String
+  nome          String
+  resultado     String?
+  status        StatusExame @default(SOLICITADO)
+  profissional  String?
+  observacoes   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@index([pacienteId])
   @@index([hospitalId])
@@ -493,7 +500,8 @@ model Internacao {
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 
-  movimentacoes MovimentacaoLeito[]
+  movimentacoes     MovimentacaoLeito[]
+  contasFaturamento ContaFaturamento[]
 
   @@index([hospitalId, saidaEm])
   @@index([hospitalId, tipoSaida, saidaEm])
@@ -524,21 +532,21 @@ model MovimentacaoLeito {
 }
 
 model Sala {
-  id         String         @id @default(uuid())
-  hospitalId String
-  hospital   Hospital       @relation(fields: [hospitalId], references: [id])
-  nome       String
-  tipo       String?
-  setor      String?
-  andar      String?
-  capacidade Int            @default(1)
+  id           String         @id @default(uuid())
+  hospitalId   String
+  hospital     Hospital       @relation(fields: [hospitalId], references: [id])
+  nome         String
+  tipo         String?
+  setor        String?
+  andar        String?
+  capacidade   Int            @default(1)
   equipamentos String?
-  obs        String?
-  status     StatusOcupacao @default(LIVRE)
-  pacienteId String?
-  paciente   Paciente?      @relation(fields: [pacienteId], references: [id])
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  obs          String?
+  status       StatusOcupacao @default(LIVRE)
+  pacienteId   String?
+  paciente     Paciente?      @relation(fields: [pacienteId], references: [id])
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   reservas ReservaSala[]
 
@@ -582,40 +590,40 @@ model Chamada {
 }
 
 model Emergencia {
-  id           String   @id @default(uuid())
-  hospitalId   String
-  hospital     Hospital @relation(fields: [hospitalId], references: [id])
-  tipo         String // PANICO | PCR
-  profissional String
-  local        String?
-  status       String   @default("ATIVA") // ATIVA | ENCERRADA
-  usuarioId    String?
-  encerradaEm  DateTime?
+  id               String    @id @default(uuid())
+  hospitalId       String
+  hospital         Hospital  @relation(fields: [hospitalId], references: [id])
+  tipo             String // PANICO | PCR
+  profissional     String
+  local            String?
+  status           String    @default("ATIVA") // ATIVA | ENCERRADA
+  usuarioId        String?
+  encerradaEm      DateTime?
   encerradaPorId   String?
   encerradaPorNome String?
-  createdAt    DateTime @default(now())
+  createdAt        DateTime  @default(now())
 
   @@index([hospitalId])
   @@index([hospitalId, status, createdAt])
 }
 
 model EstoqueItem {
-  id          String    @id @default(uuid())
-  hospitalId  String
-  hospital    Hospital  @relation(fields: [hospitalId], references: [id])
-  categoria   String
+  id           String    @id @default(uuid())
+  hospitalId   String
+  hospital     Hospital  @relation(fields: [hospitalId], references: [id])
+  categoria    String
   subcategoria String?
-  nome        String
-  codigo      String?
-  quantidade  Int       @default(0)
-  unidade     String?
-  minimo      Int       @default(0)
-  lote        String?
-  validade    DateTime?
-  fornecedor  String?
-  localizacao String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  nome         String
+  codigo       String?
+  quantidade   Int       @default(0)
+  unidade      String?
+  minimo       Int       @default(0)
+  lote         String?
+  validade     DateTime?
+  fornecedor   String?
+  localizacao  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   movimentacoes MovimentacaoEstoque[]
 
@@ -654,9 +662,9 @@ model Obito {
   paciente        Paciente? @relation(fields: [pacienteId], references: [id], onDelete: SetNull)
   usuarioId       String?
   usuario         Usuario?  @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   hospitalId      String
-  hospital        Hospital @relation(fields: [hospitalId], references: [id])
+  hospital        Hospital  @relation(fields: [hospitalId], references: [id])
   nome            String
   nascimento      String?
   cpf             String?
@@ -673,23 +681,23 @@ model Obito {
   observacoes     String?
   registradoPor   String?
   dataRegistro    String?
-  certidaoEmitida Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  certidaoEmitida Boolean   @default(false)
+  createdAt       DateTime  @default(now())
 
   @@index([hospitalId])
 }
 
 model MensagemChat {
-  id          String    @id @default(uuid())
+  id          String     @id @default(uuid())
   hospitalId  String
-  hospital    Hospital  @relation(fields: [hospitalId], references: [id])
+  hospital    Hospital   @relation(fields: [hospitalId], references: [id])
   senderId    String?
-  sender      Usuario?  @relation("MensagemEnviada", fields: [senderId], references: [id])
+  sender      Usuario?   @relation("MensagemEnviada", fields: [senderId], references: [id])
   recipientId String?
-  recipient   Usuario?  @relation("MensagemRecebida", fields: [recipientId], references: [id])
+  recipient   Usuario?   @relation("MensagemRecebida", fields: [recipientId], references: [id])
   remetente   String
   texto       String
-  dataHora    DateTime  @default(now())
+  dataHora    DateTime   @default(now())
   /// Conversa direta: quando o destinatário leu. Em canal fica nulo (a leitura é por pessoa, em LeituraCanal).
   lidaEm      DateTime?
   canalId     String?
@@ -858,15 +866,24 @@ model OcorrenciaSeguranca {
 }
 
 model OperadoraPlano {
-  id         String   @id @default(uuid())
-  hospitalId String
-  hospital   Hospital @relation(fields: [hospitalId], references: [id])
-  nome       String
-  codigoAns  String
-  vigencia   String
-  status     String   @default("ATIVO")
-  teto       String
-  createdAt  DateTime @default(now())
+  id              String   @id @default(uuid())
+  hospitalId      String
+  hospital        Hospital @relation(fields: [hospitalId], references: [id])
+  nome            String
+  codigoAns       String
+  vigencia        String
+  status          String   @default("ATIVO")
+  teto            String
+  createdAt       DateTime @default(now())
+  // Faturamento TISS (item 7): dados do convênio para guias e lotes.
+  cnpj            String?
+  /// Código do hospital nesta operadora (origem do lote TISS). Sem ele, usa o CNPJ do hospital.
+  codigoPrestador String?
+  versaoTiss      String   @default("4.03.00")
+
+  precos PrecoConvenio[]
+  contas ContaFaturamento[]
+  lotes  LoteFaturamento[]
 
   @@index([hospitalId])
 }
@@ -895,8 +912,8 @@ model SinalVital {
   satO2        String?
   glicemia     String?
   profissional String?
-  usuarioId String?
-  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuarioId    String?
+  usuario      Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
 
   @@index([pacienteId, createdAt])
@@ -911,8 +928,8 @@ model EscoreClinico {
   dor          Int?
   braden       Json?
   profissional String?
-  usuarioId String?
-  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuarioId    String?
+  usuario      Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
 
   @@index([pacienteId, createdAt])
@@ -928,8 +945,8 @@ model AvaliacaoNutricional {
   dieta        String?
   restricoes   String?
   profissional String?
-  usuarioId String?
-  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuarioId    String?
+  usuario      Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
 
   @@index([pacienteId, createdAt])
@@ -946,8 +963,8 @@ model AvaliacaoMedica {
   diagnostico   String?
   conduta       String?
   profissional  String?
-  usuarioId String?
-  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuarioId     String?
+  usuario       Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   createdAt     DateTime @default(now())
 
   @@index([pacienteId, createdAt])
@@ -963,8 +980,8 @@ model AnotacaoEnfermagem {
   evolucao     String?
   prescricao   String?
   profissional String?
-  usuarioId String?
-  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuarioId    String?
+  usuario      Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   createdAt    DateTime @default(now())
 
   @@index([pacienteId, createdAt])
@@ -978,8 +995,8 @@ model TimelineEvent {
   tipo       String
   descricao  String
   user       String?
-  usuarioId String?
-  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuarioId  String?
+  usuario    Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   createdAt  DateTime @default(now())
 
   @@index([pacienteId, createdAt])
@@ -1264,4 +1281,209 @@ model TentativaLogin {
   chave        String   @id
   falhas       Int      @default(0)
   inicioJanela DateTime @default(now())
+}
+
+// ==========================================
+// FATURAMENTO HOSPITALAR (item 7): TISS (convênios) e produção SUS (BPA e AIH).
+// Não confundir com Fatura, que é a cobrança do SaaS.
+// ==========================================
+
+// Dados da unidade exigidos pelos arquivos do SUS (uma linha por hospital).
+model ConfigFaturamento {
+  id               String   @id @default(uuid())
+  hospitalId       String   @unique
+  hospital         Hospital @relation(fields: [hospitalId], references: [id])
+  /// CNES com 7 dígitos (o último é o verificador).
+  cnes             String?
+  /// Município do estabelecimento, código IBGE de 6 dígitos (sem verificador).
+  municipioIbge    String?
+  uf               String?
+  /// Órgão de destino do BPA (ex.: Secretaria Municipal de Saúde) e tipo: M (municipal) ou E (estadual).
+  orgaoDestinoNome String?
+  orgaoDestinoTipo String   @default("M")
+  orgaoOrigemNome  String?
+  orgaoOrigemSigla String?
+  /// Órgão emissor da AIH (10 posições, Portaria SAS 567/2005).
+  orgaoEmissorAih  String?
+  updatedAt        DateTime @updatedAt
+}
+
+// Catálogo global de procedimentos e itens (sem dado de paciente): TUSS da ANS e SIGTAP do SUS.
+// tabela: "22" (procedimentos), "18" (diárias e taxas), "19" (materiais), "20" (medicamentos), "38" (glosas) ou "SIGTAP".
+model ProcedimentoTabela {
+  id              String   @id @default(uuid())
+  tabela          String
+  codigo          String
+  descricao       String
+  /// Versão TUSS (AAAAMM) ou competência SIGTAP (AAAAMM).
+  versao          String
+  valorSh         Decimal? @db.Decimal(12, 2)
+  valorSa         Decimal? @db.Decimal(12, 2)
+  valorSp         Decimal? @db.Decimal(12, 2)
+  complexidade    String?
+  sexo            String?
+  idadeMin        Int?
+  idadeMax        Int?
+  diasPermanencia Int?
+  /// Instrumentos de registro SIGTAP: 01 BPA-C, 02 BPA-I, 03 AIH principal, 04 AIH especial, 05 AIH secundário...
+  instrumentos    String[] @default([])
+  ativo           Boolean  @default(true)
+  busca           String
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tabela, codigo])
+  @@index([tabela, ativo])
+}
+
+// Preço combinado com cada convênio (tabela própria do contrato).
+model PrecoConvenio {
+  id          String         @id @default(uuid())
+  hospitalId  String
+  hospital    Hospital       @relation(fields: [hospitalId], references: [id])
+  operadoraId String
+  operadora   OperadoraPlano @relation(fields: [operadoraId], references: [id], onDelete: Cascade)
+  tabela      String
+  codigo      String
+  valor       Decimal        @db.Decimal(12, 2)
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([operadoraId, tabela, codigo])
+  @@index([hospitalId])
+}
+
+// Conta de um atendimento: vira guia TISS (convênio) ou linha de BPA/AIH (SUS).
+// status: ABERTA -> FECHADA -> EM_LOTE -> ENVIADA -> PAGA | GLOSADA; CANCELADA antes de entrar em lote.
+model ContaFaturamento {
+  id                    String           @id @default(uuid())
+  hospitalId            String
+  hospital              Hospital         @relation(fields: [hospitalId], references: [id])
+  /// Sequencial por hospital; vira o número da guia do prestador.
+  numero                Int
+  pacienteId            String
+  paciente              Paciente         @relation(fields: [pacienteId], references: [id])
+  internacaoId          String?
+  internacao            Internacao?      @relation(fields: [internacaoId], references: [id], onDelete: SetNull)
+  /// CONVENIO ou SUS.
+  fonte                 String
+  /// CONSULTA, SP_SADT, RESUMO_INTERNACAO (TISS); BPA_C, BPA_I, AIH (SUS).
+  tipoGuia              String
+  status                String           @default("ABERTA")
+  /// Competência AAAAMM (produção SUS e controle do mês).
+  competencia           String
+  dataAtendimento       DateTime
+  dataFim               DateTime?
+  operadoraId           String?
+  operadora             OperadoraPlano?  @relation(fields: [operadoraId], references: [id], onDelete: SetNull)
+  numeroCarteira        String?
+  senhaAutorizacao      String?
+  numeroGuiaOperadora   String?
+  dataAutorizacao       DateTime?
+  cid                   String?
+  /// TISS tabela 23: 1 eletivo, 2 urgência/emergência.
+  caraterAtendimento    String           @default("1")
+  /// TISS tabela 36: 0 trabalho, 1 trânsito, 2 outros, 9 não acidente.
+  indicacaoAcidente     String           @default("9")
+  tipoAtendimento       String?
+  tipoConsulta          String?
+  regimeAtendimento     String           @default("01")
+  /// TISS tabela 39 (mesmos códigos do motivo de saída do SIH).
+  motivoEncerramento    String?
+  tipoInternacao        String?
+  regimeInternacao      String?
+  profissionalId        String?
+  profissionalNome      String?
+  conselho              String?
+  numeroConselho        String?
+  ufConselho            String?
+  cbo                   String?
+  cnsProfissional       String?
+  // Dados do paciente exigidos pelo SUS (fotografia no momento da conta).
+  cnsPaciente           String?
+  racaCor               String?
+  municipioIbgePaciente String?
+  cepPaciente           String?
+  numeroAih             String?
+  procedimentoPrincipal String?
+  especialidadeAih      String?
+  observacao            String?
+  valorTotal            Decimal          @default(0) @db.Decimal(12, 2)
+  valorGlosado          Decimal          @default(0) @db.Decimal(12, 2)
+  valorPago             Decimal?         @db.Decimal(12, 2)
+  loteId                String?
+  lote                  LoteFaturamento? @relation(fields: [loteId], references: [id], onDelete: SetNull)
+  criadoPorId           String?
+  criadoPorNome         String?
+  fechadoEm             DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  itens ItemConta[]
+
+  @@unique([hospitalId, numero])
+  @@index([hospitalId, status])
+  @@index([hospitalId, competencia, fonte])
+  @@index([pacienteId])
+  @@index([internacaoId])
+  @@index([loteId])
+}
+
+// Item lançado na conta (procedimento, diária, taxa, material, medicamento).
+model ItemConta {
+  id            String           @id @default(uuid())
+  hospitalId    String
+  hospital      Hospital         @relation(fields: [hospitalId], references: [id])
+  contaId       String
+  conta         ContaFaturamento @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  /// "22", "18", "19", "20", "00" (tabela própria) ou "SIGTAP".
+  tabela        String
+  codigo        String
+  descricao     String
+  quantidade    Decimal          @db.Decimal(10, 4)
+  valorUnitario Decimal          @db.Decimal(12, 2)
+  valorTotal    Decimal          @db.Decimal(12, 2)
+  dataExecucao  DateTime
+  /// Outras despesas TISS (tabela 25): 01 gases, 02 medicamentos, 03 materiais, 05 diárias, 07 taxas, 08 OPME. Nulo = procedimento.
+  codigoDespesa String?
+  /// TISS tabela 60 (036 = unidade).
+  unidadeMedida String?
+  cbo           String?
+  valorGlosado  Decimal          @default(0) @db.Decimal(12, 2)
+  /// Código da glosa (TISS tabela 38).
+  motivoGlosa   String?
+  createdAt     DateTime         @default(now())
+
+  @@index([contaId])
+  @@index([hospitalId])
+}
+
+// Arquivo gerado: lote XML TISS por convênio ou arquivo BPA/AIH por competência.
+// status: GERADO -> ENVIADO -> PROCESSADO; CANCELADO devolve as contas para FECHADA.
+model LoteFaturamento {
+  id               String          @id @default(uuid())
+  hospitalId       String
+  hospital         Hospital        @relation(fields: [hospitalId], references: [id])
+  /// TISS, BPA ou AIH.
+  tipo             String
+  numero           Int
+  operadoraId      String?
+  operadora        OperadoraPlano? @relation(fields: [operadoraId], references: [id], onDelete: SetNull)
+  competencia      String?
+  tipoGuia         String?
+  status           String          @default("GERADO")
+  arquivoNome      String
+  arquivoConteudo  String
+  hash             String?
+  quantidadeContas Int
+  valorTotal       Decimal         @db.Decimal(12, 2)
+  protocolo        String?
+  enviadoEm        DateTime?
+  geradoPorId      String?
+  geradoPorNome    String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  contas ContaFaturamento[]
+
+  @@unique([hospitalId, tipo, numero])
+  @@index([hospitalId, createdAt])
 }
