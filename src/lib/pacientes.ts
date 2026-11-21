@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import type { Ator } from '@/lib/api-guard'
 import { isTerminal } from '@/lib/paciente-status'
 import { cpfValido, nascimentoParaInput, normalizarCpf } from '@/lib/utils'
+import { cnsValido, somenteDigitos } from '@/lib/cns'
 
 export async function findPatientInHospital(id: string, hospitalId: string) {
   return prisma.paciente.findFirst({
@@ -47,7 +48,7 @@ export function textoOpcional(valor: unknown, limite: number): string | null | u
 }
 
 const LIMITES = {
-  nome: 160, cpf: 20, rg: 30, sexo: 40, telefone: 40, email: 254, endereco: 300,
+  nome: 160, cpf: 20, cns: 25, rg: 30, sexo: 40, telefone: 40, email: 254, endereco: 300,
   convenio: 120, numConvenio: 80, mae: 160, pai: 160, profissao: 120, estadoCivil: 60,
   nacionalidade: 80, naturalidade: 120, religiao: 80, etnia: 80, tipoSanguineo: 20,
   alergias: 2000, classificacao: 40, leitoTipo: 40, consultorio: 120, queixaPrincipal: 2000,
@@ -92,6 +93,14 @@ export function validarDadosPaciente(
       if (atual && digitos === (normalizarCpf(atual.cpf as string | null) || null)) continue
       if (digitos && !cpfValido(digitos)) return { erro: 'CPF inválido: confira os dígitos' }
       dados.cpf = digitos
+      continue
+    }
+
+    if (campo === 'cns') {
+      const digitos = somenteDigitos(valor) || null
+      if (atual && digitos === (somenteDigitos(atual.cns) || null)) continue
+      if (digitos && !cnsValido(digitos)) return { erro: 'CNS inválido: confira os 15 dígitos do Cartão Nacional de Saúde' }
+      dados.cns = digitos
       continue
     }
 
@@ -229,7 +238,7 @@ export function comEspera<T extends ReferenciaEspera>({ triagens, timelineEvents
 }
 
 export const SELECT_CADASTRO = {
-  id: true, nome: true, cpf: true, rg: true, nascimento: true, sexo: true, telefone: true, email: true,
+  id: true, nome: true, cpf: true, cns: true, rg: true, nascimento: true, sexo: true, telefone: true, email: true,
   endereco: true, convenio: true, numConvenio: true, mae: true, pai: true, profissao: true, estadoCivil: true,
   nacionalidade: true, naturalidade: true, religiao: true, etnia: true, tipoSanguineo: true, alergias: true,
   status: true, classificacao: true, leitoTipo: true, leitoNumero: true, consultorio: true,

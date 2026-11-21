@@ -134,7 +134,7 @@ export const STATUS_EDITAVEL = new Set(['ABERTA'])
 
 export const INCLUDE_CONTA_ARQUIVO = {
   itens: { orderBy: { dataExecucao: 'asc' as const } },
-  paciente: { select: { id: true, nome: true, cpf: true, nascimento: true, sexo: true, mae: true, endereco: true, telefone: true, email: true } },
+  paciente: { select: { id: true, nome: true, cpf: true, cns: true, nascimento: true, sexo: true, mae: true, endereco: true, telefone: true, email: true } },
 } satisfies Prisma.ContaFaturamentoInclude
 export type ContaArquivo = Prisma.ContaFaturamentoGetPayload<{ include: typeof INCLUDE_CONTA_ARQUIVO }>
 
@@ -205,7 +205,7 @@ export function pendenciasSus(c: ContaArquivo): string[] {
   if (c.itens.some(i => i.tabela !== 'SIGTAP')) p.push('só itens SIGTAP entram no SUS')
   if (!c.cbo) p.push('CBO do profissional')
   if (c.tipoGuia === 'BPA_C') return p
-  if (!c.cnsPaciente && !c.paciente.cpf) p.push('CNS ou CPF do paciente')
+  if (!c.cnsPaciente && !c.paciente.cns && !c.paciente.cpf) p.push('CNS ou CPF do paciente')
   if (!c.paciente.nascimento) p.push('data de nascimento do paciente')
   if (!sexoSus(c.paciente.sexo)) p.push('sexo do paciente')
   if (!c.racaCor) p.push('raça/cor do paciente')
@@ -239,7 +239,7 @@ export function linhasBpa(contas: ContaArquivo[], cnes: string) {
       }
       individualizado.push({
         cnes, competencia: c.competencia, cnsProfissional: c.cnsProfissional ?? '', cbo, dataAtendimento: aaaammdd(i.dataExecucao), procedimento: i.codigo,
-        cnsPaciente: c.cnsPaciente, cpfPaciente: c.paciente.cpf, sexo: sexoSus(c.paciente.sexo) ?? 'F', municipioIbge: c.municipioIbgePaciente, cid: c.cid,
+        cnsPaciente: c.cnsPaciente ?? c.paciente.cns, cpfPaciente: c.paciente.cpf, sexo: sexoSus(c.paciente.sexo) ?? 'F', municipioIbge: c.municipioIbgePaciente, cid: c.cid,
         idade, quantidade: qtd, caraterAtendimento: c.caraterAtendimento === '2' ? '02' : '01', nomePaciente: c.paciente.nome,
         dataNascimento: nasc ? aaaammdd(nasc) : '', racaCor: c.racaCor ?? '99', cep: c.cepPaciente, endereco: c.paciente.endereco,
         telefone: c.paciente.telefone, email: c.paciente.email,
@@ -272,7 +272,7 @@ export function aihDaConta(c: ContaArquivo, cfg: { cnes: string; municipioIbge: 
     sexo: sexoSus(c.paciente.sexo) ?? 'I',
     racaCor: c.racaCor ?? '99',
     nomeMae: c.paciente.mae,
-    cnsPaciente: c.cnsPaciente,
+    cnsPaciente: c.cnsPaciente ?? c.paciente.cns,
     cpfPaciente: c.paciente.cpf,
     logradouro: c.paciente.endereco,
     municipioPaciente: c.municipioIbgePaciente ?? '',

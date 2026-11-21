@@ -100,6 +100,12 @@ const MATRIZ = {
   'faturamento:ler': ['FATURISTA'],
   'faturamento:gerir': ['FATURISTA'],
   'faturamento:configurar': ['ADMIN'],
+  // Interoperabilidade (item 8): conferência do CNES e fila da RNDS. Só gestor (ADMIN sempre).
+  'integracao:ler': ['ADMIN'],
+  'integracao:gerir': ['ADMIN'],
+  // Registro de dose aplicada (vai para a RNDS). Ler: equipe clínica; registrar: quem vacina.
+  'vacina:ler': [...CLINICA, 'FARMACEUTICO'],
+  'vacina:registrar': ['MEDICO', ...ENFERMAGEM],
   'emergencia:acionar': TODOS,
   'emergencia:ler': TODOS,
   'emergencia:encerrar': ['MEDICO', ...ENFERMAGEM],

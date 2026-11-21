@@ -157,6 +157,7 @@ model Hospital {
   contasFaturamento    ContaFaturamento[]
   itensConta           ItemConta[]
   lotesFaturamento     LoteFaturamento[]
+  cnesProfissionais    CnesProfissional[]
 }
 
 model Usuario {
@@ -174,6 +175,10 @@ model Usuario {
   especialidade                 String?
   /// Registro de Qualificação de Especialista (opcional).
   rqe                           String?
+  /// Identificação SUS do profissional (item 8): CNS (15 dígitos, validado), CPF e CBO de lotação no CNES.
+  cns                           String?
+  cpf                           String?
+  cbo                           String?
   /// Tipos de prescrição que o gestor autorizou este usuário a emitir (FARMACOLOGICA, CUIDADO...). Vazio = não prescreve.
   prescricoesAutorizadas        String[]                @default([])
   avatar                        String?
@@ -236,6 +241,8 @@ model Paciente {
   hospital        Hospital  @relation(fields: [hospitalId], references: [id])
   nome            String
   cpf             String?
+  /// Cartão Nacional de Saúde (15 dígitos, validado). Identifica o paciente na RNDS quando não há CPF.
+  cns             String?
   rg              String?
   nascimento      DateTime?
   sexo            String?
@@ -1486,4 +1493,27 @@ model LoteFaturamento {
 
   @@unique([hospitalId, tipo, numero])
   @@index([hospitalId, createdAt])
+}
+
+// ==========================================
+// INTEROPERABILIDADE (item 8): CNES e RNDS.
+// ==========================================
+
+// Equipe do estabelecimento na base oficial do CNES (dado público do DATASUS), importada por scripts/importar-cnes.cjs.
+// Serve para conferir CNS e CBO dos usuários do Saskia. Uma linha por profissional e CBO na competência importada.
+model CnesProfissional {
+  id           String   @id @default(uuid())
+  hospitalId   String
+  hospital     Hospital @relation(fields: [hospitalId], references: [id])
+  cnes         String
+  /// Competência da base (AAAAMM).
+  competencia  String
+  cns          String
+  nome         String
+  cbo          String
+  cargaHoraria Int?
+  createdAt    DateTime @default(now())
+
+  @@unique([hospitalId, cns, cbo])
+  @@index([hospitalId])
 }

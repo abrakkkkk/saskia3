@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { hashSenha, isSenhaValida, MENSAGEM_SENHA_INVALIDA } from '@/lib/password'
 import { CARGOS } from '@/lib/permissions'
 import { lerRegistro } from '@/lib/registro-profissional'
+import { lerIdentificacaoSus } from '@/lib/identificacao-sus'
 import { lerAutorizacoes, podeReceberAutorizacao } from '@/lib/prescricao'
 
 const cargosPermitidos = new Set<string>(CARGOS)
@@ -44,6 +45,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const registro = lerRegistro(body)
     if ('error' in registro) return NextResponse.json({ error: registro.error }, { status: 400 })
     Object.assign(updateData, registro.data)
+    const sus = lerIdentificacaoSus(body)
+    if ('error' in sus) return NextResponse.json({ error: sus.error }, { status: 400 })
+    Object.assign(updateData, sus.data)
     const autorizacoes = lerAutorizacoes(body, null)
     if ('error' in autorizacoes) return NextResponse.json({ error: autorizacoes.error }, { status: 400 })
     if (autorizacoes.data !== undefined) updateData.prescricoesAutorizadas = { set: autorizacoes.data }
@@ -85,6 +89,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         select: {
           id: true, nome: true, email: true, cargo: true, ativo: true, createdAt: true,
           conselho: true, registroNumero: true, registroUf: true, especialidade: true, rqe: true, prescricoesAutorizadas: true,
+          cns: true, cpf: true, cbo: true,
         },
       })
       return { usuario }
