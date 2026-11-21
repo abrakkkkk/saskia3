@@ -148,10 +148,11 @@ export default function ConfigurarMfa({ obrigatorio }: { obrigatorio: boolean })
           alt="QR Code para cadastrar o Saskia no app autenticador"
           width={200}
           height={200}
-          className="bg-white mx-auto block"
-          style={{ padding: '10px', borderRadius: '8px', marginBottom: '16px' }}
+          className="bg-white block"
+          // margin inline: o reset global de margem vence o mx-auto do Tailwind.
+          style={{ padding: '10px', borderRadius: '8px', margin: '0 auto 16px' }}
         />
-        <details className="text-sm text-slate-300" style={{ marginBottom: '20px' }}>
+        <details className="text-sm text-slate-300 text-center" style={{ marginBottom: '20px' }}>
           <summary className="cursor-pointer underline underline-offset-2 hover:text-white" style={{ minHeight: '32px' }}>Não consegue ler? Digite a chave</summary>
           <p className="text-white break-all select-all" style={{ marginTop: '8px', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.06em' }}>
             {segredo.match(/.{1,4}/g)?.join(' ')}
