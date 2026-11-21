@@ -58,6 +58,13 @@ export async function semearBancoDeTeste(url) {
         movimentacoes: { create: { id: 'e2e-mov-b', hospitalId: HOSPITAL_B.id, setor: 'Enfermaria', leito: '7', motivo: 'Entrada' } },
       },
     });
+    // Item 10: cirurgias para o checklist de cirurgia segura (A responde; B é sigilosa para o A).
+    await prisma.cirurgia.createMany({
+      data: [
+        { id: 'e2e-cir-a', hospitalId: HOSPITAL_A.id, pacienteId: 'e2e-patient-a1', procedimento: 'Colecistectomia videolaparoscópica', sala: 'Sala Alfa 1', dataHora: new Date(), status: 'AGENDADA' },
+        { id: 'e2e-cir-b', hospitalId: HOSPITAL_B.id, pacienteId: 'audit-patient-b', procedimento: 'Cirurgia sigilosa Beta', sala: 'Sala Beta 1', dataHora: new Date(), status: 'AGENDADA' },
+      ],
+    });
     await prisma.receita.create({
       data: { id: 'e2e-receita-b', pacienteId: 'audit-patient-b', hospitalId: HOSPITAL_B.id, medicamentos: [{ conteudo: 'Receita sigilosa Beta' }], profissional: 'Dr. Médico Beta' },
     });

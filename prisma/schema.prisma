@@ -160,6 +160,9 @@ model Hospital {
   cnesProfissionais    CnesProfissional[]
   vacinasAplicadas     VacinaAplicada[]
   enviosRnds           EnvioRnds[]
+  checklistsCirurgicos ChecklistCirurgicoEtapa[]
+  evolucoesUti         EvolucaoUti[]
+  validacoesModelo     ValidacaoModeloClinico[]
   integracaoRnds       IntegracaoRnds?
 }
 
@@ -455,6 +458,8 @@ model Cirurgia {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
+  checklistEtapas ChecklistCirurgicoEtapa[]
+
   @@index([pacienteId])
   @@index([hospitalId])
   @@index([usuarioId])
@@ -513,6 +518,7 @@ model Internacao {
 
   movimentacoes     MovimentacaoLeito[]
   contasFaturamento ContaFaturamento[]
+  evolucoesUti      EvolucaoUti[]
 
   @@index([hospitalId, saidaEm])
   @@index([hospitalId, tipoSaida, saidaEm])
@@ -1608,4 +1614,98 @@ model EnvioRnds {
 
   @@unique([hospitalId, tipo, origemId])
   @@index([hospitalId, status])
+}
+
+// ==========================================
+// Item 10: checklist cirúrgico e evolução de UTI (modelos oficiais MS/Anvisa)
+// ==========================================
+
+/// Etapa da Lista de Verificação de Segurança Cirúrgica (Protocolo para Cirurgia Segura, MS/Anvisa/Fiocruz 2013, base OMS).
+enum EtapaChecklistCirurgico {
+  ANTES_INDUCAO
+  ANTES_INCISAO
+  ANTES_SAIDA
+}
+
+/// Uma linha por etapa respondida da cirurgia. A ordem das etapas é exigida pela API.
+model ChecklistCirurgicoEtapa {
+  id                 String                  @id @default(uuid())
+  hospitalId         String
+  hospital           Hospital                @relation(fields: [hospitalId], references: [id])
+  cirurgiaId         String
+  cirurgia           Cirurgia                @relation(fields: [cirurgiaId], references: [id], onDelete: Cascade)
+  etapa              EtapaChecklistCirurgico
+  /// Respostas por id do item (ver src/lib/checklist-cirurgico.ts).
+  respostas          Json
+  observacoes        String?
+  /// Versão do modelo usado (ex.: MS-ANVISA-2013).
+  modelo             String
+  respondidoPorId    String
+  respondidoPorNome  String
+  respondidoPorCargo String
+  respondidoEm       DateTime                @default(now())
+
+  @@unique([cirurgiaId, etapa])
+  @@index([hospitalId, respondidoEm])
+}
+
+/// Evolução diária na UTI (RDC Anvisa 7/2010: registro ao menos uma vez ao dia). Ligada à internação (item 9).
+model EvolucaoUti {
+  id            String     @id @default(uuid())
+  hospitalId    String
+  hospital      Hospital   @relation(fields: [hospitalId], references: [id])
+  internacaoId  String
+  internacao    Internacao @relation(fields: [internacaoId], references: [id], onDelete: Cascade)
+  pacienteId    String
+  utiLeitoId    String?
+  registradoEm  DateTime   @default(now())
+  autorId       String
+  autorNome     String
+  autorCargo    String
+  pas           Int?
+  pad           Int?
+  fc            Int?
+  fr            Int?
+  temperatura   Float?
+  spo2          Int?
+  glicemia      Int?
+  /// [{ tipo, local, inseridoEm }]
+  dispositivos  Json?
+  ventilacao    String?
+  fio2          Int?
+  peep          Int?
+  ventilacaoObs String?
+  entradasMl    Int?
+  saidasMl      Int?
+  rass          Int?
+  glasgowOcular Int?
+  glasgowVerbal Int?
+  glasgowMotora Int?
+  glasgowTotal  Int?
+  /// { percepcao, umidade, atividade, mobilidade, nutricao, friccao }
+  bradenItens   Json?
+  bradenTotal   Int?
+  dor           Int?
+  dorEscala     String?
+  evolucao      String
+  modelo        String
+  createdAt     DateTime   @default(now())
+
+  @@index([hospitalId, internacaoId, registradoEm])
+  @@index([hospitalId, registradoEm])
+}
+
+/// Validação do modelo clínico pelo hospital (decisão do dono, 21/11/2026). Sem linha: usa o modelo padrão MS/Anvisa.
+model ValidacaoModeloClinico {
+  id              String   @id @default(uuid())
+  hospitalId      String
+  hospital        Hospital @relation(fields: [hospitalId], references: [id])
+  /// CHECKLIST_CIRURGICO ou EVOLUCAO_UTI
+  modelo          String
+  validadoEm      DateTime @default(now())
+  validadoPorId   String
+  validadoPorNome String
+  observacao      String?
+
+  @@unique([hospitalId, modelo])
 }

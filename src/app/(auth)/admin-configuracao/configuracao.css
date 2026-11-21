@@ -13,3 +13,12 @@
 /* seletor de arquivo do logotipo: o botão é a <label> */
 .cfg-inst .conta-file-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .cfg-inst .conta-file-input:focus-visible + .btn, .cfg-inst label[for="instituicao-logo"]:focus-within { outline: 2px solid var(--ui-blue-700); outline-offset: 2px; }
+
+/* Modelos clínicos (item 10): um bloco por modelo, separados por linha. */
+.cfg-inst > .ui-panel, .cfg-inst form + * { margin-top: var(--ui-space-4); }
+.cfg-modelos { list-style: none; margin: 0; padding: 0; }
+.cfg-modelo { padding: var(--ui-space-3) 0; border-top: 1px solid var(--ui-border); }
+.cfg-modelo-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-2); }
+.cfg-modelo .mod-secundario { margin: 2px 0 var(--ui-space-2); }
+.cfg-modelo-registro { margin: 0 0 var(--ui-space-2); font-size: var(--ui-t-label); }
+.cfg-modelo .form-group { margin-bottom: var(--ui-space-2); }

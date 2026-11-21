@@ -41,7 +41,7 @@ Plataforma única, em português, desenhada para a rotina de hospitais brasileir
 - Decisões do dono que a interface deve respeitar:
   - o chatbot de IA está desligado e removido;
   - botões de emergência (pânico e PCR) ficam ativos e visíveis para todos os cargos; o ADMIN pode desligá-los por hospital (confirmado pelo dono em 21/11/2026);
-  - evolução de UTI e checklist cirúrgico ficam bloqueados até validação clínica (pendente, a agendar);
+  - evolução de UTI e checklist cirúrgico estão liberados com modelos oficiais (Protocolo para Cirurgia Segura MS/Anvisa, baseado na OMS; RDC Anvisa 7/2010 com RASS, Glasgow, Braden e dor); a validação clínica é feita por cada hospital na implantação: até o ADMIN marcar como validado em Configurações → Hospital, as telas mostram o selo discreto "Modelo padrão MS/Anvisa" (decisão do dono em 21/11/2026);
   - a receita não tem assinatura digital ICP-Brasil: a folha impressa avisa que só vale impressa, assinada e carimbada (decisão do dono em 21/11/2026);
   - a identidade visual atual (fundo azul-marinho, cartões brancos, logo Saskia) é mantida.
 - Terminologia: Paciente, Prontuário, Evolução, Triagem, Classificação de risco (Manchester), UTI, CSSD, CCIH, Óbito, Evasão, Transferência.

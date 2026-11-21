@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, SearchInput, StatCard, StatGrid, Tabs, type Tone } from '@/components/ui';
 import PacienteSelect from '@/components/ui/PacienteSelect';
 import { pode } from '@/lib/permissions';
+import ChecklistCirurgico from './ChecklistCirurgico';
 import '@/components/ui/modulo.css';
 import '../setores.css';
 import './centro-cirurgico.css';
@@ -55,6 +56,8 @@ function dataLocalKey(date: Date) {
 export default function CentroCirurgicoPage() {
   const { data: session, status: sessionStatus } = useSession();
   const podeGerenciar = pode(session?.user?.cargo, 'cirurgia:gerir');
+  const podeChecklist = pode(session?.user?.cargo, 'cirurgia:checklist');
+  const [checklistId, setChecklistId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Aba>('agendamento');
   const [cirurgias, setCirurgias] = useState<Cirurgia[]>([]);
   const [salas, setSalas] = useState<string[]>([]);
@@ -420,6 +423,10 @@ export default function CentroCirurgicoPage() {
 
             {activeTab === 'lista' && (
               <>
+                {(() => {
+                  const alvo = checklistId ? cirurgias.find(c => c.id === checklistId) : null;
+                  return alvo ? <ChecklistCirurgico key={alvo.id} cirurgia={alvo} podeResponder={podeChecklist} onFechar={() => setChecklistId(null)} /> : null;
+                })()}
                 <div className="sc-filtros">
                   <SearchInput value={buscaCirurgia} onChange={setBuscaCirurgia} placeholder="Buscar por paciente, procedimento ou equipe..." label="Buscar cirurgias por paciente, procedimento ou equipe" />
                   <select aria-label="Filtrar cirurgias por status" value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
@@ -442,7 +449,7 @@ export default function CentroCirurgicoPage() {
                           <th scope="col">Procedimento</th>
                           <th scope="col">Sala</th>
                           <th scope="col">Status</th>
-                          {podeGerenciar && <th scope="col">Ações</th>}
+                          <th scope="col">Ações</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -456,15 +463,18 @@ export default function CentroCirurgicoPage() {
                             </td>
                             <td>{c.sala}</td>
                             <td><Badge tone={STATUS_TOM[c.status] ?? 'neutral'}>{rotuloStatus(c.status)}</Badge></td>
-                            {podeGerenciar && (
-                              <td>
+                            <td>
                                 <div className="mod-acoes-tabela">
+                                  <button type="button" className="btn btn-xs btn-secondary" aria-label={`Checklist de cirurgia segura de ${c.paciente.nome}`} aria-pressed={checklistId === c.id} onClick={() => setChecklistId(c.id)}>
+                                    <i className="las la-clipboard-check" aria-hidden="true"></i> Checklist
+                                  </button>
+                                  {podeGerenciar && (<>
                                   <button type="button" className="btn btn-xs btn-primary" aria-label={`Iniciar ${c.procedimento} de ${c.paciente.nome}`} onClick={() => alterarStatus(c.id, 'EM_ANDAMENTO')} disabled={c.status !== 'AGENDADA'}>Iniciar</button>
                                   <button type="button" className="btn btn-xs btn-success" aria-label={`Concluir ${c.procedimento} de ${c.paciente.nome}`} onClick={() => alterarStatus(c.id, 'CONCLUIDA')} disabled={c.status !== 'EM_ANDAMENTO'}>Concluir</button>
                                   <button type="button" className="btn btn-xs btn-danger" aria-label={`Cancelar ${c.procedimento} de ${c.paciente.nome}`} onClick={() => alterarStatus(c.id, 'CANCELADA')} disabled={c.status === 'CANCELADA' || c.status === 'CONCLUIDA'}>Cancelar</button>
+                                  </>)}
                                 </div>
                               </td>
-                            )}
                           </tr>
                         ))}
                       </tbody>

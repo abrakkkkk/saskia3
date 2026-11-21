@@ -47,6 +47,8 @@ before(async () => {
   await prisma.escoreClinico.deleteMany({ where: { pacienteId: 'audit-patient-b' } });
   await prisma.exame.deleteMany({ where: { pacienteId: 'audit-patient-b' } });
   await prisma.internacao.deleteMany({ where: { pacienteId: 'audit-patient-b' } });
+  await prisma.checklistCirurgicoEtapa.deleteMany({ where: { cirurgiaId: { in: ['e2e-cir-a', 'e2e-cir-b'] } } });
+  await prisma.validacaoModeloClinico.deleteMany({ where: { hospitalId: { in: ['audit-hospital-a', 'audit-hospital-b'] } } });
 
   const csrfResponse = await request('/api/auth/csrf');
   assert.equal(csrfResponse.status, 200, 'Auth.js deve fornecer o CSRF para o login sintético');
@@ -157,4 +159,64 @@ test('internação: hospital A não lê, cria, troca leito nem encerra internaç
   // A internação aberta do B não entra nos contadores do A.
   const stats = await (await json('GET', '/api/dashboard/stats')).json();
   assert.equal(stats.internados, 0, 'painel do A não pode contar internação do B');
+});
+
+test('item 10: checklist cirúrgico, evolução de UTI e validação de modelo respeitam o hospital e as regras', {
+  skip: !baseUrl || !databaseUrl,
+}, async () => {
+  const json = (metodo, path, body) => request(path, {
+    method: metodo,
+    headers: body ? { 'content-type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  await prisma.usuario.update({ where: { email: 'audit.admin@example.test' }, data: { cargo: 'ENFERMEIRO_ASSISTENCIAL' } });
+  const tudoOk = (itens) => Object.fromEntries(itens.map(([id, v]) => [id, v ?? true]));
+  const inducao = tudoOk([['identidade'], ['demarcacao', 'sim'], ['seguranca_anestesica'], ['oximetro'], ['alergia', 'nao'], ['via_aerea', 'nao'], ['perda_sanguinea', 'nao']]);
+
+  // Hospital B: nada visível nem gravável.
+  assert.equal((await json('GET', '/api/cirurgias/e2e-cir-b/checklist')).status, 404);
+  assert.equal((await json('POST', '/api/cirurgias/e2e-cir-b/checklist', { etapa: 'ANTES_INDUCAO', respostas: inducao })).status, 404);
+  assert.equal(await prisma.checklistCirurgicoEtapa.count({ where: { cirurgiaId: 'e2e-cir-b' } }), 0);
+
+  // Regras do protocolo no Hospital A: ordem das etapas, item não confirmado e etapa repetida.
+  assert.equal((await json('POST', '/api/cirurgias/e2e-cir-a/checklist', { etapa: 'ANTES_INCISAO', respostas: {} })).status, 409, 'Time Out sem Sign In');
+  assert.equal((await json('POST', '/api/cirurgias/e2e-cir-a/checklist', { etapa: 'ANTES_INDUCAO', respostas: { ...inducao, oximetro: false } })).status, 422,
+    'item não confirmado deve parar a verificação');
+  assert.equal((await json('POST', '/api/cirurgias/e2e-cir-a/checklist', { etapa: 'ANTES_INDUCAO', respostas: { ...inducao, alergia: 'sim' } })).status, 422,
+    'alergia sem descrição deve ser recusada');
+  const incisao = tudoOk([['apresentacao'], ['confirmacao_verbal'], ['revisao_cirurgiao'], ['revisao_anestesia'], ['revisao_enfermagem'], ['antibiotico', 'sim'], ['imagem', 'nao_se_aplica']]);
+  assert.equal((await json('POST', '/api/cirurgias/e2e-cir-a/checklist', { etapa: 'ANTES_INCISAO', respostas: incisao })).status, 409, 'Time Out antes do Sign In');
+  assert.equal((await json('POST', '/api/cirurgias/e2e-cir-a/checklist', { etapa: 'ANTES_INDUCAO', respostas: inducao })).status, 201);
+  assert.equal((await json('POST', '/api/cirurgias/e2e-cir-a/checklist', { etapa: 'ANTES_INDUCAO', respostas: inducao })).status, 409, 'etapa não se repete');
+  const etapa = await prisma.checklistCirurgicoEtapa.findFirst({ where: { cirurgiaId: 'e2e-cir-a' } });
+  assert.equal(etapa.hospitalId, 'audit-hospital-a');
+  assert.equal(etapa.respondidoPorCargo, 'ENFERMEIRO_ASSISTENCIAL');
+  await prisma.checklistCirurgicoEtapa.deleteMany({ where: { cirurgiaId: 'e2e-cir-a' } });
+
+  // Evolução de UTI: internação do B dá 404; dado fora da escala é recusado.
+  assert.equal((await json('POST', '/api/uti/evolucoes', { internacaoId: 'e2e-intern-b', pas: 120, pad: 80, evolucao: 'Tentativa sintética de evolução' })).status, 404);
+  assert.equal((await json('GET', '/api/uti/evolucoes?internacaoId=e2e-intern-b')).status, 404);
+  const lista = await (await json('GET', '/api/uti/evolucoes')).json();
+  assert.ok(!lista.internacoes.some(i => i.id === 'e2e-intern-b'), 'lista da UTI não pode trazer internação do B');
+  assert.equal(lista.modelo.validado, false, 'sem validação o modelo é o padrão');
+  assert.equal((await json('POST', '/api/uti/evolucoes', { internacaoId: 'e2e-intern-b', rass: 9, evolucao: 'Tentativa sintética' })).status, 422, 'RASS fora da escala');
+  assert.equal(await prisma.evolucaoUti.count({ where: { internacaoId: 'e2e-intern-b' } }), 0);
+
+  // Validação do modelo: só ADMIN, e só no próprio hospital.
+  assert.equal((await json('PUT', '/api/modelos-clinicos', { modelo: 'EVOLUCAO_UTI', validado: true })).status, 403, 'enfermagem não valida modelo');
+  await prisma.usuario.update({ where: { email: 'audit.admin@example.test' }, data: { cargo: 'ADMIN', mfaAtivo: true } });
+  try {
+    const r = await json('PUT', '/api/modelos-clinicos', { modelo: 'EVOLUCAO_UTI', validado: true, observacao: 'Comissão de UTI' });
+    assert.equal(r.status, 200);
+    const v = await prisma.validacaoModeloClinico.findMany();
+    assert.equal(v.length, 1);
+    assert.equal(v[0].hospitalId, 'audit-hospital-a');
+    assert.equal(v[0].validadoPorNome, 'Auditor Alfa');
+    assert.equal((await (await json('GET', '/api/uti/evolucoes')).json()).modelo.validado, true);
+    assert.equal((await (await json('GET', '/api/cirurgias/e2e-cir-a/checklist')).json()).modelo.validado, false, 'validação é por modelo');
+    assert.equal((await json('PUT', '/api/modelos-clinicos', { modelo: 'EVOLUCAO_UTI', validado: false })).status, 200);
+    assert.equal(await prisma.validacaoModeloClinico.count(), 0);
+  } finally {
+    await prisma.usuario.update({ where: { email: 'audit.admin@example.test' }, data: { cargo: 'ENFERMEIRO_ASSISTENCIAL', mfaAtivo: false } });
+  }
 });

@@ -21,3 +21,34 @@
 .cc-sala-ocupada { background: var(--ui-surface); color: var(--ui-text); border-color: var(--ui-blue-700); box-shadow: var(--ui-shadow-card); }
 .cc-sala-ocupada .cc-sala-nome { font-size: 20px; font-weight: 700; }
 .cc-sala-ocupada .cc-sala-detalhe { font-size: var(--ui-t-body); font-weight: 500; }
+
+/* Checklist de cirurgia segura (item 10): três etapas em sequência; a atual ganha destaque, as concluídas recuam. */
+.cc-check-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-2); margin-bottom: var(--ui-space-3); }
+.cc-check-topo .mod-nota { margin: 0; flex: 1 1 280px; }
+.cc-check-etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--ui-space-3); }
+.cc-check-etapa { padding: 12px 14px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-card); background: var(--ui-surface-muted); color: var(--ui-text-muted); min-width: 0; }
+.cc-check-atual { background: var(--ui-surface); color: var(--ui-text); border-color: var(--ui-blue-700); box-shadow: var(--ui-shadow-card); }
+.cc-check-feita { background: var(--ui-surface); color: var(--ui-text); }
+.cc-check-cabeca { display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-2); }
+.cc-check-cabeca h3 { margin: 0; font-size: var(--ui-t-section); font-weight: 600; color: var(--ui-text); }
+.cc-check-momento { font-size: var(--ui-t-meta); font-weight: 500; color: var(--ui-text-muted); }
+.cc-check-etapa > .mod-secundario { margin: 4px 0 var(--ui-space-2); }
+.cc-check-respostas { display: grid; gap: 6px; margin: 0; font-size: var(--ui-t-label); }
+.cc-check-respostas > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--ui-space-3); padding-bottom: 6px; border-bottom: 1px solid var(--ui-border); }
+.cc-check-respostas > div:last-child { border-bottom: 0; padding-bottom: 0; }
+.cc-check-respostas dt { color: var(--ui-text-muted); }
+.cc-check-respostas dd { margin: 0; font-weight: 600; text-align: right; }
+.cc-check-form { display: grid; gap: var(--ui-space-2); margin-top: var(--ui-space-3); }
+.cc-check-form .form-group { margin: var(--ui-space-2) 0 0; }
+.cc-check-item { display: flex; align-items: flex-start; gap: 10px; min-height: 40px; padding: 8px 0; border-bottom: 1px solid var(--ui-border); cursor: pointer; line-height: 1.4; }
+.cc-check-item input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--ui-blue-700); }
+.cc-check-opcoes { display: block; margin: 0; padding: 8px 0; border: 0; border-bottom: 1px solid var(--ui-border); cursor: default; }
+.cc-check-opcoes legend { padding: 0; margin-bottom: 6px; float: left; width: 100%; }
+.cc-check-opcoes > div { clear: both; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.cc-check-opcoes label { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; cursor: pointer; }
+.cc-check-opcoes input { width: 18px; height: 18px; accent-color: var(--ui-blue-700); }
+@media (max-width: 560px) {
+  .cc-check-respostas > div { grid-template-columns: 1fr; gap: 2px; }
+  .cc-check-respostas dd { text-align: left; }
+}
+.cc-check-ancora { scroll-margin-top: 80px; }

@@ -8,6 +8,7 @@ import '@/components/ui/modulo.css';
 import '@/components/ui/ui-extras.css';
 import '@/components/ui/modal.css';
 import './configuracao.css';
+import ModelosClinicos from './ModelosClinicos';
 
 export default function AdminConfiguracaoPage() {
   const { data: session, status } = useSession();
@@ -277,6 +278,7 @@ export default function AdminConfiguracaoPage() {
             </Panel>
           </form>
         )}
+        {canManageHospital && !loadingHospital && <ModelosClinicos />}
       </div>
     </div>
   );

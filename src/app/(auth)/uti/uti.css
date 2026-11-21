@@ -18,3 +18,25 @@
 .uti-leito-ocupado .uti-leito-meta { color: var(--ui-text-muted); }
 .uti-leito-paciente { margin: 0; font-size: var(--ui-t-section); font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
 .uti-leito-acoes { margin-top: var(--ui-space-1); }
+
+/* Evolução diária (item 10): formulário em blocos por tema; cálculos lidos de relance. */
+.uti-evolucao { display: grid; gap: var(--ui-space-4); min-width: 0; }
+.uti-evolucao-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ui-space-2); }
+.uti-evolucao-topo .mod-nota { margin: 0; }
+.uti-evolucao .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.uti-evolucao td .mod-secundario { margin-bottom: 4px; }
+.uti-evolucao tr[aria-current="true"] td { background: var(--ui-surface-muted); }
+.uti-evo-form { display: grid; gap: var(--ui-space-4); margin-bottom: var(--ui-space-5); }
+.uti-evo-form fieldset { margin: 0; padding: 0; border: 0; border-top: 1px solid var(--ui-border); padding-top: var(--ui-space-3); min-width: 0; }
+.uti-evo-form legend { padding: 0 8px 0 0; font-size: var(--ui-t-label); font-weight: 600; color: var(--ui-text); }
+.uti-evo-form .form-group { margin-bottom: 0; }
+.uti-evo-form textarea { width: 100%; }
+.uti-evo-calculo { align-self: end; margin: 0; min-height: var(--ui-h-control); display: flex; align-items: center; gap: 4px; color: var(--ui-text-muted); font-variant-numeric: tabular-nums; }
+.uti-evo-calculo strong { color: var(--ui-text); font-size: var(--ui-t-section); }
+.uti-evo-dispositivo { margin-bottom: var(--ui-space-3); }
+.uti-evo-remover { align-self: end; }
+.uti-evo-hist-titulo { margin: 0 0 var(--ui-space-3); font-size: var(--ui-t-section); font-weight: 600; }
+.uti-evo-texto { margin: var(--ui-space-2) 0 0; }
+.uti-evo-ancora { scroll-margin-top: 80px; min-width: 0; }
+/* Campos numéricos curtos: dois por linha no celular. */
+.uti-evo-form .mod-form-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }

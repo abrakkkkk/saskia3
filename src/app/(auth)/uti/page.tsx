@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { Badge, EmptyState, ErrorState, LoadingState, PageHeader, Panel, SearchInput, StatCard, StatGrid, Tabs, type Tone } from '@/components/ui';
 import PacienteSelect from '@/components/ui/PacienteSelect';
 import { pode } from '@/lib/permissions';
+import EvolucaoUti from './EvolucaoUti';
 import '@/components/ui/modulo.css';
 import './uti.css';
 
@@ -20,10 +21,11 @@ interface UtiLeito {
   updatedAt: string;
 }
 
-type Aba = 'mapa' | 'admissao' | 'pacientes';
+type Aba = 'mapa' | 'evolucao' | 'admissao' | 'pacientes';
 
 const ABAS = [
   { id: 'mapa', label: 'Mapa de leitos', icon: 'las la-th-large' },
+  { id: 'evolucao', label: 'Evolução diária', icon: 'las la-notes-medical' },
   { id: 'admissao', label: 'Admissão', icon: 'las la-user-plus' },
   { id: 'pacientes', label: 'Pacientes', icon: 'las la-users' },
 ] as const;
@@ -42,6 +44,7 @@ const TIPO_ROTULO: Record<string, string> = { ADULTO: 'Adulto', PEDIATRICO: 'Ped
 export default function UtiPage() {
   const { data: session } = useSession();
   const podeGerir = pode(session?.user?.cargo, 'uti:gerir');
+  const podeEvoluir = pode(session?.user?.cargo, 'uti:evoluir');
   const [abaEscolhida, setAbaEscolhida] = useState<Aba>('mapa');
   const [leitosUTI, setLeitosUTI] = useState<UtiLeito[]>([]);
   const [liberando, setLiberando] = useState<{ id: string; nome: string | null } | null>(null);
@@ -255,6 +258,8 @@ export default function UtiPage() {
                 })}
               </ul>
             ))}
+
+            {aba === 'evolucao' && <EvolucaoUti podeEvoluir={podeEvoluir} />}
 
             {aba === 'admissao' && podeGerir && (
               <Panel title="Vincular paciente cadastrado a um leito livre" icon="las la-user-plus">

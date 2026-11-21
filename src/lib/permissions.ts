@@ -65,8 +65,12 @@ const MATRIZ = {
   'exame:laudar': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL'],
   'cirurgia:ler': [...CLINICA, 'ADMIN'],
   'cirurgia:gerir': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL'],
-  'uti:ler': [...CLINICA, 'ADMIN'],
+  // Item 10: checklist de cirurgia segura (MS/Anvisa). Quem conduz na sala: médico ou enfermagem.
+  'cirurgia:checklist': ['MEDICO', ...ENFERMAGEM],
+  // Fisioterapia lê a UTI e evolui: a RDC 7/2010 pede registro diário das equipes médica, de enfermagem e de fisioterapia.
+  'uti:ler': [...CLINICA, 'FISIOTERAPEUTA', 'ADMIN'],
   'uti:gerir': ['MEDICO', 'ENFERMEIRO_ASSISTENCIAL'],
+  'uti:evoluir': [...CLINICA, 'FISIOTERAPEUTA'],
   // Internação (item 9): ler o histórico e internar/trocar leito/registrar evasão.
   // Alta e transferência continuam exigindo 'prontuario:desfecho'; leito de UTI também exige 'uti:gerir'.
   'internacao:ler': ['ADMIN', 'RECEPCIONISTA', ...CLINICA, ...REABILITACAO_ODONTO, 'FARMACEUTICO', 'NUTRICIONISTA', 'ASSISTENTE_SOCIAL', 'FATURISTA'],

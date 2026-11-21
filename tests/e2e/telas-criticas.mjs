@@ -202,8 +202,65 @@ await cenario('Internação (internar, trocar leito, transferir)', 'medico.alfa@
   conferir(await api(page, 'PATCH', '/api/internacoes/e2e-intern-b', { acao: 'encerrar', tipoSaida: 'ALTA_MEDICA' }) === 404, 'alta na internação do B não devolveu 404');
 });
 
+await cenario('Checklist de cirurgia segura (3 etapas)', 'enfermagem.alfa@example.test', async page => {
+  await page.goto(`${BASE}/centro-cirurgico`);
+  await page.getByRole('tab', { name: 'Cirurgias' }).click();
+  await semDadosDoB(page, 'Centro cirúrgico');
+  await page.getByRole('button', { name: /Checklist de cirurgia segura de Paciente Alfa/ }).first().click();
+  await page.getByText('Modelo padrão MS/Anvisa').first().waitFor();
+  for (const titulo of ['Antes da indução anestésica', 'Antes da incisão cirúrgica', 'Antes de o paciente sair da sala']) {
+    const etapa = page.locator('.cc-check-atual');
+    await etapa.getByRole('heading', { name: new RegExp(titulo) }).waitFor();
+    for (const caixa of await etapa.locator('input[type="checkbox"]').all()) await caixa.check();
+    for (const grupo of await etapa.locator('fieldset.cc-check-opcoes').all()) await grupo.locator('input[type="radio"]').first().check();
+    await etapa.getByRole('button', { name: 'Registrar etapa' }).click();
+    await page.getByText(`${titulo}: etapa registrada.`).waitFor();
+  }
+  const etapas = await prisma.checklistCirurgicoEtapa.findMany({ where: { cirurgiaId: 'e2e-cir-a' } });
+  conferir(etapas.length === 3 && etapas.every(e => e.respondidoPorNome === 'Enfermeira Alfa' && e.hospitalId === HOSPITAL_A.id), 'checklist não gravou as 3 etapas');
+  conferir(await page.locator('.cc-check-feita').count() === 3, 'tela não mostrou as 3 etapas concluídas');
+  conferir(await api(page, 'POST', '/api/cirurgias/e2e-cir-b/checklist', { etapa: 'ANTES_INDUCAO', respostas: {} }) === 404, 'checklist do B não devolveu 404');
+  await page.screenshot({ path: 'test-results/checklist-desktop.png', fullPage: true }).catch(() => {});
+  await page.setViewportSize({ width: 390, height: 844 });
+  const estouro = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  conferir(estouro <= 1, `checklist estoura ${estouro}px no celular`);
+  await page.screenshot({ path: 'test-results/checklist-celular.png', fullPage: true }).catch(() => {});
+});
+
+await cenario('Evolução diária de UTI', 'medico.alfa@example.test', async page => {
+  await page.goto(`${BASE}/uti`);
+  await page.getByRole('tab', { name: 'Evolução diária' }).click();
+  await semDadosDoB(page, 'UTI: evolução');
+  await page.getByText('Modelo padrão MS/Anvisa').first().waitFor();
+  await page.getByRole('button', { name: 'Abrir evolução de Paciente Alfa UTI' }).click();
+  for (const [id, valor] of [['pas', '118'], ['pad', '72'], ['fc', '96'], ['fr', '18'], ['temperatura', '37,8'], ['spo2', '95'], ['entradas', '2400'], ['saidas', '1900'], ['fio2', '40'], ['peep', '8'], ['dor', '2']]) {
+    await page.locator(`#evo-${id}`).fill(valor);
+  }
+  await page.locator('#evo-ventilacao').selectOption('VM_INVASIVA');
+  await page.locator('#evo-rass').selectOption('-2');
+  await page.locator('#evo-g-ocular').selectOption('2');
+  await page.locator('#evo-g-verbal').selectOption('1');
+  await page.locator('#evo-g-motora').selectOption('5');
+  for (const k of ['percepcao', 'umidade', 'atividade', 'mobilidade', 'nutricao', 'friccao']) await page.locator(`#evo-b-${k}`).selectOption('2');
+  await page.getByRole('button', { name: 'Adicionar dispositivo' }).click();
+  await page.locator('#evo-d-local-0').fill('Jugular direita');
+  await page.locator('#evo-texto').fill('Paciente em VM, sedação leve, afebril nas últimas horas. Mantém plano.');
+  await page.getByRole('button', { name: 'Registrar evolução' }).click();
+  await page.getByText('Evolução registrada.').waitFor();
+  const e = await prisma.evolucaoUti.findFirst({ where: { pacienteId: 'e2e-patient-a2' } });
+  conferir(e && e.hospitalId === HOSPITAL_A.id && e.glasgowTotal === 8 && e.bradenTotal === 12 && e.rass === -2 && e.temperatura === 37.8
+    && e.autorCargo === 'MEDICO' && Array.isArray(e.dispositivos) && e.dispositivos[0].tipo === 'CVC', 'evolução não gravada como esperado');
+  await page.getByText('8 (Grave)').first().waitFor();
+  await page.screenshot({ path: 'test-results/evolucao-uti-desktop.png', fullPage: true }).catch(() => {});
+  await page.setViewportSize({ width: 390, height: 844 });
+  const estouro = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  conferir(estouro <= 1, `evolução estoura ${estouro}px no celular`);
+  await page.screenshot({ path: 'test-results/evolucao-uti-celular.png', fullPage: true }).catch(() => {});
+  conferir(await api(page, 'POST', '/api/uti/evolucoes', { internacaoId: 'e2e-intern-b', evolucao: 'Tentativa sintética' }) === 404, 'evolução no B não devolveu 404');
+});
+
 await prisma.$disconnect();
 await pool.end().catch(() => {});
 
 for (const r of resultados) console.log(r.ok ? `PASSOU  ${r.tela} (${(r.ms / 1000).toFixed(1)} s)` : `FALHOU  ${r.tela}: ${r.erro}`);
-process.exitCode = resultados.every(r => r.ok) && resultados.length === 5 ? 0 : 1;
+process.exitCode = resultados.every(r => r.ok) && resultados.length === 7 ? 0 : 1;
