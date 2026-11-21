@@ -13,7 +13,7 @@ export default function EsqueciSenhaPage() {
   async function enviar(event: React.FormEvent) {
     event.preventDefault()
     setErro('')
-    if (!email.trim()) { setErro('Digite o e-mail da sua conta.'); return }
+    if (!email.trim()) { setErro('Digite seu e-mail.'); return }
     setCarregando(true)
     try {
       const r = await fetch('/api/senha/esqueci', {
@@ -22,10 +22,10 @@ export default function EsqueciSenhaPage() {
         body: JSON.stringify({ email }),
       })
       const dados = await r.json().catch(() => null)
-      if (!r.ok) { setErro(dados?.error ?? 'Não foi possível enviar agora. Tente de novo em alguns minutos.'); return }
+      if (!r.ok) { setErro(dados?.error ?? 'Não foi possível enviar. Tente de novo.'); return }
       setEnviado(dados?.mensagem ?? 'Se o e-mail estiver cadastrado, você vai receber um link.')
     } catch {
-      setErro('Sem conexão com o servidor. Confira a internet e tente de novo.')
+      setErro('Sem conexão. Tente de novo.')
     } finally {
       setCarregando(false)
     }
@@ -34,14 +34,14 @@ export default function EsqueciSenhaPage() {
   return (
     <AuthShell
       titulo="Esqueci minha senha"
-      descricao={enviado ? undefined : 'Digite o e-mail da sua conta. Enviaremos um link para criar uma nova senha.'}
+      descricao={enviado ? undefined : 'Enviaremos um link para criar uma nova senha.'}
       rodape={<LinkAcesso href="/">Voltar para o login</LinkAcesso>}
     >
       {enviado ? (
         <>
           <AvisoAcesso tipo="sucesso">{enviado}</AvisoAcesso>
           <p className="text-sm text-slate-300 text-pretty" style={{ lineHeight: 1.5 }}>
-            Não chegou? Confira a caixa de spam. Se ainda assim não aparecer, o administrador do seu hospital pode redefinir a senha em Usuários.
+            Não chegou? Veja o spam ou peça ao administrador do hospital.
           </p>
         </>
       ) : (

@@ -18,7 +18,7 @@ function Formulario() {
   if (!token) {
     return (
       <AuthShell titulo="Link incompleto" rodape={<LinkAcesso href="/esqueci-senha">Pedir um novo link</LinkAcesso>}>
-        <AvisoAcesso>Abra o link exatamente como chegou no e-mail, ou peça um novo.</AvisoAcesso>
+        <AvisoAcesso>Abra o link completo do e-mail ou peça um novo.</AvisoAcesso>
       </AuthShell>
     )
   }
@@ -27,7 +27,7 @@ function Formulario() {
     event.preventDefault()
     setErro('')
     if (senha.length < MIN) { setErro(`A senha precisa ter pelo menos ${MIN} caracteres.`); return }
-    if (senha !== confirmacao) { setErro('As duas senhas não são iguais.'); return }
+    if (senha !== confirmacao) { setErro('As duas senhas estão diferentes.'); return }
     setCarregando(true)
     try {
       const r = await fetch('/api/senha/redefinir', {
@@ -39,7 +39,7 @@ function Formulario() {
       if (!r.ok) { setErro(dados?.error ?? 'Não foi possível alterar a senha.'); return }
       setPronto(true)
     } catch {
-      setErro('Sem conexão com o servidor. Confira a internet e tente de novo.')
+      setErro('Sem conexão. Tente de novo.')
     } finally {
       setCarregando(false)
     }
@@ -48,7 +48,7 @@ function Formulario() {
   if (pronto) {
     return (
       <AuthShell titulo="Senha alterada" rodape={<LinkAcesso href="/">Ir para o login</LinkAcesso>}>
-        <AvisoAcesso tipo="sucesso">Pronto. Entre com a nova senha; sessões abertas em outros aparelhos foram encerradas.</AvisoAcesso>
+        <AvisoAcesso tipo="sucesso">Pronto. Já pode entrar com a nova senha.</AvisoAcesso>
       </AuthShell>
     )
   }
@@ -56,7 +56,7 @@ function Formulario() {
   return (
     <AuthShell
       titulo="Criar nova senha"
-      descricao={`Use pelo menos ${MIN} caracteres. Uma frase curta é fácil de lembrar e difícil de adivinhar.`}
+      descricao={`Mínimo de ${MIN} caracteres.`}
       rodape={<LinkAcesso href="/">Voltar para o login</LinkAcesso>}
     >
       <form onSubmit={salvar} aria-busy={carregando} noValidate>
@@ -84,7 +84,7 @@ function Formulario() {
           autoComplete="new-password"
         />
         {erro && <AvisoAcesso>{erro}</AvisoAcesso>}
-        <BotaoAcesso carregando={carregando} textoCarregando="Salvando..." icone={Check}>Salvar nova senha</BotaoAcesso>
+        <BotaoAcesso carregando={carregando} textoCarregando="Salvando..." icone={Check}>Salvar</BotaoAcesso>
       </form>
     </AuthShell>
   )

@@ -37,11 +37,11 @@ export default function LoginPage() {
 
     const codigoLimpo = codigo.replace(/[\s-]/g, '').toUpperCase()
     if (!codigoLimpo || !email || !senha) {
-      setErro('Preencha o código da unidade, o e-mail e a senha.')
+      setErro('Preencha todos os campos.')
       return
     }
     if (pedeOtp && !otp.trim()) {
-      setErro('Digite o código do app autenticador.')
+      setErro('Digite o código do celular.')
       return
     }
 
@@ -62,21 +62,21 @@ export default function LoginPage() {
       }
       if (resultado?.code === 'mfa_invalido') {
         setOtp('')
-        setErro('Código de verificação incorreto ou já usado. Digite o código atual do app.')
+        setErro('Código incorreto ou já usado. Digite o que aparece agora no app.')
         setLoading(false)
         otpRef.current?.focus()
         return
       }
       if (resultado?.error || !resultado?.ok) {
         // Mensagem única: não revela se a unidade ou a conta existem, estão inativas ou bloqueadas.
-        setErro('Não foi possível entrar. Confira o código da unidade, o e-mail e a senha, ou tente de novo em alguns minutos.')
+        setErro('Código da unidade, e-mail ou senha incorretos. Depois de várias tentativas, aguarde 15 minutos.')
         setLoading(false)
         return
       }
       try { localStorage.setItem(CHAVE_CODIGO, codigoLimpo) } catch { /* sem armazenamento */ }
       router.push('/dashboard')
     } catch {
-      setErro('Não foi possível conectar ao serviço de autenticação. Tente novamente.')
+      setErro('Sem conexão. Tente de novo.')
       setLoading(false)
     }
   }
@@ -90,7 +90,7 @@ export default function LoginPage() {
   return (
     <AuthShell
       titulo={pedeOtp ? 'Verificação em duas etapas' : 'Acessar o sistema'}
-      descricao={pedeOtp ? 'Abra o app autenticador no celular e digite o código de 6 dígitos. Sem o celular, use um código de recuperação.' : undefined}
+      descricao={pedeOtp ? 'Abra o app autenticador no celular e digite o código de 6 dígitos.' : undefined}
       rodape={pedeOtp ? undefined : (
         <>
           <LinkAcesso href="/esqueci-senha">Esqueci minha senha</LinkAcesso>
@@ -145,7 +145,7 @@ export default function LoginPage() {
           <CampoAcesso
             ref={otpRef}
             id="login-otp"
-            rotulo="Código de verificação"
+            rotulo="Código do celular"
             icone={KeyRound}
             value={otp}
             onChange={e => setOtp(e.target.value)}
@@ -155,7 +155,7 @@ export default function LoginPage() {
             autoComplete="one-time-code"
             autoCorrect="off"
             spellCheck={false}
-            dica="Código de recuperação: formato abcde-12345, vale uma vez só."
+            dica="Sem o celular? Use um código de reserva."
             style={{ minHeight: '48px', padding: '12px 16px', borderRadius: '8px', fontSize: '20px', color: '#0f172a', letterSpacing: '0.2em', fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}
           />
         )}
@@ -163,7 +163,7 @@ export default function LoginPage() {
         {erro && <AvisoAcesso>{erro}</AvisoAcesso>}
 
         <BotaoAcesso carregando={loading} textoCarregando="Entrando..." icone={pedeOtp ? ShieldCheck : LogIn}>
-          {pedeOtp ? 'Verificar e entrar' : 'Entrar'}
+          Entrar
         </BotaoAcesso>
 
         {pedeOtp && (
@@ -173,7 +173,7 @@ export default function LoginPage() {
             className="w-full text-sm text-slate-300 underline underline-offset-2 hover:text-white"
             style={{ marginTop: '16px', minHeight: '44px' }}
           >
-            Voltar e usar outra conta
+            Voltar
           </button>
         )}
       </form>

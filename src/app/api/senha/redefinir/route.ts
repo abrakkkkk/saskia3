@@ -6,7 +6,7 @@ import { hashSenha, isSenhaValida, MENSAGEM_SENHA_INVALIDA } from '@/lib/passwor
 import { limparFalhas } from '@/lib/rate-limit'
 
 const SEM_CACHE = { 'Cache-Control': 'no-store' }
-const LINK_INVALIDO = 'Este link não vale mais. Peça um novo em "Esqueci minha senha".'
+const LINK_INVALIDO = 'Link expirado ou já usado. Peça um novo.'
 
 /** Troca a senha com o token recebido por e-mail (uso único, 30 min). */
 export async function POST(request: NextRequest) {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     })
     if (!resultado) return NextResponse.json({ error: LINK_INVALIDO }, { status: 400, headers: SEM_CACHE })
     await limparFalhas(`conta:${resultado.email}`)
-    return NextResponse.json({ mensagem: 'Senha alterada. Entre com a nova senha.' }, { headers: SEM_CACHE })
+    return NextResponse.json({ mensagem: 'Senha alterada.' }, { headers: SEM_CACHE })
   } catch (error) {
     console.error('Erro ao redefinir senha:', error instanceof Error ? error.name : 'erro')
     return NextResponse.json({ error: 'Não foi possível alterar a senha. Tente de novo.' }, { status: 500, headers: SEM_CACHE })

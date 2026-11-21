@@ -12,7 +12,7 @@ const LIMITE_POR_IP = 10
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // Mesma resposta exista ou não a conta: não revela quem tem cadastro.
-const MENSAGEM_PADRAO = 'Se o e-mail estiver cadastrado, você vai receber um link para criar uma nova senha. Ele vale por 30 minutos.'
+const MENSAGEM_PADRAO = 'Se o e-mail estiver cadastrado, o link chega em instantes. Vale por 30 minutos.'
 
 function baseUrl(request: NextRequest) {
   // Preferir a URL fixa: o cabeçalho Host poderia ser forjado para desviar o link.
@@ -27,7 +27,7 @@ function escapar(texto: string) {
 export async function POST(request: NextRequest) {
   if (!emailConfigurado()) {
     return NextResponse.json(
-      { error: 'A recuperação de senha por e-mail ainda não está disponível. Peça ao administrador do seu hospital para redefinir a senha.' },
+      { error: 'Recuperação por e-mail indisponível. Peça ao administrador do hospital para redefinir sua senha.' },
       { status: 503, headers: SEM_CACHE },
     )
   }

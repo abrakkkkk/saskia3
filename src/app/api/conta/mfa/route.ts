@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       const segredo = usuario.mfaSegredo ? decifrarSegredo(usuario.mfaSegredo) : null
       if (!segredo) return resposta({ error: 'Comece a configuração de novo.' }, 409)
       const passo = verificarTotp(segredo, codigo.replace(/\s/g, ''))
-      if (passo == null) return resposta({ error: 'Código incorreto. Confira o horário do celular e digite o código atual.' }, 400)
+      if (passo == null) return resposta({ error: 'Código incorreto. Confira o horário do celular.' }, 400)
       const { codigos, hashes } = gerarCodigosBackup()
       await prisma.usuario.update({
         where: { id: ator.id },

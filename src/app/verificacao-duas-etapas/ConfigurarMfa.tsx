@@ -65,7 +65,7 @@ export default function ConfigurarMfa({ obrigatorio }: { obrigatorio: boolean })
 
   const confirmar = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!/^\d{6}$/.test(codigo.replace(/\s/g, ''))) { setErro('Digite os 6 dígitos que aparecem no app.'); return }
+    if (!/^\d{6}$/.test(codigo.replace(/\s/g, ''))) { setErro('Digite os 6 dígitos do app.'); return }
     void executar(async () => {
       const dados = await chamar({ acao: 'confirmar', codigo })
       setCodigos(dados.codigos)
@@ -77,7 +77,7 @@ export default function ConfigurarMfa({ obrigatorio }: { obrigatorio: boolean })
 
   const renovar = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!codigo.trim()) { setErro('Digite o código atual do app.'); return }
+    if (!codigo.trim()) { setErro('Digite o código do app.'); return }
     void executar(async () => {
       const dados = await chamar({ acao: desativando ? 'desativar' : 'novos-codigos', codigo, senha })
       setCodigo('')
@@ -109,7 +109,7 @@ export default function ConfigurarMfa({ obrigatorio }: { obrigatorio: boolean })
   if (etapa === 'falha') {
     return (
       <AuthShell titulo="Verificação em duas etapas" rodape={sair}>
-        <AvisoAcesso>Não foi possível carregar a configuração.</AvisoAcesso>
+        <AvisoAcesso>Não foi possível carregar.</AvisoAcesso>
         <button type="button" className={botaoSecundario} style={estiloSecundario} onClick={() => { setEtapa('carregando'); void carregar() }}>
           <RefreshCw aria-hidden="true" className="w-4 h-4" /> Tentar de novo
         </button>
@@ -120,16 +120,16 @@ export default function ConfigurarMfa({ obrigatorio }: { obrigatorio: boolean })
   if (etapa === 'inicio') {
     return (
       <AuthShell
-        titulo="Proteja sua conta"
+        titulo="Verificação em duas etapas"
         descricao={obrigatorio
-          ? 'Administradores entram com senha e um código do celular. Configure agora para continuar; leva cerca de 2 minutos.'
-          : 'Além da senha, o login vai pedir um código que muda a cada 30 segundos no seu celular.'}
+          ? 'Administradores entram com a senha e um código do celular. Configure agora; leva 2 minutos.'
+          : 'O login vai pedir a senha e um código do celular.'}
         rodape={rodape}
       >
         <ol className="text-sm text-slate-200 flex flex-col gap-3" style={{ margin: '0 0 24px', paddingLeft: '20px', listStyle: 'decimal', lineHeight: 1.5 }}>
-          <li>Instale um app autenticador: Google Authenticator, Microsoft Authenticator ou Authy.</li>
-          <li>Leia o QR Code que vamos mostrar.</li>
-          <li>Digite o código de 6 dígitos e guarde os códigos de recuperação.</li>
+          <li>No celular, instale o app Google Authenticator ou Microsoft Authenticator.</li>
+          <li>Use o app para ler o QR Code.</li>
+          <li>Digite o código e guarde os códigos de reserva.</li>
         </ol>
         {erro && <AvisoAcesso>{erro}</AvisoAcesso>}
         <form onSubmit={e => { e.preventDefault(); void iniciar() }}>
@@ -141,7 +141,7 @@ export default function ConfigurarMfa({ obrigatorio }: { obrigatorio: boolean })
 
   if (etapa === 'escanear') {
     return (
-      <AuthShell titulo="Leia o QR Code" descricao="No app autenticador, toque em adicionar conta e aponte a câmera." rodape={rodape}>
+      <AuthShell titulo="Leia o QR Code" descricao="No app, toque em adicionar conta (+) e aponte a câmera para o código." rodape={rodape}>
         {/* eslint-disable-next-line @next/next/no-img-element -- imagem gerada na hora (data URL) */}
         <img
           src={qr}
@@ -153,7 +153,7 @@ export default function ConfigurarMfa({ obrigatorio }: { obrigatorio: boolean })
           style={{ padding: '10px', borderRadius: '8px', margin: '0 auto 16px' }}
         />
         <details className="text-sm text-slate-300 text-center" style={{ marginBottom: '20px' }}>
-          <summary className="cursor-pointer underline underline-offset-2 hover:text-white" style={{ minHeight: '32px' }}>Não consegue ler? Digite a chave</summary>
+          <summary className="cursor-pointer underline underline-offset-2 hover:text-white" style={{ minHeight: '32px' }}>Sem câmera? Digite a chave</summary>
           <p className="text-white break-all select-all" style={{ marginTop: '8px', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.06em' }}>
             {segredo.match(/.{1,4}/g)?.join(' ')}
           </p>
@@ -183,8 +183,8 @@ export default function ConfigurarMfa({ obrigatorio }: { obrigatorio: boolean })
   if (etapa === 'codigos') {
     return (
       <AuthShell
-        titulo="Guarde os códigos de recuperação"
-        descricao="Cada código entra uma vez se você perder o celular. Eles não aparecem de novo: imprima ou guarde num gerenciador de senhas."
+        titulo="Códigos de reserva"
+        descricao="Use um destes se perder o celular. Cada um vale uma vez. Anote agora: eles não aparecem de novo."
         rodape={anotou ? rodape : sair}
       >
         <ul className="grid grid-cols-2 gap-2 text-white" style={{ margin: '0 0 16px', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.04em' }}>
@@ -193,11 +193,11 @@ export default function ConfigurarMfa({ obrigatorio }: { obrigatorio: boolean })
           ))}
         </ul>
         <button type="button" className={botaoSecundario} style={{ ...estiloSecundario, marginTop: 0, marginBottom: '20px' }} onClick={() => void copiar()}>
-          <Copy aria-hidden="true" className="w-4 h-4" /> {copiado ? 'Copiados' : 'Copiar os códigos'}
+          <Copy aria-hidden="true" className="w-4 h-4" /> {copiado ? 'Copiados' : 'Copiar códigos'}
         </button>
         <label className="flex items-start gap-3 text-sm text-slate-200 cursor-pointer" style={{ marginBottom: '20px', lineHeight: 1.5 }}>
           <input type="checkbox" checked={anotou} onChange={e => setAnotou(e.target.checked)} className="accent-blue-500" style={{ width: '20px', height: '20px', marginTop: '1px', flexShrink: 0 }} />
-          Guardei os códigos em lugar seguro.
+          Guardei os códigos
         </label>
         <form onSubmit={e => { e.preventDefault(); router.push('/dashboard'); router.refresh() }}>
           <BotaoAcesso disabled={!anotou} icone={ArrowRight}>Continuar</BotaoAcesso>
@@ -208,8 +208,8 @@ export default function ConfigurarMfa({ obrigatorio }: { obrigatorio: boolean })
 
   return (
     <AuthShell
-      titulo="Verificação em duas etapas ativa"
-      descricao={`O login pede o código do app. Códigos de recuperação restantes: ${situacao?.codigosRestantes ?? 0}.`}
+      titulo="Verificação ativa"
+      descricao={`Códigos de reserva restantes: ${situacao?.codigosRestantes ?? 0}.`}
       rodape={rodape}
     >
       <form onSubmit={renovar} aria-busy={carregando} noValidate>
@@ -226,18 +226,18 @@ export default function ConfigurarMfa({ obrigatorio }: { obrigatorio: boolean })
           autoComplete="one-time-code"
           maxLength={16}
           required
-          dica={desativando ? 'Confirme com a senha e o código atual.' : 'Para gerar novos códigos de recuperação, confirme com o código atual. Os antigos deixam de valer.'}
+          dica={desativando ? undefined : 'Para gerar novos códigos de reserva, digite o código do app. Os antigos deixam de valer.'}
         />
         {erro && <AvisoAcesso>{erro}</AvisoAcesso>}
         {desativando ? (
           <BotaoAcesso carregando={carregando} textoCarregando="Desativando..." icone={ShieldOff}>Desativar</BotaoAcesso>
         ) : (
-          <BotaoAcesso carregando={carregando} textoCarregando="Gerando..." icone={RefreshCw}>Gerar novos códigos</BotaoAcesso>
+          <BotaoAcesso carregando={carregando} textoCarregando="Gerando..." icone={RefreshCw}>Novos códigos de reserva</BotaoAcesso>
         )}
       </form>
       {!situacao?.obrigatorio && (
         <button type="button" className={botaoSecundario} style={estiloSecundario} onClick={() => { setDesativando(d => !d); setErro('') }}>
-          {desativando ? 'Cancelar' : <><ShieldOff aria-hidden="true" className="w-4 h-4" /> Desativar a verificação</>}
+          {desativando ? 'Cancelar' : <><ShieldOff aria-hidden="true" className="w-4 h-4" /> Desativar</>}
         </button>
       )}
     </AuthShell>

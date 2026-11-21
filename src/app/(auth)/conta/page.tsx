@@ -250,9 +250,9 @@ export default function ContaPage() {
       </Panel>
 
       <Panel title="Verificação em duas etapas" icon="las la-shield-alt">
-        <p className="conta-mfa-texto">Além da senha, o login pede um código do app autenticador do celular.{session?.user?.cargo === 'ADMIN' ? ' Obrigatória para administradores.' : ''}</p>
+        <p className="conta-mfa-texto">O login pede a senha e um código do celular.{session?.user?.cargo === 'ADMIN' ? ' Obrigatória para administradores.' : ''}</p>
         <Link href="/verificacao-duas-etapas" className="btn btn-secondary">
-          <i className="las la-mobile-alt" aria-hidden="true"></i> Configurar ou gerenciar
+          <i className="las la-mobile-alt" aria-hidden="true"></i> Gerenciar
         </Link>
       </Panel>
     </div>
