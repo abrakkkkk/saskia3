@@ -54,6 +54,12 @@ export const MENU: GrupoMenu[] = [
     ],
   },
   {
+    titulo: 'Faturamento',
+    itens: [
+      { href: '/faturamento', icon: 'las la-file-invoice-dollar', label: 'Faturamento', permissao: 'faturamento:ler' },
+    ],
+  },
+  {
     titulo: 'Operação',
     itens: [
       { href: '/suporte', icon: 'las la-headset', label: 'Suporte', permissao: 'autenticado' },

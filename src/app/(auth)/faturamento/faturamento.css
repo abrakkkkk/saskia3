@@ -1,0 +1,65 @@
+/* Faturamento (item 7). Só o que os componentes de @/components/ui não cobrem; tokens do DESIGN.md. */
+.fat-oculto { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Contagem direto sobre o fundo azul: Regra do Fundo Escuro. */
+.fat-contagem { margin: 0 0 12px; color: var(--ui-on-dark-muted); font-size: 12px; }
+
+.fat-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fat-codigo { font-variant-numeric: tabular-nums; font-weight: 600; }
+.tabela .fat-num .mod-secundario { text-align: right; }
+
+/* Nome do paciente abre a conta: parece texto da tabela, age como botão. */
+.fat-link {
+  padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--ui-blue-700);
+  text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px;
+}
+.fat-link:hover { text-decoration-color: currentColor; }
+.fat-link:focus-visible { outline: 3px solid rgba(30, 58, 138, 0.35); outline-offset: 2px; border-radius: var(--ui-radius-control); }
+
+/* Cabeçalho da conta dentro do modal */
+.fat-resumo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--ui-border); color: var(--ui-text-muted); font-size: 12px;
+}
+.fat-total { margin-left: auto; color: var(--ui-text); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fat-cabecalho { margin-bottom: 20px; }
+.fat-grupo { min-width: 0; margin: 0 0 8px; padding: 0; border: 0; }
+.fat-grupo legend { margin-bottom: 8px; padding: 0; color: var(--ui-text); font-size: 15px; font-weight: 600; }
+.fat-grupo:disabled select, .fat-grupo:disabled input { background: var(--ui-surface-muted); color: var(--ui-text); opacity: 1; }
+.fat-subtitulo { margin: 4px 0 10px; color: var(--ui-text); font-size: 15px; font-weight: 600; }
+
+/* Lançamento de item */
+.fat-lancar { margin-top: 16px; padding: 14px 16px 12px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-control); background: var(--ui-surface-muted); }
+.fat-busca { position: relative; }
+.fat-busca { grid-column: span 2; }
+.fat-achados {
+  position: absolute; z-index: 5; top: 100%; left: 0; right: 0; max-height: 260px; overflow-y: auto; margin: 4px 0 0; padding: 4px; list-style: none;
+  background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: var(--ui-radius-control); box-shadow: 0 8px 24px rgba(15, 35, 72, 0.14);
+}
+.fat-achados button {
+  display: block; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--ui-radius-control); background: none; color: var(--ui-text);
+  font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+}
+.fat-achados button:hover, .fat-achados button:focus-visible { background: var(--ui-surface-muted); outline: none; }
+.fat-achados strong { margin-right: 6px; font-variant-numeric: tabular-nums; }
+
+.fat-glosa { display: flex; gap: 6px; align-items: center; }
+.fat-glosa input { width: 84px; min-height: 32px; padding: 0 8px; border: 1px solid #cbd5e1; border-radius: var(--ui-radius-control); font: inherit; font-size: 14px; }
+.fat-glosa input:focus { border-color: var(--ui-blue-700); outline: none; box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.18); }
+
+.fat-rodape { align-items: flex-end; }
+.fat-retorno { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.fat-retorno .form-group { margin-bottom: 0; }
+
+/* Aba Lotes: dois geradores lado a lado */
+.fat-geradores { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 0 16px; }
+.fat-topo-aba { margin-bottom: 12px; }
+
+@media (max-width: 768px) {
+  .fat-busca { grid-column: auto; }
+  .fat-total { margin-left: 0; width: 100%; }
+  .fat-glosa { flex-wrap: wrap; }
+  .fat-glosa input { min-height: 44px; }
+  .fat-retorno { width: 100%; }
+  .fat-retorno .form-group, .fat-retorno .btn { flex: 1 1 100%; }
+}
