@@ -1,0 +1,46 @@
+/* Integrações (item 8). Só o que @/components/ui não cobre; tokens do DESIGN.md. */
+.int-oculto { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+.int-num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.int-erro { max-width: 46ch; color: var(--ui-danger, #b91c1c); }
+
+.int-dados { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 0 0 14px; }
+.int-dados div { min-width: 0; }
+.int-dados dt { color: var(--ui-text-muted); font-size: 12px; font-weight: 600; }
+.int-dados dd { margin: 2px 0 0; color: var(--ui-text); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+.int-pendencias, .int-problemas { margin: 6px 0 0; padding-left: 18px; }
+.int-pendencias li, .int-problemas li { margin: 2px 0; }
+.int-problemas { margin-bottom: 12px; font-size: 14px; }
+.int-problemas code, .mod-nota code { font-size: 12px; overflow-wrap: anywhere; }
+
+.int-grupo { min-width: 0; margin: 0 0 8px; padding: 0; border: 0; }
+.int-grupo:disabled select, .int-grupo:disabled input { background: var(--ui-surface-muted); color: var(--ui-text); opacity: 1; }
+.int-check { display: flex; align-items: flex-end; }
+.int-check label { display: flex; align-items: center; gap: 8px; min-height: 40px; font-weight: 500; cursor: pointer; }
+.int-check input { width: 18px; height: 18px; accent-color: var(--ui-blue-700, #1e3a8a); }
+.int-largo { grid-column: 1 / -1; }
+
+.int-json {
+  max-height: 48vh; margin: 0 0 12px; padding: 12px 14px; overflow: auto; border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-control); background: var(--ui-surface-muted); color: var(--ui-text); font-size: 12px; line-height: 1.5;
+}
+.int-json:focus-visible { outline: 3px solid rgba(30, 58, 138, 0.35); outline-offset: 2px; }
+
+@media (max-width: 768px) {
+  .int-check label { min-height: 44px; }
+  .int-erro { max-width: none; }
+}
+
+/* Fila no celular: cada item vira um bloco (registro, paciente, situação, ações), sem rolagem lateral. */
+@media (max-width: 640px) {
+  .int-fila { overflow: visible; }
+  .int-fila table, .int-fila tbody, .int-fila tr, .int-fila td { display: block; width: 100%; }
+  .int-fila thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .int-fila tr { padding: 12px 14px; border-bottom: 1px solid var(--ui-border); }
+  .int-fila tr:last-child { border-bottom: 0; }
+  .int-fila td { padding: 2px 0; border: 0; }
+  .int-fila td:nth-child(2) { color: var(--ui-text-muted); }
+  .int-fila .mod-acoes-tabela { display: flex; gap: 8px; margin-top: 8px; }
+  .int-fila .mod-acoes-tabela .btn { flex: 1 1 0; min-height: 44px; }
+}

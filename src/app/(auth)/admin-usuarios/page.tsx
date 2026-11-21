@@ -8,7 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { CARGO_LABEL, CARGOS, pode, type Cargo } from '@/lib/permissions'
 import { formatarRegistro } from '@/lib/registro-profissional'
 import { podeReceberAutorizacao, SUGESTAO_POR_CARGO, tipoPrescricao, TIPOS_PRESCRICAO } from '@/lib/prescricao'
-import CamposRegistro, { REGISTRO_VAZIO, registroDoUsuario, type RegistroForm } from '@/components/ui/CamposRegistro'
+import CamposRegistro, { CamposSus, REGISTRO_VAZIO, registroDoUsuario, SUS_VAZIO, susDoUsuario, type RegistroForm, type SusForm } from '@/components/ui/CamposRegistro'
 import '@/components/ui/modulo.css'
 import '@/components/ui/ui-extras.css'
 import './usuarios.css'
@@ -16,6 +16,7 @@ import './usuarios.css'
 type Usuario = {
   id: string; nome: string; email: string; cargo: Cargo; ativo: boolean; createdAt: string
   conselho?: string | null; registroNumero?: string | null; registroUf?: string | null; especialidade?: string | null; rqe?: string | null
+  cns?: string | null; cpf?: string | null; cbo?: string | null
   prescricoesAutorizadas?: string[]
 }
 
@@ -39,6 +40,7 @@ export default function AdminUsuariosPage() {
   const [senha, setSenha] = useState('')
   const [cargo, setCargo] = useState<Cargo>('OUTROS')
   const [registro, setRegistro] = useState<RegistroForm>(REGISTRO_VAZIO)
+  const [sus, setSus] = useState<SusForm>(SUS_VAZIO)
   const [prescricoes, setPrescricoes] = useState<string[]>([])
 
   const loadUsers = useCallback(async () => {
@@ -61,17 +63,17 @@ export default function AdminUsuariosPage() {
   }, [loadUsers, permitido, status])
 
   const openCreate = () => {
-    setEditing(null); setNome(''); setEmail(''); setSenha(''); setCargo('OUTROS'); setRegistro(REGISTRO_VAZIO); setPrescricoes([]); setError(''); setNotice(''); setModal(true)
+    setEditing(null); setNome(''); setEmail(''); setSenha(''); setCargo('OUTROS'); setRegistro(REGISTRO_VAZIO); setSus(SUS_VAZIO); setPrescricoes([]); setError(''); setNotice(''); setModal(true)
   }
   const openEdit = (user: Usuario) => {
-    setEditing(user); setNome(user.nome); setEmail(user.email); setSenha(''); setCargo(user.cargo); setRegistro(registroDoUsuario(user)); setPrescricoes(user.prescricoesAutorizadas ?? []); setError(''); setNotice(''); setModal(true)
+    setEditing(user); setNome(user.nome); setEmail(user.email); setSenha(''); setCargo(user.cargo); setRegistro(registroDoUsuario(user)); setSus(susDoUsuario(user)); setPrescricoes(user.prescricoesAutorizadas ?? []); setError(''); setNotice(''); setModal(true)
   }
   const saveUser = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (saving) return
     setSaving(true); setError(''); setNotice('')
     try {
-      const payload: Record<string, unknown> = { nome: nome.trim(), email: email.trim(), cargo, ...registro }
+      const payload: Record<string, unknown> = { nome: nome.trim(), email: email.trim(), cargo, ...registro, ...sus }
       if (podeReceberAutorizacao(cargo)) payload.prescricoesAutorizadas = prescricoes
       else if (editing) payload.prescricoesAutorizadas = []
       if (senha) payload.senha = senha
@@ -161,6 +163,7 @@ export default function AdminUsuariosPage() {
           <select id="us-cargo" value={cargo} onChange={event => { const novo = event.target.value as Cargo; setCargo(novo); if (!editing) setPrescricoes(novo === 'MEDICO' ? [...SUGESTAO_POR_CARGO.MEDICO] : []) }}>{CARGOS.map(item => <option key={item} value={item}>{CARGO_LABEL[item]}</option>)}</select>
         </div>
         <CamposRegistro valor={registro} onChange={setRegistro} cargo={cargo} prefixo="us" obrigatorio={prescricoes.length > 0} />
+        {cargo !== 'ADMIN' && <CamposSus valor={sus} onChange={setSus} prefixo="us" />}
         {podeReceberAutorizacao(cargo) && cargo !== 'ADMIN' && (
           <fieldset className="us-prescricao">
             <legend>Pode prescrever</legend>

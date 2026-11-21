@@ -24,7 +24,7 @@ type Medica = Registro & { responsavel: string | null; crm: string | null; espec
 type Enfermagem = Registro & { responsavel: string | null; coren: string | null; evolucao: string | null; prescricao: string | null }
 type Evento = { id: string; createdAt: string; tipo: string; descricao: string; user: string | null }
 
-const CAMPOS_CADASTRO = ['nome', 'cpf', 'rg', 'nascimento', 'sexo', 'telefone', 'email', 'endereco', 'convenio', 'mae', 'pai', 'profissao', 'estadoCivil', 'tipoSanguineo', 'alergias', 'queixaPrincipal'] as const
+const CAMPOS_CADASTRO = ['nome', 'cpf', 'cns', 'rg', 'nascimento', 'sexo', 'telefone', 'email', 'endereco', 'convenio', 'mae', 'pai', 'profissao', 'estadoCivil', 'tipoSanguineo', 'alergias', 'queixaPrincipal'] as const
 type CampoCadastro = (typeof CAMPOS_CADASTRO)[number]
 
 type Paciente = Partial<Record<CampoCadastro, string | null>> & {
@@ -367,7 +367,7 @@ export default function FichaPacientePage() {
             )}
             <div className="pac-dados">
               {([
-                ['Nome', paciente.nome], ['CPF', formatarCPF(paciente.cpf)], ['RG', paciente.rg], ['Nascimento', formatarNascimento(nascimento)],
+                ['Nome', paciente.nome], ['CPF', formatarCPF(paciente.cpf)], ['CNS', paciente.cns], ['RG', paciente.rg], ['Nascimento', formatarNascimento(nascimento)],
                 ['Sexo', paciente.sexo], ['Telefone', paciente.telefone], ['E-mail', paciente.email],
                 ['Endereço', paciente.endereco], ['Convênio', paciente.convenio], ['Tipo sanguíneo', paciente.tipoSanguineo || 'Desconhecido'],
                 ['Alergias', paciente.alergias || 'Não avaliado'], ['Mãe', paciente.mae], ['Pai', paciente.pai],
@@ -386,6 +386,7 @@ export default function FichaPacientePage() {
             <div className="mod-form-grid">
               {campoCadastro('nome', 'Nome completo', { inteira: true, obrigatorio: true })}
               {campoCadastro('cpf', 'CPF')}
+              {campoCadastro('cns', 'CNS (Cartão SUS)')}
               {campoCadastro('rg', 'RG')}
               {campoCadastro('nascimento', 'Nascimento', { tipo: 'date' })}
               <div className="form-group">

@@ -81,7 +81,7 @@ export function Espera({ status, desde, classificacao, agora }: {
 export const TIPOS_SANGUINEOS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 const FORM_VAZIO = {
-  nome: '', cpf: '', rg: '', nascimento: '', sexo: '', telefone: '', email: '', endereco: '',
+  nome: '', cpf: '', cns: '', rg: '', nascimento: '', sexo: '', telefone: '', email: '', endereco: '',
   mae: '', convenio: '', tipoSanguineo: '', alergias: '', status: 'Recepção', queixaPrincipal: '',
 };
 
@@ -152,6 +152,7 @@ export function ModalNovoPaciente({ permitirInternacao = false, onFechar, onCria
             <input id="novo-nome" required maxLength={160} placeholder="Nome ou Desconhecido" {...campo('nome')} />
           </div>
           <div className="form-group"><label htmlFor="novo-cpf">CPF</label><input id="novo-cpf" maxLength={20} inputMode="numeric" placeholder="000.000.000-00" {...campo('cpf')} /></div>
+          <div className="form-group"><label htmlFor="novo-cns">CNS (Cartão SUS)</label><input id="novo-cns" maxLength={18} inputMode="numeric" placeholder="15 dígitos" {...campo('cns')} /></div>
           <div className="form-group"><label htmlFor="novo-rg">RG</label><input id="novo-rg" maxLength={30} {...campo('rg')} /></div>
           <div className="form-group"><label htmlFor="novo-nascimento">Nascimento</label><input id="novo-nascimento" type="date" {...campo('nascimento')} /></div>
           <div className="form-group">

@@ -53,3 +53,30 @@ export default function CamposRegistro({ valor, onChange, cargo, prefixo, obriga
     </>
   );
 }
+
+export type SusForm = { cns: string; cpf: string; cbo: string };
+export const SUS_VAZIO: SusForm = { cns: '', cpf: '', cbo: '' };
+export const susDoUsuario = (u: Partial<Record<keyof SusForm, string | null>> | null | undefined): SusForm => ({
+  cns: u?.cns ?? '', cpf: u?.cpf ?? '', cbo: u?.cbo ?? '',
+});
+
+/** Identificação SUS do profissional (CNES e RNDS): CNS, CPF e CBO de lotação. */
+export function CamposSus({ valor, onChange, prefixo }: { valor: SusForm; onChange: (v: SusForm) => void; prefixo: string }) {
+  const set = (campo: keyof SusForm, v: string) => onChange({ ...valor, [campo]: v });
+  return (
+    <>
+      <div className="form-group">
+        <label htmlFor={`${prefixo}-cns`}>CNS (Cartão SUS)</label>
+        <input id={`${prefixo}-cns`} maxLength={18} inputMode="numeric" autoComplete="off" placeholder="15 dígitos" value={valor.cns} onChange={e => set('cns', e.target.value)} />
+      </div>
+      <div className="form-group">
+        <label htmlFor={`${prefixo}-cpf`}>CPF</label>
+        <input id={`${prefixo}-cpf`} maxLength={14} inputMode="numeric" autoComplete="off" placeholder="000.000.000-00" value={valor.cpf} onChange={e => set('cpf', e.target.value)} />
+      </div>
+      <div className="form-group">
+        <label htmlFor={`${prefixo}-cbo`}>CBO no CNES</label>
+        <input id={`${prefixo}-cbo`} maxLength={6} inputMode="numeric" autoComplete="off" placeholder="Ex.: 223505" value={valor.cbo} onChange={e => set('cbo', e.target.value)} />
+      </div>
+    </>
+  );
+}

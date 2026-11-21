@@ -85,7 +85,7 @@ export const MENU: GrupoMenu[] = [
     itens: [
       { href: '/biblioteca', icon: 'las la-book-medical', label: 'Biblioteca', permissao: 'autenticado' },
       { href: '/utilitarios', icon: 'las la-calculator', label: 'Utilitários', permissao: 'autenticado' },
-      { href: '/vacinacao', icon: 'las la-syringe', label: 'Calendários de Vacinação', permissao: 'autenticado' },
+      { href: '/vacinacao', icon: 'las la-syringe', label: 'Vacinação', permissao: 'autenticado' },
       { href: '/curvas-crescimento', icon: 'las la-chart-line', label: 'Curvas de Crescimento', permissao: 'autenticado' },
     ],
   },
@@ -94,6 +94,7 @@ export const MENU: GrupoMenu[] = [
     itens: [
       { href: '/admin', icon: 'las la-cog', label: 'Painel Admin', permissao: 'admin:acesso' },
       { href: '/admin-usuarios', icon: 'las la-users-cog', label: 'Usuários', permissao: 'admin:acesso' },
+      { href: '/integracoes', icon: 'las la-network-wired', label: 'Integrações', permissao: 'integracao:ler' },
       { href: '/admin-configuracao', icon: 'las la-building', label: 'Hospital', permissao: 'admin:acesso' },
       { href: '/admin-procedimentos', icon: 'las la-notes-medical', label: 'Procedimentos', permissao: 'admin:acesso' },
       { href: '/admin-prontuarios', icon: 'las la-file-alt', label: 'Modelos de Prontuário', permissao: 'admin:acesso' },

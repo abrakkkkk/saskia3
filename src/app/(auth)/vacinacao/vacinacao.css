@@ -1,0 +1,6 @@
+/* Vacinação: registro de dose (item 8). Só o que @/components/ui não cobre. */
+.vac-paciente { max-width: 560px; margin-bottom: 12px; }
+.vac-form { margin: 4px 0 18px; padding-bottom: 16px; border-bottom: 1px solid var(--ui-border); }
+.vac-grupo { min-width: 0; margin: 0 0 8px; padding: 0; border: 0; }
+.vac-grupo legend { margin-bottom: 8px; padding: 0; color: var(--ui-text); font-size: 15px; font-weight: 600; }
+.vac-num { white-space: nowrap; font-variant-numeric: tabular-nums; }
