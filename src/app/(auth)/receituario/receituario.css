@@ -125,7 +125,8 @@
   body:not([data-print-mode="stickers"]) .rec-folha-data { margin: 0 0 28pt; text-align: right; font-size: 10.5pt; }
   body:not([data-print-mode="stickers"]) .rec-folha-assinatura { display: grid; gap: 1pt; width: 85mm; margin-left: auto; margin-right: auto; text-align: center; font-size: 10.5pt; }
   body:not([data-print-mode="stickers"]) .rec-folha-linha { border-top: 0.75pt solid #000; margin-bottom: 3pt; }
-  body:not([data-print-mode="stickers"]) .rec-folha-codigo { margin: 18pt 0 0; text-align: center; font-size: 8pt; color: #333; }
+  body:not([data-print-mode="stickers"]) .rec-folha-validade { margin: 14pt 0 0; text-align: center; font-size: 9pt; font-weight: 600; color: #000; }
+  body:not([data-print-mode="stickers"]) .rec-folha-codigo { margin: 4pt 0 0; text-align: center; font-size: 8pt; color: #333; }
   body[data-print-mode="stickers"] * { visibility: hidden; }
   body[data-print-mode="stickers"] .print-adesivos-container,
   body[data-print-mode="stickers"] .print-adesivos-container * { visibility: visible; }

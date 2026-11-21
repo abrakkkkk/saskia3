@@ -40,7 +40,9 @@ Plataforma única, em português, desenhada para a rotina de hospitais brasileir
 - Dois conjuntos de ícones convivem: Line Awesome (`las la-*`) na maior parte e `lucide-react` em telas mais novas.
 - Decisões do dono que a interface deve respeitar:
   - o chatbot de IA está desligado e removido;
-  - botões de emergência, evolução de UTI e checklist cirúrgico ficam bloqueados até aprovação clínica;
+  - botões de emergência (pânico e PCR) ficam ativos e visíveis para todos os cargos; o ADMIN pode desligá-los por hospital (confirmado pelo dono em 21/11/2026);
+  - evolução de UTI e checklist cirúrgico ficam bloqueados até validação clínica (pendente, a agendar);
+  - a receita não tem assinatura digital ICP-Brasil: a folha impressa avisa que só vale impressa, assinada e carimbada (decisão do dono em 21/11/2026);
   - a identidade visual atual (fundo azul-marinho, cartões brancos, logo Saskia) é mantida.
 - Terminologia: Paciente, Prontuário, Evolução, Triagem, Classificação de risco (Manchester), UTI, CSSD, CCIH, Óbito, Evasão, Transferência.
 

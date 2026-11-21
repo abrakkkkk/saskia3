@@ -91,6 +91,8 @@ export default function FolhaReceita({ hospital, paciente, receita }: { hospital
           {receita.registroProfissional && <span>{receita.registroProfissional}</span>}
           {receita.especialidadeProfissional && <span>{receita.especialidadeProfissional}</span>}
         </div>
+        {/* Sem assinatura digital ICP-Brasil (Res. CFM 2.299/2021): a receita só vale impressa e assinada à mão. */}
+        <p className="rec-folha-validade">Válida somente impressa, com assinatura e carimbo do profissional. Este documento não tem assinatura digital.</p>
         <p className="rec-folha-codigo">Registro {receita.id} · Documento emitido pelo sistema Saskia</p>
       </footer>
     </section>
