@@ -25,7 +25,7 @@ const env = {
   OPENAI_API_KEY: '',
   NEXT_TELEMETRY_DISABLED: '1',
   // Pasta de build própria (dentro de .next, já ignorada no git): não briga com outro `next dev` aberto.
-  SASKIA_TESTE_DIST_DIR: '.next/teste',
+  SASKIA_TESTE_DIST_DIR: process.env.SASKIA_TESTE_DIST_DIR || '.next/teste',
 };
 
 const rodar = (cmd, args, extra = {}) => new Promise(resolve => {
@@ -71,10 +71,13 @@ const isolamento = await rodar('node', ['--test', 'tests/tenant-isolation.integr
 console.log('> Faturamento (TISS e SUS): isolamento e fluxo completo');
 const faturamento = await rodar('node', ['--test', 'tests/faturamento.integration.test.mjs'], { AUDIT_BASE_URL: BASE });
 
+console.log('> Interoperabilidade (CNES e RNDS): isolamento, fila e validação nos perfis oficiais');
+const interoperabilidade = await rodar('node', ['--test', 'tests/interoperabilidade.integration.test.mjs'], { AUDIT_BASE_URL: BASE });
+
 console.log('> Roteiro Playwright das telas críticas');
 await semearBancoDeTeste(url);
 const e2e = await rodar('node', ['tests/e2e/telas-criticas.mjs'], { E2E_BASE_URL: BASE });
 
 parar();
-console.log(`\nResultado: isolamento ${isolamento === 0 ? 'PASSOU' : 'FALHOU'}; faturamento ${faturamento === 0 ? 'PASSOU' : 'FALHOU'}; telas críticas ${e2e === 0 ? 'PASSOU' : 'FALHOU'}`);
-process.exit(isolamento === 0 && faturamento === 0 && e2e === 0 ? 0 : 1);
+console.log(`\nResultado: isolamento ${isolamento === 0 ? 'PASSOU' : 'FALHOU'}; faturamento ${faturamento === 0 ? 'PASSOU' : 'FALHOU'}; interoperabilidade ${interoperabilidade === 0 ? 'PASSOU' : 'FALHOU'}; telas críticas ${e2e === 0 ? 'PASSOU' : 'FALHOU'}`);
+process.exit(isolamento === 0 && faturamento === 0 && interoperabilidade === 0 && e2e === 0 ? 0 : 1);

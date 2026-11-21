@@ -1,0 +1,30 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "BRRegistroOrigem",
+  "meta": {
+    "versionId": "4",
+    "lastUpdated": "2025-12-10T00:27:01.399+00:00"
+  },
+  "language": "pt-BR",
+  "url": "http://www.saude.gov.br/fhir/r4/CodeSystem/BRRegistroOrigem",
+  "version": "01.10",
+  "name": "BRRegistroOrigem",
+  "title": "Registro de Origem",
+  "status": "active",
+  "experimental": false,
+  "date": "2022-01-21T14:38:40.0457007+00:00",
+  "publisher": "Ministério da Saúde do Brasil",
+  "description": "Códigos para representação da Origem do Registro de Imunobiológico.",
+  "caseSensitive": true,
+  "content": "complete",
+  "concept": [
+    {
+      "code": "01",
+      "display": "Transcrição de Caderneta"
+    },
+    {
+      "code": "02",
+      "display": "Vacina no Exterior"
+    }
+  ]
+}

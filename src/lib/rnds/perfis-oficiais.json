@@ -1,0 +1,2394 @@
+[
+ {
+  "url": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRRegistroImunobiologicoAdministradoRotina-2.0",
+  "type": "Composition",
+  "elementos": [
+   {
+    "id": "Composition",
+    "path": "Composition"
+   },
+   {
+    "id": "Composition.identifier",
+    "path": "Composition.identifier",
+    "max": "0"
+   },
+   {
+    "id": "Composition.status",
+    "path": "Composition.status",
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BREstadoDocumento-1.0"
+   },
+   {
+    "id": "Composition.type",
+    "path": "Composition.type"
+   },
+   {
+    "id": "Composition.type.coding",
+    "path": "Composition.type.coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Composition.type.text",
+    "path": "Composition.type.text",
+    "max": "0"
+   },
+   {
+    "id": "Composition.category",
+    "path": "Composition.category",
+    "max": "0"
+   },
+   {
+    "id": "Composition.category.coding",
+    "path": "Composition.category.coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Composition.category.text",
+    "path": "Composition.category.text",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject",
+    "path": "Composition.subject",
+    "min": 1,
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRIndividuo-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Composition.subject.reference",
+    "path": "Composition.subject.reference",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject.type",
+    "path": "Composition.subject.type",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject.identifier",
+    "path": "Composition.subject.identifier",
+    "min": 1
+   },
+   {
+    "id": "Composition.subject.identifier.use",
+    "path": "Composition.subject.identifier.use",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject.identifier.type",
+    "path": "Composition.subject.identifier.type",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject.identifier.system",
+    "path": "Composition.subject.identifier.system",
+    "min": 1
+   },
+   {
+    "id": "Composition.subject.identifier.value",
+    "path": "Composition.subject.identifier.value",
+    "min": 1
+   },
+   {
+    "id": "Composition.subject.identifier.period",
+    "path": "Composition.subject.identifier.period",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject.identifier.assigner",
+    "path": "Composition.subject.identifier.assigner",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject.display",
+    "path": "Composition.subject.display",
+    "max": "0"
+   },
+   {
+    "id": "Composition.encounter",
+    "path": "Composition.encounter",
+    "max": "0"
+   },
+   {
+    "id": "Composition.date",
+    "path": "Composition.date"
+   },
+   {
+    "id": "Composition.author",
+    "path": "Composition.author",
+    "max": "1",
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BREstabelecimentoSaude-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Composition.author.reference",
+    "path": "Composition.author.reference",
+    "max": "0"
+   },
+   {
+    "id": "Composition.author.type",
+    "path": "Composition.author.type",
+    "max": "0"
+   },
+   {
+    "id": "Composition.author.identifier",
+    "path": "Composition.author.identifier",
+    "min": 1
+   },
+   {
+    "id": "Composition.author.identifier.use",
+    "path": "Composition.author.identifier.use",
+    "max": "0"
+   },
+   {
+    "id": "Composition.author.identifier.type",
+    "path": "Composition.author.identifier.type",
+    "max": "0"
+   },
+   {
+    "id": "Composition.author.identifier.system",
+    "path": "Composition.author.identifier.system",
+    "min": 1
+   },
+   {
+    "id": "Composition.author.identifier.value",
+    "path": "Composition.author.identifier.value",
+    "min": 1
+   },
+   {
+    "id": "Composition.author.identifier.period",
+    "path": "Composition.author.identifier.period",
+    "max": "0"
+   },
+   {
+    "id": "Composition.author.identifier.assigner",
+    "path": "Composition.author.identifier.assigner",
+    "max": "0"
+   },
+   {
+    "id": "Composition.author.display",
+    "path": "Composition.author.display",
+    "max": "0"
+   },
+   {
+    "id": "Composition.title",
+    "path": "Composition.title",
+    "fixedString": "Registro de Imunobiologico Administrado na Rotina"
+   },
+   {
+    "id": "Composition.confidentiality",
+    "path": "Composition.confidentiality",
+    "max": "0"
+   },
+   {
+    "id": "Composition.attester",
+    "path": "Composition.attester",
+    "max": "0"
+   },
+   {
+    "id": "Composition.custodian",
+    "path": "Composition.custodian",
+    "max": "0"
+   },
+   {
+    "id": "Composition.relatesTo",
+    "path": "Composition.relatesTo",
+    "max": "1"
+   },
+   {
+    "id": "Composition.event",
+    "path": "Composition.event",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section",
+    "path": "Composition.section",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Composition.section.title",
+    "path": "Composition.section.title",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.code",
+    "path": "Composition.section.code",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.author",
+    "path": "Composition.section.author",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.focus",
+    "path": "Composition.section.focus",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.text",
+    "path": "Composition.section.text",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.mode",
+    "path": "Composition.section.mode",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.orderedBy",
+    "path": "Composition.section.orderedBy",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.entry",
+    "path": "Composition.section.entry",
+    "min": 1,
+    "max": "1",
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRImunobiologicoAdministrado-3.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Composition.section.entry.reference",
+    "path": "Composition.section.entry.reference",
+    "min": 1
+   },
+   {
+    "id": "Composition.section.entry.type",
+    "path": "Composition.section.entry.type",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.entry.identifier",
+    "path": "Composition.section.entry.identifier",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.entry.display",
+    "path": "Composition.section.entry.display",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.emptyReason",
+    "path": "Composition.section.emptyReason",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.section",
+    "path": "Composition.section.section",
+    "max": "0"
+   }
+  ]
+ },
+ {
+  "url": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRImunobiologicoAdministrado-3.0",
+  "type": "Immunization",
+  "elementos": [
+   {
+    "id": "Immunization",
+    "path": "Immunization"
+   },
+   {
+    "id": "Immunization.extension",
+    "path": "Immunization.extension",
+    "min": 2,
+    "max": "3"
+   },
+   {
+    "id": "Immunization.extension:grupoAtendimento",
+    "path": "Immunization.extension",
+    "sliceName": "grupoAtendimento",
+    "min": 1,
+    "max": "1",
+    "type": [
+     {
+      "code": "Extension",
+      "profile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRGrupoAtendimento"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Immunization.extension:condicaoMaternal",
+    "path": "Immunization.extension",
+    "sliceName": "condicaoMaternal",
+    "min": 1,
+    "type": [
+     {
+      "code": "Extension",
+      "profile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRCondicaoMaternal"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Immunization.extension:contatoHanseniase",
+    "path": "Immunization.extension",
+    "sliceName": "contatoHanseniase",
+    "max": "1",
+    "type": [
+     {
+      "code": "Extension",
+      "profile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRContatoHanseniase"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Immunization.identifier",
+    "path": "Immunization.identifier",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.status",
+    "path": "Immunization.status",
+    "fixedCode": "completed",
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BREstadoEvento-1.0"
+   },
+   {
+    "id": "Immunization.statusReason",
+    "path": "Immunization.statusReason",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.vaccineCode",
+    "path": "Immunization.vaccineCode",
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRImunobiologico-1.0"
+   },
+   {
+    "id": "Immunization.vaccineCode.coding",
+    "path": "Immunization.vaccineCode.coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Immunization.vaccineCode.coding.system",
+    "path": "Immunization.vaccineCode.coding.system",
+    "min": 1
+   },
+   {
+    "id": "Immunization.vaccineCode.coding.code",
+    "path": "Immunization.vaccineCode.coding.code",
+    "min": 1
+   },
+   {
+    "id": "Immunization.vaccineCode.coding.display",
+    "path": "Immunization.vaccineCode.coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.vaccineCode.coding.userSelected",
+    "path": "Immunization.vaccineCode.coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.vaccineCode.text",
+    "path": "Immunization.vaccineCode.text",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.patient",
+    "path": "Immunization.patient",
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRIndividuo-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Immunization.patient.identifier.use",
+    "path": "Immunization.patient.identifier.use",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.patient.identifier.type",
+    "path": "Immunization.patient.identifier.type",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.patient.identifier.system",
+    "path": "Immunization.patient.identifier.system",
+    "min": 1
+   },
+   {
+    "id": "Immunization.patient.identifier.value",
+    "path": "Immunization.patient.identifier.value",
+    "min": 1
+   },
+   {
+    "id": "Immunization.patient.identifier.period",
+    "path": "Immunization.patient.identifier.period",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.patient.identifier.assigner",
+    "path": "Immunization.patient.identifier.assigner",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.patient.display",
+    "path": "Immunization.patient.display",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.encounter",
+    "path": "Immunization.encounter",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.occurrence[x]",
+    "path": "Immunization.occurrence[x]",
+    "type": [
+     {
+      "code": "dateTime"
+     }
+    ]
+   },
+   {
+    "id": "Immunization.recorded",
+    "path": "Immunization.recorded",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.primarySource",
+    "path": "Immunization.primarySource"
+   },
+   {
+    "id": "Immunization.reportOrigin",
+    "path": "Immunization.reportOrigin",
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRRegistroOrigem"
+   },
+   {
+    "id": "Immunization.location",
+    "path": "Immunization.location"
+   },
+   {
+    "id": "Immunization.location.reference",
+    "path": "Immunization.location.reference",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.location.type",
+    "path": "Immunization.location.type",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.location.identifier",
+    "path": "Immunization.location.identifier",
+    "min": 1
+   },
+   {
+    "id": "Immunization.location.identifier.use",
+    "path": "Immunization.location.identifier.use",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.location.identifier.type",
+    "path": "Immunization.location.identifier.type",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.location.identifier.system",
+    "path": "Immunization.location.identifier.system",
+    "min": 1,
+    "fixedUri": "http://www.saude.gov.br/fhir/r4/CodeSystem/BRPais"
+   },
+   {
+    "id": "Immunization.location.identifier.value",
+    "path": "Immunization.location.identifier.value",
+    "min": 1,
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRPais-1.0"
+   },
+   {
+    "id": "Immunization.location.identifier.period",
+    "path": "Immunization.location.identifier.period",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.location.identifier.assigner",
+    "path": "Immunization.location.identifier.assigner",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.location.display",
+    "path": "Immunization.location.display",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer",
+    "path": "Immunization.manufacturer"
+   },
+   {
+    "id": "Immunization.manufacturer.reference",
+    "path": "Immunization.manufacturer.reference",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.type",
+    "path": "Immunization.manufacturer.type",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier",
+    "path": "Immunization.manufacturer.identifier",
+    "min": 1
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.use",
+    "path": "Immunization.manufacturer.identifier.use",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.type",
+    "path": "Immunization.manufacturer.identifier.type",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.type.coding",
+    "path": "Immunization.manufacturer.identifier.type.coding",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.type.coding.id",
+    "path": "Immunization.manufacturer.identifier.type.coding.id",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.type.coding.system",
+    "path": "Immunization.manufacturer.identifier.type.coding.system",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.type.coding.version",
+    "path": "Immunization.manufacturer.identifier.type.coding.version",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.type.coding.code",
+    "path": "Immunization.manufacturer.identifier.type.coding.code",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.type.coding.display",
+    "path": "Immunization.manufacturer.identifier.type.coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.type.coding.userSelected",
+    "path": "Immunization.manufacturer.identifier.type.coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.type.text",
+    "path": "Immunization.manufacturer.identifier.type.text",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.system",
+    "path": "Immunization.manufacturer.identifier.system",
+    "min": 1,
+    "fixedUri": "http://www.saude.gov.br/fhir/r4/CodeSystem/BRFabricantePNI"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.value",
+    "path": "Immunization.manufacturer.identifier.value",
+    "min": 1,
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRFabricanteImunobiologico-1.0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.period",
+    "path": "Immunization.manufacturer.identifier.period",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.identifier.assigner",
+    "path": "Immunization.manufacturer.identifier.assigner",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.manufacturer.display",
+    "path": "Immunization.manufacturer.display",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.lotNumber",
+    "path": "Immunization.lotNumber"
+   },
+   {
+    "id": "Immunization.expirationDate",
+    "path": "Immunization.expirationDate"
+   },
+   {
+    "id": "Immunization.site",
+    "path": "Immunization.site",
+    "min": 1,
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRLocalAplicacao-1.0"
+   },
+   {
+    "id": "Immunization.site.coding",
+    "path": "Immunization.site.coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Immunization.site.coding.system",
+    "path": "Immunization.site.coding.system",
+    "min": 1
+   },
+   {
+    "id": "Immunization.site.coding.code",
+    "path": "Immunization.site.coding.code",
+    "min": 1
+   },
+   {
+    "id": "Immunization.site.coding.display",
+    "path": "Immunization.site.coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.site.coding.userSelected",
+    "path": "Immunization.site.coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.site.text",
+    "path": "Immunization.site.text",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.route",
+    "path": "Immunization.route",
+    "min": 1,
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRViaAdministracao-1.0"
+   },
+   {
+    "id": "Immunization.route.coding",
+    "path": "Immunization.route.coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Immunization.route.coding.system",
+    "path": "Immunization.route.coding.system",
+    "min": 1
+   },
+   {
+    "id": "Immunization.route.coding.code",
+    "path": "Immunization.route.coding.code",
+    "min": 1
+   },
+   {
+    "id": "Immunization.route.coding.display",
+    "path": "Immunization.route.coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.route.coding.userSelected",
+    "path": "Immunization.route.coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.route.text",
+    "path": "Immunization.route.text",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.doseQuantity",
+    "path": "Immunization.doseQuantity",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.performer",
+    "path": "Immunization.performer",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Immunization.performer.function",
+    "path": "Immunization.performer.function",
+    "min": 0,
+    "max": "1",
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BROcupacao-1.0"
+   },
+   {
+    "id": "Immunization.performer.function.coding",
+    "path": "Immunization.performer.function.coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Immunization.performer.function.coding.system",
+    "path": "Immunization.performer.function.coding.system",
+    "min": 1
+   },
+   {
+    "id": "Immunization.performer.function.coding.code",
+    "path": "Immunization.performer.function.coding.code",
+    "min": 1
+   },
+   {
+    "id": "Immunization.performer.function.coding.display",
+    "path": "Immunization.performer.function.coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.performer.function.coding.userSelected",
+    "path": "Immunization.performer.function.coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.performer.function.text",
+    "path": "Immunization.performer.function.text",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.performer.actor",
+    "path": "Immunization.performer.actor",
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRProfissional-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Immunization.performer.actor.reference",
+    "path": "Immunization.performer.actor.reference",
+    "min": 1
+   },
+   {
+    "id": "Immunization.performer.actor.type",
+    "path": "Immunization.performer.actor.type",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.performer.actor.identifier",
+    "path": "Immunization.performer.actor.identifier",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.performer.actor.display",
+    "path": "Immunization.performer.actor.display",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.note",
+    "path": "Immunization.note",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.reasonCode",
+    "path": "Immunization.reasonCode",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.reasonReference",
+    "path": "Immunization.reasonReference",
+    "min": 0,
+    "max": "1",
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRCID10Avaliado-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Immunization.isSubpotent",
+    "path": "Immunization.isSubpotent",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.subpotentReason",
+    "path": "Immunization.subpotentReason",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.education",
+    "path": "Immunization.education",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.programEligibility",
+    "path": "Immunization.programEligibility",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.fundingSource",
+    "path": "Immunization.fundingSource",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.reaction",
+    "path": "Immunization.reaction",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.protocolApplied",
+    "path": "Immunization.protocolApplied",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Immunization.protocolApplied.extension",
+    "path": "Immunization.protocolApplied.extension",
+    "min": 1,
+    "max": "2"
+   },
+   {
+    "id": "Immunization.protocolApplied.extension:strategy",
+    "path": "Immunization.protocolApplied.extension",
+    "sliceName": "strategy",
+    "min": 1,
+    "max": "1",
+    "type": [
+     {
+      "code": "Extension",
+      "profile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BREstrategiaVacinacao-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Immunization.protocolApplied.extension:pesquisaClinica",
+    "path": "Immunization.protocolApplied.extension",
+    "sliceName": "pesquisaClinica",
+    "max": "1",
+    "type": [
+     {
+      "code": "Extension",
+      "profile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BREstrategiaVacinacaoPesquisa-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Immunization.protocolApplied.extension:pesquisaClinica.extension",
+    "path": "Immunization.protocolApplied.extension.extension",
+    "max": "3"
+   },
+   {
+    "id": "Immunization.protocolApplied.extension:pesquisaClinica.extension:numeroProtocoloEstudoANVISA",
+    "path": "Immunization.protocolApplied.extension.extension",
+    "sliceName": "numeroProtocoloEstudoANVISA"
+   },
+   {
+    "id": "Immunization.protocolApplied.extension:pesquisaClinica.extension:numeroVersaoProtocoloEstudo",
+    "path": "Immunization.protocolApplied.extension.extension",
+    "sliceName": "numeroVersaoProtocoloEstudo"
+   },
+   {
+    "id": "Immunization.protocolApplied.extension:pesquisaClinica.extension:numeroRegistroVacinaAnvisa",
+    "path": "Immunization.protocolApplied.extension.extension",
+    "sliceName": "numeroRegistroVacinaAnvisa"
+   },
+   {
+    "id": "Immunization.protocolApplied.series",
+    "path": "Immunization.protocolApplied.series",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.protocolApplied.authority",
+    "path": "Immunization.protocolApplied.authority",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.protocolApplied.targetDisease",
+    "path": "Immunization.protocolApplied.targetDisease",
+    "max": "0"
+   },
+   {
+    "id": "Immunization.protocolApplied.doseNumber[x]",
+    "path": "Immunization.protocolApplied.doseNumber[x]",
+    "type": [
+     {
+      "code": "string"
+     }
+    ],
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRDose-1.0"
+   },
+   {
+    "id": "Immunization.protocolApplied.seriesDoses[x]",
+    "path": "Immunization.protocolApplied.seriesDoses[x]",
+    "max": "0"
+   }
+  ]
+ },
+ {
+  "url": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BREstrategiaVacinacao-1.0",
+  "type": "Extension",
+  "elementos": [
+   {
+    "id": "Extension",
+    "path": "Extension"
+   },
+   {
+    "id": "Extension.url",
+    "path": "Extension.url",
+    "fixedUri": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BREstrategiaVacinacao-1.0"
+   },
+   {
+    "id": "Extension.value[x]",
+    "path": "Extension.value[x]",
+    "min": 1,
+    "type": [
+     {
+      "code": "CodeableConcept"
+     }
+    ],
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BREstrategiaVacinacao-1.0"
+   },
+   {
+    "id": "Extension.value[x].coding",
+    "path": "Extension.value[x].coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Extension.value[x].coding.system",
+    "path": "Extension.value[x].coding.system",
+    "min": 1
+   },
+   {
+    "id": "Extension.value[x].coding.code",
+    "path": "Extension.value[x].coding.code",
+    "min": 1
+   },
+   {
+    "id": "Extension.value[x].coding.display",
+    "path": "Extension.value[x].coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Extension.value[x].coding.userSelected",
+    "path": "Extension.value[x].coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Extension.value[x].text",
+    "path": "Extension.value[x].text",
+    "max": "0"
+   }
+  ]
+ },
+ {
+  "url": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRGrupoAtendimento",
+  "type": "Extension",
+  "elementos": [
+   {
+    "id": "Extension",
+    "path": "Extension"
+   },
+   {
+    "id": "Extension.url",
+    "path": "Extension.url",
+    "fixedUri": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRGrupoAtendimento"
+   },
+   {
+    "id": "Extension.value[x]",
+    "path": "Extension.value[x]",
+    "min": 1,
+    "type": [
+     {
+      "code": "CodeableConcept"
+     }
+    ],
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRGrupoAtendimento-1.0"
+   },
+   {
+    "id": "Extension.value[x].coding",
+    "path": "Extension.value[x].coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Extension.value[x].coding.system",
+    "path": "Extension.value[x].coding.system",
+    "min": 1
+   },
+   {
+    "id": "Extension.value[x].coding.code",
+    "path": "Extension.value[x].coding.code",
+    "min": 1
+   },
+   {
+    "id": "Extension.value[x].coding.display",
+    "path": "Extension.value[x].coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Extension.value[x].coding.userSelected",
+    "path": "Extension.value[x].coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Extension.value[x].text",
+    "path": "Extension.value[x].text",
+    "max": "0"
+   }
+  ]
+ },
+ {
+  "url": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRCondicaoMaternal",
+  "type": "Extension",
+  "elementos": [
+   {
+    "id": "Extension",
+    "path": "Extension",
+    "max": "1"
+   },
+   {
+    "id": "Extension.url",
+    "path": "Extension.url",
+    "fixedUri": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRCondicaoMaternal"
+   },
+   {
+    "id": "Extension.value[x]",
+    "path": "Extension.value[x]",
+    "min": 1,
+    "type": [
+     {
+      "code": "CodeableConcept"
+     }
+    ],
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRCondicaoMaternal-1.0"
+   },
+   {
+    "id": "Extension.value[x].coding",
+    "path": "Extension.value[x].coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Extension.value[x].coding.system",
+    "path": "Extension.value[x].coding.system",
+    "min": 1
+   },
+   {
+    "id": "Extension.value[x].coding.code",
+    "path": "Extension.value[x].coding.code",
+    "min": 1
+   },
+   {
+    "id": "Extension.value[x].coding.display",
+    "path": "Extension.value[x].coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Extension.value[x].coding.userSelected",
+    "path": "Extension.value[x].coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Extension.value[x].text",
+    "path": "Extension.value[x].text",
+    "max": "0"
+   }
+  ]
+ },
+ {
+  "url": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRResultadoExameLaboratorial-3.2.1",
+  "type": "Composition",
+  "elementos": [
+   {
+    "id": "Composition",
+    "path": "Composition"
+   },
+   {
+    "id": "Composition.identifier",
+    "path": "Composition.identifier",
+    "max": "0"
+   },
+   {
+    "id": "Composition.status",
+    "path": "Composition.status",
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BREstadoDocumento-1.0"
+   },
+   {
+    "id": "Composition.type",
+    "path": "Composition.type",
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRTipoDocumento-1.0"
+   },
+   {
+    "id": "Composition.type.coding",
+    "path": "Composition.type.coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Composition.type.coding.system",
+    "path": "Composition.type.coding.system",
+    "min": 1
+   },
+   {
+    "id": "Composition.type.coding.code",
+    "path": "Composition.type.coding.code",
+    "min": 1
+   },
+   {
+    "id": "Composition.type.coding.display",
+    "path": "Composition.type.coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Composition.type.coding.userSelected",
+    "path": "Composition.type.coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Composition.type.text",
+    "path": "Composition.type.text",
+    "max": "0"
+   },
+   {
+    "id": "Composition.category",
+    "path": "Composition.category",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject",
+    "path": "Composition.subject",
+    "min": 1,
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRIndividuo-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Composition.subject.reference",
+    "path": "Composition.subject.reference",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject.type",
+    "path": "Composition.subject.type",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject.identifier",
+    "path": "Composition.subject.identifier",
+    "min": 1
+   },
+   {
+    "id": "Composition.subject.identifier.use",
+    "path": "Composition.subject.identifier.use",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject.identifier.type",
+    "path": "Composition.subject.identifier.type",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject.identifier.system",
+    "path": "Composition.subject.identifier.system",
+    "min": 1,
+    "fixedUri": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRIndividuo-1.0"
+   },
+   {
+    "id": "Composition.subject.identifier.value",
+    "path": "Composition.subject.identifier.value",
+    "min": 1
+   },
+   {
+    "id": "Composition.subject.identifier.period",
+    "path": "Composition.subject.identifier.period",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject.identifier.assigner",
+    "path": "Composition.subject.identifier.assigner",
+    "max": "0"
+   },
+   {
+    "id": "Composition.subject.display",
+    "path": "Composition.subject.display",
+    "max": "0"
+   },
+   {
+    "id": "Composition.encounter",
+    "path": "Composition.encounter",
+    "max": "0"
+   },
+   {
+    "id": "Composition.date",
+    "path": "Composition.date"
+   },
+   {
+    "id": "Composition.author",
+    "path": "Composition.author",
+    "max": "1",
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRPessoaJuridicaProfissionalLiberal-1.0",
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BREstabelecimentoSaude-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Composition.author.reference",
+    "path": "Composition.author.reference",
+    "max": "0"
+   },
+   {
+    "id": "Composition.author.type",
+    "path": "Composition.author.type",
+    "max": "0"
+   },
+   {
+    "id": "Composition.author.identifier",
+    "path": "Composition.author.identifier",
+    "min": 1
+   },
+   {
+    "id": "Composition.author.identifier.use",
+    "path": "Composition.author.identifier.use",
+    "max": "0"
+   },
+   {
+    "id": "Composition.author.identifier.type",
+    "path": "Composition.author.identifier.type",
+    "max": "0"
+   },
+   {
+    "id": "Composition.author.identifier.system",
+    "path": "Composition.author.identifier.system",
+    "min": 1
+   },
+   {
+    "id": "Composition.author.identifier.value",
+    "path": "Composition.author.identifier.value",
+    "min": 1
+   },
+   {
+    "id": "Composition.author.identifier.period",
+    "path": "Composition.author.identifier.period",
+    "max": "0"
+   },
+   {
+    "id": "Composition.author.identifier.assigner",
+    "path": "Composition.author.identifier.assigner",
+    "max": "0"
+   },
+   {
+    "id": "Composition.author.display",
+    "path": "Composition.author.display",
+    "max": "0"
+   },
+   {
+    "id": "Composition.title",
+    "path": "Composition.title",
+    "fixedString": "Resultado de Exame Laboratorial"
+   },
+   {
+    "id": "Composition.confidentiality",
+    "path": "Composition.confidentiality",
+    "max": "0"
+   },
+   {
+    "id": "Composition.attester",
+    "path": "Composition.attester",
+    "max": "0"
+   },
+   {
+    "id": "Composition.custodian",
+    "path": "Composition.custodian",
+    "max": "0"
+   },
+   {
+    "id": "Composition.relatesTo",
+    "path": "Composition.relatesTo",
+    "max": "1"
+   },
+   {
+    "id": "Composition.relatesTo.code",
+    "path": "Composition.relatesTo.code",
+    "fixedCode": "replaces"
+   },
+   {
+    "id": "Composition.relatesTo.target[x]",
+    "path": "Composition.relatesTo.target[x]",
+    "type": [
+     {
+      "code": "Reference"
+     }
+    ]
+   },
+   {
+    "id": "Composition.relatesTo.target[x].id",
+    "path": "Composition.relatesTo.target[x].id",
+    "max": "0"
+   },
+   {
+    "id": "Composition.relatesTo.target[x].reference",
+    "path": "Composition.relatesTo.target[x].reference",
+    "min": 1
+   },
+   {
+    "id": "Composition.relatesTo.target[x].type",
+    "path": "Composition.relatesTo.target[x].type",
+    "max": "0"
+   },
+   {
+    "id": "Composition.relatesTo.target[x].identifier",
+    "path": "Composition.relatesTo.target[x].identifier",
+    "max": "0"
+   },
+   {
+    "id": "Composition.relatesTo.target[x].display",
+    "path": "Composition.relatesTo.target[x].display",
+    "max": "0"
+   },
+   {
+    "id": "Composition.event",
+    "path": "Composition.event",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section",
+    "path": "Composition.section",
+    "min": 1
+   },
+   {
+    "id": "Composition.section.title",
+    "path": "Composition.section.title",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.code",
+    "path": "Composition.section.code",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.author",
+    "path": "Composition.section.author",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.focus",
+    "path": "Composition.section.focus",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.text",
+    "path": "Composition.section.text",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.mode",
+    "path": "Composition.section.mode",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.orderedBy",
+    "path": "Composition.section.orderedBy",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.entry",
+    "path": "Composition.section.entry",
+    "min": 1,
+    "slicing": [
+     {
+      "type": "profile",
+      "path": "resolve()"
+     }
+    ]
+   },
+   {
+    "id": "Composition.section.entry.reference",
+    "path": "Composition.section.entry.reference"
+   },
+   {
+    "id": "Composition.section.entry.type",
+    "path": "Composition.section.entry.type",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.entry.identifier",
+    "path": "Composition.section.entry.identifier",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.entry.display",
+    "path": "Composition.section.entry.display",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.entry:condicaoSaude",
+    "path": "Composition.section.entry",
+    "sliceName": "condicaoSaude",
+    "min": 1,
+    "max": "1",
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRCondicaoSaude"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Composition.section.entry:condicaoSaude.reference",
+    "path": "Composition.section.entry.reference",
+    "min": 1
+   },
+   {
+    "id": "Composition.section.entry:diagnosticoLaboratorioClinico",
+    "path": "Composition.section.entry",
+    "sliceName": "diagnosticoLaboratorioClinico",
+    "min": 1,
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRDiagnosticoLaboratorioClinico-3.2.1"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Composition.section.entry:diagnosticoLaboratorioClinico.reference",
+    "path": "Composition.section.entry.reference",
+    "min": 1
+   },
+   {
+    "id": "Composition.section.emptyReason",
+    "path": "Composition.section.emptyReason",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.section",
+    "path": "Composition.section.section",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.section.title",
+    "path": "Composition.section.section.title",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.section.code",
+    "path": "Composition.section.section.code",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.section.author",
+    "path": "Composition.section.section.author",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.section.focus",
+    "path": "Composition.section.section.focus",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.section.text",
+    "path": "Composition.section.section.text",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.section.mode",
+    "path": "Composition.section.section.mode",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.section.orderedBy",
+    "path": "Composition.section.section.orderedBy",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.section.emptyReason",
+    "path": "Composition.section.section.emptyReason",
+    "max": "0"
+   },
+   {
+    "id": "Composition.section.section.section",
+    "path": "Composition.section.section.section"
+   }
+  ]
+ },
+ {
+  "url": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRDiagnosticoLaboratorioClinico-3.2.1",
+  "type": "Observation",
+  "elementos": [
+   {
+    "id": "Observation",
+    "path": "Observation"
+   },
+   {
+    "id": "Observation.extension",
+    "path": "Observation.extension",
+    "min": 0,
+    "slicing": [
+     {
+      "type": "value",
+      "path": "url"
+     }
+    ]
+   },
+   {
+    "id": "Observation.extension:pathogen",
+    "path": "Observation.extension",
+    "sliceName": "pathogen",
+    "min": 0,
+    "max": "1",
+    "type": [
+     {
+      "code": "Extension",
+      "profile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRPatogeno"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Observation.identifier",
+    "path": "Observation.identifier",
+    "max": "0"
+   },
+   {
+    "id": "Observation.basedOn",
+    "path": "Observation.basedOn",
+    "max": "0"
+   },
+   {
+    "id": "Observation.partOf",
+    "path": "Observation.partOf",
+    "max": "0"
+   },
+   {
+    "id": "Observation.status",
+    "path": "Observation.status",
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BREstadoObservacao-1.0"
+   },
+   {
+    "id": "Observation.category",
+    "path": "Observation.category",
+    "min": 1,
+    "max": "1",
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRCategoriaExame-1.0"
+   },
+   {
+    "id": "Observation.category.coding",
+    "path": "Observation.category.coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Observation.category.coding.system",
+    "path": "Observation.category.coding.system",
+    "min": 1
+   },
+   {
+    "id": "Observation.category.coding.code",
+    "path": "Observation.category.coding.code",
+    "min": 1
+   },
+   {
+    "id": "Observation.category.coding.display",
+    "path": "Observation.category.coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Observation.category.coding.userSelected",
+    "path": "Observation.category.coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Observation.category.text",
+    "path": "Observation.category.text",
+    "max": "0"
+   },
+   {
+    "id": "Observation.code",
+    "path": "Observation.code",
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRNomeExame-2.0"
+   },
+   {
+    "id": "Observation.code.coding",
+    "path": "Observation.code.coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Observation.code.coding.system",
+    "path": "Observation.code.coding.system",
+    "min": 1
+   },
+   {
+    "id": "Observation.code.coding.code",
+    "path": "Observation.code.coding.code",
+    "min": 1
+   },
+   {
+    "id": "Observation.code.coding.display",
+    "path": "Observation.code.coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Observation.code.coding.userSelected",
+    "path": "Observation.code.coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Observation.code.text",
+    "path": "Observation.code.text",
+    "max": "0"
+   },
+   {
+    "id": "Observation.subject",
+    "path": "Observation.subject",
+    "min": 1,
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRIndividuo-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Observation.subject.reference",
+    "path": "Observation.subject.reference",
+    "max": "0"
+   },
+   {
+    "id": "Observation.subject.type",
+    "path": "Observation.subject.type",
+    "max": "0",
+    "fixedUri": "Patient"
+   },
+   {
+    "id": "Observation.subject.identifier",
+    "path": "Observation.subject.identifier",
+    "min": 1
+   },
+   {
+    "id": "Observation.subject.identifier.use",
+    "path": "Observation.subject.identifier.use",
+    "max": "0"
+   },
+   {
+    "id": "Observation.subject.identifier.type",
+    "path": "Observation.subject.identifier.type",
+    "max": "0"
+   },
+   {
+    "id": "Observation.subject.identifier.system",
+    "path": "Observation.subject.identifier.system",
+    "min": 1,
+    "fixedUri": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRIndividuo-1.0"
+   },
+   {
+    "id": "Observation.subject.identifier.value",
+    "path": "Observation.subject.identifier.value",
+    "min": 1
+   },
+   {
+    "id": "Observation.subject.identifier.period",
+    "path": "Observation.subject.identifier.period",
+    "max": "0"
+   },
+   {
+    "id": "Observation.subject.identifier.assigner",
+    "path": "Observation.subject.identifier.assigner",
+    "max": "0"
+   },
+   {
+    "id": "Observation.subject.display",
+    "path": "Observation.subject.display",
+    "max": "0"
+   },
+   {
+    "id": "Observation.focus",
+    "path": "Observation.focus",
+    "max": "0"
+   },
+   {
+    "id": "Observation.encounter",
+    "path": "Observation.encounter",
+    "max": "0"
+   },
+   {
+    "id": "Observation.effective[x]",
+    "path": "Observation.effective[x]",
+    "min": 1,
+    "type": [
+     {
+      "code": "dateTime"
+     }
+    ]
+   },
+   {
+    "id": "Observation.issued",
+    "path": "Observation.issued",
+    "min": 1
+   },
+   {
+    "id": "Observation.performer",
+    "path": "Observation.performer",
+    "min": 1,
+    "slicing": [
+     {
+      "type": "value",
+      "path": "identifier.system"
+     }
+    ]
+   },
+   {
+    "id": "Observation.performer:estabelecimentoSaude",
+    "path": "Observation.performer",
+    "sliceName": "estabelecimentoSaude",
+    "min": 1,
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BREstabelecimentoSaude-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Observation.performer:estabelecimentoSaude.reference",
+    "path": "Observation.performer.reference",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:estabelecimentoSaude.type",
+    "path": "Observation.performer.type",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:estabelecimentoSaude.identifier",
+    "path": "Observation.performer.identifier",
+    "min": 1
+   },
+   {
+    "id": "Observation.performer:estabelecimentoSaude.identifier.use",
+    "path": "Observation.performer.identifier.use",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:estabelecimentoSaude.identifier.type",
+    "path": "Observation.performer.identifier.type",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:estabelecimentoSaude.identifier.system",
+    "path": "Observation.performer.identifier.system",
+    "min": 1,
+    "fixedUri": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BREstabelecimentoSaude-1.0"
+   },
+   {
+    "id": "Observation.performer:estabelecimentoSaude.identifier.value",
+    "path": "Observation.performer.identifier.value",
+    "min": 1
+   },
+   {
+    "id": "Observation.performer:estabelecimentoSaude.identifier.period",
+    "path": "Observation.performer.identifier.period",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:estabelecimentoSaude.identifier.assigner",
+    "path": "Observation.performer.identifier.assigner",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:estabelecimentoSaude.display",
+    "path": "Observation.performer.display",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:pessoaJuridicaProfissionalLiberal",
+    "path": "Observation.performer",
+    "sliceName": "pessoaJuridicaProfissionalLiberal",
+    "max": "1",
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRPessoaJuridicaProfissionalLiberal-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Observation.performer:pessoaJuridicaProfissionalLiberal.reference",
+    "path": "Observation.performer.reference",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:pessoaJuridicaProfissionalLiberal.type",
+    "path": "Observation.performer.type",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:pessoaJuridicaProfissionalLiberal.identifier",
+    "path": "Observation.performer.identifier",
+    "min": 1
+   },
+   {
+    "id": "Observation.performer:pessoaJuridicaProfissionalLiberal.identifier.use",
+    "path": "Observation.performer.identifier.use",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:pessoaJuridicaProfissionalLiberal.identifier.type",
+    "path": "Observation.performer.identifier.type",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:pessoaJuridicaProfissionalLiberal.identifier.system",
+    "path": "Observation.performer.identifier.system",
+    "min": 1,
+    "fixedUri": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRPessoaJuridicaProfissionalLiberal-1.0"
+   },
+   {
+    "id": "Observation.performer:pessoaJuridicaProfissionalLiberal.identifier.value",
+    "path": "Observation.performer.identifier.value",
+    "min": 1
+   },
+   {
+    "id": "Observation.performer:pessoaJuridicaProfissionalLiberal.identifier.period",
+    "path": "Observation.performer.identifier.period",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:pessoaJuridicaProfissionalLiberal.identifier.assigner",
+    "path": "Observation.performer.identifier.assigner",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:pessoaJuridicaProfissionalLiberal.display",
+    "path": "Observation.performer.display",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:lotacaoProfissional",
+    "path": "Observation.performer",
+    "sliceName": "lotacaoProfissional",
+    "max": "1",
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRLotacaoProfissional-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Observation.performer:lotacaoProfissional.reference",
+    "path": "Observation.performer.reference",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:lotacaoProfissional.type",
+    "path": "Observation.performer.type",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:lotacaoProfissional.identifier",
+    "path": "Observation.performer.identifier",
+    "min": 1
+   },
+   {
+    "id": "Observation.performer:lotacaoProfissional.identifier.use",
+    "path": "Observation.performer.identifier.use",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:lotacaoProfissional.identifier.type",
+    "path": "Observation.performer.identifier.type",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:lotacaoProfissional.identifier.system",
+    "path": "Observation.performer.identifier.system",
+    "min": 1,
+    "fixedUri": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRLotacaoProfissional-1.0"
+   },
+   {
+    "id": "Observation.performer:lotacaoProfissional.identifier.value",
+    "path": "Observation.performer.identifier.value",
+    "min": 1
+   },
+   {
+    "id": "Observation.performer:lotacaoProfissional.identifier.period",
+    "path": "Observation.performer.identifier.period",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:lotacaoProfissional.identifier.assigner",
+    "path": "Observation.performer.identifier.assigner",
+    "max": "0"
+   },
+   {
+    "id": "Observation.performer:lotacaoProfissional.display",
+    "path": "Observation.performer.display",
+    "max": "0"
+   },
+   {
+    "id": "Observation.value[x]",
+    "path": "Observation.value[x]",
+    "min": 1,
+    "type": [
+     {
+      "code": "Quantity"
+     },
+     {
+      "code": "CodeableConcept"
+     }
+    ],
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRResultadoQualitativoExame-2.0"
+   },
+   {
+    "id": "Observation.dataAbsentReason",
+    "path": "Observation.dataAbsentReason",
+    "max": "0"
+   },
+   {
+    "id": "Observation.interpretation",
+    "path": "Observation.interpretation",
+    "max": "1",
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRResultadoQualitativoExame-1.0"
+   },
+   {
+    "id": "Observation.interpretation.coding",
+    "path": "Observation.interpretation.coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Observation.interpretation.coding.system",
+    "path": "Observation.interpretation.coding.system",
+    "min": 1
+   },
+   {
+    "id": "Observation.interpretation.coding.code",
+    "path": "Observation.interpretation.coding.code",
+    "min": 1
+   },
+   {
+    "id": "Observation.interpretation.coding.display",
+    "path": "Observation.interpretation.coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Observation.interpretation.coding.userSelected",
+    "path": "Observation.interpretation.coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Observation.interpretation.text",
+    "path": "Observation.interpretation.text",
+    "max": "0"
+   },
+   {
+    "id": "Observation.note",
+    "path": "Observation.note"
+   },
+   {
+    "id": "Observation.note.author[x]",
+    "path": "Observation.note.author[x]",
+    "max": "0"
+   },
+   {
+    "id": "Observation.note.time",
+    "path": "Observation.note.time",
+    "max": "0"
+   },
+   {
+    "id": "Observation.bodySite",
+    "path": "Observation.bodySite",
+    "max": "0"
+   },
+   {
+    "id": "Observation.method",
+    "path": "Observation.method",
+    "min": 1
+   },
+   {
+    "id": "Observation.method.coding",
+    "path": "Observation.method.coding",
+    "max": "0"
+   },
+   {
+    "id": "Observation.method.text",
+    "path": "Observation.method.text"
+   },
+   {
+    "id": "Observation.specimen",
+    "path": "Observation.specimen",
+    "min": 1,
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRAmostraBiologica-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Observation.specimen.reference",
+    "path": "Observation.specimen.reference",
+    "min": 1
+   },
+   {
+    "id": "Observation.specimen.type",
+    "path": "Observation.specimen.type",
+    "max": "0"
+   },
+   {
+    "id": "Observation.specimen.identifier",
+    "path": "Observation.specimen.identifier",
+    "max": "0"
+   },
+   {
+    "id": "Observation.specimen.display",
+    "path": "Observation.specimen.display",
+    "max": "0"
+   },
+   {
+    "id": "Observation.device",
+    "path": "Observation.device",
+    "max": "0"
+   },
+   {
+    "id": "Observation.referenceRange",
+    "path": "Observation.referenceRange",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Observation.referenceRange.low",
+    "path": "Observation.referenceRange.low",
+    "max": "0"
+   },
+   {
+    "id": "Observation.referenceRange.high",
+    "path": "Observation.referenceRange.high",
+    "max": "0"
+   },
+   {
+    "id": "Observation.referenceRange.type",
+    "path": "Observation.referenceRange.type",
+    "max": "0"
+   },
+   {
+    "id": "Observation.referenceRange.appliesTo",
+    "path": "Observation.referenceRange.appliesTo",
+    "max": "0"
+   },
+   {
+    "id": "Observation.referenceRange.age",
+    "path": "Observation.referenceRange.age",
+    "max": "0"
+   },
+   {
+    "id": "Observation.referenceRange.text",
+    "path": "Observation.referenceRange.text",
+    "min": 1
+   },
+   {
+    "id": "Observation.hasMember",
+    "path": "Observation.hasMember",
+    "max": "0"
+   },
+   {
+    "id": "Observation.derivedFrom",
+    "path": "Observation.derivedFrom",
+    "max": "0"
+   },
+   {
+    "id": "Observation.component",
+    "path": "Observation.component",
+    "max": "0"
+   }
+  ]
+ },
+ {
+  "url": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRAmostraBiologica-1.0",
+  "type": "Specimen",
+  "elementos": [
+   {
+    "id": "Specimen",
+    "path": "Specimen"
+   },
+   {
+    "id": "Specimen.identifier",
+    "path": "Specimen.identifier",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.identifier.use",
+    "path": "Specimen.identifier.use",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.accessionIdentifier",
+    "path": "Specimen.accessionIdentifier",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.status",
+    "path": "Specimen.status",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.type",
+    "path": "Specimen.type",
+    "min": 1,
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRTipoAmostra-1.0"
+   },
+   {
+    "id": "Specimen.type.coding",
+    "path": "Specimen.type.coding",
+    "min": 1,
+    "max": "1"
+   },
+   {
+    "id": "Specimen.type.coding.system",
+    "path": "Specimen.type.coding.system",
+    "min": 1
+   },
+   {
+    "id": "Specimen.type.coding.code",
+    "path": "Specimen.type.coding.code",
+    "min": 1
+   },
+   {
+    "id": "Specimen.type.coding.display",
+    "path": "Specimen.type.coding.display",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.type.coding.userSelected",
+    "path": "Specimen.type.coding.userSelected",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.type.text",
+    "path": "Specimen.type.text",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.subject",
+    "path": "Specimen.subject",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.receivedTime",
+    "path": "Specimen.receivedTime",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.parent",
+    "path": "Specimen.parent",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.request",
+    "path": "Specimen.request",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.collection",
+    "path": "Specimen.collection",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.processing",
+    "path": "Specimen.processing",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.container",
+    "path": "Specimen.container",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.condition",
+    "path": "Specimen.condition",
+    "max": "0"
+   },
+   {
+    "id": "Specimen.note",
+    "path": "Specimen.note",
+    "max": "0"
+   }
+  ]
+ },
+ {
+  "url": "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRCondicaoSaude",
+  "type": "Condition",
+  "elementos": [
+   {
+    "id": "Condition.identifier",
+    "path": "Condition.identifier",
+    "max": "0"
+   },
+   {
+    "id": "Condition.clinicalStatus",
+    "path": "Condition.clinicalStatus",
+    "max": "0"
+   },
+   {
+    "id": "Condition.category",
+    "path": "Condition.category",
+    "max": "0"
+   },
+   {
+    "id": "Condition.severity",
+    "path": "Condition.severity",
+    "max": "0"
+   },
+   {
+    "id": "Condition.code",
+    "path": "Condition.code",
+    "min": 1,
+    "valueSet": "http://www.saude.gov.br/fhir/r4/ValueSet/BRTerminologiaSuspeitaDiagnostica"
+   },
+   {
+    "id": "Condition.bodySite",
+    "path": "Condition.bodySite",
+    "max": "0"
+   },
+   {
+    "id": "Condition.subject",
+    "path": "Condition.subject",
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRIndividuo-1.0"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Condition.subject.identifier",
+    "path": "Condition.subject.identifier",
+    "min": 1
+   },
+   {
+    "id": "Condition.subject.identifier.system",
+    "path": "Condition.subject.identifier.system",
+    "min": 1
+   },
+   {
+    "id": "Condition.subject.identifier.value",
+    "path": "Condition.subject.identifier.value",
+    "min": 1
+   },
+   {
+    "id": "Condition.encounter",
+    "path": "Condition.encounter",
+    "max": "0"
+   },
+   {
+    "id": "Condition.onset[x]",
+    "path": "Condition.onset[x]",
+    "max": "0"
+   },
+   {
+    "id": "Condition.abatement[x]",
+    "path": "Condition.abatement[x]",
+    "max": "0"
+   },
+   {
+    "id": "Condition.recordedDate",
+    "path": "Condition.recordedDate",
+    "max": "0"
+   },
+   {
+    "id": "Condition.recorder",
+    "path": "Condition.recorder",
+    "max": "0"
+   },
+   {
+    "id": "Condition.asserter",
+    "path": "Condition.asserter",
+    "max": "0"
+   },
+   {
+    "id": "Condition.stage",
+    "path": "Condition.stage",
+    "min": 1
+   },
+   {
+    "id": "Condition.stage.assessment",
+    "path": "Condition.stage.assessment",
+    "min": 1,
+    "type": [
+     {
+      "code": "Reference",
+      "targetProfile": [
+       "http://www.saude.gov.br/fhir/r4/StructureDefinition/BRDiagnosticoLaboratorioClinico-3.2.1"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "Condition.stage.assessment.reference",
+    "path": "Condition.stage.assessment.reference",
+    "min": 1
+   },
+   {
+    "id": "Condition.evidence",
+    "path": "Condition.evidence",
+    "max": "0"
+   },
+   {
+    "id": "Condition.note",
+    "path": "Condition.note",
+    "max": "0"
+   }
+  ]
+ }
+]
